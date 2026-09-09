@@ -11,6 +11,7 @@ import {
 import {
     Sparkles,
     ChevronRight,
+    ChevronDown, //
     LayoutDashboard,
     Users,
     FileText,
@@ -30,6 +31,7 @@ const NAV = [
         label: "Dashboard",
         icon: Package,
         to: "/dashboard"
+        // no children → no chevron ✅ correct, matches your reference
     },
     {
         label: "Customers",
@@ -37,12 +39,13 @@ const NAV = [
         to: "/customers",
         addTo: "/customers/new",
         queryKey: "status",
-        // children: [
-        //     { label: "All", status: "ALL" },
-        //     { label: "Active", status: "ACTIVE" },
-        //     { label: "Inactive", status: "INACTIVE" },
-        //     { label: "Draft", status: "DRAFT" },
-        // ],
+        dropdown: true, // ← add this
+        children: [
+            { label: "All", status: "ALL" },
+            { label: "Active", status: "ACTIVE" },
+            { label: "Inactive", status: "INACTIVE" },
+            { label: "Draft", status: "DRAFT" },
+        ],
     },
     {
         label: "Items",
@@ -50,6 +53,13 @@ const NAV = [
         to: "/items",
         addTo: "/items/new",
         queryKey: "status",
+        dropdown: true, // ← add this
+        children: [
+            { label: "All", status: "ALL" },
+            { label: "Active", status: "ACTIVE" },
+            { label: "Inactive", status: "INACTIVE" },
+            { label: "Draft", status: "DRAFT" },
+        ],
     },
 
     {
@@ -57,6 +67,13 @@ const NAV = [
         icon: FileText,
         to: "/invoices",
         addTo: "/invoices/new",
+        dropdown: true, // ← add this
+        children: [
+            { label: "All", status: "ALL" },
+            { label: "Active", status: "ACTIVE" },
+            { label: "Inactive", status: "INACTIVE" },
+            { label: "Draft", status: "DRAFT" },
+        ],
     },
 
 
@@ -65,6 +82,13 @@ const NAV = [
         icon: Wallet,
         to: "/payments",
         addTo: "/payments/new",
+        dropdown: true, // ← add this
+        children: [
+            { label: "All", status: "ALL" },
+            { label: "Active", status: "ACTIVE" },
+            { label: "Inactive", status: "INACTIVE" },
+            { label: "Draft", status: "DRAFT" },
+        ],
     },
 
 ];
@@ -168,13 +192,22 @@ export default function Siderbar() {
                                         <button
                                             onClick={() => handleMenuClick(item)}
                                             className={`
-                            relative flex items-center gap-3
-                            px-3 py-2 flex-1
-                            text-gray-300
-                            hover:bg-white/10
-                            hover:text-white
-                        `}
+            relative flex items-center gap-3
+            px-3 py-2 flex-1
+            text-gray-300
+            hover:bg-white/10
+            hover:text-white
+        `}
                                         >
+                                            {/* chevron on the left */}
+                                            {open && (
+                                                <ChevronDown
+                                                    size={16}
+                                                    className={`transition-transform duration-200 ${openMenu === item.label ? "rotate-180" : ""
+                                                        }`}
+                                                />
+                                            )}
+
                                             <Icon size={18} />
 
                                             {open && (
@@ -182,23 +215,39 @@ export default function Siderbar() {
                                                     {item.label}
                                                 </span>
                                             )}
+
+
                                         </button>
+
                                     ) : (
                                         <NavLink
                                             to={item.to}
+                                            onClick={(e) => {
+                                                if (item.children) {
+                                                    e.preventDefault();
+                                                    setOpenMenu(openMenu === item.label ? null : item.label);
+                                                }
+                                            }}
                                             className={({ isActive }) =>
                                                 `
-                            relative flex items-center gap-3
-                            px-3 py-2 flex-1
-                            transition
-                            ${isActive
+                                relative flex items-center gap-2
+                                px-3 py-2 flex-1
+                                transition
+                                ${isActive
                                                     ? "bg-blue-500 text-white"
                                                     : "text-gray-300 hover:bg-white/10 hover:text-white"
                                                 }
-                            `
+    `
                                             }
                                         >
-                                            <Icon size={18} />
+                                            {/* always reserve the slot, but only show chevron if item has children */}
+                                            {open && (
+                                                <span className="w-5 flex justify-center flex-shrink-0 text-gray-500">
+                                                    {item.children && <ChevronDown size={14} />}
+                                                </span>
+                                            )}
+
+                                            <Icon size={18} className="flex-shrink-0" />
 
                                             {open && (
                                                 <span className="whitespace-nowrap">
@@ -288,7 +337,7 @@ export default function Siderbar() {
 
                                 {/* CHILDREN */}
                                 {item.children && openMenu === item.label && (
-                                    <div className="ml-7 mt-1 flex flex-col space-y-1">
+                                    <div className="mt-1 flex flex-col">
                                         {item.children.map((child) => {
                                             const search = new URLSearchParams(location.search);
 
@@ -301,12 +350,11 @@ export default function Siderbar() {
                                                     key={`${item.label}-${child.status}`}
                                                     to={`${item.basePath}?${item.queryKey}=${child.status}`}
                                                     className={`
-                                    text-sm px-2 py-1 rounded-md transition
-                                    ${active
-                                                            ? "text-blue-400 font-medium"
-                                                            : "text-gray-400 hover:text-white"
-                                                        }
-                                `}
+                    text-sm py-2 px-3 ml-6 rounded-md transition
+                    ${active ? "bg-white/10 text-white font-medium" : "text-gray-400 hover:bg-white/5 hover:text-white"}
+            
+                    `}
+                                                    style={{ paddingLeft: '2.75rem' }}
                                                 >
                                                     {child.label}
                                                 </NavLink>
@@ -330,7 +378,7 @@ export default function Siderbar() {
                         {open && <span className="text-xs">Collapse</span>}
                     </button>
                 </div>
-            </aside>
+            </aside >
         </>
 
     );
