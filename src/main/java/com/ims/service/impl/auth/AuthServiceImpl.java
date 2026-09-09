@@ -1,6 +1,5 @@
 package com.ims.service.impl.auth;
 
-
 import com.ims.common.ApiResponse;
 import com.ims.dtos.auth.AuthRequest;
 import com.ims.dtos.auth.AuthResponse;
@@ -37,87 +36,142 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final EmailService emailService;
 
+    // ===============================
+    // LOGIN
+    // ===============================
     @Override
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<AuthResponse>> login(AuthRequest request) {
 
         try {
 
-            authenticate(request.getEmail(), request.getPassword());
-            UserEntity user = userRepository.findByEmail(request.getEmail())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+            // Authenticate user
+            authenticate(
+                    request.getEmail(),
+                    request.getPassword()
+            );
 
+            // Find user
+            UserEntity user = userRepository
+                    .findByEmail(request.getEmail())
+                    .orElseThrow(() ->
+                            new RuntimeException("User not found")
+                    );
+
+            // Generate JWT
             String jwtToken = jwtUtil.generateUserToken(user);
 
-            ResponseCookie cookie = ResponseCookie.from("jwt", jwtToken)
+            // Create JWT cookie
+            ResponseCookie cookie = ResponseCookie
+                    .from("jwt", jwtToken)
                     .httpOnly(true)
-                    .secure(false)           // true in production (HTTPS)
+                    .secure(false) // true in production HTTPS
                     .path("/")
                     .maxAge(Duration.ofDays(1))
                     .sameSite("Strict")
                     .build();
 
+            // Auth response
             AuthResponse response = AuthResponse.builder()
-
                     .name(user.getName())
                     .email(user.getEmail())
                     .token(jwtToken)
                     .tokenType("Bearer")
                     .build();
 
-            ApiResponse<AuthResponse> apiResponse = ApiResponse.success(
-                    response,
-                    "Login successful."
-            );
 
+            // API response
+            ApiResponse<AuthResponse> apiResponse =
+                    ApiResponse.success(
+                            response,
+                            "Login successful."
+                    );
+
+            // Return response + JWT cookie
             return ResponseEntity.ok()
-                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .header(
+                            HttpHeaders.SET_COOKIE,
+                            cookie.toString()
+                    )
                     .body(apiResponse);
 
         } catch (BadCredentialsException ex) {
 
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.<AuthResponse>builder()
-                            .success(false)
-                            .message("Email or Password Incorrect.")
-                            .build());
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(
+                            ApiResponse.<AuthResponse>builder()
+                                    .success(false)
+                                    .message("Email or Password Incorrect.")
+                                    .build()
+                    );
 
         } catch (DisabledException ex) {
 
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.<AuthResponse>builder()
-                            .success(false)
-                            .message("Account is disabled.")
-                            .build());
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(
+                            ApiResponse.<AuthResponse>builder()
+                                    .success(false)
+                                    .message("Account is disabled.")
+                                    .build()
+                    );
 
         } catch (Exception ex) {
 
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.<AuthResponse>builder()
-                            .success(false)
-                            .message("Authentication failed.")
-                            .build());
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(
+                            ApiResponse.<AuthResponse>builder()
+                                    .success(false)
+                                    .message("Authentication failed.")
+                                    .build()
+                    );
         }
     }
 
-    private void authenticate(String email, String password) {
+    // ===============================
+    // AUTHENTICATE
+    // ===============================
+    private void authenticate(
+            String email,
+            String password
+    ) {
+
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(email, password)
+                new UsernamePasswordAuthenticationToken(
+                        email,
+                        password
+                )
         );
     }
 
+    // ===============================
+    // CHECK AUTHENTICATION
+    // ===============================
     @Override
     public ResponseEntity<Boolean> isAuthenticated(String email) {
+
         return ResponseEntity.ok(email != null);
     }
 
+    // ===============================
+    // SEND RESET OTP
+    // ===============================
     @Override
     public void sendResetOtp(String email) {
+
         profileService.sendResetOtp(email);
     }
 
+    // ===============================
+    // RESET PASSWORD
+    // ===============================
     @Override
-    public void resetPassword(ResetPasswordRequest request) {
+    public void resetPassword(
+            ResetPasswordRequest request
+    ) {
+
         profileService.resetPassword(
                 request.getEmail(),
                 request.getOtp(),
@@ -125,20 +179,37 @@ public class AuthServiceImpl implements AuthService {
         );
     }
 
+    // ===============================
+    // SEND VERIFIED OTP
+    // ===============================
     @Override
     public void sendVerifiedOtp(String email) {
+
         profileService.sendOtp(email);
     }
 
+    // ===============================
+    // VERIFY OTP
+    // ===============================
     @Override
-    public void verifyOtp(Map<String, Object> request, String email) {
+    public void verifyOtp(
+            Map<String, Object> request,
+            String email
+    ) {
 
         if (request.get("otp") == null) {
             throw new RuntimeException("Missing details");
         }
 
-        profileService.verifyOtp(email, request.get("otp").toString());
+        profileService.verifyOtp(
+                email,
+                request.get("otp").toString()
+        );
     }
+
+    // ===============================
+    // LOGOUT
+    // ===============================
 
     @Override
     public ResponseEntity<?> logout(HttpServletResponse response) {
@@ -147,12 +218,20 @@ public class AuthServiceImpl implements AuthService {
                 .httpOnly(true)
                 .secure(false)
                 .path("/")
-                .maxAge(0)
+                .maxAge(Duration.ZERO)
                 .sameSite("Strict")
                 .build();
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body("Logged out successfully");
+        response.addHeader(
+                HttpHeaders.SET_COOKIE,
+                cookie.toString()
+        );
+
+        System.out.println("🔴 JWT COOKIE EXPIRED");
+        System.out.println("🍪 " + cookie);
+
+        return ResponseEntity.ok(
+                "Logged out successfully"
+        );
     }
 }

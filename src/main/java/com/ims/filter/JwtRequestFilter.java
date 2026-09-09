@@ -25,8 +25,22 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     private final AppUserDetailsService appUserDetailsService;
     private final JwtUtil jwtUtil;
 
+    /*
+     * =========================================================
+     * SKIP JWT FILTER
+     * =========================================================
+     *
+     * These endpoints do not require JWT authentication.
+     *
+     * IMPORTANT:
+     * /is-authenticated is NOT included here.
+     *
+     * It must pass through this filter so that Spring Security
+     * can determine whether the JWT cookie is valid.
+     */
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
+    protected boolean shouldNotFilter(
+            HttpServletRequest request) {
 
         String path = request.getServletPath();
 
@@ -41,6 +55,11 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 || path.startsWith("/webjars");
     }
 
+    /*
+     * =========================================================
+     * JWT FILTER
+     * =========================================================
+     */
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -48,44 +67,121 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             FilterChain filterChain)
             throws ServletException, IOException {
 
+        /*
+         * If Spring Security already has an authenticated user,
+         * there is nothing more to do.
+         */
+        if (SecurityContextHolder
+                .getContext()
+                .getAuthentication() != null) {
+
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        /*
+         * Extract JWT.
+         *
+         * Priority:
+         * 1. Authorization header
+         * 2. HttpOnly jwt cookie
+         */
         String jwt = extractToken(request);
 
+        /*
+         * No JWT.
+         *
+         * Continue the request and let Spring Security decide
+         * whether the endpoint is public or requires authentication.
+         */
         if (jwt == null || jwt.isBlank()) {
+
+            System.out.println(
+                    "🔐 No JWT found for: "
+                            + request.getServletPath()
+            );
+
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
 
-            String email = jwtUtil.extractEmail(jwt);
+            /*
+             * =================================================
+             * EXTRACT EMAIL
+             * =================================================
+             */
+            String email =
+                    jwtUtil.extractEmail(jwt);
 
-            if (email != null
-                    && SecurityContextHolder
-                    .getContext()
-                    .getAuthentication() == null) {
+            if (email == null || email.isBlank()) {
 
-                UserDetails userDetails =
-                        appUserDetailsService
-                                .loadUserByUsername(email);
+                System.out.println(
+                        "❌ JWT does not contain email"
+                );
 
-                if (jwtUtil.validateToken(jwt, userDetails)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails,
-                                    null,
-                                    userDetails.getAuthorities()
-                            );
+            /*
+             * =================================================
+             * LOAD USER
+             * =================================================
+             */
+            UserDetails userDetails =
+                    appUserDetailsService
+                            .loadUserByUsername(email);
 
-                    authentication.setDetails(
-                            new WebAuthenticationDetailsSource()
-                                    .buildDetails(request)
-                    );
+            /*
+             * =================================================
+             * VALIDATE JWT
+             * =================================================
+             */
+            if (jwtUtil.validateToken(
+                    jwt,
+                    userDetails)) {
 
-                    SecurityContextHolder
-                            .getContext()
-                            .setAuthentication(authentication);
-                }
+                /*
+                 * =================================================
+                 * CREATE AUTHENTICATION
+                 * =================================================
+                 */
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
+
+                authentication.setDetails(
+                        new WebAuthenticationDetailsSource()
+                                .buildDetails(request)
+                );
+
+                /*
+                 * =================================================
+                 * SET SECURITY CONTEXT
+                 * =================================================
+                 */
+                SecurityContextHolder
+                        .getContext()
+                        .setAuthentication(authentication);
+
+                System.out.println(
+                        "✅ JWT authenticated: "
+                                + email
+                );
+
+            } else {
+
+                System.out.println(
+                        "❌ JWT validation failed for: "
+                                + email
+                );
+
+                SecurityContextHolder.clearContext();
             }
 
         } catch (UsernameNotFoundException ex) {
@@ -93,7 +189,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             SecurityContextHolder.clearContext();
 
             System.out.println(
-                    "User not found for JWT: "
+                    "❌ User not found for JWT: "
                             + ex.getMessage()
             );
 
@@ -102,22 +198,38 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             SecurityContextHolder.clearContext();
 
             System.out.println(
-                    "JWT validation failed: "
+                    "❌ JWT processing failed: "
                             + ex.getMessage()
             );
         }
 
+        /*
+         * Continue request.
+         */
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * JWT priority:
+    /*
+     * =========================================================
+     * EXTRACT JWT
+     * =========================================================
+     *
+     * Priority:
+     *
      * 1. Authorization header
      * 2. jwt HttpOnly cookie
+     *
+     * The current frontend uses the HttpOnly cookie.
+     * Authorization support is retained for compatibility.
      */
-    private String extractToken(HttpServletRequest request) {
+    private String extractToken(
+            HttpServletRequest request) {
 
-        // 1. Authorization Header
+        /*
+         * =====================================================
+         * 1. AUTHORIZATION HEADER
+         * =====================================================
+         */
         String authorizationHeader =
                 request.getHeader("Authorization");
 
@@ -125,15 +237,27 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 && authorizationHeader.startsWith("Bearer ")) {
 
             String token =
-                    authorizationHeader.substring(7).trim();
+                    authorizationHeader
+                            .substring(7)
+                            .trim();
 
             if (!token.isBlank()) {
+
+                System.out.println(
+                        "🔑 JWT found in Authorization header"
+                );
+
                 return token;
             }
         }
 
-        // 2. JWT Cookie
-        Cookie[] cookies = request.getCookies();
+        /*
+         * =====================================================
+         * 2. JWT COOKIE
+         * =====================================================
+         */
+        Cookie[] cookies =
+                request.getCookies();
 
         if (cookies != null) {
 
@@ -141,10 +265,15 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
                 if ("jwt".equals(cookie.getName())) {
 
-                    String token = cookie.getValue();
+                    String token =
+                            cookie.getValue();
 
                     if (token != null
                             && !token.isBlank()) {
+
+                        System.out.println(
+                                "🍪 JWT found in HttpOnly cookie"
+                        );
 
                         return token;
                     }
@@ -152,6 +281,11 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             }
         }
 
+        /*
+         * =====================================================
+         * NO JWT
+         * =====================================================
+         */
         return null;
     }
 }

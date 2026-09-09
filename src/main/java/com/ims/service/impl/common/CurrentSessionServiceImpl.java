@@ -29,31 +29,48 @@ public class CurrentSessionServiceImpl implements CurrentSessionService {
 
             String type = jwtUtil.extractLoginType(token);
 
-            return CurrentSession.builder()
-                    .loginType(
-                            CurrentSession.LoginType.valueOf(type)
-                    )
-                    .userId(
-                            jwtUtil.extractUserId(token)
-                    )
-                    .employeeId(
-                            jwtUtil.extractEmployeeId(token)
-                    )
-                    .username(
-                            jwtUtil.extractEmail(token)
-                    )
-                    .role(
-                            jwtUtil.extractClaim(
-                                    token,
-                                    claims -> claims.get(
-                                            "role",
-                                            String.class
-                                    )
-                            )
-                    )
-                    .build();
+            if (type == null || type.isBlank()) {
+                throw new ValidationException("Missing login type");
+            }
+
+            CurrentSession.LoginType loginType =
+                    CurrentSession.LoginType.valueOf(type);
+
+            CurrentSession.CurrentSessionBuilder builder =
+                    CurrentSession.builder()
+                            .loginType(loginType)
+                            .username(jwtUtil.extractEmail(token))
+                            .role(jwtUtil.extractRole(token));
+
+            /*
+             * USER LOGIN
+             */
+            if (loginType == CurrentSession.LoginType.USER) {
+
+                builder.userId(
+                        jwtUtil.extractUserId(token)
+                );
+            }
+
+            /*
+             * EMPLOYEE LOGIN
+             */
+            if (loginType == CurrentSession.LoginType.EMPLOYEE) {
+
+                builder.employeeId(
+                        jwtUtil.extractEmployeeId(token)
+                );
+            }
+
+            return builder.build();
+
+        } catch (ValidationException ex) {
+
+            throw ex;
 
         } catch (Exception ex) {
+
+            ex.printStackTrace();
 
             throw new ValidationException(
                     "Invalid JWT token"
@@ -63,30 +80,48 @@ public class CurrentSessionServiceImpl implements CurrentSessionService {
 
     /**
      * JWT priority:
-     * <p>
+     *
      * 1. Authorization header
      * 2. HttpOnly jwt cookie
      */
     private String extractToken(HttpServletRequest request) {
 
+        /*
+         * ================================
+         * 1. Authorization Header
+         * ================================
+         */
         String authorizationHeader =
                 request.getHeader("Authorization");
 
-        System.out.println("Authorization Header = "
-                + authorizationHeader);
+        System.out.println(
+                "Authorization Header = "
+                        + authorizationHeader
+        );
 
         if (authorizationHeader != null
                 && authorizationHeader.startsWith("Bearer ")) {
 
             String token =
-                    authorizationHeader.substring(7).trim();
+                    authorizationHeader
+                            .substring(7)
+                            .trim();
 
             if (!token.isBlank()) {
-                System.out.println("JWT found in Authorization header");
+
+                System.out.println(
+                        "JWT found in Authorization header"
+                );
+
                 return token;
             }
         }
 
+        /*
+         * ================================
+         * 2. JWT Cookie
+         * ================================
+         */
         Cookie[] cookies = request.getCookies();
 
         if (cookies != null) {
@@ -100,9 +135,11 @@ public class CurrentSessionServiceImpl implements CurrentSessionService {
 
                 if ("jwt".equals(cookie.getName())) {
 
-                    String token = cookie.getValue();
+                    String token =
+                            cookie.getValue();
 
-                    if (token != null && !token.isBlank()) {
+                    if (token != null
+                            && !token.isBlank()) {
 
                         System.out.println(
                                 "JWT found in cookie"
@@ -114,31 +151,67 @@ public class CurrentSessionServiceImpl implements CurrentSessionService {
             }
         }
 
+        /*
+         * ================================
+         * No JWT
+         * ================================
+         */
         System.out.println("NO JWT FOUND");
 
         return null;
     }
 
+    /*
+     * ================================
+     * USER
+     * ================================
+     */
 
     @Override
     public boolean isUser() {
-        return getCurrentSession().getLoginType()
+
+        return getCurrentSession()
+                .getLoginType()
                 == CurrentSession.LoginType.USER;
     }
 
+    /*
+     * ================================
+     * EMPLOYEE
+     * ================================
+     */
+
     @Override
     public boolean isEmployee() {
-        return getCurrentSession().getLoginType()
+
+        return getCurrentSession()
+                .getLoginType()
                 == CurrentSession.LoginType.EMPLOYEE;
     }
 
+    /*
+     * ================================
+     * USER ID
+     * ================================
+     */
+
     @Override
     public Long getUserId() {
-        return getCurrentSession().getUserId();
+
+        return getCurrentSession()
+                .getUserId();
     }
+
+    /*
+     * ================================
+     * EMPLOYEE ID
+     * ================================
+     */
 
     @Override
     public Long getEmployeeId() {
-        return getCurrentSession().getEmployeeId();
+
+        return getCurrentSession()
+                .getEmployeeId();
     }
 }

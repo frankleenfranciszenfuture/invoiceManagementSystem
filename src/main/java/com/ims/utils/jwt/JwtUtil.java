@@ -22,38 +22,97 @@ public class JwtUtil {
     private String SECRET_KEY;
 
     private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
+
+        byte[] keyBytes =
+                Decoders.BASE64.decode(SECRET_KEY);
+
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateToken(UserDetails userDetails) {
-        Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, userDetails.getUsername());
+    /*
+     * ================================
+     * GENERATE TOKEN
+     * ================================
+     */
 
+    public String generateToken(
+            UserDetails userDetails) {
+
+        Map<String, Object> claims =
+                new HashMap<>();
+
+        return createToken(
+                claims,
+                userDetails.getUsername()
+        );
     }
 
-    public String generateUserToken(UserEntity user) {
+    /*
+     * ================================
+     * GENERATE USER TOKEN
+     * ================================
+     */
 
-        Map<String, Object> claims = new HashMap<>();
+    public String generateUserToken(
+            UserEntity user) {
 
-        claims.put("type", "USER");
-        claims.put("userId", user.getId());
-        claims.put("role", user.getRole().getRoleName());
-        return createToken(claims, user.getEmail());
+        Map<String, Object> claims =
+                new HashMap<>();
+
+        claims.put(
+                "type",
+                "USER"
+        );
+
+        claims.put(
+                "userId",
+                user.getId()
+        );
+
+        claims.put(
+                "role",
+                user.getRole().getRoleName()
+        );
+
+        return createToken(
+                claims,
+                user.getEmail()
+        );
     }
 
-    private String createToken(Map<String, Object> claims, String email) {
+    /*
+     * ================================
+     * CREATE TOKEN
+     * ================================
+     */
+
+    private String createToken(
+            Map<String, Object> claims,
+            String email) {
+
         return Jwts.builder()
                 .claims(claims)
                 .subject(email)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))
+                .expiration(
+                        new Date(
+                                System.currentTimeMillis()
+                                        + 1000L * 60 * 60 * 10
+                        )
+                )
                 .signWith(getSigningKey())
                 .compact();
     }
 
+    /*
+     * ================================
+     * EXTRACT ALL CLAIMS
+     * ================================
+     */
 
-    private Claims extractAllClaims(String token) {
+    private Claims extractAllClaims(
+            String token) {
+
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
@@ -61,52 +120,157 @@ public class JwtUtil {
                 .getPayload();
     }
 
-    public <T> T extractClaim(String token, Function<Claims, T> resolver) {
-        final Claims claims = extractAllClaims(token);
+    /*
+     * ================================
+     * GENERIC CLAIM
+     * ================================
+     */
+
+    public <T> T extractClaim(
+            String token,
+            Function<Claims, T> resolver) {
+
+        final Claims claims =
+                extractAllClaims(token);
+
         return resolver.apply(claims);
     }
 
-    public String extractEmail(String token) {
-        return extractClaim(token, Claims::getSubject);
+    /*
+     * ================================
+     * EMAIL
+     * ================================
+     */
+
+    public String extractEmail(
+            String token) {
+
+        return extractClaim(
+                token,
+                Claims::getSubject
+        );
     }
 
-    public Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
+    /*
+     * ================================
+     * EXPIRATION
+     * ================================
+     */
+
+    public Date extractExpiration(
+            String token) {
+
+        return extractClaim(
+                token,
+                Claims::getExpiration
+        );
     }
 
-    private boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+    /*
+     * ================================
+     * TOKEN EXPIRED
+     * ================================
+     */
+
+    private boolean isTokenExpired(
+            String token) {
+
+        return extractExpiration(token)
+                .before(new Date());
     }
 
-    public boolean validateToken(String token, UserDetails userDetails) {
+    /*
+     * ================================
+     * VALIDATE TOKEN
+     * ================================
+     */
 
-        final String email = extractEmail(token);
+    public boolean validateToken(
+            String token,
+            UserDetails userDetails) {
 
-        return (email.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        final String email =
+                extractEmail(token);
+
+        return email.equals(
+                userDetails.getUsername()
+        )
+                && !isTokenExpired(token);
     }
 
+    /*
+     * ================================
+     * LOGIN TYPE
+     * ================================
+     */
 
-    public String extractLoginType(String token) {
-        return extractClaim(token, claims -> claims.get("type", String.class));
+    public String extractLoginType(
+            String token) {
+
+        return extractClaim(
+                token,
+                claims ->
+                        claims.get(
+                                "type",
+                                String.class
+                        )
+        );
     }
 
-    public Long extractUserId(String token) {
-        return extractClaim(token, claims -> claims.get("userId", Long.class));
+    /*
+     * ================================
+     * USER ID
+     * ================================
+     */
+
+    public Long extractUserId(
+            String token) {
+
+        return extractClaim(
+                token,
+                claims ->
+                        claims.get(
+                                "userId",
+                                Long.class
+                        )
+        );
     }
 
-    public Long extractEmployeeId(String token) {
-        return extractClaim(token, claims -> claims.get("employeeId", Long.class));
+    /*
+     * ================================
+     * EMPLOYEE ID
+     * ================================
+     */
+
+    public Long extractEmployeeId(
+            String token) {
+
+        return extractClaim(
+                token,
+                claims ->
+                        claims.get(
+                                "employeeId",
+                                Long.class
+                        )
+        );
     }
 
-    public Long extractBranchId(String token) {
-        return extractClaim(token, claims -> claims.get("branchId", Long.class));
-    }
+    /*
+     * ================================
+     * ROLE
+     * ================================
+     */
 
-    public Long extractShopId(String token) {
-        return extractClaim(token, claims -> claims.get("shopId", Long.class));
-    }
+    public String extractRole(
+            String token) {
 
-    public Long extractFloorId(String token) {
-        return extractClaim(token, claims -> claims.get("floorId", Long.class));
+        return extractClaim(
+                token,
+                claims ->
+                        claims.get(
+                                "role",
+                                String.class
+                        )
+        );
     }
 }
