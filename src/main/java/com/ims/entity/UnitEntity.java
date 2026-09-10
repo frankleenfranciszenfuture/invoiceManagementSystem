@@ -1,6 +1,5 @@
 package com.ims.entity;
 
-
 import com.ims.enums.Status;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -14,16 +13,16 @@ import lombok.experimental.SuperBuilder;
         name = "units",
         indexes = {
                 @Index(
-                        name = "idx_unit_branch_name",
-                        columnList = "branch_id, unit_name"
+                        name = "idx_unit_name",
+                        columnList = "unit_name"
                 ),
                 @Index(
-                        name = "idx_unit_branch_short_name",
-                        columnList = "branch_id, unit_short_name"
+                        name = "idx_unit_short_name",
+                        columnList = "unit_short_name"
                 ),
                 @Index(
-                        name = "idx_unit_branch_code",
-                        columnList = "branch_id, unit_code"
+                        name = "idx_unit_code",
+                        columnList = "unit_code"
                 )
         }
 )
@@ -60,4 +59,10 @@ public class UnitEntity extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Status status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "product_id"
+    )
+    private ProductEntity product;
 }

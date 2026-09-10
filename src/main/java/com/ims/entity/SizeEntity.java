@@ -12,20 +12,17 @@ import lombok.experimental.SuperBuilder;
 @Table(
         name = "sizes",
         indexes = {
-
                 @Index(
-                        name = "idx_size_branch_name",
-                        columnList = "branch_id, size_name"
+                        name = "idx_size_name",
+                        columnList = "size_name"
                 ),
-
                 @Index(
-                        name = "idx_size_branch_short_name",
-                        columnList = "branch_id, size_short_name"
+                        name = "idx_size_short_name",
+                        columnList = "size_short_name"
                 ),
-
                 @Index(
-                        name = "idx_size_branch_code",
-                        columnList = "branch_id, size_code"
+                        name = "idx_size_code",
+                        columnList = "size_code"
                 )
         }
 )
@@ -69,8 +66,12 @@ public class SizeEntity extends BaseEntity {
     @Column(nullable = false)
     private Status status;
 
-    @Column(
-            name = "display_order"
-    )
+    @Column(name = "display_order")
     private Integer displayOrder;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "product_id"
+    )
+    private ProductEntity product;
 }
