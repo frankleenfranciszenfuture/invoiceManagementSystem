@@ -52,13 +52,15 @@ const NAV = [
         icon: Package,
         to: "/items",
         addTo: "/items/new",
-        queryKey: "status",
-        dropdown: true, // ← add this
+        basePath: "/items",
+        dropdown: true,
         children: [
-            { label: "All", status: "ALL" },
-            { label: "Active", status: "ACTIVE" },
-            { label: "Inactive", status: "INACTIVE" },
-            { label: "Draft", status: "DRAFT" },
+            { label: "Products", to: "/items" },
+            { label: "Categories", to: "/categories" },
+            { label: "Sub Categories", to: "/sub-categories" },
+            { label: "Brands", to: "/brands" },
+            { label: "Units", to: "/units" },
+            { label: "Taxes", to: "/taxes" },
         ],
     },
 
@@ -336,12 +338,38 @@ export default function Siderbar() {
                                 </div>
 
                                 {/* CHILDREN */}
+                                {/* CHILDREN */}
                                 {item.children && openMenu === item.label && (
                                     <div className="mt-1 flex flex-col">
                                         {item.children.map((child) => {
+                                            // Menu items that have their own route
+                                            if (child.to) {
+                                                const childActive =
+                                                    location.pathname === child.to ||
+                                                    location.pathname.startsWith(`${child.to}/`);
+
+                                                return (
+                                                    <NavLink
+                                                        key={`${item.label}-${child.label}`}
+                                                        to={child.to}
+                                                        className={`
+                            text-sm py-2 px-3 ml-6 rounded-md transition
+                            ${childActive
+                                                                ? "bg-white/10 text-white font-medium"
+                                                                : "text-gray-400 hover:bg-white/5 hover:text-white"
+                                                            }
+                        `}
+                                                        style={{ paddingLeft: "2.75rem" }}
+                                                    >
+                                                        {child.label}
+                                                    </NavLink>
+                                                );
+                                            }
+
+                                            // Status-filter menu items
                                             const search = new URLSearchParams(location.search);
 
-                                            const active =
+                                            const childActive =
                                                 location.pathname === item.basePath &&
                                                 search.get(item.queryKey) === child.status;
 
@@ -350,11 +378,13 @@ export default function Siderbar() {
                                                     key={`${item.label}-${child.status}`}
                                                     to={`${item.basePath}?${item.queryKey}=${child.status}`}
                                                     className={`
-                    text-sm py-2 px-3 ml-6 rounded-md transition
-                    ${active ? "bg-white/10 text-white font-medium" : "text-gray-400 hover:bg-white/5 hover:text-white"}
-            
+                        text-sm py-2 px-3 ml-6 rounded-md transition
+                        ${childActive
+                                                            ? "bg-white/10 text-white font-medium"
+                                                            : "text-gray-400 hover:bg-white/5 hover:text-white"
+                                                        }
                     `}
-                                                    style={{ paddingLeft: '2.75rem' }}
+                                                    style={{ paddingLeft: "2.75rem" }}
                                                 >
                                                     {child.label}
                                                 </NavLink>

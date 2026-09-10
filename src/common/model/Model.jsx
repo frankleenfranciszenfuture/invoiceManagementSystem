@@ -10,7 +10,7 @@ import { X } from "lucide-react";
 // import ChangeTemplateModal from "../../invoices/overViewCardInvoices/template/templates/ChangeTemplateModal";
 // import CustomerViewModal from "../pages/customers/CustomerViewModal";
 import AddContactPerson from "../../module/customer/overviewCard/model/AddContactPerson";
-
+import TaxMasterCreate from "../../module/taxMaster/pages/taxMasterCreate";
 
 export default function Modal() {
     const dispatch = useDispatch();
@@ -28,6 +28,7 @@ export default function Modal() {
         // viewCustomer: CustomerViewModal,
         // viewInvoice: ViewInvoiceModal,
         addContactPerson: AddContactPerson,
+        addTaxMaster: TaxMasterCreate,
     };
 
     const ModalComponent = modalMap[type];
