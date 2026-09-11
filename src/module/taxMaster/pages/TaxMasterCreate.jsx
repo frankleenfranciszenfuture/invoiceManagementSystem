@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { X } from "lucide-react";
 import toast from "react-hot-toast";
@@ -12,10 +12,10 @@ import {
 
 import {
     createTaxMaster,
+    updateTaxMaster,
 } from "../thunks/taxMasterThunks";
 
 export default function TaxMasterCreate() {
-
     const dispatch = useDispatch();
 
     const { modal } = useSelector(
@@ -29,22 +29,26 @@ export default function TaxMasterCreate() {
         (state) => state.taxMaster
     );
 
-    /* =====================================================
-       ONLY SHOW WHEN TAX MASTER MODAL IS OPEN
-    ===================================================== */
+    // =========================================================
+    // ADD / EDIT MODE
+    // =========================================================
 
-    if (
-        modal.type !== "addTaxMaster" ||
-        !modal.open
-    ) {
-        return null;
-    }
+    const isEdit =
+        modal.type === "editTaxMaster";
 
-    /* =====================================================
-       FORM
-    ===================================================== */
+    const isOpen =
+        modal.open &&
+        (
+            modal.type === "addTaxMaster" ||
+            modal.type === "editTaxMaster"
+        );
+
+    // =========================================================
+    // FORM
+    // =========================================================
 
     const form = taxMaster || {
+        id: null,
         taxName: "",
         taxType: "",
         taxRate: "",
@@ -55,82 +59,188 @@ export default function TaxMasterCreate() {
         status: "ACTIVE",
     };
 
-    /* =====================================================
-       CHANGE
-    ===================================================== */
+    // =========================================================
+    // CHANGE FIELD
+    // =========================================================
 
     const handleChange = (field, value) => {
-
         dispatch(
             setTaxMasterField({
                 field,
                 value,
             })
         );
-
     };
 
-    /* =====================================================
-       CLOSE
-    ===================================================== */
+    // =========================================================
+    // CLOSE MODAL
+    // =========================================================
 
     const handleClose = () => {
-
         dispatch(closeModal());
-
         dispatch(resetTaxMasterForm());
-
     };
 
-    /* =====================================================
-       SAVE
-    ===================================================== */
+    // =========================================================
+    // ESCAPE KEY
+    // =========================================================
+
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+
+        const handleEscape = (event) => {
+            if (event.key === "Escape") {
+                handleClose();
+            }
+        };
+
+        document.addEventListener(
+            "keydown",
+            handleEscape
+        );
+
+        return () => {
+            document.removeEventListener(
+                "keydown",
+                handleEscape
+            );
+        };
+    }, [isOpen]);
+
+    // =========================================================
+    // LOAD EXISTING DATA FOR EDIT
+    // =========================================================
+
+    useEffect(() => {
+        if (
+            modal.open &&
+            modal.type === "editTaxMaster" &&
+            modal.data
+        ) {
+            const tax = modal.data;
+
+            dispatch(
+                setTaxMasterField({
+                    field: "id",
+                    value: tax.id ?? null,
+                })
+            );
+
+            dispatch(
+                setTaxMasterField({
+                    field: "taxName",
+                    value: tax.taxName ?? "",
+                })
+            );
+
+            dispatch(
+                setTaxMasterField({
+                    field: "taxType",
+                    value: tax.taxType ?? "",
+                })
+            );
+
+            dispatch(
+                setTaxMasterField({
+                    field: "taxRate",
+                    value: tax.taxRate ?? "",
+                })
+            );
+
+            dispatch(
+                setTaxMasterField({
+                    field: "cgstRate",
+                    value: tax.cgstRate ?? "",
+                })
+            );
+
+            dispatch(
+                setTaxMasterField({
+                    field: "sgstRate",
+                    value: tax.sgstRate ?? "",
+                })
+            );
+
+            dispatch(
+                setTaxMasterField({
+                    field: "igstRate",
+                    value: tax.igstRate ?? "",
+                })
+            );
+
+            dispatch(
+                setTaxMasterField({
+                    field: "description",
+                    value: tax.description ?? "",
+                })
+            );
+
+            dispatch(
+                setTaxMasterField({
+                    field: "status",
+                    value: tax.status ?? "ACTIVE",
+                })
+            );
+        }
+    }, [
+        modal.open,
+        modal.type,
+        modal.data,
+        dispatch,
+    ]);
+
+    // =========================================================
+    // SAVE
+    // CREATE / UPDATE
+    // =========================================================
 
     const handleSave = async (e) => {
-
         e.preventDefault();
 
-        /* -------------------------
-           VALIDATION
-        ------------------------- */
+        // -----------------------------------------------------
+        // TAX NAME
+        // -----------------------------------------------------
 
         if (!form.taxName?.trim()) {
-
             toast.error("Tax name is required");
-
             return;
         }
+
+        // -----------------------------------------------------
+        // TAX TYPE
+        // -----------------------------------------------------
 
         if (!form.taxType) {
-
             toast.error("Tax type is required");
-
             return;
         }
+
+        // -----------------------------------------------------
+        // TAX RATE
+        // -----------------------------------------------------
 
         if (
             form.taxRate === "" ||
             Number(form.taxRate) <= 0
         ) {
-
             toast.error("Tax rate is required");
-
             return;
         }
 
-        /* -------------------------
-           CGST / SGST VALIDATION
-        ------------------------- */
+        // -----------------------------------------------------
+        // CGST + SGST
+        // -----------------------------------------------------
 
         if (form.taxType === "CGST_SGST") {
-
             if (
                 form.cgstRate === "" ||
                 Number(form.cgstRate) <= 0
             ) {
-
-                toast.error("CGST rate is required");
-
+                toast.error(
+                    "CGST rate is required"
+                );
                 return;
             }
 
@@ -138,9 +248,9 @@ export default function TaxMasterCreate() {
                 form.sgstRate === "" ||
                 Number(form.sgstRate) <= 0
             ) {
-
-                toast.error("SGST rate is required");
-
+                toast.error(
+                    "SGST rate is required"
+                );
                 return;
             }
 
@@ -152,28 +262,25 @@ export default function TaxMasterCreate() {
                 combinedRate !==
                 Number(form.taxRate)
             ) {
-
                 toast.error(
                     "CGST + SGST rate must equal Tax Rate"
                 );
-
                 return;
             }
         }
 
-        /* -------------------------
-           IGST VALIDATION
-        ------------------------- */
+        // -----------------------------------------------------
+        // IGST
+        // -----------------------------------------------------
 
         if (form.taxType === "IGST") {
-
             if (
                 form.igstRate === "" ||
                 Number(form.igstRate) <= 0
             ) {
-
-                toast.error("IGST rate is required");
-
+                toast.error(
+                    "IGST rate is required"
+                );
                 return;
             }
 
@@ -181,76 +288,133 @@ export default function TaxMasterCreate() {
                 Number(form.igstRate) !==
                 Number(form.taxRate)
             ) {
-
                 toast.error(
                     "IGST rate must equal Tax Rate"
                 );
-
                 return;
             }
         }
 
-        /* -------------------------
-           API
-        ------------------------- */
+        // -----------------------------------------------------
+        // PAYLOAD
+        // -----------------------------------------------------
+
+        const payload = {
+            taxName:
+                form.taxName.trim(),
+
+            taxType:
+                form.taxType,
+
+            taxRate:
+                Number(form.taxRate),
+
+            cgstRate:
+                form.taxType === "CGST_SGST"
+                    ? Number(form.cgstRate || 0)
+                    : 0,
+
+            sgstRate:
+                form.taxType === "CGST_SGST"
+                    ? Number(form.sgstRate || 0)
+                    : 0,
+
+            igstRate:
+                form.taxType === "IGST"
+                    ? Number(form.igstRate || 0)
+                    : 0,
+
+            description:
+                form.description?.trim() || "",
+
+            status:
+                form.status || "ACTIVE",
+        };
 
         try {
+            // =================================================
+            // EDIT
+            // =================================================
 
-            await dispatch(
-                createTaxMaster({
+            if (isEdit) {
+                const taxId =
+                    form.id ??
+                    modal.data?.id;
 
-                    taxName:
-                        form.taxName.trim(),
+                if (!taxId) {
+                    toast.error(
+                        "Tax master ID is missing"
+                    );
+                    return;
+                }
 
-                    taxType:
-                        form.taxType,
+                await dispatch(
+                    updateTaxMaster({
+                        id: taxId,
+                        data: payload,
+                    })
+                ).unwrap();
 
-                    taxRate:
-                        Number(form.taxRate),
+                toast.success(
+                    "Tax master updated successfully"
+                );
+            }
 
-                    cgstRate:
-                        form.taxType === "CGST_SGST"
-                            ? Number(form.cgstRate || 0)
-                            : 0,
+            // =================================================
+            // CREATE
+            // =================================================
 
-                    sgstRate:
-                        form.taxType === "CGST_SGST"
-                            ? Number(form.sgstRate || 0)
-                            : 0,
+            else {
+                await dispatch(
+                    createTaxMaster(payload)
+                ).unwrap();
 
-                    igstRate:
-                        form.taxType === "IGST"
-                            ? Number(form.igstRate || 0)
-                            : 0,
+                toast.success(
+                    "Tax master created successfully"
+                );
+            }
 
-                    description:
-                        form.description?.trim() || "",
-
-                    status:
-                        form.status || "ACTIVE",
-
-                })
-            ).unwrap();
-
-            toast.success(
-                "Tax master created successfully"
-            );
+            // =================================================
+            // CLOSE + RESET
+            // =================================================
 
             dispatch(closeModal());
 
-            dispatch(resetTaxMasterForm());
+            dispatch(
+                resetTaxMasterForm()
+            );
 
         } catch (error) {
+            console.error(
+                "Tax master save error:",
+                error
+            );
 
             toast.error(
                 typeof error === "string"
                     ? error
                     : error?.message ||
-                    "Failed to create tax master"
+                    error?.response?.data?.message ||
+                    (
+                        isEdit
+                            ? "Failed to update tax master"
+                            : "Failed to create tax master"
+                    )
             );
-
         }
     };
+
+    // =========================================================
+    // DO NOT RENDER
+    // =========================================================
+
+    if (!isOpen) {
+        return null;
+    }
+
+    // =========================================================
+    // UI
+    // =========================================================
 
     return (
         <div
@@ -260,36 +424,27 @@ export default function TaxMasterCreate() {
                 z-[100]
                 flex
                 items-center
-                justify-center
-                bg-black/40
+                justify-start
+                bg-black/25
+                pl-105
             "
-            onMouseDown={(e) => {
-
-                if (
-                    e.target === e.currentTarget
-                ) {
-                    handleClose();
-                }
-
-            }}
         >
-
             {/* =================================================
                 MODAL
             ================================================= */}
 
             <div
                 className="
-                    w-[850px]
-                    max-w-[95vw]
+                    w-[950px]
+                    h-[650px]
+                    max-w-[65vw]
                     bg-white
                     rounded-lg
                     shadow-2xl
                     overflow-hidden
+                    flex
+                    flex-col
                 "
-                onMouseDown={(e) =>
-                    e.stopPropagation()
-                }
             >
 
                 {/* =================================================
@@ -298,48 +453,86 @@ export default function TaxMasterCreate() {
 
                 <div
                     className="
+                        shrink-0
                         flex
                         items-center
                         justify-between
+                        px-6
+                        py-4
                         border-b
                         border-gray-200
-                        px-6
-                        py-5
+                        bg-blue-700
                     "
                 >
+                    <div>
+                        <h2
+                            className="
+                                text-[24px]
+                                font-semibold
+                                text-gray-100
+                            "
+                        >
+                            {isEdit
+                                ? "Edit Tax"
+                                : "Add New Tax"}
+                        </h2>
 
-                    <h2
-                        className="
-                            text-[24px]
-                            font-semibold
-                            text-gray-800
-                        "
-                    >
-                        Add Tax Master
-                    </h2>
+                        <p
+                            className="
+                                text-sm
+                                text-gray-100
+                                mt-1
+                            "
+                        >
+                            {isEdit
+                                ? "Update tax master details"
+                                : "Create a new tax master"}
+                        </p>
+                    </div>
 
                     <button
                         type="button"
                         onClick={handleClose}
                         className="
-                            text-red-500
-                            hover:text-red-600
+                            w-9
+                            h-9
+                            flex
+                            items-center
+                            justify-center
+                            rounded-md
+                            text-gray-100
+                            hover:bg-red-600
+                            hover:text-gray-100
                             transition
                         "
                     >
-                        <X size={22} strokeWidth={1.8} />
+                        <X size={30} />
                     </button>
-
                 </div>
 
                 {/* =================================================
                     FORM
                 ================================================= */}
 
-                <form onSubmit={handleSave}>
+                <form
+                    onSubmit={handleSave}
+                    className="
+                        flex
+                        flex-col
+                        flex-1
+                        min-h-0
+                    "
+                >
+
+                    {/* =================================================
+                        SCROLL BODY
+                    ================================================= */}
 
                     <div
                         className="
+                            flex-1
+                            min-h-0
+                            overflow-y-auto
                             px-6
                             py-6
                         "
@@ -349,28 +542,24 @@ export default function TaxMasterCreate() {
                             TAX NAME
                         ================================================= */}
 
-                        <div
-                            className="
-                                grid
-                                grid-cols-[170px_1fr]
-                                gap-4
-                                items-center
-                                mb-5
-                            "
-                        >
-
+                        <div className="mb-5">
                             <label
                                 className="
-                                    text-[15px]
+                                    block
+                                    text-sm
+                                    font-medium
                                     text-gray-700
+                                    mb-2
                                 "
                             >
                                 Tax Name
+                                <span className="text-red-500 ml-1">
+                                    *
+                                </span>
                             </label>
 
                             <input
                                 type="text"
-                                placeholder="Tax Name"
                                 value={
                                     form.taxName ?? ""
                                 }
@@ -380,284 +569,286 @@ export default function TaxMasterCreate() {
                                         e.target.value
                                     )
                                 }
+                                placeholder="Enter tax name"
                                 className="
                                     w-full
-                                    h-[42px]
+                                    h-11
+                                    px-3
                                     border
                                     border-gray-300
                                     rounded-md
-                                    px-3
-                                    text-[15px]
+                                    text-sm
                                     outline-none
                                     focus:border-blue-500
                                     focus:ring-1
                                     focus:ring-blue-500
                                 "
                             />
-
                         </div>
 
                         {/* =================================================
-                            TAX TYPE
+                            TAX TYPE + TAX RATE
                         ================================================= */}
 
                         <div
                             className="
                                 grid
-                                grid-cols-[170px_1fr]
-                                gap-4
-                                items-center
+                                grid-cols-2
+                                gap-5
                                 mb-5
                             "
                         >
 
-                            <label
-                                className="
-                                    text-[15px]
-                                    text-gray-700
-                                "
-                            >
-                                Tax Type
-                            </label>
+                            {/* TAX TYPE */}
 
-                            <select
-                                value={
-                                    form.taxType ?? ""
-                                }
-                                onChange={(e) =>
-                                    handleChange(
-                                        "taxType",
-                                        e.target.value
-                                    )
-                                }
-                                className="
-                                    w-full
-                                    h-[42px]
-                                    border
-                                    border-gray-300
-                                    rounded-md
-                                    px-3
-                                    text-[15px]
-                                    bg-white
-                                    outline-none
-                                    focus:border-blue-500
-                                    focus:ring-1
-                                    focus:ring-blue-500
-                                "
-                            >
-
-                                <option value="">
-                                    Select Tax Type
-                                </option>
-
-                                <option value="CGST_SGST">
-                                    CGST + SGST
-                                </option>
-
-                                <option value="IGST">
-                                    IGST
-                                </option>
-
-                            </select>
-
-                        </div>
-
-                        {/* =================================================
-                            TAX RATE
-                        ================================================= */}
-
-                        <div
-                            className="
-                                grid
-                                grid-cols-[170px_1fr]
-                                gap-4
-                                items-center
-                                mb-5
-                            "
-                        >
-
-                            <label
-                                className="
-                                    text-[15px]
-                                    text-gray-700
-                                "
-                            >
-                                Tax Rate (%)
-                            </label>
-
-                            <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                placeholder="Tax Rate"
-                                value={
-                                    form.taxRate ?? ""
-                                }
-                                onChange={(e) =>
-                                    handleChange(
-                                        "taxRate",
-                                        e.target.value
-                                    )
-                                }
-                                className="
-                                    w-full
-                                    h-[42px]
-                                    border
-                                    border-gray-300
-                                    rounded-md
-                                    px-3
-                                    text-[15px]
-                                    outline-none
-                                    focus:border-blue-500
-                                    focus:ring-1
-                                    focus:ring-blue-500
-                                "
-                            />
-
-                        </div>
-
-                        {/* =================================================
-                            CGST / SGST
-                        ================================================= */}
-
-                        {form.taxType === "CGST_SGST" && (
-                            <>
-
-                                <div
-                                    className="
-                                        grid
-                                        grid-cols-[170px_1fr]
-                                        gap-4
-                                        items-center
-                                        mb-5
-                                    "
-                                >
-
-                                    <label
-                                        className="
-                                            text-[15px]
-                                            text-gray-700
-                                        "
-                                    >
-                                        CGST Rate (%)
-                                    </label>
-
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        placeholder="CGST Rate"
-                                        value={
-                                            form.cgstRate ?? ""
-                                        }
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "cgstRate",
-                                                e.target.value
-                                            )
-                                        }
-                                        className="
-                                            w-full
-                                            h-[42px]
-                                            border
-                                            border-gray-300
-                                            rounded-md
-                                            px-3
-                                            text-[15px]
-                                            outline-none
-                                            focus:border-blue-500
-                                            focus:ring-1
-                                            focus:ring-blue-500
-                                        "
-                                    />
-
-                                </div>
-
-                                <div
-                                    className="
-                                        grid
-                                        grid-cols-[170px_1fr]
-                                        gap-4
-                                        items-center
-                                        mb-5
-                                    "
-                                >
-
-                                    <label
-                                        className="
-                                            text-[15px]
-                                            text-gray-700
-                                        "
-                                    >
-                                        SGST Rate (%)
-                                    </label>
-
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        placeholder="SGST Rate"
-                                        value={
-                                            form.sgstRate ?? ""
-                                        }
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "sgstRate",
-                                                e.target.value
-                                            )
-                                        }
-                                        className="
-                                            w-full
-                                            h-[42px]
-                                            border
-                                            border-gray-300
-                                            rounded-md
-                                            px-3
-                                            text-[15px]
-                                            outline-none
-                                            focus:border-blue-500
-                                            focus:ring-1
-                                            focus:ring-blue-500
-                                        "
-                                    />
-
-                                </div>
-
-                            </>
-                        )}
-
-                        {/* =================================================
-                            IGST
-                        ================================================= */}
-
-                        {form.taxType === "IGST" && (
-
-                            <div
-                                className="
-                                    grid
-                                    grid-cols-[170px_1fr]
-                                    gap-4
-                                    items-center
-                                    mb-5
-                                "
-                            >
-
+                            <div>
                                 <label
                                     className="
-                                        text-[15px]
+                                        block
+                                        text-sm
+                                        font-medium
                                         text-gray-700
+                                        mb-2
                                     "
                                 >
-                                    IGST Rate (%)
+                                    Tax Type
+                                    <span className="text-red-500 ml-1">
+                                        *
+                                    </span>
+                                </label>
+
+                                <select
+                                    value={
+                                        form.taxType ?? ""
+                                    }
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "taxType",
+                                            e.target.value
+                                        )
+                                    }
+                                    className="
+                                        w-full
+                                        h-11
+                                        px-3
+                                        border
+                                        border-gray-300
+                                        rounded-md
+                                        text-sm
+                                        bg-white
+                                        outline-none
+                                        focus:border-blue-500
+                                        focus:ring-1
+                                        focus:ring-blue-500
+                                    "
+                                >
+                                    <option value="">
+                                        Select Tax Type
+                                    </option>
+
+                                    <option value="CGST_SGST">
+                                        CGST + SGST
+                                    </option>
+
+                                    <option value="IGST">
+                                        IGST
+                                    </option>
+                                </select>
+                            </div>
+
+                            {/* TAX RATE */}
+
+                            <div>
+                                <label
+                                    className="
+                                        block
+                                        text-sm
+                                        font-medium
+                                        text-gray-700
+                                        mb-2
+                                    "
+                                >
+                                    Tax Rate (%)
+                                    <span className="text-red-500 ml-1">
+                                        *
+                                    </span>
                                 </label>
 
                                 <input
                                     type="number"
                                     min="0"
                                     step="0.01"
-                                    placeholder="IGST Rate"
                                     value={
-                                        form.igstRate ?? ""
+                                        form.taxRate ?? ""
+                                    }
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "taxRate",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Enter tax rate"
+                                    className="
+                                        w-full
+                                        h-11
+                                        px-3
+                                        border
+                                        border-gray-300
+                                        rounded-md
+                                        text-sm
+                                        outline-none
+                                        focus:border-blue-500
+                                        focus:ring-1
+                                        focus:ring-blue-500
+                                    "
+                                />
+                            </div>
+                        </div>
+
+                        {/* =================================================
+                            CGST + SGST
+                        ================================================= */}
+
+                        {form.taxType ===
+                            "CGST_SGST" && (
+                                <div
+                                    className="
+                                    grid
+                                    grid-cols-2
+                                    gap-5
+                                    mb-5
+                                "
+                                >
+
+                                    {/* CGST */}
+
+                                    <div>
+                                        <label
+                                            className="
+                                            block
+                                            text-sm
+                                            font-medium
+                                            text-gray-700
+                                            mb-2
+                                        "
+                                        >
+                                            CGST Rate (%)
+                                            <span className="text-red-500 ml-1">
+                                                *
+                                            </span>
+                                        </label>
+
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={
+                                                form.cgstRate ??
+                                                ""
+                                            }
+                                            onChange={(e) =>
+                                                handleChange(
+                                                    "cgstRate",
+                                                    e.target.value
+                                                )
+                                            }
+                                            placeholder="Enter CGST rate"
+                                            className="
+                                            w-full
+                                            h-11
+                                            px-3
+                                            border
+                                            border-gray-300
+                                            rounded-md
+                                            text-sm
+                                            outline-none
+                                            focus:border-blue-500
+                                            focus:ring-1
+                                            focus:ring-blue-500
+                                        "
+                                        />
+                                    </div>
+
+                                    {/* SGST */}
+
+                                    <div>
+                                        <label
+                                            className="
+                                            block
+                                            text-sm
+                                            font-medium
+                                            text-gray-700
+                                            mb-2
+                                        "
+                                        >
+                                            SGST Rate (%)
+                                            <span className="text-red-500 ml-1">
+                                                *
+                                            </span>
+                                        </label>
+
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={
+                                                form.sgstRate ??
+                                                ""
+                                            }
+                                            onChange={(e) =>
+                                                handleChange(
+                                                    "sgstRate",
+                                                    e.target.value
+                                                )
+                                            }
+                                            placeholder="Enter SGST rate"
+                                            className="
+                                            w-full
+                                            h-11
+                                            px-3
+                                            border
+                                            border-gray-300
+                                            rounded-md
+                                            text-sm
+                                            outline-none
+                                            focus:border-blue-500
+                                            focus:ring-1
+                                            focus:ring-blue-500
+                                        "
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                        {/* =================================================
+                            IGST
+                        ================================================= */}
+
+                        {form.taxType === "IGST" && (
+                            <div className="mb-5">
+
+                                <label
+                                    className="
+                                        block
+                                        text-sm
+                                        font-medium
+                                        text-gray-700
+                                        mb-2
+                                    "
+                                >
+                                    IGST Rate (%)
+                                    <span className="text-red-500 ml-1">
+                                        *
+                                    </span>
+                                </label>
+
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={
+                                        form.igstRate ??
+                                        ""
                                     }
                                     onChange={(e) =>
                                         handleChange(
@@ -665,54 +856,47 @@ export default function TaxMasterCreate() {
                                             e.target.value
                                         )
                                     }
+                                    placeholder="Enter IGST rate"
                                     className="
                                         w-full
-                                        h-[42px]
+                                        h-11
+                                        px-3
                                         border
                                         border-gray-300
                                         rounded-md
-                                        px-3
-                                        text-[15px]
+                                        text-sm
                                         outline-none
                                         focus:border-blue-500
                                         focus:ring-1
                                         focus:ring-blue-500
                                     "
                                 />
-
                             </div>
-
                         )}
 
                         {/* =================================================
                             DESCRIPTION
                         ================================================= */}
 
-                        <div
-                            className="
-                                grid
-                                grid-cols-[170px_1fr]
-                                gap-4
-                                items-start
-                                mb-5
-                            "
-                        >
+                        <div className="mb-5">
 
                             <label
                                 className="
-                                    text-[15px]
+                                    block
+                                    text-sm
+                                    font-medium
                                     text-gray-700
-                                    pt-2
+                                    mb-2
                                 "
                             >
                                 Description
                             </label>
 
                             <textarea
-                                rows={3}
-                                placeholder="Description"
+                                rows={4}
                                 value={
-                                    form.description ?? ""
+                                    form.description ??
+                                    ""
                                 }
                                 onChange={(e) =>
                                     handleChange(
@@ -720,41 +904,37 @@ export default function TaxMasterCreate() {
                                         e.target.value
                                     )
                                 }
+                                placeholder="Enter description"
                                 className="
                                     w-full
+                                    px-3
+                                    py-3
                                     border
                                     border-gray-300
                                     rounded-md
-                                    px-3
-                                    py-2
-                                    text-[15px]
-                                    resize-none
+                                    text-sm
                                     outline-none
+                                    resize-none
                                     focus:border-blue-500
                                     focus:ring-1
                                     focus:ring-blue-500
                                 "
                             />
-
                         </div>
 
                         {/* =================================================
                             STATUS
                         ================================================= */}
 
-                        <div
-                            className="
-                                grid
-                                grid-cols-[170px_1fr]
-                                gap-4
-                                items-center
-                            "
-                        >
+                        <div className="mb-2">
 
                             <label
                                 className="
-                                    text-[15px]
+                                    block
+                                    text-sm
+                                    font-medium
                                     text-gray-700
+                                    mb-2
                                 "
                             >
                                 Status
@@ -762,7 +942,8 @@ export default function TaxMasterCreate() {
 
                             <select
                                 value={
-                                    form.status || "ACTIVE"
+                                    form.status ??
+                                    "ACTIVE"
                                 }
                                 onChange={(e) =>
                                     handleChange(
@@ -772,12 +953,12 @@ export default function TaxMasterCreate() {
                                 }
                                 className="
                                     w-full
-                                    h-[42px]
+                                    h-11
+                                    px-3
                                     border
                                     border-gray-300
                                     rounded-md
-                                    px-3
-                                    text-[15px]
+                                    text-sm
                                     bg-white
                                     outline-none
                                     focus:border-blue-500
@@ -785,7 +966,6 @@ export default function TaxMasterCreate() {
                                     focus:ring-blue-500
                                 "
                             >
-
                                 <option value="ACTIVE">
                                     ACTIVE
                                 </option>
@@ -797,9 +977,7 @@ export default function TaxMasterCreate() {
                                 <option value="DRAFT">
                                     DRAFT
                                 </option>
-
                             </select>
-
                         </div>
 
                     </div>
@@ -810,58 +988,74 @@ export default function TaxMasterCreate() {
 
                     <div
                         className="
-                            border-t
-                            border-gray-200
-                            px-6
-                            py-4
+                            shrink-0
                             flex
                             items-center
+                            justify-end
                             gap-3
+                            px-6
+                            py-4
+                            border-t
+                            border-gray-200
+                            bg-white
                         "
                     >
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="
-                                bg-blue-600
-                                hover:bg-blue-700
-                                text-white
-                                px-6
-                                py-2.5
-                                rounded-md
-                                text-[15px]
-                                font-medium
-                                transition
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
-                            "
-                        >
-                            {loading
-                                ? "Saving..."
-                                : "Save"}
-                        </button>
+                        {/* CANCEL */}
 
                         <button
                             type="button"
                             onClick={handleClose}
                             disabled={loading}
                             className="
+                                h-10
+                                px-5
+                                rounded-md
                                 border
                                 border-gray-300
+                                text-sm
+                                font-medium
+                                text-gray-700
                                 bg-white
                                 hover:bg-gray-50
-                                text-gray-700
-                                px-6
-                                py-2.5
-                                rounded-md
-                                text-[15px]
-                                font-medium
                                 transition
                                 disabled:opacity-50
+                                disabled:cursor-not-allowed
                             "
                         >
                             Cancel
+                        </button>
+
+                        {/* SAVE / UPDATE */}
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="
+                                h-10
+                                px-6
+                                rounded-md
+                                bg-blue-600
+                                text-white
+                                text-sm
+                                font-medium
+                                hover:bg-blue-700
+                                transition
+                                disabled:opacity-50
+                                disabled:cursor-not-allowed
+                            "
+                        >
+                            {loading
+                                ? (
+                                    isEdit
+                                        ? "Updating..."
+                                        : "Saving..."
+                                )
+                                : (
+                                    isEdit
+                                        ? "Update"
+                                        : "Save"
+                                )}
                         </button>
 
                     </div>
@@ -869,7 +1063,6 @@ export default function TaxMasterCreate() {
                 </form>
 
             </div>
-
         </div>
     );
 }

@@ -113,7 +113,7 @@ export default function ProductTable({ products = [] }) {
 
             dispatch(setExsistingProduct(product));
 
-            navigate(`/products/edit/${product.id}`);
+            navigate(`/items/edit/${product.id}`);
 
         } catch (error) {
 

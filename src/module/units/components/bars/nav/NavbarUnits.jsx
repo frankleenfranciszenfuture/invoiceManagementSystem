@@ -19,13 +19,13 @@ import {
 } from "lucide-react";
 
 import {
-    setTaxMasterStatus,
-    setSelectedTaxMasterView,
-} from "../../../slices/taxMasterViewSlice";
+    setUnitStatus,
+    setSelectedUnitView,
+} from "../../../slices/unitViewSlice";
 
 import { openModal } from "../../../../ui/uiSlice";
 
-export default function NavbarTaxMaster() {
+export default function NavbarUnit() {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -43,22 +43,22 @@ export default function NavbarTaxMaster() {
         useRef(null);
 
     // ============================================================
-    // TAX MASTER VIEW STATE
+    // UNIT VIEW STATE
     // ============================================================
 
-    const selectedTaxMasterView = useSelector(
+    const selectedUnitView = useSelector(
         (state) =>
-            state.taxMasterView?.selectedTaxMasterView
+            state.unitView?.selectedUnitView
     );
 
     const views = useSelector(
         (state) =>
-            state.taxMasterView?.views ?? []
+            state.unitView?.views ?? []
     );
 
-    const taxMasterStatus = useSelector(
+    const unitStatus = useSelector(
         (state) =>
-            state.taxMasterView?.taxMasterStatus
+            state.unitView?.unitStatus
     );
 
     // ============================================================
@@ -105,16 +105,16 @@ export default function NavbarTaxMaster() {
     }, []);
 
     // ============================================================
-    // OPEN TAX MASTER CREATE MODAL
+    // OPEN UNIT CREATE MODAL
     // ============================================================
 
-    const handleNewTaxMaster = () => {
+    const handleNewUnit = () => {
 
         setMoreOpen(false);
 
         dispatch(
             openModal({
-                type: "addTaxMaster",
+                type: "addUnit",
             })
         );
     };
@@ -126,19 +126,19 @@ export default function NavbarTaxMaster() {
     const handleViewChange = (view) => {
 
         dispatch(
-            setSelectedTaxMasterView(
+            setSelectedUnitView(
                 view.label
             )
         );
 
         dispatch(
-            setTaxMasterStatus(
+            setUnitStatus(
                 view.value
             )
         );
 
         navigate(
-            `/tax-masters?taxMasterStatus=${view.value}`
+            `/units?unitStatus=${view.value}`
         );
 
         setDropdownOpen(false);
@@ -164,7 +164,7 @@ export default function NavbarTaxMaster() {
         ">
 
             {/* =====================================================
-                LEFT - TAX MASTER STATUS FILTER
+                LEFT - UNIT STATUS FILTER
             ====================================================== */}
 
             <div
@@ -191,9 +191,12 @@ export default function NavbarTaxMaster() {
                     "
                 >
 
-                    <h2 className=" font-semibold text-gray-100">
-                        {selectedTaxMasterView ||
-                            "All Tax Masters"}
+                    <h2 className="
+                        font-semibold
+                        text-gray-100
+                    ">
+                        {selectedUnitView ||
+                            "All Units"}
                     </h2>
 
                     <ChevronDown
@@ -257,7 +260,7 @@ export default function NavbarTaxMaster() {
                                             text-left
                                             hover:bg-blue-500
                                             hover:text-white
-                                            ${taxMasterStatus ===
+                                            ${unitStatus ===
                                                 view.value
                                                 ? "bg-blue-50 text-blue-600"
                                                 : ""
@@ -277,7 +280,6 @@ export default function NavbarTaxMaster() {
                         {/* =================================================
                             NEW VIEW
                         ================================================== */}
-
 
                         <button
                             type="button"
@@ -318,7 +320,7 @@ export default function NavbarTaxMaster() {
             ">
 
                 {/* =================================================
-                    NEW TAX MASTER
+                    NEW UNIT
                 ================================================== */}
 
                 <div className="
@@ -333,7 +335,7 @@ export default function NavbarTaxMaster() {
                     <button
                         type="button"
                         onClick={
-                            handleNewTaxMaster
+                            handleNewUnit
                         }
                         className="
                             flex
@@ -351,40 +353,9 @@ export default function NavbarTaxMaster() {
 
                         <Plus size={14} />
 
-                        New Tax
+                        New Unit
 
                     </button>
-
-                    {/* <button
-                        type="button"
-                        className="
-                            border-l
-                            border-blue-500
-                            bg-blue-600
-                            px-2
-                            text-white
-                            hover:bg-blue-700
-                        "
-                        onClick={() =>
-                            setDropdownOpen(
-                                false
-                            )
-                        }
-                    >
-
-                        <ChevronDown
-                            className={`
-                            text-gray-100
-                            transition
-                            ${dropdownOpen
-                                    ? "rotate-180"
-                                    : ""
-                                }
-                        `}
-                            size={14}
-                        />
-
-                    </button> */}
 
                 </div>
 
@@ -443,13 +414,13 @@ export default function NavbarTaxMaster() {
                         ">
 
                             {/* =========================================
-                                TAX MASTER
+                                UNIT
                             ========================================== */}
 
                             <button
                                 type="button"
                                 onClick={
-                                    handleNewTaxMaster
+                                    handleNewUnit
                                 }
                                 className="
                                     w-full
@@ -462,12 +433,12 @@ export default function NavbarTaxMaster() {
                                     hover:text-blue-600
                                 "
                             >
-                                Tax Master
+                                Unit
                             </button>
 
 
                             {/* =========================================
-                                ADD TAX
+                                ADD UNIT
                             ========================================== */}
 
                             <button
@@ -478,7 +449,7 @@ export default function NavbarTaxMaster() {
                                         false
                                     );
 
-                                    // Add Tax action
+                                    // Add Unit action
 
                                 }}
                                 className="
@@ -492,12 +463,12 @@ export default function NavbarTaxMaster() {
                                     hover:text-blue-600
                                 "
                             >
-                                Add Tax
+                                Add Unit
                             </button>
 
 
                             {/* =========================================
-                                TAX SETTINGS
+                                UNIT SETTINGS
                             ========================================== */}
 
                             <button
@@ -508,7 +479,7 @@ export default function NavbarTaxMaster() {
                                         false
                                     );
 
-                                    // Tax Settings action
+                                    // Unit Settings action
 
                                 }}
                                 className="
@@ -522,7 +493,7 @@ export default function NavbarTaxMaster() {
                                     hover:text-blue-600
                                 "
                             >
-                                Tax Settings
+                                Unit Settings
                             </button>
 
 

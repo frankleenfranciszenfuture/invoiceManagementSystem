@@ -1,15 +1,16 @@
+
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
 import {
-    fetchAllTaxMasters,
-    deleteTaxMaster,
-} from "../thunks/taxMasterThunks";
+    fetchAllSizes,
+    deleteSize,
+} from "../thunks/sizeThunks";
 
 import {
-    setExsistingTaxMaster,
-} from "../slices/taxMasterSlice";
+    setExsistingSize,
+} from "../slices/sizeSlice";
 
 import { openModal } from "../../ui/uiSlice";
 
@@ -17,14 +18,14 @@ import {
     ChevronDown,
     Edit,
     Trash2,
-    Receipt,
+    Ruler,
     Eye,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
-export default function TaxMasterTable({
-    taxMasters = [],
+export default function SizeTable({
+    sizes = [],
 }) {
 
     const dispatch = useDispatch();
@@ -39,7 +40,7 @@ export default function TaxMasterTable({
         error,
         pagination,
     } = useSelector(
-        (state) => state.taxMaster || {}
+        (state) => state.size || {}
     );
 
     const {
@@ -49,31 +50,31 @@ export default function TaxMasterTable({
         totalElements,
     } = pagination || {};
 
-    const currentTaxMasters =
-        taxMasters || [];
+    const currentSizes =
+        sizes || [];
 
     /* =====================================================
-       DELETE TAX MASTER
+       DELETE SIZE
     ===================================================== */
 
     const handleDelete = async (id) => {
 
-        if (!window.confirm("Delete this tax master?")) {
+        if (!window.confirm("Delete this size?")) {
             return;
         }
 
         try {
 
             await dispatch(
-                deleteTaxMaster(id)
+                deleteSize(id)
             ).unwrap();
 
             toast.success(
-                "Tax master deleted successfully"
+                "Size deleted successfully"
             );
 
             dispatch(
-                fetchAllTaxMasters()
+                fetchAllSizes()
             );
 
         } catch (error) {
@@ -82,62 +83,66 @@ export default function TaxMasterTable({
                 typeof error === "string"
                     ? error
                     : error?.message ||
-                    "Failed to delete tax master"
+                    "Failed to delete size"
             );
         }
     };
 
     /* =====================================================
-       VIEW TAX MASTER
+       VIEW SIZE
     ===================================================== */
 
-    const handleView = (taxMaster) => {
+    const handleView = (size) => {
 
         try {
 
             dispatch(
-                setExsistingTaxMaster(
-                    taxMaster
+                setExsistingSize(
+                    size
                 )
             );
 
             navigate(
-                `/tax-masters/view/${taxMaster.id}`
+                `/sizes/view/${size.id}`
             );
 
         } catch (error) {
 
             toast.error(
-                "Failed to open tax master"
+                "Failed to open size"
             );
         }
     };
 
     /* =====================================================
-       EDIT TAX MASTER
+       EDIT SIZE
     ===================================================== */
 
-    const handleEdit = (taxMaster) => {
+    const handleEdit = (size) => {
+
         try {
+
             dispatch(
                 openModal({
-                    type: "editTaxMaster",
-                    data: taxMaster,
+                    type: "editSize",
+                    data: size,
                 })
             );
+
         } catch (error) {
+
             toast.error(
-                "Failed to open tax master"
+                "Failed to open size"
             );
         }
     };
 
     /* =====================================================
-       TAX MASTER INITIALS
+       SIZE INITIALS
     ===================================================== */
 
-    const initials = (taxName) =>
-        taxName
+    const initials = (sizeName) =>
+        sizeName
             ?.split(" ")
             .map(
                 (word) =>
@@ -145,7 +150,7 @@ export default function TaxMasterTable({
             )
             .join("")
             .slice(0, 2)
-            .toUpperCase() || "TX";
+            .toUpperCase() || "SZ";
 
     /* =====================================================
        STATUS COLORS
@@ -164,18 +169,43 @@ export default function TaxMasterTable({
 
     };
 
-    /* =====================================================
-       TAX TYPE COLORS
-    ===================================================== */
 
-    const taxTypeColor = {
+    const getShortNameColor = (sizeName) => {
+        if (!sizeName) {
+            return "bg-gray-100 text-gray-700";
+        }
 
-        CGST_SGST:
-            "bg-blue-100 text-blue-700",
+        const hasNumber = /\d/.test(sizeName);
 
-        IGST:
-            "bg-purple-100 text-purple-700",
+        if (hasNumber) {
+            return "bg-blue-100 text-blue-700";
+        }
 
+        return "bg-purple-100 text-purple-700";
+    };
+
+
+    const getSizeCode = (sizeCode) => {
+        if (!sizeCode) {
+            return "bg-gray-100 text-gray-700";
+        }
+
+        const value = sizeCode.trim().toUpperCase();
+
+        // Get the last part after "-"
+        const lastPart = value.split("-").pop();
+
+        // Last part is only numbers → number color
+        if (/^\d+$/.test(lastPart)) {
+            return "bg-gray-100 text-orange-400";
+        }
+
+        // Last part contains letters → letter color
+        if (/^[A-Z]+$/.test(lastPart)) {
+            return "bg-gray-100 text-pink-400";
+        }
+
+        return "bg-gray-100 text-gray-700";
     };
 
     /* =====================================================
@@ -216,26 +246,6 @@ export default function TaxMasterTable({
     };
 
     /* =====================================================
-       FORMAT RATE
-    ===================================================== */
-
-    const formatRate = (
-        value
-    ) => {
-
-        if (
-            value === null ||
-            value === undefined ||
-            value === ""
-        ) {
-            return "0.00";
-        }
-
-        return Number(value)
-            .toFixed(2);
-    };
-
-    /* =====================================================
        LOADING
     ===================================================== */
 
@@ -243,15 +253,17 @@ export default function TaxMasterTable({
 
         return (
 
-            <div className="
-                flex
-                items-center
-                justify-center
-                py-10
-            ">
+            <div
+                className="
+                    flex
+                    items-center
+                    justify-center
+                    py-10
+                "
+            >
 
                 <p className="text-gray-500">
-                    Loading tax masters...
+                    Loading sizes...
                 </p>
 
             </div>
@@ -266,14 +278,16 @@ export default function TaxMasterTable({
 
         return (
 
-            <div className="
-                bg-white
-                rounded-xl
-                border
-                border-red-200
-                p-8
-                text-center
-            ">
+            <div
+                className="
+                    bg-white
+                    rounded-xl
+                    border
+                    border-red-200
+                    p-8
+                    text-center
+                "
+            >
 
                 <p className="text-red-500">
                     {error}
@@ -287,20 +301,22 @@ export default function TaxMasterTable({
        EMPTY STATE
     ===================================================== */
 
-    if (!currentTaxMasters.length) {
+    if (!currentSizes.length) {
 
         return (
 
-            <div className="
-                bg-white
-                rounded-2xl
-                border
-                border-gray-200
-                p-8
-                text-center
-            ">
+            <div
+                className="
+                    bg-white
+                    rounded-2xl
+                    border
+                    border-gray-200
+                    p-8
+                    text-center
+                "
+            >
 
-                <Receipt
+                <Ruler
                     className="
                         mx-auto
                         mb-3
@@ -311,7 +327,7 @@ export default function TaxMasterTable({
                 />
 
                 <p className="text-gray-500">
-                    No tax masters found.
+                    No sizes found.
                 </p>
 
             </div>
@@ -324,45 +340,55 @@ export default function TaxMasterTable({
 
     return (
 
-        <div className="
-            bg-white
-            rounded-xl
-            border
-            border-gray-200
-            overflow-visible
-            w-full
-        ">
+        <div
+            className="
+                bg-white
+                rounded-xl
+                border
+                border-gray-200
+                overflow-visible
+                w-full
+            "
+        >
 
             {/* =================================================
                 TABLE CONTAINER
             ================================================= */}
 
-            <div className="
-                w-full
-                overflow-visible
-            ">
-
-                <table className="
+            <div
+                className="
                     w-full
-                    table-fixed
-                    border-collapse
-                ">
+                    overflow-visible
+                "
+            >
+
+                <table
+                    className="
+                        w-full
+                        table-fixed
+                        border-collapse
+                    "
+                >
 
                     {/* =================================================
                         TABLE HEADER
                     ================================================= */}
 
-                    <thead className="
-                        bg-gray-100
-                        border-b
-                        border-gray-300
-                    ">
+                    <thead
+                        className="
+                            bg-gray-100
+                            border-b
+                            border-gray-300
+                        "
+                    >
 
                         <tr>
 
+                            {/* SIZE NAME */}
+
                             <th
                                 className="
-                                    w-[16%]
+                                    w-[25%]
                                     px-2
                                     py-3
                                     font-medium
@@ -372,12 +398,14 @@ export default function TaxMasterTable({
                                     text-left
                                 "
                             >
-                                Tax Name
+                                Size Name
                             </th>
+
+                            {/* SIZE SHORT NAME */}
 
                             <th
                                 className="
-                                    w-[10%]
+                                    w-[25%]
                                     px-2
                                     py-3
                                     font-medium
@@ -387,12 +415,14 @@ export default function TaxMasterTable({
                                     text-left
                                 "
                             >
-                                Tax Type
+                                Size Short Name
                             </th>
+
+                            {/* SIZE CODE */}
 
                             <th
                                 className="
-                                    w-[8%]
+                                    w-[40%]
                                     px-2
                                     py-3
                                     font-medium
@@ -402,57 +432,15 @@ export default function TaxMasterTable({
                                     text-left
                                 "
                             >
-                                Tax Rate
+                                Size Code
                             </th>
+
+
+                            {/* DESCRIPTION */}
 
                             <th
                                 className="
-                                    w-[7%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                CGST
-                            </th>
-
-                            <th
-                                className="
-                                    w-[7%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                SGST
-                            </th>
-
-                            <th
-                                className="
-                                    w-[7%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                IGST
-                            </th>
-
-                            <th
-                                className="
-                                    w-[20%]
+                                    w-[40%]
                                     px-2
                                     py-3
                                     font-medium
@@ -465,9 +453,11 @@ export default function TaxMasterTable({
                                 Description
                             </th>
 
+                            {/* STATUS */}
+
                             <th
                                 className="
-                                    w-[10%]
+                                    w-[15%]
                                     px-2
                                     py-3
                                     font-medium
@@ -480,9 +470,11 @@ export default function TaxMasterTable({
                                 Status
                             </th>
 
+                            {/* ACTIONS */}
+
                             <th
                                 className="
-                                    w-[15%]
+                                    w-[20%]
                                     px-2
                                     py-3
                                     font-medium
@@ -505,27 +497,23 @@ export default function TaxMasterTable({
 
                     <tbody>
 
-                        {[...currentTaxMasters]
+                        {[...currentSizes]
                             .sort(
                                 (a, b) =>
-                                    a.id - b.id
+                                    (a.id || 0) -
+                                    (b.id || 0)
                             )
                             .map(
                                 (
-                                    taxMaster,
+                                    size,
                                     index
                                 ) => (
 
                                     <tr
                                         key={
-                                            taxMaster.id ||
+                                            size.id ||
                                             index
                                         }
-                                        // onClick={() =>
-                                        //     handleView(
-                                        //         taxMaster
-                                        //     )
-                                        // }
                                         className="
                                             border-b
                                             border-gray-100
@@ -537,21 +525,27 @@ export default function TaxMasterTable({
                                     >
 
                                         {/* =================================
-                                            TAX NAME
+                                            SIZE NAME
                                         ================================= */}
 
-                                        <td className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                        ">
+                                        <td
+                                            className="
+                                                px-2
+                                                py-3
+                                                overflow-hidden
+                                            "
+                                        >
 
-                                            <div className="
-                                                flex
-                                                items-center
-                                                gap-2
-                                                min-w-0
-                                            ">
+                                            <div
+                                                className="
+                                                    flex
+                                                    items-center
+                                                    gap-2
+                                                    min-w-0
+                                                "
+                                            >
+
+                                                {/* AVATAR */}
 
                                                 <div
                                                     className={`
@@ -565,44 +559,53 @@ export default function TaxMasterTable({
                                                         text-sm
                                                         font-bold
                                                         ${getAvatarColor(
-                                                        taxMaster.taxName
+                                                        size.sizeName
                                                     )}
                                                     `}
                                                 >
+
                                                     {
                                                         initials(
-                                                            taxMaster.taxName
+                                                            size.sizeName
                                                         )
                                                     }
+
                                                 </div>
 
-                                                <div className="
-                                                    min-w-0
-                                                ">
+                                                {/* NAME */}
 
-                                                    <p className="
-                                                        font-medium
-                                                        text-gray-800
-                                                        truncate
+                                                <div
+                                                    className="
+                                                        min-w-0
                                                     "
+                                                >
+
+                                                    <p
+                                                        className="
+                                                            font-medium
+                                                            text-gray-800
+                                                            truncate
+                                                        "
                                                         title={
-                                                            taxMaster.taxName ||
+                                                            size.sizeName ||
                                                             ""
                                                         }
                                                     >
                                                         {
-                                                            taxMaster.taxName ||
+                                                            size.sizeName ||
                                                             "—"
                                                         }
                                                     </p>
 
-                                                    <p className="
-                                                        text-xs
-                                                        text-gray-500
-                                                    ">
+                                                    <p
+                                                        className="
+                                                            text-xs
+                                                            text-gray-500
+                                                        "
+                                                    >
                                                         ID: #
                                                         {
-                                                            taxMaster.id
+                                                            size.id
                                                         }
                                                     </p>
 
@@ -612,143 +615,94 @@ export default function TaxMasterTable({
 
                                         </td>
 
+
+
                                         {/* =================================
-                                            TAX TYPE
+                                            SIZE SHORT NAME
                                         ================================= */}
 
-                                        <td className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                        ">
-
-                                            <span
+                                        <td
+                                            className="
+                                                px-2
+                                                py-3
+                                                overflow-hidden
+                                            "
+                                        >
+                                            <p
                                                 className={`
-                                                    inline-block
-                                                    max-w-full
-                                                    px-2
-                                                    py-1
-                                                    rounded-full
-                                                    text-xs
-                                                    font-medium
-                                                    truncate
-                                                    ${taxTypeColor[
-                                                    taxMaster.taxType
-                                                    ] ||
-                                                    "bg-gray-100 text-gray-700"
-                                                    }
-                                                `}
-                                                title={
-                                                    taxMaster.taxType ||
-                                                    ""
-                                                }
+                                                        truncate
+                                                        inline-block
+                                                        px-2
+                                                        py-1
+                                                        rounded-md
+                                                        text-xs
+                                                        font-medium
+                                                        ${getShortNameColor(size.sizeShortName)}
+                                                    `}
+                                                title={size.sizeShortName || ""}
                                             >
-                                                {
-                                                    taxMaster.taxType ||
-                                                    "—"
-                                                }
-                                            </span>
-
+                                                {size.sizeShortName || "—"}
+                                            </p>
                                         </td>
 
                                         {/* =================================
-                                            TAX RATE
+                                            Size Code
                                         ================================= */}
-
-                                        <td className="
-                                            px-2
-                                            py-3
-                                            font-medium
-                                            whitespace-nowrap
-                                        ">
-                                            {formatRate(
-                                                taxMaster.taxRate
-                                            )}
-                                            %
+                                        <td
+                                            className="
+                                                px-2
+                                                py-3
+                                                overflow-hidden
+                                        "
+                                        >
+                                            <p
+                                                className={`
+                                                        inline-flex
+                                                        items-center
+                                                        w-fit
+                                                        px-2.5
+                                                        py-1
+                                                        rounded-md
+                                                        text-xs
+                                                        font-medium
+                                                        ${getSizeCode(size.sizeCode)}
+                                                    `}
+                                                title={size.sizeCode || ""}
+                                            >
+                                                {size.sizeCode || "—"}
+                                            </p>
                                         </td>
 
-                                        {/* =================================
-                                            CGST
-                                        ================================= */}
-
-                                        <td className="
-                                            px-2
-                                            py-3
-                                            whitespace-nowrap
-                                        ">
-                                            {formatRate(
-                                                taxMaster.cgstRate
-                                            )}
-                                            %
-                                        </td>
-
-                                        {/* =================================
-                                            SGST
-                                        ================================= */}
-
-                                        <td className="
-                                            px-2
-                                            py-3
-                                            whitespace-nowrap
-                                        ">
-                                            {formatRate(
-                                                taxMaster.sgstRate
-                                            )}
-                                            %
-                                        </td>
-
-                                        {/* =================================
-                                            IGST
-                                        ================================= */}
-
-                                        <td className="
-                                            px-2
-                                            py-3
-                                            whitespace-nowrap
-                                        ">
-                                            {formatRate(
-                                                taxMaster.igstRate
-                                            )}
-                                            %
-                                        </td>
 
                                         {/* =================================
                                             DESCRIPTION
                                         ================================= */}
-
-                                        <td className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                        ">
-
+                                        <td
+                                            className="
+                                                px-2
+                                                py-3
+                                                overflow-hidden
+                                        "
+                                        >
                                             <p
-                                                className="
-                                                    truncate
-                                                    text-gray-600
-                                                "
-                                                title={
-                                                    taxMaster.description ||
-                                                    ""
-                                                }
-                                            >
-                                                {
-                                                    taxMaster.description ||
-                                                    "—"
-                                                }
-                                            </p>
 
+                                                title={size.description || ""}
+                                            >
+                                                {size.description || "—"}
+                                            </p>
                                         </td>
 
                                         {/* =================================
                                             STATUS
                                         ================================= */}
 
-                                        <td className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                        ">
+                                        <td
+                                            className="
+                                                px-2
+                                                py-3
+                                                overflow-hidden
+                                            "
+                                        >
 
                                             <span
                                                 className={`
@@ -759,14 +713,14 @@ export default function TaxMasterTable({
                                                     text-xs
                                                     font-medium
                                                     ${statusColor[
-                                                    taxMaster.status
+                                                    size.status
                                                     ] ||
                                                     "bg-gray-100 text-gray-700"
                                                     }
                                                 `}
                                             >
                                                 {
-                                                    taxMaster.status ||
+                                                    size.status ||
                                                     "—"
                                                 }
                                             </span>
@@ -789,16 +743,20 @@ export default function TaxMasterTable({
                                             }
                                         >
 
-                                            <div className="
-                                                flex
-                                                justify-end
-                                            ">
+                                            <div
+                                                className="
+                                                    flex
+                                                    justify-end
+                                                "
+                                            >
 
-                                                <div className="
-                                                    relative
-                                                    group
-                                                    inline-block
-                                                ">
+                                                <div
+                                                    className="
+                                                        relative
+                                                        group
+                                                        inline-block
+                                                    "
+                                                >
 
                                                     {/* ACTION BUTTON */}
 
@@ -813,9 +771,11 @@ export default function TaxMasterTable({
                                                             transition-colors
                                                         "
                                                     >
+
                                                         <ChevronDown
                                                             size={16}
                                                         />
+
                                                     </button>
 
                                                     {/* =========================
@@ -838,13 +798,15 @@ export default function TaxMasterTable({
                                                         "
                                                     >
 
-                                                        <div className="
-                                                            w-36
-                                                            rounded-md
-                                                            bg-blue-500
-                                                            shadow-lg
-                                                            overflow-hidden
-                                                        ">
+                                                        <div
+                                                            className="
+                                                                w-36
+                                                                rounded-md
+                                                                bg-blue-500
+                                                                shadow-lg
+                                                                overflow-hidden
+                                                            "
+                                                        >
 
                                                             {/* VIEW */}
 
@@ -852,7 +814,7 @@ export default function TaxMasterTable({
                                                                 type="button"
                                                                 onClick={() =>
                                                                     handleView(
-                                                                        taxMaster
+                                                                        size
                                                                     )
                                                                 }
                                                                 className="
@@ -883,7 +845,7 @@ export default function TaxMasterTable({
                                                                 type="button"
                                                                 onClick={() =>
                                                                     handleEdit(
-                                                                        taxMaster
+                                                                        size
                                                                     )
                                                                 }
                                                                 className="
@@ -914,7 +876,7 @@ export default function TaxMasterTable({
                                                                 type="button"
                                                                 onClick={() =>
                                                                     handleDelete(
-                                                                        taxMaster.id
+                                                                        size.id
                                                                     )
                                                                 }
                                                                 className="
@@ -962,37 +924,43 @@ export default function TaxMasterTable({
                     PAGINATION
                 ===================================================== */}
 
-                <div className="
-                    p-4
-                    border-t
-                    border-gray-100
-                    flex
-                    items-center
-                    justify-between
-                ">
+                <div
+                    className="
+                        p-4
+                        border-t
+                        border-gray-100
+                        flex
+                        items-center
+                        justify-between
+                    "
+                >
 
-                    <p className="
-                        text-sm
-                        text-gray-500
-                    ">
+                    <p
+                        className="
+                            text-sm
+                            text-gray-500
+                        "
+                    >
 
                         Showing{" "}
 
-                        {currentTaxMasters.length}
+                        {currentSizes.length}
 
                         {" "}of{" "}
 
                         {totalElements || 0}
 
-                        {" "}tax masters
+                        {" "}sizes
 
                     </p>
 
-                    <div className="
-                        flex
-                        items-center
-                        gap-3
-                    ">
+                    <div
+                        className="
+                            flex
+                            items-center
+                            gap-3
+                        "
+                    >
 
                         {/* PREVIOUS */}
 
@@ -1017,18 +985,20 @@ export default function TaxMasterTable({
 
                         {/* CURRENT PAGE */}
 
-                        <span className="
-                            w-8
-                            h-8
-                            flex
-                            items-center
-                            justify-center
-                            rounded-lg
-                            bg-indigo-600
-                            text-white
-                            text-sm
-                            font-medium
-                        ">
+                        <span
+                            className="
+                                w-8
+                                h-8
+                                flex
+                                items-center
+                                justify-center
+                                rounded-lg
+                                bg-indigo-600
+                                text-white
+                                text-sm
+                                font-medium
+                            "
+                        >
 
                             {(Number(pageNumber) || 0) + 1}
 

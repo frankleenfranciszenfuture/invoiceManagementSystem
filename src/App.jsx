@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import "react-toastify/dist/ReactToastify.css";
@@ -28,8 +29,14 @@ import CustomerOverViewDashboard from "./module/customer/overviewCard/CustomerOv
 
 import ProductDashboard from "./module/items/pages/productDashboard";
 import ProductTable from "./module/items/pages/ProductTable";
-import TaxMasterCreate from "./module/taxMaster/pages/taxMasterCreate";
+
+// =====================================================
+// TAX MASTER
+// =====================================================
+
 import TaxMasterDashboard from "./module/taxMaster/pages/TaxMasterDashboard";
+import SizesDashboard from "./module/sizes/pages/SizesDashboard";
+import UnitDashboard from "./module/units/pages/UnitDashboard";
 
 export default function App() {
   const dispatch = useDispatch();
@@ -68,11 +75,6 @@ export default function App() {
 
         {/* =====================================================
                     PROTECTED APPLICATION ROUTES
-
-                    AppLayout provides:
-                    - Sidebar
-                    - Navbar
-                    - Main content
                 ===================================================== */}
 
         <Route
@@ -127,8 +129,8 @@ export default function App() {
           />
 
           {/* =================================================
-              PRODUCTS / ITEMS
-          ================================================= */}
+                        PRODUCTS / ITEMS
+                    ================================================= */}
 
           <Route
             path="/items"
@@ -141,22 +143,36 @@ export default function App() {
           />
 
           {/* =================================================
-              TAX MASTER
-          ================================================= */}
+                        TAX MASTER
+              ================================================= */}
 
           <Route
             path="/taxes"
             element={<TaxMasterDashboard />}
           />
 
+
+          {/* =================================================
+                        Sizes
+              ================================================= */}
+
           <Route
-            path="/items/taxes"
-            element={<TaxMasterCreate />}
+            path="/sizes"
+            element={<SizesDashboard />}
           />
+
+
+          {/* =================================================
+                        Units
+              ================================================= */}
+
+          <Route
+            path="/units"
+            element={<UnitDashboard />}
+          />
+
+
         </Route>
-
-
-
 
       </Routes>
 

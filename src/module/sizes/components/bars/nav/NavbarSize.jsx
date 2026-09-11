@@ -1,4 +1,3 @@
-
 import React, {
     useState,
     useEffect,
@@ -19,13 +18,13 @@ import {
 } from "lucide-react";
 
 import {
-    setTaxMasterStatus,
-    setSelectedTaxMasterView,
-} from "../../../slices/taxMasterViewSlice";
+    setSizeStatus,
+    setSelectedSizeView,
+} from "../../../slices/sizeViewSlice";
 
 import { openModal } from "../../../../ui/uiSlice";
 
-export default function NavbarTaxMaster() {
+export default function NavbarSize() {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -43,22 +42,22 @@ export default function NavbarTaxMaster() {
         useRef(null);
 
     // ============================================================
-    // TAX MASTER VIEW STATE
+    // SIZE VIEW STATE
     // ============================================================
 
-    const selectedTaxMasterView = useSelector(
+    const selectedSizeView = useSelector(
         (state) =>
-            state.taxMasterView?.selectedTaxMasterView
+            state.sizeView?.selectedSizeView
     );
 
     const views = useSelector(
         (state) =>
-            state.taxMasterView?.views ?? []
+            state.sizeView?.views ?? []
     );
 
-    const taxMasterStatus = useSelector(
+    const sizeStatus = useSelector(
         (state) =>
-            state.taxMasterView?.taxMasterStatus
+            state.sizeView?.sizeStatus
     );
 
     // ============================================================
@@ -105,16 +104,16 @@ export default function NavbarTaxMaster() {
     }, []);
 
     // ============================================================
-    // OPEN TAX MASTER CREATE MODAL
+    // OPEN SIZE CREATE MODAL
     // ============================================================
 
-    const handleNewTaxMaster = () => {
+    const handleNewSize = () => {
 
         setMoreOpen(false);
 
         dispatch(
             openModal({
-                type: "addTaxMaster",
+                type: "addSize",
             })
         );
     };
@@ -126,19 +125,19 @@ export default function NavbarTaxMaster() {
     const handleViewChange = (view) => {
 
         dispatch(
-            setSelectedTaxMasterView(
+            setSelectedSizeView(
                 view.label
             )
         );
 
         dispatch(
-            setTaxMasterStatus(
+            setSizeStatus(
                 view.value
             )
         );
 
         navigate(
-            `/tax-masters?taxMasterStatus=${view.value}`
+            `/ sizes ? sizeStatus = ${view.value} `
         );
 
         setDropdownOpen(false);
@@ -164,7 +163,7 @@ export default function NavbarTaxMaster() {
         ">
 
             {/* =====================================================
-                LEFT - TAX MASTER STATUS FILTER
+                LEFT - SIZE STATUS FILTER
             ====================================================== */}
 
             <div
@@ -191,9 +190,12 @@ export default function NavbarTaxMaster() {
                     "
                 >
 
-                    <h2 className=" font-semibold text-gray-100">
-                        {selectedTaxMasterView ||
-                            "All Tax Masters"}
+                    <h2 className="
+                        font-semibold
+                        text-gray-100
+                    ">
+                        {selectedSizeView ||
+                            "All Sizes"}
                     </h2>
 
                     <ChevronDown
@@ -205,7 +207,7 @@ export default function NavbarTaxMaster() {
                                 ? "rotate-180"
                                 : ""
                             }
-                        `}
+`}
                     />
 
                 </button>
@@ -248,21 +250,21 @@ export default function NavbarTaxMaster() {
                                             )
                                         }
                                         className={`
-                                            w-full
-                                            px-5
-                                            py-4
-                                            border-b
-                                            border-gray-50
-                                            rounded-lg
-                                            text-left
-                                            hover:bg-blue-500
-                                            hover:text-white
-                                            ${taxMasterStatus ===
+w - full
+px - 5
+py - 4
+border - b
+border - gray - 50
+rounded - lg
+text - left
+hover: bg - blue - 500
+hover: text - white
+                                            ${sizeStatus ===
                                                 view.value
                                                 ? "bg-blue-50 text-blue-600"
                                                 : ""
                                             }
-                                        `}
+`}
                                     >
 
                                         {view.label}
@@ -277,7 +279,6 @@ export default function NavbarTaxMaster() {
                         {/* =================================================
                             NEW VIEW
                         ================================================== */}
-
 
                         <button
                             type="button"
@@ -318,7 +319,7 @@ export default function NavbarTaxMaster() {
             ">
 
                 {/* =================================================
-                    NEW TAX MASTER
+                    NEW SIZE
                 ================================================== */}
 
                 <div className="
@@ -333,7 +334,7 @@ export default function NavbarTaxMaster() {
                     <button
                         type="button"
                         onClick={
-                            handleNewTaxMaster
+                            handleNewSize
                         }
                         className="
                             flex
@@ -351,40 +352,9 @@ export default function NavbarTaxMaster() {
 
                         <Plus size={14} />
 
-                        New Tax
+                        New Size
 
                     </button>
-
-                    {/* <button
-                        type="button"
-                        className="
-                            border-l
-                            border-blue-500
-                            bg-blue-600
-                            px-2
-                            text-white
-                            hover:bg-blue-700
-                        "
-                        onClick={() =>
-                            setDropdownOpen(
-                                false
-                            )
-                        }
-                    >
-
-                        <ChevronDown
-                            className={`
-                            text-gray-100
-                            transition
-                            ${dropdownOpen
-                                    ? "rotate-180"
-                                    : ""
-                                }
-                        `}
-                            size={14}
-                        />
-
-                    </button> */}
 
                 </div>
 
@@ -443,13 +413,13 @@ export default function NavbarTaxMaster() {
                         ">
 
                             {/* =========================================
-                                TAX MASTER
+                                SIZE
                             ========================================== */}
 
                             <button
                                 type="button"
                                 onClick={
-                                    handleNewTaxMaster
+                                    handleNewSize
                                 }
                                 className="
                                     w-full
@@ -462,12 +432,12 @@ export default function NavbarTaxMaster() {
                                     hover:text-blue-600
                                 "
                             >
-                                Tax Master
+                                Size
                             </button>
 
 
                             {/* =========================================
-                                ADD TAX
+                                ADD SIZE
                             ========================================== */}
 
                             <button
@@ -478,7 +448,7 @@ export default function NavbarTaxMaster() {
                                         false
                                     );
 
-                                    // Add Tax action
+                                    // Add Size action
 
                                 }}
                                 className="
@@ -492,12 +462,12 @@ export default function NavbarTaxMaster() {
                                     hover:text-blue-600
                                 "
                             >
-                                Add Tax
+                                Add Size
                             </button>
 
 
                             {/* =========================================
-                                TAX SETTINGS
+                                SIZE SETTINGS
                             ========================================== */}
 
                             <button
@@ -508,7 +478,7 @@ export default function NavbarTaxMaster() {
                                         false
                                     );
 
-                                    // Tax Settings action
+                                    // Size Settings action
 
                                 }}
                                 className="
@@ -522,7 +492,7 @@ export default function NavbarTaxMaster() {
                                     hover:text-blue-600
                                 "
                             >
-                                Tax Settings
+                                Size Settings
                             </button>
 
 

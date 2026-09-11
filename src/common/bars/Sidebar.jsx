@@ -59,6 +59,7 @@ const NAV = [
             { label: "Categories", to: "/categories" },
             { label: "Sub Categories", to: "/sub-categories" },
             { label: "Brands", to: "/brands" },
+            { label: "Sizes", to: "/sizes" },
             { label: "Units", to: "/units" },
             { label: "Taxes", to: "/taxes" },
         ],
