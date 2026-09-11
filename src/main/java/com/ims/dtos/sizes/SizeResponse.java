@@ -24,6 +24,8 @@ public class SizeResponse extends BaseResponse {
 
     private String sizeCode;
 
+    private String description;
+
     private Status status;
 
 }

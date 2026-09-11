@@ -23,6 +23,8 @@ public class UnitResponse extends BaseResponse {
 
     private String unitCode;
 
+    private String description;
+
     private Status status;
 
 }

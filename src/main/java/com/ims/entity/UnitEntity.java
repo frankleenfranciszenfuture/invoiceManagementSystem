@@ -56,6 +56,11 @@ public class UnitEntity extends BaseEntity {
     )
     private String unitShortName;
 
+    @Column(
+            length = 255
+    )
+    private String description;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Status status;

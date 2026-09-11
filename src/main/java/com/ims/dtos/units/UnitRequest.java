@@ -15,6 +15,8 @@ public class UnitRequest {
     @NotBlank(message = "Size short name is required")
     private String unitShortName;
 
+    private String description;
+
     private Status status;
 
 }

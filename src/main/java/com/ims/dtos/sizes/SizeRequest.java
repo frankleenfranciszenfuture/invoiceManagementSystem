@@ -17,4 +17,6 @@ public class SizeRequest {
     private String sizeShortName;
 
     private Status status;
+
+    private String description;
 }
