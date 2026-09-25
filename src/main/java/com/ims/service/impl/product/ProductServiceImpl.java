@@ -455,102 +455,71 @@ public class ProductServiceImpl implements ProductService {
 // UPDATE SIZES
 //=====================================================
 
-    private void updateSizes(
-            ProductEntity product,
-            ProductRequest request) {
+    private void updateSizes(ProductEntity product, ProductRequest request) {
 
+        // null = no change
         if (request.getSizeIds() == null) {
             return;
         }
 
         Set<Long> requestedSizeIds =
-                new HashSet<>(
-                        request.getSizeIds()
-                );
+                new HashSet<>(request.getSizeIds());
 
         Set<SizeEntity> existingSizes =
                 product.getSizes();
 
-        // =====================================================
-        // ADD / REACTIVATE
-        // =====================================================
-
+        // Activate requested sizes
         for (Long sizeId : requestedSizeIds) {
 
             Optional<SizeEntity> existing =
                     existingSizes.stream()
                             .filter(size ->
                                     size.getId() != null
-                                            && size.getId().equals(sizeId)
-                            )
+                                            && size.getId().equals(sizeId))
                             .findFirst();
 
             if (existing.isPresent()) {
 
-                SizeEntity size =
-                        existing.get();
+                SizeEntity size = existing.get();
 
-                size.setProduct(
-                        product
-                );
+                size.setProduct(product);
+                size.setStatus(Status.ACTIVE);
 
-                size.setStatus(
-                        Status.ACTIVE
-                );
-
-                baseEntityUtil.prepareForUpdate(
-                        size
-                );
+                baseEntityUtil.prepareForUpdate(size);
 
             } else {
 
                 SizeEntity size =
-                        productValidation.validateSize(
-                                sizeId
-                        );
+                        productValidation.validateSize(sizeId);
 
-                size.setProduct(
-                        product
-                );
+                size.setProduct(product);
+                size.setStatus(Status.ACTIVE);
 
-                size.setStatus(
-                        Status.ACTIVE
-                );
+                baseEntityUtil.prepareForUpdate(size);
 
-                baseEntityUtil.prepareForUpdate(
-                        size
-                );
-
-                existingSizes.add(
-                        size
-                );
+                existingSizes.add(size);
             }
         }
 
-        // =====================================================
-        // DEACTIVATE REMOVED SIZES
-        // =====================================================
+        // Deactivate sizes not present in request
+        Set<SizeEntity> sizeSnapshot =
+                new HashSet<>(existingSizes);
 
-        for (SizeEntity size : existingSizes) {
+        for (SizeEntity size : sizeSnapshot) {
 
             if (size.getId() == null) {
                 continue;
             }
 
-            if (!requestedSizeIds.contains(
-                    size.getId()
-            )) {
+            if (!requestedSizeIds.contains(size.getId())) {
 
-                size.setStatus(
-                        Status.INACTIVE
-                );
+                size.setStatus(Status.INACTIVE);
 
-                baseEntityUtil.prepareForUpdate(
-                        size
-                );
+                baseEntityUtil.prepareForUpdate(size);
             }
         }
     }
+
 
 //=====================================================
 // ADD UNITS
@@ -591,97 +560,67 @@ public class ProductServiceImpl implements ProductService {
 // UPDATE UNITS
 //=====================================================
 
-    private void updateUnits(
-            ProductEntity product,
-            ProductRequest request) {
+    private void updateUnits(ProductEntity product, ProductRequest request) {
+
+        // null = no change
+        if (request.getUnitIds() == null) {
+            return;
+        }
 
         Set<Long> requestedUnitIds =
-                request.getUnitIds() != null
-                        ? new HashSet<>(
-                        request.getUnitIds()
-                )
-                        : Collections.emptySet();
+                new HashSet<>(request.getUnitIds());
 
         Set<UnitEntity> existingUnits =
                 product.getUnits();
 
-        // =====================================================
-        // ADD / REACTIVATE
-        // =====================================================
-
+        // Activate requested units
         for (Long unitId : requestedUnitIds) {
 
             Optional<UnitEntity> existing =
                     existingUnits.stream()
                             .filter(unit ->
                                     unit.getId() != null
-                                            && unit.getId().equals(unitId)
-                            )
+                                            && unit.getId().equals(unitId))
                             .findFirst();
 
             if (existing.isPresent()) {
 
-                UnitEntity unit =
-                        existing.get();
+                UnitEntity unit = existing.get();
 
-                unit.setProduct(
-                        product
-                );
+                unit.setProduct(product);
+                unit.setStatus(Status.ACTIVE);
 
-                unit.setStatus(
-                        Status.ACTIVE
-                );
-
-                baseEntityUtil.prepareForUpdate(
-                        unit
-                );
+                baseEntityUtil.prepareForUpdate(unit);
 
             } else {
 
                 UnitEntity unit =
-                        productValidation.validateUnit(
-                                unitId
-                        );
+                        productValidation.validateUnit(unitId);
 
-                unit.setProduct(
-                        product
-                );
+                unit.setProduct(product);
+                unit.setStatus(Status.ACTIVE);
 
-                unit.setStatus(
-                        Status.ACTIVE
-                );
+                baseEntityUtil.prepareForUpdate(unit);
 
-                baseEntityUtil.prepareForUpdate(
-                        unit
-                );
-
-                existingUnits.add(
-                        unit
-                );
+                existingUnits.add(unit);
             }
         }
 
-        // =====================================================
-        // DEACTIVATE REMOVED UNITS
-        // =====================================================
+        // Deactivate units not present in request
+        Set<UnitEntity> unitSnapshot =
+                new HashSet<>(existingUnits);
 
-        for (UnitEntity unit : existingUnits) {
+        for (UnitEntity unit : unitSnapshot) {
 
             if (unit.getId() == null) {
                 continue;
             }
 
-            if (!requestedUnitIds.contains(
-                    unit.getId()
-            )) {
+            if (!requestedUnitIds.contains(unit.getId())) {
 
-                unit.setStatus(
-                        Status.INACTIVE
-                );
+                unit.setStatus(Status.INACTIVE);
 
-                baseEntityUtil.prepareForUpdate(
-                        unit
-                );
+                baseEntityUtil.prepareForUpdate(unit);
             }
         }
     }
@@ -1088,6 +1027,42 @@ public class ProductServiceImpl implements ProductService {
                         product
                 );
 
+        // =====================================================
+        // FILTER ACTIVE SIZES
+        // =====================================================
+
+        if (response.getSizes() != null) {
+
+            response.setSizes(
+                    response.getSizes()
+                            .stream()
+                            .filter(size ->
+                                    size.getStatus() == Status.ACTIVE
+                            )
+                            .toList()
+            );
+        }
+
+        // =====================================================
+        // FILTER ACTIVE UNITS
+        // =====================================================
+
+        if (response.getUnits() != null) {
+
+            response.setUnits(
+                    response.getUnits()
+                            .stream()
+                            .filter(unit ->
+                                    unit.getStatus() == Status.ACTIVE
+                            )
+                            .toList()
+            );
+        }
+
+        // =====================================================
+        // IMAGE URL
+        // =====================================================
+
         String imagePath =
                 response.getImageUrl();
 
@@ -1103,7 +1078,6 @@ public class ProductServiceImpl implements ProductService {
 
         return response;
     }
-
 
     //=====================================================
     // PAGE RESPONSE
