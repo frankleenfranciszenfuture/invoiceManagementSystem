@@ -57,7 +57,7 @@ const NAV = [
         children: [
             { label: "Products", to: "/items" },
             { label: "Categories", to: "/categories" },
-            { label: "Sub Categories", to: "/sub-categories" },
+            { label: "Sub Categories", to: "/subCategoires" },
             { label: "Brands", to: "/brands" },
             { label: "Sizes", to: "/sizes" },
             { label: "Units", to: "/units" },

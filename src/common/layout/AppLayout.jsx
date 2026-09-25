@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { Outlet, useLocation } from "react-router-dom";
@@ -10,48 +11,37 @@ import {
     hideLeaveDialog,
 } from "../../module/ui/uiSlice";
 
-
 import {
-    loading,
     resetCustomerForm,
     resetDirty,
 } from "../../module/customer/slices/customerSlices";
-
-import {
-    ChevronDown,
-    Plus,
-    Star,
-    Download,
-    MoreHorizontal,
-    UserCircle,
-    RefreshCw,
-    Check,
-    SearchIcon,
-    BadgeIndianRupee,
-} from "lucide-react";
-
 
 import UnsavedChangesDialog from "../dialogue/UnsavedChangesDialog";
 import InvoiceSkeleton from "../loader/InvoiceSkeleton";
 import Modal from "../model/Model";
 
 
-
 export default function AppLayout() {
 
-
-
-    const leaveDialog = useSelector(state => state.ui.leaveDialog);
+    const leaveDialog = useSelector(
+        (state) => state.ui.leaveDialog
+    );
 
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
-    const sidebarOpen = useSelector((s) => s.ui.sidebarOpen);
-    const user = useSelector((state) => state.auth.user);
+    const sidebarOpen = useSelector(
+        (state) => state.ui.sidebarOpen
+    );
 
-    const loading = useSelector((state) => state.auth.loading);
+    const user = useSelector(
+        (state) => state.auth.user
+    );
 
-    const tabs = ["Dashboard", "Recent Updates"];
+    const loading = useSelector(
+        (state) => state.auth.loading
+    );
+
     const location = useLocation();
 
     const pageTitle =
@@ -65,31 +55,38 @@ export default function AppLayout() {
 
 
     if (loading) {
-        return (
-
-            <InvoiceSkeleton />
-        );
+        return <InvoiceSkeleton />;
     }
+
 
     return (
         <div className="h-screen overflow-hidden bg-gray-50 flex">
+
             <Sidebar />
 
             <div
-                className={`flex-1 flex flex-col h-screen min-w-0 transition-all duration-300 ${sidebarOpen ? "lg:ml-60" : "lg:ml-16"
-                    }`}
+                className={`
+                flex-1
+                flex
+                flex-col
+                h-screen
+                min-w-0
+                transition-all
+                duration-300
+                ${sidebarOpen ? "lg:ml-60" : "lg:ml-16"}
+            `}
             >
                 <Navbar title={pageTitle} />
+
                 <main className="flex-1 overflow-auto">
                     <div className="h-full">
-                        {" "}
-                        {/* ⬅ was just <div>, give it h-full so children can use h-full */}
                         <Outlet />
-
                     </div>
                 </main>
-                <Modal />
             </div>
+
+            {/* MUST BE HERE */}
+            <Modal />
 
             <UnsavedChangesDialog
                 open={leaveDialog.open}
@@ -111,4 +108,3 @@ export default function AppLayout() {
         </div>
     );
 }
-

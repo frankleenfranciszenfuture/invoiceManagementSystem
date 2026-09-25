@@ -6,28 +6,32 @@ import toast from "react-hot-toast";
 import { closeModal } from "../../ui/uiSlice";
 
 import {
-    resetUnitForm,
-    setUnitField,
-} from "../slices/unitSlice";
+    resetSubCategoryForm,
+    setSubCategoryField,
+} from "../slices/subCategorySlice";
 
 import {
-    createUnit,
-    updateUnit,
-} from "../thunks/unitThunks";
+    createSubCategory,
+    updateSubCategory,
+} from "../thunks/subCategoryThunks";
 
-export default function UnitCreate() {
+export default function SubCategoryCreate() {
 
     const dispatch = useDispatch();
+
+    // =========================================================
+    // REDUX
+    // =========================================================
 
     const { modal } = useSelector(
         (state) => state.ui
     );
 
     const {
-        unit,
+        subCategory,
         loading,
     } = useSelector(
-        (state) => state.unit
+        (state) => state.subCategory
     );
 
     // =========================================================
@@ -35,24 +39,25 @@ export default function UnitCreate() {
     // =========================================================
 
     const isEdit =
-        modal.type === "editUnit";
+        modal.type === "editSubCategory";
 
     const isOpen =
         modal.open &&
         (
-            modal.type === "addUnit" ||
-            modal.type === "editUnit"
+            modal.type === "addSubCategory" ||
+            modal.type === "editSubCategory"
         );
 
     // =========================================================
     // FORM
     // =========================================================
 
-    const form = unit || {
+    const form = subCategory || {
         id: null,
-        unitName: "",
-        unitShortName: "",
+        categoryId: null,
+        name: "",
         description: "",
+        displayOrder: 1,
         status: "ACTIVE",
     };
 
@@ -63,7 +68,7 @@ export default function UnitCreate() {
     const handleChange = (field, value) => {
 
         dispatch(
-            setUnitField({
+            setSubCategoryField({
                 field,
                 value,
             })
@@ -77,10 +82,12 @@ export default function UnitCreate() {
 
     const handleClose = () => {
 
-        dispatch(closeModal());
+        dispatch(
+            closeModal()
+        );
 
         dispatch(
-            resetUnitForm()
+            resetSubCategoryForm()
         );
 
     };
@@ -127,63 +134,63 @@ export default function UnitCreate() {
 
         if (
             modal.open &&
-            modal.type === "editUnit" &&
+            modal.type === "editSubCategory" &&
             modal.data
         ) {
 
-            const existingUnit =
+            const existingSubCategory =
                 modal.data;
 
             dispatch(
-                setUnitField({
+                setSubCategoryField({
                     field: "id",
                     value:
-                        existingUnit.id ??
+                        existingSubCategory.id ??
                         null,
                 })
             );
 
             dispatch(
-                setUnitField({
-                    field: "unitName",
+                setSubCategoryField({
+                    field: "categoryId",
                     value:
-                        existingUnit.unitName ??
+                        existingSubCategory.categoryId ??
+                        null,
+                })
+            );
+
+            dispatch(
+                setSubCategoryField({
+                    field: "name",
+                    value:
+                        existingSubCategory.name ??
                         "",
                 })
             );
 
             dispatch(
-                setUnitField({
-                    field: "unitShortName",
-                    value:
-                        existingUnit.unitShortName ??
-                        "",
-                })
-            );
-
-            dispatch(
-                setUnitField({
-                    field: "unitCode",
-                    value:
-                        existingUnit.unitCode ??
-                        "",
-                })
-            );
-
-            dispatch(
-                setUnitField({
+                setSubCategoryField({
                     field: "description",
                     value:
-                        existingUnit.description ??
+                        existingSubCategory.description ??
                         "",
                 })
             );
 
             dispatch(
-                setUnitField({
+                setSubCategoryField({
+                    field: "displayOrder",
+                    value:
+                        existingSubCategory.displayOrder ??
+                        1,
+                })
+            );
+
+            dispatch(
+                setSubCategoryField({
                     field: "status",
                     value:
-                        existingUnit.status ??
+                        existingSubCategory.status ??
                         "ACTIVE",
                 })
             );
@@ -206,51 +213,70 @@ export default function UnitCreate() {
 
         e.preventDefault();
 
-        // -----------------------------------------------------
-        // UNIT NAME
-        // -----------------------------------------------------
+        // =====================================================
+        // CATEGORY
+        // =====================================================
 
-        if (!form.unitName?.trim()) {
+        if (!form.categoryId) {
 
             toast.error(
-                "Unit name is required"
+                "Category is required"
             );
 
             return;
         }
 
-        // -----------------------------------------------------
-        // UNIT SHORT NAME
-        // -----------------------------------------------------
+        // =====================================================
+        // NAME
+        // =====================================================
 
-        if (!form.unitShortName?.trim()) {
+        if (!form.name?.trim()) {
 
             toast.error(
-                "Unit short name is required"
+                "Sub category name is required"
             );
 
             return;
         }
 
-        // -----------------------------------------------------
+        // =====================================================
+        // DISPLAY ORDER
+        // =====================================================
+
+        const displayOrder =
+            Number(form.displayOrder);
+
+        if (
+            !Number.isInteger(displayOrder) ||
+            displayOrder < 1
+        ) {
+
+            toast.error(
+                "Display order must be a valid number greater than 0"
+            );
+
+            return;
+        }
+
+        // =====================================================
         // PAYLOAD
-        // -----------------------------------------------------
+        // =====================================================
 
         const payload = {
 
-            unitName:
-                form.unitName.trim(),
+            categoryId:
+                Number(form.categoryId),
 
-            unitShortName:
-                form.unitShortName.trim(),
+            name:
+                form.name.trim(),
 
             description:
                 form.description?.trim() ||
                 "",
 
-            status:
-                form.status ||
-                "ACTIVE",
+            displayOrder:
+                displayOrder,
+
         };
 
         try {
@@ -261,28 +287,28 @@ export default function UnitCreate() {
 
             if (isEdit) {
 
-                const unitId =
+                const subCategoryId =
                     form.id ??
                     modal.data?.id;
 
-                if (!unitId) {
+                if (!subCategoryId) {
 
                     toast.error(
-                        "Unit ID is missing"
+                        "Sub category ID is missing"
                     );
 
                     return;
                 }
 
                 await dispatch(
-                    updateUnit({
-                        id: unitId,
+                    updateSubCategory({
+                        id: subCategoryId,
                         data: payload,
                     })
                 ).unwrap();
 
                 toast.success(
-                    "Unit updated successfully"
+                    "Sub category updated successfully"
                 );
 
             }
@@ -294,11 +320,11 @@ export default function UnitCreate() {
             else {
 
                 await dispatch(
-                    createUnit(payload)
+                    createSubCategory(payload)
                 ).unwrap();
 
                 toast.success(
-                    "Unit created successfully"
+                    "Sub category created successfully"
                 );
 
             }
@@ -312,13 +338,13 @@ export default function UnitCreate() {
             );
 
             dispatch(
-                resetUnitForm()
+                resetSubCategoryForm()
             );
 
         } catch (error) {
 
             console.error(
-                "Unit save error:",
+                "Sub category save error:",
                 error
             );
 
@@ -329,8 +355,8 @@ export default function UnitCreate() {
                     error?.response?.data?.message ||
                     (
                         isEdit
-                            ? "Failed to update unit"
-                            : "Failed to create unit"
+                            ? "Failed to update sub category"
+                            : "Failed to create sub category"
                     )
             );
 
@@ -357,10 +383,15 @@ export default function UnitCreate() {
                 w-[950px]
                 h-[650px]
                 max-w-[65vw]
+
                 bg-white
+
                 rounded-lg
+
                 shadow-2xl
+
                 overflow-hidden
+
                 flex
                 flex-col
             "
@@ -373,13 +404,17 @@ export default function UnitCreate() {
             <div
                 className="
                     shrink-0
+
                     flex
                     items-center
                     justify-between
+
                     px-6
                     py-4
+
                     border-b
                     border-gray-200
+
                     bg-blue-700
                 "
             >
@@ -394,8 +429,8 @@ export default function UnitCreate() {
                         "
                     >
                         {isEdit
-                            ? "Edit Unit"
-                            : "Add New Unit"}
+                            ? "Edit Sub Category"
+                            : "Add New Sub Category"}
                     </h2>
 
                     <p
@@ -406,13 +441,15 @@ export default function UnitCreate() {
                         "
                     >
                         {isEdit
-                            ? "Update unit details"
-                            : "Create a new unit"}
+                            ? "Update sub category details"
+                            : "Create a new sub category"}
                     </p>
 
                 </div>
 
-                {/* CLOSE */}
+                {/* =================================================
+                    CLOSE BUTTON
+                ================================================= */}
 
                 {/* <button
                     type="button"
@@ -421,14 +458,20 @@ export default function UnitCreate() {
                     className="
                         w-9
                         h-9
+
                         flex
                         items-center
                         justify-center
+
                         rounded-md
+
                         text-gray-100
+
                         hover:bg-red-600
                         hover:text-gray-100
+
                         transition
+
                         disabled:opacity-50
                         disabled:cursor-not-allowed
                     "
@@ -462,14 +505,16 @@ export default function UnitCreate() {
                     className="
                         flex-1
                         min-h-0
+
                         overflow-y-auto
+
                         px-6
                         py-6
                     "
                 >
 
                     {/* =================================================
-                        UNIT NAME
+                        CATEGORY
                     ================================================= */}
 
                     <div className="mb-5">
@@ -484,7 +529,7 @@ export default function UnitCreate() {
                             "
                         >
 
-                            Unit Name
+                            Category
 
                             <span
                                 className="
@@ -497,38 +542,68 @@ export default function UnitCreate() {
 
                         </label>
 
-                        <input
-                            type="text"
+                        <select
                             value={
-                                form.unitName ??
+                                form.categoryId ??
                                 ""
                             }
                             onChange={(e) =>
                                 handleChange(
-                                    "unitName",
+                                    "categoryId",
                                     e.target.value
+                                        ? Number(e.target.value)
+                                        : null
                                 )
                             }
-                            placeholder="Enter unit name"
                             className="
                                 w-full
                                 h-11
+
                                 px-3
+
                                 border
                                 border-gray-300
+
                                 rounded-md
+
                                 text-sm
+
+                                bg-white
+
                                 outline-none
+
                                 focus:border-blue-500
                                 focus:ring-1
                                 focus:ring-blue-500
                             "
-                        />
+                        >
+
+                            <option value="">
+                                Select Category
+                            </option>
+
+                            {/* 
+                                Replace with categories
+                                from Redux.
+
+                                Example:
+
+                                {categories.map((category) => (
+                                    <option
+                                        key={category.id}
+                                        value={category.id}
+                                    >
+                                        {category.categoryName}
+                                    </option>
+                                ))}
+                            */}
+
+                        </select>
 
                     </div>
 
                     {/* =================================================
-                        UNIT SHORT NAME
+                        SUB CATEGORY NAME
                     ================================================= */}
 
                     <div className="mb-5">
@@ -543,7 +618,7 @@ export default function UnitCreate() {
                             "
                         >
 
-                            Unit Short Name
+                            Sub Category Name
 
                             <span
                                 className="
@@ -559,25 +634,31 @@ export default function UnitCreate() {
                         <input
                             type="text"
                             value={
-                                form.unitShortName ??
+                                form.name ??
                                 ""
                             }
                             onChange={(e) =>
                                 handleChange(
-                                    "unitShortName",
+                                    "name",
                                     e.target.value
                                 )
                             }
-                            placeholder="Enter unit short name"
+                            placeholder="Enter sub category name"
                             className="
                                 w-full
                                 h-11
+
                                 px-3
+
                                 border
                                 border-gray-300
+
                                 rounded-md
+
                                 text-sm
+
                                 outline-none
+
                                 focus:border-blue-500
                                 focus:ring-1
                                 focus:ring-blue-500
@@ -619,14 +700,87 @@ export default function UnitCreate() {
                             placeholder="Enter description"
                             className="
                                 w-full
+
                                 px-3
                                 py-3
+
                                 border
                                 border-gray-300
+
                                 rounded-md
+
                                 text-sm
+
                                 outline-none
+
                                 resize-none
+
+                                focus:border-blue-500
+                                focus:ring-1
+                                focus:ring-blue-500
+                            "
+                        />
+
+                    </div>
+
+                    {/* =================================================
+                        DISPLAY ORDER
+                    ================================================= */}
+
+                    <div className="mb-5">
+
+                        <label
+                            className="
+                                block
+                                text-sm
+                                font-medium
+                                text-gray-700
+                                mb-2
+                            "
+                        >
+
+                            Display Order
+
+                            <span
+                                className="
+                                    text-red-500
+                                    ml-1
+                                "
+                            >
+                                *
+                            </span>
+
+                        </label>
+
+                        <input
+                            type="number"
+                            min="1"
+                            value={
+                                form.displayOrder ??
+                                1
+                            }
+                            onChange={(e) =>
+                                handleChange(
+                                    "displayOrder",
+                                    e.target.value
+                                )
+                            }
+                            placeholder="Enter display order"
+                            className="
+                                w-full
+                                h-11
+
+                                px-3
+
+                                border
+                                border-gray-300
+
+                                rounded-md
+
+                                text-sm
+
+                                outline-none
+
                                 focus:border-blue-500
                                 focus:ring-1
                                 focus:ring-blue-500
@@ -667,13 +821,20 @@ export default function UnitCreate() {
                             className="
                                 w-full
                                 h-11
+
                                 px-3
+
                                 border
                                 border-gray-300
+
                                 rounded-md
+
                                 text-sm
+
                                 bg-white
+
                                 outline-none
+
                                 focus:border-blue-500
                                 focus:ring-1
                                 focus:ring-blue-500
@@ -705,19 +866,26 @@ export default function UnitCreate() {
                 <div
                     className="
                         shrink-0
+
                         flex
                         items-center
                         justify-end
+
                         gap-3
+
                         px-6
                         py-4
+
                         border-t
                         border-gray-200
+
                         bg-white
                     "
                 >
 
-                    {/* CANCEL */}
+                    {/* =================================================
+                        CANCEL
+                    ================================================= */}
 
                     <button
                         type="button"
@@ -726,15 +894,22 @@ export default function UnitCreate() {
                         className="
                             h-10
                             px-5
+
                             rounded-md
+
                             border
                             border-gray-300
+
                             text-sm
                             font-medium
                             text-gray-700
+
                             bg-white
+
                             hover:bg-gray-50
+
                             transition
+
                             disabled:opacity-50
                             disabled:cursor-not-allowed
                         "
@@ -742,7 +917,9 @@ export default function UnitCreate() {
                         Cancel
                     </button>
 
-                    {/* SAVE / UPDATE */}
+                    {/* =================================================
+                        SAVE / UPDATE
+                    ================================================= */}
 
                     <button
                         type="submit"
@@ -750,13 +927,20 @@ export default function UnitCreate() {
                         className="
                             h-10
                             px-6
+
                             rounded-md
+
                             bg-blue-600
+
                             text-white
+
                             text-sm
                             font-medium
+
                             hover:bg-blue-700
+
                             transition
+
                             disabled:opacity-50
                             disabled:cursor-not-allowed
                         "

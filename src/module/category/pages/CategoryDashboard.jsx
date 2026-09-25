@@ -1,63 +1,72 @@
-
 import React, { useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Plus, Download } from "lucide-react";
 
-import SizeTable from "./SizeTable";
-import NavbarSize from "../components/bars/nav/NavbarSize";
-
-import { fetchAllSizes } from "../thunks/sizeThunks";
+import CategoryTable from "./CategoryTable";
+import NavbarCategory from "../components/bars/nav/NavbarCategory";
 
 import {
-    setSizeStatus,
-    setSelectedSizeView,
-} from "../slices/sizeSlice";
+    fetchAllCategories,
+} from "../thunks/categoryThunks";
+
+import {
+    setCategoryStatus,
+    setSelectedCategoryView,
+} from "../slices/categorySlice";
 
 import { openModal } from "../../ui/uiSlice";
 
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
-import SizeCreate from "../pages/SizeCreate";
+// import CategoryCreate from "../pages/CategoryCreate";
 
-export default function SizeDashboard() {
+export default function CategoryDashboard() {
 
     const dispatch = useDispatch();
 
     // ============================================================
-    // SIZE STATE
+    // CATEGORY STATE
     // ============================================================
 
-    const sizesFromRedux = useSelector(
-        (state) => state.size?.sizes
+    const categoriesFromRedux = useSelector(
+        (state) => state.category?.categories
     );
 
-    const sizes = sizesFromRedux ?? [];
+    const categories =
+        categoriesFromRedux ?? [];
 
     const loading = useSelector(
-        (state) => state.size?.loading || false
+        (state) =>
+            state.category?.loading || false
     );
 
     const error = useSelector(
-        (state) => state.size?.error
-    );
-
-    // ============================================================
-    // SIZE FILTER STATE
-    // ============================================================
-
-    const sizeStatus = useSelector(
         (state) =>
-            state.sizeView?.sizeStatus || "ALL"
+            state.category?.error
     );
 
     // ============================================================
-    // FETCH SIZES
+    // CATEGORY FILTER STATE
+    // ============================================================
+
+    const categoryStatus = useSelector(
+        (state) =>
+            state.categoryView?.categoryStatus ||
+            "ALL"
+    );
+
+    // ============================================================
+    // FETCH CATEGORIES
     // ============================================================
 
     useEffect(() => {
 
-        console.log("Fetching sizes...");
+        console.log(
+            "Fetching categories..."
+        );
 
-        dispatch(fetchAllSizes());
+        dispatch(
+            fetchAllCategories()
+        );
 
     }, [dispatch]);
 
@@ -72,7 +81,7 @@ export default function SizeDashboard() {
         );
 
         const urlStatus =
-            params.get("sizeStatus");
+            params.get("categoryStatus");
 
         if (!urlStatus) {
             return;
@@ -88,23 +97,29 @@ export default function SizeDashboard() {
             "DRAFT",
         ];
 
-        if (!validStatuses.includes(normalizedStatus)) {
+        if (
+            !validStatuses.includes(
+                normalizedStatus
+            )
+        ) {
             return;
         }
 
         dispatch(
-            setSizeStatus(normalizedStatus)
+            setCategoryStatus(
+                normalizedStatus
+            )
         );
 
         const statusLabels = {
-            ALL: "All Sizes",
-            ACTIVE: "Active Sizes",
-            INACTIVE: "Inactive Sizes",
-            DRAFT: "Draft Sizes",
+            ALL: "All Categories",
+            ACTIVE: "Active Categories",
+            INACTIVE: "Inactive Categories",
+            DRAFT: "Draft Categories",
         };
 
         dispatch(
-            setSelectedSizeView(
+            setSelectedCategoryView(
                 statusLabels[normalizedStatus]
             )
         );
@@ -117,92 +132,108 @@ export default function SizeDashboard() {
 
     useEffect(() => {
 
-        console.log("================================");
         console.log(
-            "SIZES FROM REDUX:",
-            sizes
+            "================================"
         );
 
         console.log(
-            "SIZE LOADING:",
+            "CATEGORIES FROM REDUX:",
+            categories
+        );
+
+        console.log(
+            "CATEGORY LOADING:",
             loading
         );
 
         console.log(
-            "SIZE ERROR:",
+            "CATEGORY ERROR:",
             error
         );
 
         console.log(
-            "SIZE STATUS:",
-            sizeStatus
+            "CATEGORY STATUS:",
+            categoryStatus
         );
 
-        console.log("================================");
+        console.log(
+            "================================"
+        );
 
     }, [
-        sizes,
+        categories,
         loading,
         error,
-        sizeStatus,
+        categoryStatus,
     ]);
 
     // ============================================================
-    // FILTER SIZES BY STATUS
+    // FILTER CATEGORIES BY STATUS
     // ============================================================
 
-    const filteredSizes = useMemo(() => {
+    const filteredCategories = useMemo(() => {
 
         const selectedStatus =
-            String(sizeStatus || "ALL")
-                .toUpperCase();
+            String(
+                categoryStatus || "ALL"
+            ).toUpperCase();
 
         // ========================================================
         // ALL
         // ========================================================
 
-        if (selectedStatus === "ALL") {
-            return sizes;
+        if (
+            selectedStatus === "ALL"
+        ) {
+            return categories;
         }
 
         // ========================================================
         // FILTER
         // ========================================================
 
-        return sizes.filter((size) => {
+        return categories.filter(
+            (category) => {
 
-            const backendStatus =
-                String(size?.status || "")
-                    .toUpperCase();
+                const backendStatus =
+                    String(
+                        category?.status || ""
+                    ).toUpperCase();
 
-            console.log(
-                "Size:",
-                size?.sizeName,
-                "| Backend Status:",
-                backendStatus,
-                "| Selected Status:",
-                selectedStatus
-            );
+                console.log(
+                    "Category:",
+                    category?.categoryName,
+                    "| Backend Status:",
+                    backendStatus,
+                    "| Selected Status:",
+                    selectedStatus
+                );
 
-            return backendStatus === selectedStatus;
-        });
+                return (
+                    backendStatus ===
+                    selectedStatus
+                );
+            }
+        );
 
     }, [
-        sizes,
-        sizeStatus,
+        categories,
+        categoryStatus,
     ]);
 
     // ============================================================
-    // OPEN CREATE SIZE MODAL
+    // OPEN CREATE CATEGORY MODAL
     // ============================================================
 
-    const handleCreateSize = () => {
+    const handleCreateCategory = () => {
 
-        console.log("Opening Add Size modal");
+        console.log(
+            "Opening Add Category modal"
+        );
 
         dispatch(
             openModal({
-                type: "addSize",
+                type: "addCategory",
             })
         );
 
@@ -221,20 +252,43 @@ export default function SizeDashboard() {
     // ============================================================
 
     return (
-        <div className="flex h-screen bg-gray-50 font-sans text-[13px] overflow-hidden">
+        <div
+            className="
+                flex
+                h-screen
+                bg-gray-50
+                font-sans
+                text-[13px]
+                overflow-hidden
+            "
+        >
 
-            <div className="flex-1 min-h-0 bg-white overflow-y-auto">
+            <div
+                className="
+                    flex-1
+                    min-h-0
+                    bg-white
+                    overflow-y-auto
+                "
+            >
 
-                <div className="px-2 py-5 max-w-30xl w-full">
+                <div
+                    className="
+                        px-2
+                        py-5
+                        max-w-30xl
+                        w-full
+                    "
+                >
 
                     {/* =================================================
-                    SIZE NAVBAR
+                        CATEGORY NAVBAR
                     ================================================= */}
 
-                    <NavbarSize />
+                    <NavbarCategory />
 
                     {/* =================================================
-                    ERROR
+                        ERROR
                     ================================================= */}
 
                     {error && (
@@ -257,13 +311,15 @@ export default function SizeDashboard() {
                     )}
 
                     {/* =================================================
-                    SIZE TABLE / EMPTY STATE
+                        CATEGORY TABLE / EMPTY STATE
                     ================================================= */}
 
-                    {filteredSizes.length > 0 ? (
+                    {filteredCategories.length > 0 ? (
 
-                        <SizeTable
-                            sizes={filteredSizes}
+                        <CategoryTable
+                            categories={
+                                filteredCategories
+                            }
                         />
 
                     ) : (
@@ -281,7 +337,7 @@ export default function SizeDashboard() {
                         >
 
                             {/* =================================================
-                            EMPTY STATE ICON
+                                EMPTY STATE ICON
                             ================================================= */}
 
                             <div
@@ -300,8 +356,13 @@ export default function SizeDashboard() {
                                 "
                             >
 
-                                <div className="text-gray-400 text-4xl">
-                                    A
+                                <div
+                                    className="
+                                        text-gray-400
+                                        text-4xl
+                                    "
+                                >
+                                    C
                                 </div>
 
                                 <div
@@ -319,29 +380,51 @@ export default function SizeDashboard() {
                                         text-white
                                     "
                                 >
-                                    <Plus className="w-4 h-4" />
+
+                                    <Plus
+                                        className="
+                                            w-4
+                                            h-4
+                                        "
+                                    />
+
                                 </div>
 
                             </div>
 
                             {/* =================================================
-                            EMPTY STATE TITLE
+                                EMPTY STATE TITLE
                             ================================================= */}
 
-                            <p className="text-base font-medium text-gray-800 text-center">
-                                Every setup starts with a size
+                            <p
+                                className="
+                                    text-base
+                                    font-medium
+                                    text-gray-800
+                                    text-center
+                                "
+                            >
+                                Every product starts with a category
                             </p>
 
                             {/* =================================================
-                            EMPTY STATE DESCRIPTION
+                                EMPTY STATE DESCRIPTION
                             ================================================= */}
 
-                            <p className="text-sm text-gray-500 text-center max-w-sm">
-                                Create and manage your sizes in one place.
+                            <p
+                                className="
+                                    text-sm
+                                    text-gray-500
+                                    text-center
+                                    max-w-sm
+                                "
+                            >
+                                Create and manage your categories
+                                in one place.
                             </p>
 
                             {/* =================================================
-                            ACTION BUTTONS
+                                ACTION BUTTONS
                             ================================================= */}
 
                             <div
@@ -355,11 +438,13 @@ export default function SizeDashboard() {
                                 "
                             >
 
-                                {/* CREATE SIZE */}
+                                {/* CREATE CATEGORY */}
 
                                 <button
                                     type="button"
-                                    onClick={handleCreateSize}
+                                    onClick={
+                                        handleCreateCategory
+                                    }
                                     className="
                                         flex
                                         items-center
@@ -376,9 +461,16 @@ export default function SizeDashboard() {
                                         whitespace-nowrap
                                     "
                                 >
-                                    <Plus className="w-4 h-4" />
 
-                                    Create New Size
+                                    <Plus
+                                        className="
+                                            w-4
+                                            h-4
+                                        "
+                                    />
+
+                                    Create New Category
+
                                 </button>
 
                                 {/* IMPORT */}
@@ -402,9 +494,16 @@ export default function SizeDashboard() {
                                         whitespace-nowrap
                                     "
                                 >
-                                    <Download className="w-4 h-4" />
+
+                                    <Download
+                                        className="
+                                            w-4
+                                            h-4
+                                        "
+                                    />
 
                                     Import File
+
                                 </button>
 
                             </div>
@@ -417,10 +516,10 @@ export default function SizeDashboard() {
             </div>
 
             {/* =========================================================
-            SIZE CREATE / EDIT MODAL
+                CATEGORY CREATE / EDIT MODAL
             ========================================================= */}
 
-            {/* <SizeCreate /> */}
+            {/* <CategoryCreate /> */}
 
         </div>
     );

@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { X } from "lucide-react";
@@ -6,55 +7,65 @@ import toast from "react-hot-toast";
 import { closeModal } from "../../ui/uiSlice";
 
 import {
-    resetUnitForm,
-    setUnitField,
-} from "../slices/unitSlice";
+    resetCategoryForm,
+    setCategoryField,
+} from "../slices/categorySlice";
 
 import {
-    createUnit,
-    updateUnit,
-} from "../thunks/unitThunks";
+    createCategory,
+    updateCategory,
+} from "../thunks/categoryThunks";
 
-export default function UnitCreate() {
+
+export default function CategoryCreate() {
 
     const dispatch = useDispatch();
+
+
+    // =========================================================
+    // REDUX
+    // =========================================================
 
     const { modal } = useSelector(
         (state) => state.ui
     );
 
     const {
-        unit,
+        category,
         loading,
     } = useSelector(
-        (state) => state.unit
+        (state) => state.category
     );
+
 
     // =========================================================
     // ADD / EDIT MODE
     // =========================================================
 
     const isEdit =
-        modal.type === "editUnit";
+        modal.type === "editCategory";
 
     const isOpen =
         modal.open &&
         (
-            modal.type === "addUnit" ||
-            modal.type === "editUnit"
+            modal.type === "addCategory" ||
+            modal.type === "editCategory"
         );
+
 
     // =========================================================
     // FORM
     // =========================================================
 
-    const form = unit || {
+    const form = category || {
         id: null,
-        unitName: "",
-        unitShortName: "",
+        categoryCode: "",
+        categoryName: "",
         description: "",
+        displayOrder: 1,
         status: "ACTIVE",
     };
+
 
     // =========================================================
     // CHANGE FIELD
@@ -63,7 +74,7 @@ export default function UnitCreate() {
     const handleChange = (field, value) => {
 
         dispatch(
-            setUnitField({
+            setCategoryField({
                 field,
                 value,
             })
@@ -71,19 +82,23 @@ export default function UnitCreate() {
 
     };
 
+
     // =========================================================
     // CLOSE MODAL
     // =========================================================
 
     const handleClose = () => {
 
-        dispatch(closeModal());
+        dispatch(
+            closeModal()
+        );
 
         dispatch(
-            resetUnitForm()
+            resetCategoryForm()
         );
 
     };
+
 
     // =========================================================
     // ESCAPE KEY
@@ -119,6 +134,7 @@ export default function UnitCreate() {
 
     }, [isOpen]);
 
+
     // =========================================================
     // LOAD EXISTING DATA FOR EDIT
     // =========================================================
@@ -127,63 +143,69 @@ export default function UnitCreate() {
 
         if (
             modal.open &&
-            modal.type === "editUnit" &&
+            modal.type === "editCategory" &&
             modal.data
         ) {
 
-            const existingUnit =
+            const existingCategory =
                 modal.data;
 
+
             dispatch(
-                setUnitField({
+                setCategoryField({
                     field: "id",
                     value:
-                        existingUnit.id ??
+                        existingCategory.id ??
                         null,
                 })
             );
 
+
             dispatch(
-                setUnitField({
-                    field: "unitName",
+                setCategoryField({
+                    field: "categoryCode",
                     value:
-                        existingUnit.unitName ??
+                        existingCategory.categoryCode ??
                         "",
                 })
             );
 
+
             dispatch(
-                setUnitField({
-                    field: "unitShortName",
+                setCategoryField({
+                    field: "categoryName",
                     value:
-                        existingUnit.unitShortName ??
+                        existingCategory.categoryName ??
                         "",
                 })
             );
 
-            dispatch(
-                setUnitField({
-                    field: "unitCode",
-                    value:
-                        existingUnit.unitCode ??
-                        "",
-                })
-            );
 
             dispatch(
-                setUnitField({
+                setCategoryField({
                     field: "description",
                     value:
-                        existingUnit.description ??
+                        existingCategory.description ??
                         "",
                 })
             );
 
+
             dispatch(
-                setUnitField({
+                setCategoryField({
+                    field: "displayOrder",
+                    value:
+                        existingCategory.displayOrder ??
+                        1,
+                })
+            );
+
+
+            dispatch(
+                setCategoryField({
                     field: "status",
                     value:
-                        existingUnit.status ??
+                        existingCategory.status ??
                         "ACTIVE",
                 })
             );
@@ -197,6 +219,7 @@ export default function UnitCreate() {
         dispatch,
     ]);
 
+
     // =========================================================
     // SAVE
     // CREATE / UPDATE
@@ -206,52 +229,62 @@ export default function UnitCreate() {
 
         e.preventDefault();
 
-        // -----------------------------------------------------
-        // UNIT NAME
-        // -----------------------------------------------------
 
-        if (!form.unitName?.trim()) {
+        // =====================================================
+        // CATEGORY NAME
+        // =====================================================
+
+        if (!form.categoryName?.trim()) {
 
             toast.error(
-                "Unit name is required"
+                "Category name is required"
             );
 
             return;
         }
 
-        // -----------------------------------------------------
-        // UNIT SHORT NAME
-        // -----------------------------------------------------
 
-        if (!form.unitShortName?.trim()) {
+        // =====================================================
+        // DISPLAY ORDER
+        // =====================================================
+
+        const displayOrder =
+            Number(form.displayOrder);
+
+
+        if (
+            !Number.isInteger(displayOrder) ||
+            displayOrder < 1
+        ) {
 
             toast.error(
-                "Unit short name is required"
+                "Display order must be a valid number greater than 0"
             );
 
             return;
         }
 
-        // -----------------------------------------------------
+
+        // =====================================================
         // PAYLOAD
-        // -----------------------------------------------------
+        // =====================================================
 
         const payload = {
 
-            unitName:
-                form.unitName.trim(),
-
-            unitShortName:
-                form.unitShortName.trim(),
+            categoryName:
+                form.categoryName.trim(),
 
             description:
-                form.description?.trim() ||
-                "",
+                form.description?.trim() || "",
+
+            displayOrder:
+                displayOrder,
 
             status:
-                form.status ||
-                "ACTIVE",
+                form.status || "ACTIVE",
+
         };
+
 
         try {
 
@@ -261,31 +294,35 @@ export default function UnitCreate() {
 
             if (isEdit) {
 
-                const unitId =
+                const categoryId =
                     form.id ??
                     modal.data?.id;
 
-                if (!unitId) {
+
+                if (!categoryId) {
 
                     toast.error(
-                        "Unit ID is missing"
+                        "Category ID is missing"
                     );
 
                     return;
                 }
 
+
                 await dispatch(
-                    updateUnit({
-                        id: unitId,
+                    updateCategory({
+                        id: categoryId,
                         data: payload,
                     })
                 ).unwrap();
 
+
                 toast.success(
-                    "Unit updated successfully"
+                    "Category updated successfully"
                 );
 
             }
+
 
             // =================================================
             // CREATE
@@ -294,14 +331,16 @@ export default function UnitCreate() {
             else {
 
                 await dispatch(
-                    createUnit(payload)
+                    createCategory(payload)
                 ).unwrap();
 
+
                 toast.success(
-                    "Unit created successfully"
+                    "Category created successfully"
                 );
 
             }
+
 
             // =================================================
             // CLOSE + RESET
@@ -312,15 +351,16 @@ export default function UnitCreate() {
             );
 
             dispatch(
-                resetUnitForm()
+                resetCategoryForm()
             );
 
         } catch (error) {
 
             console.error(
-                "Unit save error:",
+                "Category save error:",
                 error
             );
+
 
             toast.error(
                 typeof error === "string"
@@ -329,14 +369,15 @@ export default function UnitCreate() {
                     error?.response?.data?.message ||
                     (
                         isEdit
-                            ? "Failed to update unit"
-                            : "Failed to create unit"
+                            ? "Failed to update category"
+                            : "Failed to create category"
                     )
             );
 
         }
 
     };
+
 
     // =========================================================
     // DO NOT RENDER
@@ -346,6 +387,7 @@ export default function UnitCreate() {
         return null;
     }
 
+
     // =========================================================
     // UI
     // =========================================================
@@ -354,12 +396,9 @@ export default function UnitCreate() {
 
         <div
             className="
-                w-[950px]
-                h-[650px]
-                max-w-[65vw]
+                w-full
                 bg-white
-                rounded-lg
-                shadow-2xl
+                rounded-xl
                 overflow-hidden
                 flex
                 flex-col
@@ -373,13 +412,17 @@ export default function UnitCreate() {
             <div
                 className="
                     shrink-0
+
                     flex
                     items-center
                     justify-between
+
                     px-6
                     py-4
+
                     border-b
                     border-gray-200
+
                     bg-blue-700
                 "
             >
@@ -394,9 +437,10 @@ export default function UnitCreate() {
                         "
                     >
                         {isEdit
-                            ? "Edit Unit"
-                            : "Add New Unit"}
+                            ? "Edit Category"
+                            : "Add New Category"}
                     </h2>
+
 
                     <p
                         className="
@@ -406,39 +450,42 @@ export default function UnitCreate() {
                         "
                     >
                         {isEdit
-                            ? "Update unit details"
-                            : "Create a new unit"}
+                            ? "Update category details"
+                            : "Create a new category"}
                     </p>
 
                 </div>
 
-                {/* CLOSE */}
+
+                {/* =================================================
+                    CLOSE BUTTON
+                ================================================= */}
 
                 {/* <button
                     type="button"
                     onClick={handleClose}
-                    disabled={loading}
                     className="
                         w-9
                         h-9
+
                         flex
                         items-center
                         justify-center
+
                         rounded-md
+
                         text-gray-100
+
                         hover:bg-red-600
-                        hover:text-gray-100
+
                         transition
-                        disabled:opacity-50
-                        disabled:cursor-not-allowed
                     "
                 >
-
                     <X size={30} />
-
                 </button> */}
 
             </div>
+
 
             {/* =================================================
                 FORM
@@ -449,27 +496,27 @@ export default function UnitCreate() {
                 className="
                     flex
                     flex-col
-                    flex-1
                     min-h-0
                 "
             >
 
                 {/* =================================================
-                    SCROLL BODY
+                    FORM BODY
                 ================================================= */}
 
                 <div
                     className="
-                        flex-1
-                        min-h-0
                         overflow-y-auto
+
                         px-6
                         py-6
+
+                        max-h-[60vh]
                     "
                 >
 
                     {/* =================================================
-                        UNIT NAME
+                        CATEGORY NAME
                     ================================================= */}
 
                     <div className="mb-5">
@@ -484,7 +531,7 @@ export default function UnitCreate() {
                             "
                         >
 
-                            Unit Name
+                            Category Name
 
                             <span
                                 className="
@@ -497,28 +544,34 @@ export default function UnitCreate() {
 
                         </label>
 
+
                         <input
                             type="text"
                             value={
-                                form.unitName ??
-                                ""
+                                form.categoryName ?? ""
                             }
                             onChange={(e) =>
                                 handleChange(
-                                    "unitName",
+                                    "categoryName",
                                     e.target.value
                                 )
                             }
-                            placeholder="Enter unit name"
+                            placeholder="Enter category name"
                             className="
                                 w-full
                                 h-11
+
                                 px-3
+
                                 border
                                 border-gray-300
+
                                 rounded-md
+
                                 text-sm
+
                                 outline-none
+
                                 focus:border-blue-500
                                 focus:ring-1
                                 focus:ring-blue-500
@@ -527,64 +580,6 @@ export default function UnitCreate() {
 
                     </div>
 
-                    {/* =================================================
-                        UNIT SHORT NAME
-                    ================================================= */}
-
-                    <div className="mb-5">
-
-                        <label
-                            className="
-                                block
-                                text-sm
-                                font-medium
-                                text-gray-700
-                                mb-2
-                            "
-                        >
-
-                            Unit Short Name
-
-                            <span
-                                className="
-                                    text-red-500
-                                    ml-1
-                                "
-                            >
-                                *
-                            </span>
-
-                        </label>
-
-                        <input
-                            type="text"
-                            value={
-                                form.unitShortName ??
-                                ""
-                            }
-                            onChange={(e) =>
-                                handleChange(
-                                    "unitShortName",
-                                    e.target.value
-                                )
-                            }
-                            placeholder="Enter unit short name"
-                            className="
-                                w-full
-                                h-11
-                                px-3
-                                border
-                                border-gray-300
-                                rounded-md
-                                text-sm
-                                outline-none
-                                focus:border-blue-500
-                                focus:ring-1
-                                focus:ring-blue-500
-                            "
-                        />
-
-                    </div>
 
                     {/* =================================================
                         DESCRIPTION
@@ -604,11 +599,11 @@ export default function UnitCreate() {
                             Description
                         </label>
 
+
                         <textarea
                             rows={4}
                             value={
-                                form.description ??
-                                ""
+                                form.description ?? ""
                             }
                             onChange={(e) =>
                                 handleChange(
@@ -619,14 +614,20 @@ export default function UnitCreate() {
                             placeholder="Enter description"
                             className="
                                 w-full
+
                                 px-3
                                 py-3
+
                                 border
                                 border-gray-300
+
                                 rounded-md
+
                                 text-sm
+
                                 outline-none
                                 resize-none
+
                                 focus:border-blue-500
                                 focus:ring-1
                                 focus:ring-blue-500
@@ -634,6 +635,74 @@ export default function UnitCreate() {
                         />
 
                     </div>
+
+
+                    {/* =================================================
+                        DISPLAY ORDER
+                    ================================================= */}
+
+                    <div className="mb-5">
+
+                        <label
+                            className="
+                                block
+                                text-sm
+                                font-medium
+                                text-gray-700
+                                mb-2
+                            "
+                        >
+
+                            Display Order
+
+                            <span
+                                className="
+                                    text-red-500
+                                    ml-1
+                                "
+                            >
+                                *
+                            </span>
+
+                        </label>
+
+
+                        <input
+                            type="number"
+                            min="1"
+                            value={
+                                form.displayOrder ?? 1
+                            }
+                            onChange={(e) =>
+                                handleChange(
+                                    "displayOrder",
+                                    e.target.value
+                                )
+                            }
+                            placeholder="Enter display order"
+                            className="
+                                w-full
+                                h-11
+
+                                px-3
+
+                                border
+                                border-gray-300
+
+                                rounded-md
+
+                                text-sm
+
+                                outline-none
+
+                                focus:border-blue-500
+                                focus:ring-1
+                                focus:ring-blue-500
+                            "
+                        />
+
+                    </div>
+
 
                     {/* =================================================
                         STATUS
@@ -653,10 +722,10 @@ export default function UnitCreate() {
                             Status
                         </label>
 
+
                         <select
                             value={
-                                form.status ??
-                                "ACTIVE"
+                                form.status ?? "ACTIVE"
                             }
                             onChange={(e) =>
                                 handleChange(
@@ -667,13 +736,20 @@ export default function UnitCreate() {
                             className="
                                 w-full
                                 h-11
+
                                 px-3
+
                                 border
                                 border-gray-300
+
                                 rounded-md
+
                                 text-sm
+
                                 bg-white
+
                                 outline-none
+
                                 focus:border-blue-500
                                 focus:ring-1
                                 focus:ring-blue-500
@@ -698,6 +774,7 @@ export default function UnitCreate() {
 
                 </div>
 
+
                 {/* =================================================
                     FOOTER
                 ================================================= */}
@@ -705,19 +782,26 @@ export default function UnitCreate() {
                 <div
                     className="
                         shrink-0
+
                         flex
                         items-center
                         justify-end
+
                         gap-3
+
                         px-6
                         py-4
+
                         border-t
                         border-gray-200
+
                         bg-white
                     "
                 >
 
-                    {/* CANCEL */}
+                    {/* =================================================
+                        CANCEL
+                    ================================================= */}
 
                     <button
                         type="button"
@@ -726,15 +810,22 @@ export default function UnitCreate() {
                         className="
                             h-10
                             px-5
+
                             rounded-md
+
                             border
                             border-gray-300
+
                             text-sm
                             font-medium
                             text-gray-700
+
                             bg-white
+
                             hover:bg-gray-50
+
                             transition
+
                             disabled:opacity-50
                             disabled:cursor-not-allowed
                         "
@@ -742,7 +833,10 @@ export default function UnitCreate() {
                         Cancel
                     </button>
 
-                    {/* SAVE / UPDATE */}
+
+                    {/* =================================================
+                        SAVE / UPDATE
+                    ================================================= */}
 
                     <button
                         type="submit"
@@ -750,13 +844,20 @@ export default function UnitCreate() {
                         className="
                             h-10
                             px-6
+
                             rounded-md
+
                             bg-blue-600
+
                             text-white
+
                             text-sm
                             font-medium
+
                             hover:bg-blue-700
+
                             transition
+
                             disabled:opacity-50
                             disabled:cursor-not-allowed
                         "

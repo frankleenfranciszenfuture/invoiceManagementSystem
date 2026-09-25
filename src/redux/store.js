@@ -22,6 +22,8 @@ import unitReducer from "../module/units/slices/unitSlice";
 //product
 import productReducer from "../module/items/slices/productSlice";
 import productViewReducer from "../module/items/slices/productViewSlice";
+import subCategoryReducer from "../module/subCategory/slices/subCategorySlice";
+import categoryReducer from "../module/category/slices/categorySlice";
 
 export const store = configureStore({
   reducer: {
@@ -44,6 +46,14 @@ export const store = configureStore({
     //unit
 
     unit: unitReducer,
+
+    //subCategory
+
+    subCategory: subCategoryReducer,
+
+    //category
+
+    category: categoryReducer,
 
     //product
 

@@ -18,19 +18,13 @@ import {
 } from "lucide-react";
 
 import {
-    setProductStatus,
-    setSelectedProductView,
-} from "../../../slices/productViewSlice";
+    setSubCategoryStatus,
+    setSelectedSubCategoryView,
+} from "../../../slices/subCategoryViewSlice";
 
 import { openModal } from "../../../../ui/uiSlice";
 
-// ============================================================
-// STABLE EMPTY ARRAY
-// ============================================================
-
-const EMPTY_VIEWS = [];
-
-export default function NavbarProduct() {
+export default function NavbarSubCategory() {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -48,22 +42,22 @@ export default function NavbarProduct() {
         useRef(null);
 
     // ============================================================
-    // PRODUCT VIEW STATE
+    // SUB CATEGORY VIEW STATE
     // ============================================================
 
-    const selectedProductView = useSelector(
+    const selectedSubCategoryView = useSelector(
         (state) =>
-            state.productView?.selectedProductView
+            state.subCategoryView?.selectedSubCategoryView
     );
 
     const views = useSelector(
         (state) =>
-            state.productView?.views ?? EMPTY_VIEWS
+            state.subCategoryView?.views ?? []
     );
 
-    const productStatus = useSelector(
+    const subCategoryStatus = useSelector(
         (state) =>
-            state.productView?.productStatus
+            state.subCategoryView?.subCategoryStatus
     );
 
     // ============================================================
@@ -110,17 +104,16 @@ export default function NavbarProduct() {
     }, []);
 
     // ============================================================
-    // OPEN PRODUCT CREATE MODAL
+    // OPEN SUB CATEGORY CREATE MODAL
     // ============================================================
 
-    const handleNewProduct = () => {
+    const handleNewSubCategory = () => {
 
         setMoreOpen(false);
 
         dispatch(
             openModal({
-                type: "addProduct",
-                data: null,
+                type: "addSubCategory",
             })
         );
     };
@@ -132,19 +125,19 @@ export default function NavbarProduct() {
     const handleViewChange = (view) => {
 
         dispatch(
-            setSelectedProductView(
+            setSelectedSubCategoryView(
                 view.label
             )
         );
 
         dispatch(
-            setProductStatus(
+            setSubCategoryStatus(
                 view.value
             )
         );
 
         navigate(
-            `/items?productStatus=${view.value}`
+            `/sub-categories?subCategoryStatus=${view.value}`
         );
 
         setDropdownOpen(false);
@@ -172,7 +165,7 @@ export default function NavbarProduct() {
         >
 
             {/* =====================================================
-                LEFT - PRODUCT STATUS FILTER
+                LEFT - SUB CATEGORY STATUS FILTER
             ====================================================== */}
 
             <div
@@ -205,8 +198,8 @@ export default function NavbarProduct() {
                             text-gray-100
                         "
                     >
-                        {selectedProductView ||
-                            "All Products"}
+                        {selectedSubCategoryView ||
+                            "All Sub Categories"}
                     </h2>
 
                     <ChevronDown
@@ -224,7 +217,7 @@ export default function NavbarProduct() {
                 </button>
 
                 {/* =================================================
-                    PRODUCT STATUS DROPDOWN
+                    STATUS DROPDOWN
                 ================================================== */}
 
                 {dropdownOpen && (
@@ -274,7 +267,7 @@ export default function NavbarProduct() {
                                             text-left
                                             hover:bg-blue-500
                                             hover:text-white
-                                            ${productStatus ===
+                                            ${subCategoryStatus ===
                                                 view.value
                                                 ? "bg-blue-50 text-blue-600"
                                                 : ""
@@ -336,7 +329,7 @@ export default function NavbarProduct() {
             >
 
                 {/* =================================================
-                    NEW PRODUCT
+                    NEW SUB CATEGORY
                 ================================================== */}
 
                 <div
@@ -353,7 +346,7 @@ export default function NavbarProduct() {
                     <button
                         type="button"
                         onClick={
-                            handleNewProduct
+                            handleNewSubCategory
                         }
                         className="
                             flex
@@ -371,7 +364,7 @@ export default function NavbarProduct() {
 
                         <Plus size={14} />
 
-                        New Product
+                        New Sub Category
 
                     </button>
 
@@ -410,6 +403,11 @@ export default function NavbarProduct() {
 
                     </button>
 
+
+                    {/* =================================================
+                        MORE DROPDOWN
+                    ================================================== */}
+
                     {moreOpen && (
 
                         <div
@@ -428,12 +426,14 @@ export default function NavbarProduct() {
                             "
                         >
 
-                            {/* PRODUCT */}
+                            {/* =========================================
+                                SUB CATEGORY
+                            ========================================== */}
 
                             <button
                                 type="button"
                                 onClick={
-                                    handleNewProduct
+                                    handleNewSubCategory
                                 }
                                 className="
                                     w-full
@@ -446,11 +446,13 @@ export default function NavbarProduct() {
                                     hover:text-blue-600
                                 "
                             >
-                                Product
+                                Sub Category
                             </button>
 
 
-                            {/* ADD PRODUCT */}
+                            {/* =========================================
+                                ADD SUB CATEGORY
+                            ========================================== */}
 
                             <button
                                 type="button"
@@ -460,12 +462,7 @@ export default function NavbarProduct() {
                                         false
                                     );
 
-                                    dispatch(
-                                        openModal({
-                                            type: "addProduct",
-                                            data: null,
-                                        })
-                                    );
+                                    // Add Sub Category action
 
                                 }}
                                 className="
@@ -479,11 +476,13 @@ export default function NavbarProduct() {
                                     hover:text-blue-600
                                 "
                             >
-                                Add Product
+                                Add Sub Category
                             </button>
 
 
-                            {/* PRODUCT SETTINGS */}
+                            {/* =========================================
+                                SUB CATEGORY SETTINGS
+                            ========================================== */}
 
                             <button
                                 type="button"
@@ -493,7 +492,7 @@ export default function NavbarProduct() {
                                         false
                                     );
 
-                                    // Product Settings action
+                                    // Sub Category Settings action
 
                                 }}
                                 className="
@@ -507,11 +506,13 @@ export default function NavbarProduct() {
                                     hover:text-blue-600
                                 "
                             >
-                                Product Settings
+                                Sub Category Settings
                             </button>
 
 
-                            {/* DIVIDER */}
+                            {/* =========================================
+                                DIVIDER
+                            ========================================== */}
 
                             <div
                                 className="
@@ -521,7 +522,9 @@ export default function NavbarProduct() {
                             />
 
 
-                            {/* OTHER SETTINGS */}
+                            {/* =========================================
+                                OTHER SETTINGS
+                            ========================================== */}
 
                             <button
                                 type="button"

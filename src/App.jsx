@@ -37,6 +37,8 @@ import ProductTable from "./module/items/pages/ProductTable";
 import TaxMasterDashboard from "./module/taxMaster/pages/TaxMasterDashboard";
 import SizesDashboard from "./module/sizes/pages/SizesDashboard";
 import UnitDashboard from "./module/units/pages/UnitDashboard";
+import SubCategoryDashboard from "./module/subCategory/pages/SubCategoryDashboard";
+import CategoryDashboard from "./module/category/pages/CategoryDashboard";
 
 export default function App() {
   const dispatch = useDispatch();
@@ -171,6 +173,25 @@ export default function App() {
             element={<UnitDashboard />}
           />
 
+
+          {/* =================================================
+                        SubCategory
+              ================================================= */}
+
+          <Route
+            path="/subCategoires"
+            element={<SubCategoryDashboard />}
+          />
+
+
+          {/* =================================================
+                        Category
+              ================================================= */}
+
+          <Route
+            path="/categories"
+            element={<CategoryDashboard />}
+          />
 
         </Route>
 

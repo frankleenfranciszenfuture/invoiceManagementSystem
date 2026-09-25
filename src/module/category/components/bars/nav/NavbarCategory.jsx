@@ -18,9 +18,9 @@ import {
 } from "lucide-react";
 
 import {
-    setProductStatus,
-    setSelectedProductView,
-} from "../../../slices/productViewSlice";
+    setCategoryStatus,
+    setSelectedCategoryView,
+} from "../../../slices/categoryViewSlice";
 
 import { openModal } from "../../../../ui/uiSlice";
 
@@ -30,7 +30,7 @@ import { openModal } from "../../../../ui/uiSlice";
 
 const EMPTY_VIEWS = [];
 
-export default function NavbarProduct() {
+export default function NavbarCategory() {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -48,22 +48,22 @@ export default function NavbarProduct() {
         useRef(null);
 
     // ============================================================
-    // PRODUCT VIEW STATE
+    // CATEGORY VIEW STATE
     // ============================================================
 
-    const selectedProductView = useSelector(
+    const selectedCategoryView = useSelector(
         (state) =>
-            state.productView?.selectedProductView
+            state.categoryView?.selectedCategoryView
     );
 
     const views = useSelector(
         (state) =>
-            state.productView?.views ?? EMPTY_VIEWS
+            state.categoryView?.views ?? EMPTY_VIEWS
     );
 
-    const productStatus = useSelector(
+    const categoryStatus = useSelector(
         (state) =>
-            state.productView?.productStatus
+            state.categoryView?.categoryStatus
     );
 
     // ============================================================
@@ -110,17 +110,16 @@ export default function NavbarProduct() {
     }, []);
 
     // ============================================================
-    // OPEN PRODUCT CREATE MODAL
+    // OPEN CATEGORY CREATE MODAL
     // ============================================================
 
-    const handleNewProduct = () => {
+    const handleNewCategory = () => {
 
         setMoreOpen(false);
 
         dispatch(
             openModal({
-                type: "addProduct",
-                data: null,
+                type: "addCategory",
             })
         );
     };
@@ -132,19 +131,19 @@ export default function NavbarProduct() {
     const handleViewChange = (view) => {
 
         dispatch(
-            setSelectedProductView(
+            setSelectedCategoryView(
                 view.label
             )
         );
 
         dispatch(
-            setProductStatus(
+            setCategoryStatus(
                 view.value
             )
         );
 
         navigate(
-            `/items?productStatus=${view.value}`
+            `/categories?categoryStatus=${view.value}`
         );
 
         setDropdownOpen(false);
@@ -172,7 +171,7 @@ export default function NavbarProduct() {
         >
 
             {/* =====================================================
-                LEFT - PRODUCT STATUS FILTER
+                LEFT - CATEGORY STATUS FILTER
             ====================================================== */}
 
             <div
@@ -205,8 +204,8 @@ export default function NavbarProduct() {
                             text-gray-100
                         "
                     >
-                        {selectedProductView ||
-                            "All Products"}
+                        {selectedCategoryView ||
+                            "All Categories"}
                     </h2>
 
                     <ChevronDown
@@ -224,7 +223,7 @@ export default function NavbarProduct() {
                 </button>
 
                 {/* =================================================
-                    PRODUCT STATUS DROPDOWN
+                    STATUS DROPDOWN
                 ================================================== */}
 
                 {dropdownOpen && (
@@ -274,7 +273,7 @@ export default function NavbarProduct() {
                                             text-left
                                             hover:bg-blue-500
                                             hover:text-white
-                                            ${productStatus ===
+                                            ${categoryStatus ===
                                                 view.value
                                                 ? "bg-blue-50 text-blue-600"
                                                 : ""
@@ -336,7 +335,7 @@ export default function NavbarProduct() {
             >
 
                 {/* =================================================
-                    NEW PRODUCT
+                    NEW CATEGORY
                 ================================================== */}
 
                 <div
@@ -353,7 +352,7 @@ export default function NavbarProduct() {
                     <button
                         type="button"
                         onClick={
-                            handleNewProduct
+                            handleNewCategory
                         }
                         className="
                             flex
@@ -371,7 +370,7 @@ export default function NavbarProduct() {
 
                         <Plus size={14} />
 
-                        New Product
+                        New Category
 
                     </button>
 
@@ -428,12 +427,10 @@ export default function NavbarProduct() {
                             "
                         >
 
-                            {/* PRODUCT */}
-
                             <button
                                 type="button"
                                 onClick={
-                                    handleNewProduct
+                                    handleNewCategory
                                 }
                                 className="
                                     w-full
@@ -446,11 +443,8 @@ export default function NavbarProduct() {
                                     hover:text-blue-600
                                 "
                             >
-                                Product
+                                Category
                             </button>
-
-
-                            {/* ADD PRODUCT */}
 
                             <button
                                 type="button"
@@ -462,8 +456,7 @@ export default function NavbarProduct() {
 
                                     dispatch(
                                         openModal({
-                                            type: "addProduct",
-                                            data: null,
+                                            type: "addCategory",
                                         })
                                     );
 
@@ -479,11 +472,8 @@ export default function NavbarProduct() {
                                     hover:text-blue-600
                                 "
                             >
-                                Add Product
+                                Add Category
                             </button>
-
-
-                            {/* PRODUCT SETTINGS */}
 
                             <button
                                 type="button"
@@ -493,7 +483,7 @@ export default function NavbarProduct() {
                                         false
                                     );
 
-                                    // Product Settings action
+                                    // Category Settings action
 
                                 }}
                                 className="
@@ -507,11 +497,8 @@ export default function NavbarProduct() {
                                     hover:text-blue-600
                                 "
                             >
-                                Product Settings
+                                Category Settings
                             </button>
-
-
-                            {/* DIVIDER */}
 
                             <div
                                 className="
@@ -519,9 +506,6 @@ export default function NavbarProduct() {
                                     border-gray-100
                                 "
                             />
-
-
-                            {/* OTHER SETTINGS */}
 
                             <button
                                 type="button"
