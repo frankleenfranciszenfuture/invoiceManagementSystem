@@ -1,3 +1,4 @@
+
 import React, {
     useEffect,
     useMemo,
@@ -45,7 +46,6 @@ export default function ProductDashboard() {
     const [searchParams] =
         useSearchParams();
 
-
     // ============================================================
     // PRODUCT STATE
     // ============================================================
@@ -65,7 +65,6 @@ export default function ProductDashboard() {
             state.product?.error
     );
 
-
     // ============================================================
     // PRODUCT FILTER STATE
     // ============================================================
@@ -76,23 +75,17 @@ export default function ProductDashboard() {
             "ALL"
     );
 
-
     // ============================================================
     // FETCH PRODUCTS
     // ============================================================
 
     useEffect(() => {
 
-        console.log(
-            "Fetching products..."
-        );
-
         dispatch(
             fetchAllProducts()
         );
 
     }, [dispatch]);
-
 
     // ============================================================
     // SYNC URL STATUS → REDUX
@@ -163,49 +156,6 @@ export default function ProductDashboard() {
         dispatch,
     ]);
 
-
-    // ============================================================
-    // DEBUG
-    // ============================================================
-
-    useEffect(() => {
-
-        console.log(
-            "================================"
-        );
-
-        console.log(
-            "PRODUCTS FROM REDUX:",
-            products
-        );
-
-        console.log(
-            "PRODUCT LOADING:",
-            loading
-        );
-
-        console.log(
-            "PRODUCT ERROR:",
-            error
-        );
-
-        console.log(
-            "PRODUCT STATUS:",
-            productStatus
-        );
-
-        console.log(
-            "================================"
-        );
-
-    }, [
-        products,
-        loading,
-        error,
-        productStatus,
-    ]);
-
-
     // ============================================================
     // FILTER PRODUCTS BY STATUS
     // ============================================================
@@ -217,23 +167,11 @@ export default function ProductDashboard() {
                 productStatus || "ALL"
             ).toUpperCase();
 
-
-        // ========================================================
-        // ALL PRODUCTS
-        // ========================================================
-
         if (
             selectedStatus === "ALL"
         ) {
-
             return products;
-
         }
-
-
-        // ========================================================
-        // FILTER
-        // ========================================================
 
         return products.filter(
             (product) => {
@@ -242,15 +180,6 @@ export default function ProductDashboard() {
                     String(
                         product?.status || ""
                     ).toUpperCase();
-
-                console.log(
-                    "Product:",
-                    product?.productName,
-                    "| Backend Status:",
-                    backendStatus,
-                    "| Selected Status:",
-                    selectedStatus
-                );
 
                 return (
                     backendStatus ===
@@ -264,7 +193,6 @@ export default function ProductDashboard() {
         products,
         productStatus,
     ]);
-
 
     // ============================================================
     // CREATE PRODUCT MODAL
@@ -281,7 +209,6 @@ export default function ProductDashboard() {
 
     };
 
-
     // ============================================================
     // LOADING
     // ============================================================
@@ -294,7 +221,6 @@ export default function ProductDashboard() {
 
     }
 
-
     // ============================================================
     // PAGE
     // ============================================================
@@ -303,17 +229,25 @@ export default function ProductDashboard() {
 
         <div
             className="
-                min-h-full
+                flex
+                h-screen
                 bg-gray-50
                 font-sans
                 text-[13px]
+                overflow-hidden
             "
         >
 
+            {/* =====================================================
+                SINGLE PAGE SCROLLER
+            ===================================================== */}
+
             <div
                 className="
-                    w-full
+                    flex-1
+                    min-h-0
                     bg-white
+                    overflow-y-auto
                 "
             >
 
@@ -327,14 +261,13 @@ export default function ProductDashboard() {
 
                     {/* =================================================
                         PRODUCT NAVBAR
-                    ================================================== */}
+                    ================================================= */}
 
                     <NavbarProduct />
 
-
                     {/* =================================================
                         ERROR
-                    ================================================== */}
+                    ================================================= */}
 
                     {error && (
 
@@ -352,17 +285,14 @@ export default function ProductDashboard() {
                                 text-red-600
                             "
                         >
-
                             {error}
-
                         </div>
 
                     )}
 
-
                     {/* =================================================
                         PRODUCT TABLE
-                    ================================================== */}
+                    ================================================= */}
 
                     {filteredProducts.length > 0 ? (
 
@@ -412,10 +342,9 @@ export default function ProductDashboard() {
 
                             </p>
 
-
                             {/* =================================================
                                 ACTION BUTTONS
-                            ================================================== */}
+                            ================================================= */}
 
                             <div
                                 className="
@@ -426,9 +355,7 @@ export default function ProductDashboard() {
                                 "
                             >
 
-                                {/* =============================================
-                                    CREATE PRODUCT
-                                ============================================== */}
+                                {/* CREATE PRODUCT */}
 
                                 <button
                                     type="button"
@@ -457,10 +384,7 @@ export default function ProductDashboard() {
 
                                 </button>
 
-
-                                {/* =============================================
-                                    IMPORT
-                                ============================================== */}
+                                {/* IMPORT */}
 
                                 <button
                                     type="button"
@@ -499,5 +423,4 @@ export default function ProductDashboard() {
         </div>
 
     );
-
 }

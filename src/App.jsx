@@ -39,6 +39,8 @@ import SizesDashboard from "./module/sizes/pages/SizesDashboard";
 import UnitDashboard from "./module/units/pages/UnitDashboard";
 import SubCategoryDashboard from "./module/subCategory/pages/SubCategoryDashboard";
 import CategoryDashboard from "./module/category/pages/CategoryDashboard";
+import ProductOverViewDashboard from "./module/items/overviewCard/ProductOverViewDashboard";
+import InvoiceCreate from "./module/invoices/pages/InvoiceCreate";
 
 export default function App() {
   const dispatch = useDispatch();
@@ -144,6 +146,11 @@ export default function App() {
             element={<ProductTable />}
           />
 
+          <Route
+            path="/items/view/:id"
+            element={<ProductOverViewDashboard />}
+          />
+
           {/* =================================================
                         TAX MASTER
               ================================================= */}
@@ -192,6 +199,16 @@ export default function App() {
             path="/categories"
             element={<CategoryDashboard />}
           />
+
+
+
+
+          <Route
+            path="/invoices/new"
+            element={<InvoiceCreate />}
+          />
+
+
 
         </Route>
 

@@ -387,10 +387,6 @@ function SearchSelect({
    SEARCHABLE MULTI SELECT
    ========================================================= */
 
-/* =========================================================
-   SEARCHABLE MULTI SELECT
-   ========================================================= */
-
 function SearchMultiSelect({
     label,
     selected = EMPTY_ARRAY,
@@ -401,14 +397,11 @@ function SearchMultiSelect({
     getOptionLabel,
     placeholder = "Search...",
     required = false,
+    error = "",
 }) {
     const wrapperRef = useRef(null);
 
     const [open, setOpen] = useState(false);
-
-    /* -------------------------------------------------------
-       CLOSE WHEN CLICKING OUTSIDE
-       ------------------------------------------------------- */
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -433,24 +426,19 @@ function SearchMultiSelect({
         };
     }, []);
 
-    /* -------------------------------------------------------
-       CHECK SELECTED
-       ------------------------------------------------------- */
-
     const isSelected = (item) => {
-        const key = getOptionKey(item);
+        const key =
+            getOptionKey(item);
 
         return selected.some(
             (selectedItem) =>
                 String(
-                    getOptionKey(selectedItem)
+                    getOptionKey(
+                        selectedItem
+                    )
                 ) === String(key)
         );
     };
-
-    /* -------------------------------------------------------
-       SELECT ITEM
-       ------------------------------------------------------- */
 
     const handleSelect = (item) => {
         if (isSelected(item)) {
@@ -458,14 +446,14 @@ function SearchMultiSelect({
         }
 
         onAdd(item);
-        setOpen(true);
+
+        setOpen(false);
     };
-    /* -------------------------------------------------------
-       TOGGLE DROPDOWN
-       ------------------------------------------------------- */
 
     const handleToggle = () => {
-        setOpen((prev) => !prev);
+        setOpen(
+            (prev) => !prev
+        );
     };
 
     return (
@@ -473,8 +461,6 @@ function SearchMultiSelect({
             ref={wrapperRef}
             className="relative"
         >
-            {/* LABEL */}
-
             <label
                 className="
                     block
@@ -493,8 +479,6 @@ function SearchMultiSelect({
                 )}
             </label>
 
-            {/* SELECT BUTTON */}
-
             <button
                 type="button"
                 onClick={handleToggle}
@@ -512,10 +496,11 @@ function SearchMultiSelect({
                     text-left
                     outline-none
                     transition
-
-                    ${open
-                        ? "border-blue-500 ring-1 ring-blue-500"
-                        : "border-gray-300 hover:border-gray-400"
+                    ${error
+                        ? "border-red-400"
+                        : open
+                            ? "border-blue-500 ring-1 ring-blue-500"
+                            : "border-gray-300 hover:border-gray-400"
                     }
                 `}
             >
@@ -569,7 +554,6 @@ function SearchMultiSelect({
                         shrink-0
                         text-gray-500
                         transition-transform
-
                         ${open
                             ? "rotate-180"
                             : ""
@@ -577,8 +561,6 @@ function SearchMultiSelect({
                     `}
                 />
             </button>
-
-            {/* DROPDOWN */}
 
             {open && (
                 <div
@@ -597,8 +579,6 @@ function SearchMultiSelect({
                         overflow-hidden
                     "
                 >
-                    {/* OPTIONS */}
-
                     <div
                         className="
                             max-h-52
@@ -620,65 +600,63 @@ function SearchMultiSelect({
                                 found
                             </div>
                         ) : (
-                            options.map((item) => {
-                                const selectedItem =
-                                    isSelected(item);
-
-                                return (
-                                    <button
-                                        key={getOptionKey(
+                            options.map(
+                                (item) => {
+                                    const selectedItem =
+                                        isSelected(
                                             item
-                                        )}
-                                        type="button"
-                                        disabled={
-                                            selectedItem
-                                        }
-                                        onClick={() =>
-                                            handleSelect(
-                                                item
-                                            )
-                                        }
-                                        className={`
-                                            w-full
-                                            px-4
-                                            py-2.5
-                                            flex
-                                            items-center
-                                            justify-between
-                                            text-left
-                                            text-sm
-                                            transition
+                                        );
 
-                                            ${selectedItem
-                                                ? "bg-blue-50 text-blue-700 cursor-default"
-                                                : "text-gray-700 hover:bg-gray-50"
-                                            }
-                                        `}
-                                    >
-                                        <span className="truncate">
-                                            {getOptionLabel(
+                                    return (
+                                        <button
+                                            key={getOptionKey(
                                                 item
                                             )}
-                                        </span>
+                                            type="button"
+                                            onClick={() =>
+                                                handleSelect(
+                                                    item
+                                                )
+                                            }
+                                            className={`
+                                                w-full
+                                                px-4
+                                                py-2.5
+                                                flex
+                                                items-center
+                                                justify-between
+                                                text-left
+                                                text-sm
+                                                transition
+                                                ${selectedItem
+                                                    ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                                    : "text-gray-700 hover:bg-gray-50"
+                                                }
+                                            `}
+                                        >
+                                            <span className="truncate">
+                                                {getOptionLabel(
+                                                    item
+                                                )}
+                                            </span>
 
-                                        {selectedItem && (
-                                            <Check
-                                                size={16}
-                                                className="
-                                                    text-blue-600
-                                                    shrink-0
-                                                "
-                                            />
-                                        )}
-                                    </button>
-                                );
-                            })
+                                            {selectedItem && (
+                                                <Check
+                                                    size={16}
+                                                    className="
+                                                        text-blue-600
+                                                        shrink-0
+                                                    "
+                                                />
+                                            )}
+                                        </button>
+                                    );
+                                }
+                            )
                         )}
                     </div>
                 </div>
             )}
-
-            {/* SELECTED TAGS */}
 
             {selected.length > 0 && (
                 <div
@@ -689,49 +667,67 @@ function SearchMultiSelect({
                         mt-2
                     "
                 >
-                    {selected.map((item) => (
-                        <span
-                            key={getOptionKey(item)}
-                            className="
-                                inline-flex
-                                items-center
-                                gap-1.5
-                                px-2.5
-                                py-1
-                                bg-blue-50
-                                border
-                                border-blue-100
-                                text-blue-700
-                                rounded-md
-                                text-xs
-                                font-medium
-                            "
-                        >
-                            <span>
-                                {getOptionLabel(item)}
-                            </span>
-
-                            <button
-                                type="button"
-                                onClick={(event) => {
-                                    event.stopPropagation();
-                                    onRemove(item);
-                                }}
+                    {selected.map(
+                        (item) => (
+                            <span
+                                key={getOptionKey(
+                                    item
+                                )}
                                 className="
-                                    p-0.5
-                                    rounded-full
-                                    hover:bg-blue-100
+                                    inline-flex
+                                    items-center
+                                    gap-1.5
+                                    px-2.5
+                                    py-1
+                                    bg-blue-50
+                                    border
+                                    border-blue-100
+                                    text-blue-700
+                                    rounded-md
+                                    text-xs
+                                    font-medium
                                 "
                             >
-                                <X size={12} />
-                            </button>
-                        </span>
-                    ))}
+                                <span>
+                                    {getOptionLabel(
+                                        item
+                                    )}
+                                </span>
+
+                                <button
+                                    type="button"
+                                    onClick={(
+                                        event
+                                    ) => {
+                                        event.stopPropagation();
+
+                                        onRemove(
+                                            item
+                                        );
+                                    }}
+                                    className="
+                                        p-0.5
+                                        rounded-full
+                                        hover:bg-blue-100
+                                    "
+                                >
+                                    <X size={12} />
+                                </button>
+                            </span>
+                        )
+                    )}
                 </div>
+            )}
+
+            {error && (
+                <p className="mt-1 text-xs text-red-500">
+                    {error}
+                </p>
             )}
         </div>
     );
 }
+
 
 /* =========================================================
    PRODUCT CREATE
@@ -759,7 +755,6 @@ export default function ProductCreate() {
        ======================================================= */
 
     const {
-        product,
         loading,
     } = useSelector(
         (state) =>
@@ -807,7 +802,7 @@ export default function ProductCreate() {
         useSelector(
             (state) =>
                 state.taxMaster
-                    ?.taxes ??
+                    ?.taxMasters ??
                 EMPTY_ARRAY
         );
 
@@ -839,11 +834,6 @@ export default function ProductCreate() {
         if (!isOpen) {
             return;
         }
-
-        /*
-         * Fetch only if Redux does not already
-         * contain the master data.
-         */
 
         if (categories.length === 0) {
             dispatch(
@@ -887,52 +877,71 @@ export default function ProductCreate() {
 
 
     /* =======================================================
-       DEBUG MASTER DATA
+       LABEL / KEY HELPERS
        ======================================================= */
 
-    useEffect(() => {
+    const getCategoryKey =
+        (item) =>
+            item?.id;
 
-        if (!isOpen) {
-            return;
-        }
+    const getCategoryLabel =
+        (item) =>
+            item?.categoryName ||
+            item?.categoreyName ||
+            item?.name ||
+            "";
 
-        console.log(
-            "PRODUCT MASTER DATA"
-        );
+    const getSubCategoryKey =
+        (item) =>
+            item?.id;
 
-        console.log(
-            "Categories:",
-            categories
-        );
+    const getSubCategoryLabel =
+        (item) =>
+            item?.subCategoryName ||
+            item?.name ||
+            "";
 
-        console.log(
-            "SubCategories:",
-            subCategories
-        );
+    const getSizeKey =
+        (item) =>
+            item?.id ??
+            item?.sizeId;
 
-        console.log(
-            "Sizes:",
-            sizes
-        );
+    const getSizeLabel =
+        (item) => {
 
-        console.log(
-            "Units:",
-            units
-        );
+            const name =
+                item?.sizeName ||
+                "";
 
-        console.log(
-            "Taxes:",
-            taxes
-        );
+            const code =
+                item?.sizeCode ||
+                "";
 
-    }, [
-        isOpen,
-        categories,
-        subCategories,
-        sizes,
-        units,
-        taxes,
-    ]);
+            return code
+                ? `${name} (${code})`
+                : name;
+        };
+
+    const getUnitKey =
+        (item) =>
+            item?.id ??
+            item?.unitId;
+
+    const getUnitLabel =
+        (item) => {
+
+            const name =
+                item?.unitName ||
+                "";
+
+            const code =
+                item?.unitCode ||
+                "";
+
+            return code
+                ? `${name} (${code})`
+                : name;
+        };
 
 
     /* =======================================================
@@ -978,13 +987,522 @@ export default function ProductCreate() {
     const [errors, setErrors] =
         useState({});
 
-
     const [imagePreview, setImagePreview] =
         useState("");
 
 
     /* =======================================================
-       FILTER SUBCATEGORIES BY CATEGORY
+       PRODUCT IMAGE URL
+       ======================================================= */
+
+    const getProductImageUrl =
+        (imageUrl) => {
+
+            if (!imageUrl) {
+                return "";
+            }
+
+            if (
+                imageUrl.startsWith(
+                    "http://"
+                ) ||
+                imageUrl.startsWith(
+                    "https://"
+                )
+            ) {
+                return imageUrl.replace(
+                    "http://localhost:8080",
+                    "http://localhost:8081"
+                );
+            }
+
+            return `http://localhost:8081/api/v1.0/uploads/products/${imageUrl}`;
+        };
+
+
+    /* =======================================================
+       NORMALIZE EDIT SIZES
+       ======================================================= */
+
+    const normalizeSelectedSizes = (
+        data
+    ) => {
+
+        /*
+         * First try sizeIds because they are
+         * the actual IDs that should be saved.
+         */
+
+        if (
+            Array.isArray(
+                data?.sizeIds
+            ) &&
+            data.sizeIds.length > 0
+        ) {
+            const mapped =
+                data.sizeIds
+                    .map(
+                        (id) =>
+                            sizes.find(
+                                (size) =>
+                                    String(
+                                        getSizeKey(
+                                            size
+                                        )
+                                    ) ===
+                                    String(id)
+                            )
+                    )
+                    .filter(Boolean);
+
+            if (mapped.length > 0) {
+                return mapped;
+            }
+        }
+
+
+        /*
+         * Fallback for APIs returning full
+         * sizes instead of sizeIds.
+         */
+
+        if (
+            Array.isArray(
+                data?.sizes
+            )
+        ) {
+            return data.sizes
+                .map(
+                    (item) => {
+
+                        if (
+                            item &&
+                            typeof item ===
+                            "object"
+                        ) {
+                            const id =
+                                getSizeKey(
+                                    item
+                                );
+
+                            const master =
+                                sizes.find(
+                                    (
+                                        size
+                                    ) =>
+                                        String(
+                                            getSizeKey(
+                                                size
+                                            )
+                                        ) ===
+                                        String(
+                                            id
+                                        )
+                                );
+
+                            return (
+                                master ||
+                                item
+                            );
+                        }
+
+                        return sizes.find(
+                            (size) =>
+                                String(
+                                    getSizeKey(
+                                        size
+                                    )
+                                ) ===
+                                String(item)
+                        );
+                    }
+                )
+                .filter(Boolean);
+        }
+
+        /*
+         * Backward compatibility with
+         * a single sizeId.
+         */
+
+        if (
+            data?.sizeId !==
+            undefined &&
+            data?.sizeId !==
+            null &&
+            data?.sizeId !== ""
+        ) {
+            return sizes
+                .filter(
+                    (size) =>
+                        String(
+                            getSizeKey(
+                                size
+                            )
+                        ) ===
+                        String(
+                            data.sizeId
+                        )
+                );
+        }
+
+        return [];
+    };
+
+
+    /* =======================================================
+       NORMALIZE EDIT UNITS
+       ======================================================= */
+
+    const normalizeSelectedUnits = (
+        data
+    ) => {
+
+        /*
+         * First try unitIds.
+         */
+
+        if (
+            Array.isArray(
+                data?.unitIds
+            ) &&
+            data.unitIds.length > 0
+        ) {
+            const mapped =
+                data.unitIds
+                    .map(
+                        (id) =>
+                            units.find(
+                                (unit) =>
+                                    String(
+                                        getUnitKey(
+                                            unit
+                                        )
+                                    ) ===
+                                    String(id)
+                            )
+                    )
+                    .filter(Boolean);
+
+            if (mapped.length > 0) {
+                return mapped;
+            }
+        }
+
+
+        /*
+         * Fallback for APIs returning
+         * complete unit objects.
+         */
+
+        if (
+            Array.isArray(
+                data?.units
+            )
+        ) {
+            return data.units
+                .map(
+                    (item) => {
+
+                        if (
+                            item &&
+                            typeof item ===
+                            "object"
+                        ) {
+                            const id =
+                                getUnitKey(
+                                    item
+                                );
+
+                            const master =
+                                units.find(
+                                    (
+                                        unit
+                                    ) =>
+                                        String(
+                                            getUnitKey(
+                                                unit
+                                            )
+                                        ) ===
+                                        String(
+                                            id
+                                        )
+                                );
+
+                            return (
+                                master ||
+                                item
+                            );
+                        }
+
+                        return units.find(
+                            (unit) =>
+                                String(
+                                    getUnitKey(
+                                        unit
+                                    )
+                                ) ===
+                                String(item)
+                        );
+                    }
+                )
+                .filter(Boolean);
+        }
+
+
+        /*
+         * Backward compatibility with
+         * a single unitId.
+         */
+
+        if (
+            data?.unitId !==
+            undefined &&
+            data?.unitId !==
+            null &&
+            data?.unitId !== ""
+        ) {
+            return units
+                .filter(
+                    (unit) =>
+                        String(
+                            getUnitKey(
+                                unit
+                            )
+                        ) ===
+                        String(
+                            data.unitId
+                        )
+                );
+        }
+
+        return [];
+    };
+
+
+    /* =======================================================
+       EDIT DATA
+       ======================================================= */
+
+    useEffect(() => {
+
+        if (!isOpen || !isEdit) {
+            return;
+        }
+
+        const data =
+            modal?.data;
+
+        if (!data) {
+            return;
+        }
+
+
+        const imageUrl =
+            data.imageUrl ??
+            "";
+
+
+        setImagePreview(
+            imageUrl
+                ? getProductImageUrl(
+                    imageUrl
+                )
+                : ""
+        );
+
+
+        /*
+         * IMPORTANT:
+         *
+         * This effect depends on sizes and units.
+         * If edit data contains IDs before master
+         * data has loaded, it will run again after
+         * sizes/units are available.
+         */
+
+        const selectedSizes =
+            normalizeSelectedSizes(
+                data
+            );
+
+        const selectedUnits =
+            normalizeSelectedUnits(
+                data
+            );
+
+
+        console.log(
+            "========== EDIT PRODUCT =========="
+        );
+
+        console.log(
+            "EDIT DATA:",
+            data
+        );
+
+        console.log(
+            "EDIT SIZE IDS:",
+            data.sizeIds
+        );
+
+        console.log(
+            "EDIT UNIT IDS:",
+            data.unitIds
+        );
+
+        console.log(
+            "SELECTED SIZES:",
+            selectedSizes
+        );
+
+        console.log(
+            "SELECTED UNITS:",
+            selectedUnits
+        );
+
+
+        setForm({
+            id:
+                data.id ??
+                null,
+
+            categoryId:
+                data.categoryId ??
+                data.category?.id ??
+                "",
+
+            subCategoryId:
+                data.subCategoryId ??
+                data.subCategory?.id ??
+                "",
+
+            productName:
+                data.productName ??
+                "",
+
+            brand:
+                data.brand ??
+                "",
+
+            hsnCode:
+                data.hsnCode ??
+                "",
+
+            sellingPrice:
+                data.sellingPrice ??
+                "",
+
+            purchasingPrice:
+                data.purchasingPrice ??
+                "",
+
+            taxId:
+                data.taxId ??
+                data.tax?.id ??
+                "",
+
+            minimumStock:
+                data.minimumStock ??
+                "",
+
+            maximumStock:
+                data.maximumStock ??
+                "",
+
+            /*
+             * ALL existing sizes.
+             */
+            sizes:
+                selectedSizes,
+
+            /*
+             * ALL existing units.
+             */
+            units:
+                selectedUnits,
+
+            status:
+                data.status ??
+                "ACTIVE",
+
+            image:
+                null,
+
+            imageUrl:
+                imageUrl,
+        });
+
+        setErrors({});
+
+    }, [
+        isOpen,
+        isEdit,
+        modal?.data,
+        sizes,
+        units,
+    ]);
+
+
+    /* =======================================================
+       RESET FORM WHEN ADD MODAL OPENS
+       ======================================================= */
+
+    useEffect(() => {
+
+        if (
+            !isOpen ||
+            isEdit
+        ) {
+            return;
+        }
+
+        setForm({
+            id: null,
+
+            categoryId: "",
+
+            subCategoryId: "",
+
+            productName: "",
+
+            brand: "",
+
+            hsnCode: "",
+
+            sellingPrice: "",
+
+            purchasingPrice: "",
+
+            taxId: "",
+
+            minimumStock: "",
+
+            maximumStock: "",
+
+            sizes: [],
+
+            units: [],
+
+            status: "ACTIVE",
+
+            image: null,
+
+            imageUrl: "",
+        });
+
+        setErrors({});
+
+        setImagePreview("");
+
+    }, [
+        isOpen,
+        isEdit,
+    ]);
+
+
+    /* =======================================================
+       FILTER SUBCATEGORIES
        ======================================================= */
 
     const filteredSubCategories =
@@ -1020,231 +1538,33 @@ export default function ProductCreate() {
 
 
     /* =======================================================
-       LABEL HELPERS
-       ======================================================= */
-
-    const getCategoryKey =
-        (item) =>
-            item?.id;
-
-    const getCategoryLabel =
-        (item) =>
-            item?.categoryName ||
-            item?.categoreyName ||
-            item?.name ||
-            "";
-
-
-    const getSubCategoryKey =
-        (item) =>
-            item?.id;
-
-    const getSubCategoryLabel =
-        (item) =>
-            item?.subCategoryName ||
-            item?.name ||
-            "";
-
-
-    const getSizeKey =
-        (item) =>
-            item?.id ??
-            item?.sizeId;
-
-    const getSizeLabel =
-        (item) => {
-
-            const name =
-                item?.sizeName ||
-                "";
-
-            const code =
-                item?.sizeCode ||
-                "";
-
-            return code
-                ? `${name} (${code})`
-                : name;
-        };
-
-
-    const getUnitKey =
-        (item) =>
-            item?.id ??
-            item?.unitId;
-
-    const getUnitLabel =
-        (item) => {
-
-            const name =
-                item?.unitName ||
-                "";
-
-            const code =
-                item?.unitCode ||
-                "";
-
-            return code
-                ? `${name} (${code})`
-                : name;
-        };
-
-
-    /* =======================================================
-       EDIT DATA
-       ======================================================= */
-
-    useEffect(() => {
-
-        if (!isOpen) {
-            return;
-        }
-
-        if (!isEdit) {
-
-            setForm({
-                id: null,
-                categoryId: "",
-                subCategoryId: "",
-                productName: "",
-                brand: "",
-                hsnCode: "",
-                sellingPrice: "",
-                purchasingPrice: "",
-                taxId: "",
-                minimumStock: "",
-                maximumStock: "",
-                sizes: [],
-                units: [],
-                status: "ACTIVE",
-                image: null,
-                imageUrl: "",
-            });
-
-            setErrors({});
-
-            setImagePreview("");
-
-            return;
-        }
-
-        const data =
-            modal?.data ||
-            product;
-
-        if (!data?.id) {
-            return;
-        }
-
-        setForm({
-            id: data.id,
-
-            categoryId:
-                data.categoryId ??
-                "",
-
-            subCategoryId:
-                data.subCategoryId ??
-                "",
-
-            productName:
-                data.productName ??
-                "",
-
-            brand:
-                data.brand ??
-                "",
-
-            hsnCode:
-                data.hsnCode ??
-                "",
-
-            sellingPrice:
-                data.sellingPrice ??
-                "",
-
-            purchasingPrice:
-                data.purchasingPrice ??
-                "",
-
-            taxId:
-                data.taxId ??
-                "",
-
-            minimumStock:
-                data.minimumStock ??
-                "",
-
-            maximumStock:
-                data.maximumStock ??
-                "",
-
-            sizes:
-                Array.isArray(
-                    data.sizes
-                )
-                    ? data.sizes
-                    : [],
-
-            units:
-                Array.isArray(
-                    data.units
-                )
-                    ? data.units
-                    : [],
-
-            status:
-                data.status ??
-                "ACTIVE",
-
-            image: null,
-
-            imageUrl:
-                data.imageUrl ??
-                "",
-        });
-
-        setImagePreview(
-            data.imageUrl || ""
-        );
-
-        setErrors({});
-
-    }, [
-        isOpen,
-        isEdit,
-        modal?.data,
-        product?.id,
-    ]);
-
-
-    /* =======================================================
        FIELD CHANGE
        ======================================================= */
 
-    const handleChange = (
-        field,
-        value
-    ) => {
+    const handleChange =
+        (
+            field,
+            value
+        ) => {
 
-        setForm(
-            (prev) => ({
-                ...prev,
+            setForm(
+                (prev) => ({
+                    ...prev,
 
-                [field]:
-                    value,
-            })
-        );
+                    [field]:
+                        value,
+                })
+            );
 
-        setErrors(
-            (prev) => ({
-                ...prev,
+            setErrors(
+                (prev) => ({
+                    ...prev,
 
-                [field]:
-                    "",
-            })
-        );
-    };
+                    [field]:
+                        "",
+                })
+            );
+        };
 
 
     /* =======================================================
@@ -1281,7 +1601,7 @@ export default function ProductCreate() {
 
 
     /* =======================================================
-       SIZE
+       ADD SIZE
        ======================================================= */
 
     const handleAddSize =
@@ -1319,8 +1639,19 @@ export default function ProductCreate() {
                     };
                 }
             );
+
+            setErrors(
+                (prev) => ({
+                    ...prev,
+                    sizes: "",
+                })
+            );
         };
 
+
+    /* =======================================================
+       REMOVE SIZE
+       ======================================================= */
 
     const handleRemoveSize =
         (size) => {
@@ -1348,7 +1679,7 @@ export default function ProductCreate() {
 
 
     /* =======================================================
-       UNIT
+       ADD UNIT
        ======================================================= */
 
     const handleAddUnit =
@@ -1386,8 +1717,19 @@ export default function ProductCreate() {
                     };
                 }
             );
+
+            setErrors(
+                (prev) => ({
+                    ...prev,
+                    units: "",
+                })
+            );
         };
 
+
+    /* =======================================================
+       REMOVE UNIT
+       ======================================================= */
 
     const handleRemoveUnit =
         (unit) => {
@@ -1450,20 +1792,21 @@ export default function ProductCreate() {
        CLOSE
        ======================================================= */
 
-    const handleClose = () => {
+    const handleClose =
+        () => {
 
-        if (loading) {
-            return;
-        }
+            if (loading) {
+                return;
+            }
 
-        dispatch(
-            closeModal()
-        );
+            dispatch(
+                closeModal()
+            );
 
-        dispatch(
-            resetProductForm()
-        );
-    };
+            dispatch(
+                resetProductForm()
+            );
+        };
 
 
     /* =======================================================
@@ -1515,15 +1858,18 @@ export default function ProductCreate() {
             const nextErrors =
                 {};
 
+
             if (!form.categoryId) {
                 nextErrors.categoryId =
                     "Category is required";
             }
 
+
             if (!form.subCategoryId) {
                 nextErrors.subCategoryId =
                     "Subcategory is required";
             }
+
 
             if (
                 !form.productName?.trim()
@@ -1531,6 +1877,7 @@ export default function ProductCreate() {
                 nextErrors.productName =
                     "Product name is required";
             }
+
 
             if (
                 form.purchasingPrice ===
@@ -1543,6 +1890,7 @@ export default function ProductCreate() {
                     "Enter a valid purchasing price";
             }
 
+
             if (
                 form.sellingPrice ===
                 "" ||
@@ -1554,10 +1902,12 @@ export default function ProductCreate() {
                     "Enter a valid selling price";
             }
 
+
             if (!form.taxId) {
                 nextErrors.taxId =
                     "Tax is required";
             }
+
 
             if (
                 form.minimumStock !==
@@ -1570,6 +1920,7 @@ export default function ProductCreate() {
                     "Enter a valid minimum stock";
             }
 
+
             if (
                 form.maximumStock !==
                 "" &&
@@ -1580,6 +1931,7 @@ export default function ProductCreate() {
                 nextErrors.maximumStock =
                     "Enter a valid maximum stock";
             }
+
 
             if (
                 form.minimumStock !==
@@ -1597,9 +1949,41 @@ export default function ProductCreate() {
                     "Maximum stock must be greater than minimum stock";
             }
 
+
+            /* =================================================
+               SIZE VALIDATION
+               ================================================= */
+
+            if (
+                !Array.isArray(
+                    form.sizes
+                ) ||
+                form.sizes.length === 0
+            ) {
+                nextErrors.sizes =
+                    "At least one size is required";
+            }
+
+
+            /* =================================================
+               UNIT VALIDATION
+               ================================================= */
+
+            if (
+                !Array.isArray(
+                    form.units
+                ) ||
+                form.units.length === 0
+            ) {
+                nextErrors.units =
+                    "At least one unit is required";
+            }
+
+
             setErrors(
                 nextErrors
             );
+
 
             return (
                 Object.keys(
@@ -1618,9 +2002,61 @@ export default function ProductCreate() {
 
             event.preventDefault();
 
+
             if (!validate()) {
                 return;
             }
+
+
+            /* =================================================
+               FINAL SIZE IDS
+               ================================================= */
+
+            const sizeIds =
+                form.sizes
+                    .map(
+                        (size) =>
+                            getSizeKey(
+                                size
+                            )
+                    )
+                    .filter(
+                        (id) =>
+                            id !==
+                            undefined &&
+                            id !== null &&
+                            id !== ""
+                    )
+                    .map(
+                        (id) =>
+                            Number(id)
+                    );
+
+
+            /* =================================================
+               FINAL UNIT IDS
+               ================================================= */
+
+            const unitIds =
+                form.units
+                    .map(
+                        (unit) =>
+                            getUnitKey(
+                                unit
+                            )
+                    )
+                    .filter(
+                        (id) =>
+                            id !==
+                            undefined &&
+                            id !== null &&
+                            id !== ""
+                    )
+                    .map(
+                        (id) =>
+                            Number(id)
+                    );
+
 
             const payload = {
 
@@ -1671,25 +2107,18 @@ export default function ProductCreate() {
                         0
                     ),
 
+
+                /* =============================================
+                   IMPORTANT
+                   Send ALL selected IDs
+                   ============================================= */
+
                 sizeIds:
-                    form.sizes.map(
-                        (item) =>
-                            Number(
-                                getSizeKey(
-                                    item
-                                )
-                            )
-                    ),
+                    sizeIds,
 
                 unitIds:
-                    form.units.map(
-                        (item) =>
-                            Number(
-                                getUnitKey(
-                                    item
-                                )
-                            )
-                    ),
+                    unitIds,
+
 
                 status:
                     form.status ||
@@ -1700,6 +2129,13 @@ export default function ProductCreate() {
                     null,
             };
 
+
+            console.log(
+                "PRODUCT SAVE PAYLOAD:",
+                payload
+            );
+
+
             try {
 
                 if (isEdit) {
@@ -1707,6 +2143,7 @@ export default function ProductCreate() {
                     const productId =
                         form.id ??
                         modal?.data?.id;
+
 
                     if (!productId) {
 
@@ -1717,6 +2154,7 @@ export default function ProductCreate() {
                         return;
                     }
 
+
                     await dispatch(
                         updateProduct({
                             id:
@@ -1726,6 +2164,7 @@ export default function ProductCreate() {
                                 payload,
                         })
                     ).unwrap();
+
 
                     toast.success(
                         "Product updated successfully"
@@ -1739,10 +2178,12 @@ export default function ProductCreate() {
                         )
                     ).unwrap();
 
+
                     toast.success(
                         "Product created successfully"
                     );
                 }
+
 
                 dispatch(
                     closeModal()
@@ -1877,75 +2318,168 @@ export default function ProductCreate() {
                 >
 
                     {/* =================================================
-                        CATEGORY / SUBCATEGORY
+                        IMAGE + CATEGORY / SUBCATEGORY
                     ================================================= */}
 
-                    <div
-                        className="
-                            grid
-                            grid-cols-2
-                            gap-5
-                            mb-5
-                        "
-                    >
+                    <div className="grid grid-cols-[280px_1fr] gap-6 mb-5">
 
-                        <SearchSelect
-                            label="Category"
-                            value={
-                                form.categoryId
-                            }
-                            options={
-                                categories
-                            }
-                            onChange={
-                                handleCategoryChange
-                            }
-                            getOptionKey={
-                                getCategoryKey
-                            }
-                            getOptionLabel={
-                                getCategoryLabel
-                            }
-                            placeholder="Choose category"
-                            required
-                            error={
-                                errors.categoryId
-                            }
-                        />
+                        {/* ================= IMAGE ================= */}
 
-                        <SearchSelect
-                            label="Subcategory"
-                            value={
-                                form.subCategoryId
-                            }
-                            options={
-                                filteredSubCategories
-                            }
-                            onChange={(value) =>
-                                handleChange(
-                                    "subCategoryId",
+                        <div>
+
+                            <label
+                                className="
+                                    block
+                                    text-sm
+                                    font-medium
+                                    text-gray-700
+                                    mb-2
+                                "
+                            >
+                                Product Image
+                            </label>
+
+                            <label
+                                className="
+                                    w-[280px]
+                                    h-[150px]
+                                    border-2
+                                    border-dashed
+                                    border-gray-300
+                                    rounded-md
+                                    flex
+                                    items-center
+                                    justify-center
+                                    overflow-hidden
+                                    cursor-pointer
+                                    hover:border-blue-500
+                                    transition
+                                "
+                            >
+                                {imagePreview ? (
+                                    <img
+                                        src={
+                                            imagePreview
+                                        }
+                                        alt="Product"
+                                        className="
+                                            w-full
+                                            h-full
+                                            object-cover
+                                        "
+                                    />
+                                ) : (
+                                    <div className="text-center text-gray-400">
+
+                                        <p className="text-sm">
+                                            Choose image
+                                        </p>
+
+                                        <p className="text-xs mt-1">
+                                            JPG / PNG
+                                        </p>
+
+                                    </div>
+                                )}
+
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={
+                                        handleImageChange
+                                    }
+                                />
+
+                            </label>
+
+                            {form.image && (
+                                <div
+                                    className="
+                                        text-xs
+                                        text-gray-500
+                                        mt-2
+                                        truncate
+                                        w-[150px]
+                                    "
+                                    title={
+                                        form.image.name
+                                    }
+                                >
+                                    {
+                                        form.image.name
+                                    }
+                                </div>
+                            )}
+
+                        </div>
+
+
+                        {/* ================= CATEGORY / SUBCATEGORY ================= */}
+
+                        <div className="flex flex-col gap-5">
+
+                            <SearchSelect
+                                label="Category"
+                                value={
+                                    form.categoryId
+                                }
+                                options={
+                                    categories
+                                }
+                                onChange={
+                                    handleCategoryChange
+                                }
+                                getOptionKey={
+                                    getCategoryKey
+                                }
+                                getOptionLabel={
+                                    getCategoryLabel
+                                }
+                                placeholder="Choose category"
+                                required
+                                error={
+                                    errors.categoryId
+                                }
+                            />
+
+                            <SearchSelect
+                                label="Subcategory"
+                                value={
+                                    form.subCategoryId
+                                }
+                                options={
+                                    filteredSubCategories
+                                }
+                                onChange={(
                                     value
-                                )
-                            }
-                            getOptionKey={
-                                getSubCategoryKey
-                            }
-                            getOptionLabel={
-                                getSubCategoryLabel
-                            }
-                            placeholder={
-                                form.categoryId
-                                    ? "Choose subcategory"
-                                    : "Choose category first"
-                            }
-                            required
-                            disabled={
-                                !form.categoryId
-                            }
-                            error={
-                                errors.subCategoryId
-                            }
-                        />
+                                ) =>
+                                    handleChange(
+                                        "subCategoryId",
+                                        value
+                                    )
+                                }
+                                getOptionKey={
+                                    getSubCategoryKey
+                                }
+                                getOptionLabel={
+                                    getSubCategoryLabel
+                                }
+                                placeholder={
+                                    form.categoryId
+                                        ? "Choose subcategory"
+                                        : "Choose category first"
+                                }
+                                required
+                                disabled={
+                                    !form.categoryId
+                                }
+                                error={
+                                    errors.subCategoryId
+                                }
+                            />
+
+                        </div>
 
                     </div>
 
@@ -1979,6 +2513,7 @@ export default function ProductCreate() {
                                 <span className="text-red-500 ml-1">
                                     *
                                 </span>
+
                             </label>
 
                             <input
@@ -2141,6 +2676,7 @@ export default function ProductCreate() {
                                 <span className="text-red-500 ml-1">
                                     *
                                 </span>
+
                             </label>
 
                             <input
@@ -2202,6 +2738,7 @@ export default function ProductCreate() {
                                 <span className="text-red-500 ml-1">
                                     *
                                 </span>
+
                             </label>
 
                             <input
@@ -2249,85 +2786,38 @@ export default function ProductCreate() {
 
                         <div>
 
-                            <label
-                                className="
-                                    block
-                                    text-sm
-                                    font-medium
-                                    text-gray-700
-                                    mb-2
-                                "
-                            >
-                                Tax
-
-                                <span className="text-red-500 ml-1">
-                                    *
-                                </span>
-                            </label>
-
-                            <select
+                            <SearchSelect
+                                label="Tax"
                                 value={
                                     form.taxId
                                 }
-                                onChange={(e) =>
+                                options={
+                                    taxes
+                                }
+                                onChange={(
+                                    value
+                                ) =>
                                     handleChange(
                                         "taxId",
-                                        e.target.value
+                                        value
                                     )
                                 }
-                                className={`
-                                    w-full
-                                    h-11
-                                    px-3
-                                    border
-                                    rounded-md
-                                    bg-white
-                                    text-sm
-                                    outline-none
-                                    focus:border-blue-500
-                                    focus:ring-1
-                                    focus:ring-blue-500
-                                    ${errors.taxId
-                                        ? "border-red-400"
-                                        : "border-gray-300"
-                                    }
-                                `}
-                            >
-
-                                <option value="">
-                                    Select tax
-                                </option>
-
-                                {taxes.map(
-                                    (tax) => (
-                                        <option
-                                            key={
-                                                tax.id
-                                            }
-                                            value={
-                                                tax.id
-                                            }
-                                        >
-                                            {
-                                                tax.taxName
-                                            }
-
-                                            {tax.taxRate !==
-                                                undefined &&
-                                                ` (${tax.taxRate}%)`}
-                                        </option>
-                                    )
-                                )}
-
-                            </select>
-
-                            {errors.taxId && (
-                                <p className="mt-1 text-xs text-red-500">
-                                    {
-                                        errors.taxId
-                                    }
-                                </p>
-                            )}
+                                getOptionKey={(
+                                    tax
+                                ) =>
+                                    tax.id
+                                }
+                                getOptionLabel={(
+                                    tax
+                                ) =>
+                                    `${tax.taxName} (${tax.taxRate}%)`
+                                }
+                                placeholder="Choose tax"
+                                required
+                                error={
+                                    errors.taxId
+                                }
+                            />
 
                         </div>
 
@@ -2527,7 +3017,7 @@ export default function ProductCreate() {
                     <div
                         className="
                             grid
-                            grid-cols-2
+                            grid-cols-1
                             gap-5
                             mb-5
                         "
@@ -2535,131 +3025,58 @@ export default function ProductCreate() {
 
                         <SearchMultiSelect
                             label="Sizes"
-                            selected={form.sizes}
-                            options={sizes}
-                            onAdd={handleAddSize}
-                            onRemove={handleRemoveSize}
-                            getOptionKey={getSizeKey}
-                            getOptionLabel={getSizeLabel}
+                            selected={
+                                form.sizes
+                            }
+                            options={
+                                sizes
+                            }
+                            onAdd={
+                                handleAddSize
+                            }
+                            onRemove={
+                                handleRemoveSize
+                            }
+                            getOptionKey={
+                                getSizeKey
+                            }
+                            getOptionLabel={
+                                getSizeLabel
+                            }
                             placeholder="Search and select sizes"
                             required
+                            error={
+                                errors.sizes
+                            }
                         />
+
 
                         <SearchMultiSelect
                             label="Units"
-                            selected={form.units}
-                            options={units}
-                            onAdd={handleAddUnit}
-                            onRemove={handleRemoveUnit}
-                            getOptionKey={getUnitKey}
-                            getOptionLabel={getUnitLabel}
+                            selected={
+                                form.units
+                            }
+                            options={
+                                units
+                            }
+                            onAdd={
+                                handleAddUnit
+                            }
+                            onRemove={
+                                handleRemoveUnit
+                            }
+                            getOptionKey={
+                                getUnitKey
+                            }
+                            getOptionLabel={
+                                getUnitLabel
+                            }
                             placeholder="Search and select units"
                             required
+                            error={
+                                errors.units
+                            }
                         />
-
-                    </div>
-
-
-                    {/* =================================================
-                        IMAGE
-                    ================================================= */}
-
-                    <div className="mb-2">
-
-                        <label
-                            className="
-                                block
-                                text-sm
-                                font-medium
-                                text-gray-700
-                                mb-2
-                            "
-                        >
-                            Product Image
-                        </label>
-
-                        <div
-                            className="
-                                flex
-                                items-start
-                                gap-4
-                            "
-                        >
-
-                            <label
-                                className="
-                                    w-[150px]
-                                    h-[100px]
-                                    border-2
-                                    border-dashed
-                                    border-gray-300
-                                    rounded-md
-                                    flex
-                                    items-center
-                                    justify-center
-                                    overflow-hidden
-                                    cursor-pointer
-                                    hover:border-blue-500
-                                    transition
-                                "
-                            >
-
-                                {imagePreview ? (
-                                    <img
-                                        src={
-                                            imagePreview
-                                        }
-                                        alt="Product"
-                                        className="
-                                            w-full
-                                            h-full
-                                            object-cover
-                                        "
-                                    />
-                                ) : (
-                                    <div
-                                        className="
-                                            text-center
-                                            text-gray-400
-                                        "
-                                    >
-                                        <p className="text-sm">
-                                            Choose image
-                                        </p>
-
-                                        <p className="text-xs mt-1">
-                                            JPG / PNG
-                                        </p>
-                                    </div>
-                                )}
-
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={
-                                        handleImageChange
-                                    }
-                                />
-
-                            </label>
-
-                            {form.image && (
-                                <div
-                                    className="
-                                        text-sm
-                                        text-gray-500
-                                        pt-2
-                                    "
-                                >
-                                    {
-                                        form.image
-                                            .name
-                                    }
-                                </div>
-                            )}
-
-                        </div>
 
                     </div>
 
@@ -2690,7 +3107,9 @@ export default function ProductCreate() {
                         onClick={
                             handleClose
                         }
-                        disabled={loading}
+                        disabled={
+                            loading
+                        }
                         className="
                             h-10
                             px-5
@@ -2713,7 +3132,9 @@ export default function ProductCreate() {
 
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={
+                            loading
+                        }
                         className="
                             h-10
                             px-6

@@ -55,13 +55,14 @@ const NAV = [
         basePath: "/items",
         dropdown: true,
         children: [
-            { label: "Products", to: "/items" },
+
             { label: "Categories", to: "/categories" },
             { label: "Sub Categories", to: "/subCategoires" },
-            { label: "Brands", to: "/brands" },
+            { label: "Parties", to: "/parties" },
             { label: "Sizes", to: "/sizes" },
             { label: "Units", to: "/units" },
             { label: "Taxes", to: "/taxes" },
+            { label: "Products", to: "/items" },
         ],
     },
 

@@ -6,6 +6,10 @@ import toast from "react-hot-toast";
 import { closeModal } from "../../ui/uiSlice";
 
 import {
+    fetchAllCategories,
+} from "../../category/thunks/categoryThunks";
+
+import {
     resetSubCategoryForm,
     setSubCategoryField,
 } from "../slices/subCategorySlice";
@@ -32,6 +36,12 @@ export default function SubCategoryCreate() {
         loading,
     } = useSelector(
         (state) => state.subCategory
+    );
+
+    const {
+        categories = [],
+    } = useSelector(
+        (state) => state.category
     );
 
     // =========================================================
@@ -203,6 +213,20 @@ export default function SubCategoryCreate() {
         modal.data,
         dispatch,
     ]);
+
+
+    //category USEEFFCT
+
+    useEffect(() => {
+
+        if (!isOpen) {
+            return;
+        }
+
+        dispatch(fetchAllCategories());
+
+    }, [isOpen, dispatch]);
+
 
     // =========================================================
     // SAVE
@@ -543,10 +567,7 @@ export default function SubCategoryCreate() {
                         </label>
 
                         <select
-                            value={
-                                form.categoryId ??
-                                ""
-                            }
+                            value={form.categoryId ?? ""}
                             onChange={(e) =>
                                 handleChange(
                                     "categoryId",
@@ -556,48 +577,46 @@ export default function SubCategoryCreate() {
                                 )
                             }
                             className="
-                                w-full
-                                h-11
+        w-full
+        h-11
+        px-3
 
-                                px-3
+        border
+        border-gray-300
+        rounded-md
 
-                                border
-                                border-gray-300
+        text-sm
+        bg-white
 
-                                rounded-md
+        outline-none
 
-                                text-sm
-
-                                bg-white
-
-                                outline-none
-
-                                focus:border-blue-500
-                                focus:ring-1
-                                focus:ring-blue-500
-                            "
+        focus:border-blue-500
+        focus:ring-1
+        focus:ring-blue-500
+    "
                         >
-
                             <option value="">
                                 Select Category
                             </option>
 
-                            {/* 
-                                Replace with categories
-                                from Redux.
-
-                                Example:
-
-                                {categories.map((category) => (
+                            {categories
+                                .filter(
+                                    (category) =>
+                                        category.status === "ACTIVE"
+                                )
+                                .sort(
+                                    (a, b) =>
+                                        (a.displayOrder ?? 0) -
+                                        (b.displayOrder ?? 0)
+                                )
+                                .map((category) => (
                                     <option
                                         key={category.id}
                                         value={category.id}
                                     >
-                                        {category.categoryName}
+                                        {category.categoryName || category.name}
                                     </option>
                                 ))}
-                            */}
-
                         </select>
 
                     </div>

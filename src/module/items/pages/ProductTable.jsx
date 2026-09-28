@@ -1,10 +1,11 @@
+
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { openModal } from "../../ui/uiSlice";
 
 import {
     fetchAllProducts,
-    fetchProductById,
     deleteProduct,
 } from "../thunks/productThunks";
 
@@ -24,14 +25,12 @@ import toast from "react-hot-toast";
 
 export default function ProductTable({ products = [] }) {
 
-
-
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
     /* =====================================================
        REDUX STATE
-       ===================================================== */
+    ===================================================== */
 
     const {
         loading,
@@ -50,7 +49,7 @@ export default function ProductTable({ products = [] }) {
 
     /* =====================================================
        DELETE PRODUCT
-       ===================================================== */
+    ===================================================== */
 
     const handleDelete = async (id) => {
 
@@ -59,14 +58,11 @@ export default function ProductTable({ products = [] }) {
         }
 
         try {
+
             await dispatch(deleteProduct(id)).unwrap();
 
             toast.success("Product deleted successfully");
 
-            /*
-             * Reload list after delete.
-             * This keeps pagination/list in sync with backend.
-             */
             dispatch(fetchAllProducts());
 
         } catch (error) {
@@ -81,20 +77,16 @@ export default function ProductTable({ products = [] }) {
 
     /* =====================================================
        VIEW PRODUCT
-       ===================================================== */
+    ===================================================== */
 
-    const handleView = async (product) => {
+    const handleView = (product) => {
 
         try {
 
-            /*
-             * Store selected product immediately
-             */
-            dispatch(setExsistingProduct(product));
+            dispatch(
+                setExsistingProduct(product)
+            );
 
-            /*
-             * Navigate to view page
-             */
             navigate(`/items/view/${product.id}`);
 
         } catch (error) {
@@ -105,25 +97,42 @@ export default function ProductTable({ products = [] }) {
 
     /* =====================================================
        EDIT PRODUCT
-       ===================================================== */
+    ===================================================== */
 
-    const handleEdit = async (product) => {
+    const handleEdit = (product) => {
+
+        console.log("EDIT PRODUCT:", product);
 
         try {
 
-            dispatch(setExsistingProduct(product));
+            dispatch(
+                openModal({
+                    type: "editProduct",
+                    data: product,
+                })
+            );
 
-            navigate(`/items/edit/${product.id}`);
+            console.log(
+                "PRODUCT MODAL OPEN DISPATCHED"
+            );
 
         } catch (error) {
 
-            toast.error("Failed to open product");
+            console.error(
+                "PRODUCT EDIT ERROR:",
+                error
+            );
+
+            toast.error(
+                error?.message ||
+                "Failed to open product"
+            );
         }
     };
 
     /* =====================================================
-       AVATAR / PRODUCT INITIALS
-       ===================================================== */
+       PRODUCT INITIALS
+    ===================================================== */
 
     const initials = (productName) =>
         productName
@@ -135,19 +144,27 @@ export default function ProductTable({ products = [] }) {
 
     /* =====================================================
        STATUS COLORS
-       ===================================================== */
+    ===================================================== */
 
     const statusColor = {
-        ACTIVE: "bg-green-100 text-green-700",
-        INACTIVE: "bg-gray-100 text-gray-700",
-        DRAFT: "bg-yellow-100 text-yellow-700",
+
+        ACTIVE:
+            "bg-green-100 text-green-700",
+
+        INACTIVE:
+            "bg-gray-100 text-gray-700",
+
+        DRAFT:
+            "bg-yellow-100 text-yellow-700",
+
     };
 
     /* =====================================================
        PRODUCT AVATAR COLORS
-       ===================================================== */
+    ===================================================== */
 
     const avatarColors = [
+
         "bg-pink-500 text-white",
         "bg-green-500 text-white",
         "bg-blue-500 text-white",
@@ -155,6 +172,7 @@ export default function ProductTable({ products = [] }) {
         "bg-orange-500 text-white",
         "bg-cyan-500 text-white",
         "bg-indigo-500 text-white",
+
     ];
 
     const getAvatarColor = (name = "") => {
@@ -163,46 +181,55 @@ export default function ProductTable({ products = [] }) {
             name
                 .split("")
                 .reduce(
-                    (acc, char) => acc + char.charCodeAt(0),
+                    (acc, char) =>
+                        acc + char.charCodeAt(0),
                     0
-                ) % avatarColors.length;
+                ) %
+            avatarColors.length;
 
         return avatarColors[index];
     };
 
     /* =====================================================
        LOADING
-       ===================================================== */
+    ===================================================== */
 
     if (loading) {
+
         return (
             <div className="flex items-center justify-center py-10">
+
                 <p className="text-gray-500">
                     Loading products...
                 </p>
+
             </div>
         );
     }
 
     /* =====================================================
        ERROR
-       ===================================================== */
+    ===================================================== */
 
     if (error) {
+
         return (
             <div className="bg-white rounded-xl border border-red-200 p-8 text-center">
+
                 <p className="text-red-500">
                     {error}
                 </p>
+
             </div>
         );
     }
 
     /* =====================================================
        EMPTY STATE
-       ===================================================== */
+    ===================================================== */
 
     if (!currentProducts.length) {
+
         return (
             <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
 
@@ -218,68 +245,93 @@ export default function ProductTable({ products = [] }) {
 
     /* =====================================================
        TABLE
-       ===================================================== */
+    ===================================================== */
 
     return (
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
+        <div className="bg-white rounded-xl border border-gray-200">
 
-            <div className="overflow-x-auto overflow-y-visible">
+            <table className="w-full">
 
-                <table className="w-full">
+                {/* =================================================
+                    TABLE HEADER
+                ================================================= */}
 
-                    {/* =================================================
-                        TABLE HEADER
-                    ================================================= */}
+                <thead className="sticky top-0 z-20 bg-gray-100 border-b border-gray-300">
 
-                    <thead className="bg-gray-100 border-b border-gray-300">
+                    <tr>
 
-                        <tr>
+                        {[
+                            "Product",
+                            "SKU",
+                            "Category",
+                            "HSN",
+                            "Selling Price",
+                            "Purchase Price",
+                            "Tax",
+                            "Status",
+                            "Actions",
+                        ].map((header) => (
 
-                            {[
-                                "Product",
-                                "SKU",
-                                "Category",
-                                "HSN",
-                                "Selling Price",
-                                "Purchase Price",
-                                "Tax",
-                                "Status",
-                                "Actions",
-                            ].map((header) => (
-
-                                <th
-                                    key={header}
-                                    className={`px-4 py-3 font-medium text-sm text-gray-600 uppercase ${header === "Actions"
+                            <th
+                                key={header}
+                                className={`
+                                    px-4
+                                    py-3
+                                    font-medium
+                                    text-sm
+                                    text-gray-600
+                                    uppercase
+                                    ${header === "Actions"
                                         ? "text-right"
                                         : "text-left"
-                                        }`}
-                                >
-                                    {header}
-                                </th>
+                                    }
+                                `}
+                            >
+                                {header}
+                            </th>
 
-                            ))}
+                        ))}
 
-                        </tr>
+                    </tr>
 
-                    </thead>
+                </thead>
 
-                    {/* =================================================
-                        TABLE BODY
-                    ================================================= */}
+                {/* =================================================
+                    TABLE BODY
+                ================================================= */}
 
-                    <tbody>
+                <tbody>
 
-                        {[...currentProducts]
-                            .sort((a, b) => a.id - b.id)
-                            .map((product, index) => (
+                    {[...currentProducts]
+                        .sort(
+                            (a, b) =>
+                                a.id - b.id
+                        )
+                        .map(
+                            (
+                                product,
+                                index
+                            ) => (
 
                                 <tr
-                                    key={product.id || index}
-                                    onClick={() =>
-                                        handleView(product)
+                                    key={
+                                        product.id ||
+                                        index
                                     }
-                                    className="border-b border-gray-100 hover:bg-gray-50 text-md cursor-pointer transition-colors"
+                                    onClick={() =>
+                                        handleView(
+                                            product
+                                        )
+                                    }
+                                    className="
+                                        border-b
+                                        border-gray-100
+                                        hover:bg-gray-50
+                                        text-md
+                                        cursor-pointer
+                                        transition-colors
+                                    "
                                 >
 
                                     {/* =================================
@@ -291,9 +343,19 @@ export default function ProductTable({ products = [] }) {
                                         <div className="flex items-center gap-3">
 
                                             <div
-                                                className={`w-10 h-10 rounded-full flex items-center justify-center text-md font-bold ${getAvatarColor(
+                                                className={`
+                                                    w-10
+                                                    h-10
+                                                    rounded-full
+                                                    flex
+                                                    items-center
+                                                    justify-center
+                                                    text-md
+                                                    font-bold
+                                                    ${getAvatarColor(
                                                     product.productName
-                                                )}`}
+                                                )}
+                                                `}
                                             >
                                                 {initials(
                                                     product.productName
@@ -303,11 +365,13 @@ export default function ProductTable({ products = [] }) {
                                             <div>
 
                                                 <p className="font-medium text-gray-800">
-                                                    {product.productName || "—"}
+                                                    {product.productName ||
+                                                        "—"}
                                                 </p>
 
                                                 <p className="text-sm text-gray-500">
-                                                    ID: #{product.id}
+                                                    ID: #
+                                                    {product.id}
                                                 </p>
 
                                             </div>
@@ -321,7 +385,8 @@ export default function ProductTable({ products = [] }) {
                                     ================================= */}
 
                                     <td className="px-4 py-3">
-                                        {product.sku || "—"}
+                                        {product.sku ||
+                                            "—"}
                                     </td>
 
                                     {/* =================================
@@ -330,7 +395,8 @@ export default function ProductTable({ products = [] }) {
 
                                     <td className="px-4 py-3">
                                         {product.categoryName ||
-                                            product.category?.categoryName ||
+                                            product.category
+                                                ?.categoryName ||
                                             "—"}
                                     </td>
 
@@ -339,7 +405,8 @@ export default function ProductTable({ products = [] }) {
                                     ================================= */}
 
                                     <td className="px-4 py-3">
-                                        {product.hsnCode || "—"}
+                                        {product.hsnCode ||
+                                            "—"}
                                     </td>
 
                                     {/* =================================
@@ -348,7 +415,8 @@ export default function ProductTable({ products = [] }) {
 
                                     <td className="px-4 py-3">
                                         ₹{" "}
-                                        {product.sellingPrice ?? "0.00"}
+                                        {product.sellingPrice ??
+                                            "0.00"}
                                     </td>
 
                                     {/* =================================
@@ -357,7 +425,8 @@ export default function ProductTable({ products = [] }) {
 
                                     <td className="px-4 py-3">
                                         ₹{" "}
-                                        {product.purchasingPrice ?? "0.00"}
+                                        {product.purchasingPrice ??
+                                            "0.00"}
                                     </td>
 
                                     {/* =================================
@@ -367,19 +436,29 @@ export default function ProductTable({ products = [] }) {
                                     <td className="px-4 py-3">
 
                                         {product.taxName ? (
+
                                             <div>
 
                                                 <p className="text-gray-800">
-                                                    {product.taxName}
+                                                    {
+                                                        product.taxName
+                                                    }
                                                 </p>
 
                                                 <p className="text-xs text-gray-500">
-                                                    {product.taxRate ?? 0}%
+                                                    {
+                                                        product.taxRate ??
+                                                        0
+                                                    }
+                                                    %
                                                 </p>
 
                                             </div>
+
                                         ) : (
+
                                             "—"
+
                                         )}
 
                                     </td>
@@ -391,13 +470,21 @@ export default function ProductTable({ products = [] }) {
                                     <td className="px-5 py-3 font-semibold">
 
                                         <span
-                                            className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor[
+                                            className={`
+                                                px-2
+                                                py-1
+                                                rounded-full
+                                                text-xs
+                                                font-medium
+                                                ${statusColor[
                                                 product.status
-                                            ] ||
+                                                ] ||
                                                 "bg-gray-100 text-gray-700"
-                                                }`}
+                                                }
+                                            `}
                                         >
-                                            {product.status || "—"}
+                                            {product.status ||
+                                                "—"}
                                         </span>
 
                                     </td>
@@ -407,7 +494,12 @@ export default function ProductTable({ products = [] }) {
                                     ================================= */}
 
                                     <td
-                                        className="relative overflow-visible px-4 py-3"
+                                        className="
+                                            relative
+                                            overflow-visible
+                                            px-2
+                                            py-3
+                                        "
                                         onClick={(e) =>
                                             e.stopPropagation()
                                         }
@@ -417,16 +509,27 @@ export default function ProductTable({ products = [] }) {
 
                                             <div className="relative group inline-block">
 
+                                                {/* ACTION BUTTON */}
+
                                                 <button
                                                     type="button"
-                                                    className="p-1 rounded-full bg-blue-500 text-white"
+                                                    className="
+                                                        p-1
+                                                        rounded-full
+                                                        bg-blue-500
+                                                        text-white
+                                                        hover:bg-blue-600
+                                                        transition-colors
+                                                    "
                                                 >
-                                                    <ChevronDown size={16} />
+
+                                                    <ChevronDown
+                                                        size={16}
+                                                    />
+
                                                 </button>
 
-                                                {/* =========================
-                                                    ACTION MENU
-                                                ========================= */}
+                                                {/* ACTION MENU */}
 
                                                 <div
                                                     className="
@@ -440,38 +543,83 @@ export default function ProductTable({ products = [] }) {
                                                         group-hover:opacity-100
                                                         group-hover:visible
                                                         transition-all
+                                                        duration-150
                                                     "
                                                 >
 
-                                                    <div className="w-36 rounded-md bg-blue-500 shadow-lg">
+                                                    <div
+                                                        className="
+                                                            w-36
+                                                            rounded-md
+                                                            bg-blue-500
+                                                            shadow-lg
+                                                            overflow-hidden
+                                                        "
+                                                    >
 
-                                                        {/* View */}
+                                                        {/* VIEW */}
 
                                                         <button
                                                             type="button"
                                                             onClick={() =>
-                                                                handleView(product)
+                                                                handleView(
+                                                                    product
+                                                                )
                                                             }
-                                                            className="flex w-full items-center gap-2 px-4 py-2 text-white hover:bg-blue-600 rounded-md"
+                                                            className="
+                                                                flex
+                                                                w-full
+                                                                items-center
+                                                                gap-2
+                                                                px-4
+                                                                py-2
+                                                                text-sm
+                                                                text-white
+                                                                hover:bg-blue-600
+                                                                transition-colors
+                                                            "
                                                         >
-                                                            <Eye size={16} />
+
+                                                            <Eye
+                                                                size={16}
+                                                            />
+
                                                             View
+
                                                         </button>
 
-                                                        {/* Edit */}
+                                                        {/* EDIT */}
 
                                                         <button
                                                             type="button"
                                                             onClick={() =>
-                                                                handleEdit(product)
+                                                                handleEdit(
+                                                                    product
+                                                                )
                                                             }
-                                                            className="flex w-full items-center gap-2 px-4 py-2 text-white hover:bg-blue-600 rounded-md"
+                                                            className="
+                                                                flex
+                                                                w-full
+                                                                items-center
+                                                                gap-2
+                                                                px-4
+                                                                py-2
+                                                                text-sm
+                                                                text-white
+                                                                hover:bg-blue-600
+                                                                transition-colors
+                                                            "
                                                         >
-                                                            <Edit size={16} />
+
+                                                            <Edit
+                                                                size={16}
+                                                            />
+
                                                             Edit
+
                                                         </button>
 
-                                                        {/* Delete */}
+                                                        {/* DELETE */}
 
                                                         <button
                                                             type="button"
@@ -480,10 +628,26 @@ export default function ProductTable({ products = [] }) {
                                                                     product.id
                                                                 )
                                                             }
-                                                            className="flex w-full items-center gap-2 px-4 py-2 text-white hover:bg-red-600 rounded-md"
+                                                            className="
+                                                                flex
+                                                                w-full
+                                                                items-center
+                                                                gap-2
+                                                                px-4
+                                                                py-2
+                                                                text-sm
+                                                                text-white
+                                                                hover:bg-red-600
+                                                                transition-colors
+                                                            "
                                                         >
-                                                            <Trash2 size={16} />
+
+                                                            <Trash2
+                                                                size={16}
+                                                            />
+
                                                             Delete
+
                                                         </button>
 
                                                     </div>
@@ -498,66 +662,95 @@ export default function ProductTable({ products = [] }) {
 
                                 </tr>
 
-                            ))}
+                            )
+                        )}
 
-                    </tbody>
+                </tbody>
 
-                </table>
+            </table>
 
-                {/* =====================================================
-                    PAGINATION
-                ===================================================== */}
+            {/* =====================================================
+                PAGINATION
+            ===================================================== */}
 
-                <div className="p-5 border-t border-gray-100 flex items-center justify-between">
+            <div className="p-5 border-t border-gray-100 flex items-center justify-between">
 
-                    <p className="text-sm text-gray-500">
-                        Showing{" "}
-                        {currentProducts.length}{" "}
-                        of{" "}
-                        {totalElements || 0}{" "}
-                        products
-                    </p>
+                <p className="text-sm text-gray-500">
 
-                    <div className="flex items-center gap-3">
+                    Showing{" "}
+                    {currentProducts.length}{" "}
+                    of{" "}
+                    {totalElements || 0}{" "}
+                    products
 
-                        {/* Previous */}
+                </p>
 
-                        <button
-                            type="button"
-                            disabled={
-                                Number(pageNumber) <= 0
-                            }
-                            onClick={() => {
-                                // Add server-side page support here
-                            }}
-                            className="text-sm text-gray-400 hover:text-gray-600 disabled:opacity-50"
-                        >
-                            Previous
-                        </button>
+                <div className="flex items-center gap-3">
 
-                        {/* Current Page */}
+                    {/* PREVIOUS */}
 
-                        <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-600 text-white text-sm font-medium">
-                            {(Number(pageNumber) || 0) + 1}
-                        </span>
+                    <button
+                        type="button"
+                        disabled={
+                            Number(pageNumber) <=
+                            0
+                        }
+                        onClick={() => {
+                            // Add server-side page support here
+                        }}
+                        className="
+                            text-sm
+                            text-gray-400
+                            hover:text-gray-600
+                            disabled:opacity-50
+                        "
+                    >
+                        Previous
+                    </button>
 
-                        {/* Next */}
+                    {/* CURRENT PAGE */}
 
-                        <button
-                            type="button"
-                            disabled={
-                                (Number(pageNumber) || 0) >=
-                                (Number(totalPages) || 1) - 1
-                            }
-                            onClick={() => {
-                                // Add server-side page support here
-                            }}
-                            className="text-sm text-gray-400 hover:text-gray-600 disabled:opacity-50"
-                        >
-                            Next
-                        </button>
+                    <span
+                        className="
+                            w-8
+                            h-8
+                            flex
+                            items-center
+                            justify-center
+                            rounded-lg
+                            bg-indigo-600
+                            text-white
+                            text-sm
+                            font-medium
+                        "
+                    >
+                        {(Number(pageNumber) ||
+                            0) + 1}
+                    </span>
 
-                    </div>
+                    {/* NEXT */}
+
+                    <button
+                        type="button"
+                        disabled={
+                            (Number(pageNumber) ||
+                                0) >=
+                            (Number(totalPages) ||
+                                1) -
+                            1
+                        }
+                        onClick={() => {
+                            // Add server-side page support here
+                        }}
+                        className="
+                            text-sm
+                            text-gray-400
+                            hover:text-gray-600
+                            disabled:opacity-50
+                        "
+                    >
+                        Next
+                    </button>
 
                 </div>
 

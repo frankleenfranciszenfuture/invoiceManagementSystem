@@ -7,9 +7,9 @@ import axios from "axios";
 const api = axios.create({
   baseURL: "http://localhost:8081/api/v1.0",
 
-  headers: {
-    "Content-Type": "application/json",
-  },
+  // headers: {
+  //   "Content-Type": "application/json",
+  // },
 
   /*
    * IMPORTANT:
@@ -171,5 +171,11 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+export const getProductImageUrl = (image) => {
+  if (!image) return null;
+
+  return `http://localhost:8081/api/v1.0/uploads/products/${image}`;
+};
 
 export default api;

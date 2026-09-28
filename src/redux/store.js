@@ -24,6 +24,8 @@ import productReducer from "../module/items/slices/productSlice";
 import productViewReducer from "../module/items/slices/productViewSlice";
 import subCategoryReducer from "../module/subCategory/slices/subCategorySlice";
 import categoryReducer from "../module/category/slices/categorySlice";
+import invoiceReducer from "../module/invoices/slices/invoiceSlice";
+import invoiceViewReducer from "../module/invoices/slices/invoiceViewSlice";
 
 export const store = configureStore({
   reducer: {
@@ -59,6 +61,11 @@ export const store = configureStore({
 
     product: productReducer,
     productView: productViewReducer,
+
+    //invoice
+
+    invoice: invoiceReducer,
+    invoiceView: invoiceViewReducer,
   },
 });
 
