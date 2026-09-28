@@ -41,6 +41,7 @@ import SubCategoryDashboard from "./module/subCategory/pages/SubCategoryDashboar
 import CategoryDashboard from "./module/category/pages/CategoryDashboard";
 import ProductOverViewDashboard from "./module/items/overviewCard/ProductOverViewDashboard";
 import InvoiceCreate from "./module/invoices/pages/InvoiceCreate";
+import InvoiceDashboard from "./module/invoices/pages/InvoiceDashboard";
 
 export default function App() {
   const dispatch = useDispatch();
@@ -201,13 +202,20 @@ export default function App() {
           />
 
 
-
+          {/* =================================================
+                        Invoices
+              ================================================= */}
 
           <Route
             path="/invoices/new"
             element={<InvoiceCreate />}
           />
 
+
+          <Route
+            path="/invoices"
+            element={<InvoiceDashboard />}
+          />
 
 
         </Route>

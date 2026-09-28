@@ -12,6 +12,7 @@ import UnitCreate from "../../module/units/pages/UnitCreate";
 import SubCategoryCreate from "../../module/subCategory/pages/SubCategoryCreate";
 import CategoryCreate from "../../module/category/pages/CategoryCreate";
 import ProductCreate from "../../module/items/pages/ProductCreate"
+import InvoiceCreate from "../../module/invoices/pages/InvoiceCreate"
 
 export default function Modal() {
 
@@ -54,6 +55,10 @@ export default function Modal() {
         // TAX MASTER
         addProduct: ProductCreate,
         editProduct: ProductCreate,
+
+        // Invoice
+        addInvoice: InvoiceCreate,
+        editInvoice: InvoiceCreate,
     };
 
 
@@ -312,24 +317,29 @@ export default function Modal() {
                 ================================================= */}
 
                 <div
-                    className="
-                        ntm-modal-container
+                    className={`
+        ntm-modal-container
+        relative
+        overflow-hidden
+        rounded-xl
+        bg-white
+        shadow-2xl
 
-                        relative
-
-                        w-[950px]
-                        max-w-[95vw]
-
-                        max-h-[90vh]
-
-                        overflow-hidden
-
-                        rounded-xl
-
-                        bg-white
-
-                        shadow-2xl
-                    "
+        ${type === "addInvoice" ||
+                            type === "editInvoice"
+                            ? `
+                    w-[1100px]
+                    max-w-[98vw]
+                    h-[102vh]
+                    max-h-[92vh]
+                `
+                            : `
+                    w-[950px]
+                    max-w-[95vw]
+                    max-h-[90vh]
+                `
+                        }
+    `}
                     onMouseDown={(event) => {
                         event.stopPropagation();
                     }}

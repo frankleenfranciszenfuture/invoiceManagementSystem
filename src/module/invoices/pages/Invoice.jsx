@@ -1,1921 +1,2082 @@
 import React, {
-    useEffect,
-    useMemo,
-    useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 
-import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
-import "./Invoice.css";
-
-import {
-    fetchInvoices,
-    fetchInvoiceById,
-    removeInvoice,
-    setExsistingInvoice,
-    resetExsistingInvoice,
-} from "../../slices/InvoiceSlice";
+import DatePicker from "react-datepicker";
+import toast from "react-hot-toast";
 
 import {
-    loadCustomers,
+  Search,
+  Settings,
+  ScanLine,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  X,
+  UploadCloud,
+  Mail,
+  FileSpreadsheet,
+} from "lucide-react";
+
+import {
+  setInvoiceField,
+  setInvoiceItemField,
+  addInvoiceItem,
+  removeInvoiceItem,
+  resetInvoiceForm,
+} from "../slices/invoiceSlice";
+
+import {
+  createInvoice,
+} from "../thunks/invoiceThunks";
+
+import {
+  loadCustomers,
 } from "../../customer/thunks/customerThunks";
 
 import {
-    fetchAllProducts,
+  fetchAllProducts,
 } from "../../items/thunks/productThunks";
 
 import {
-    fetchAllUnits,
+  fetchAllUnits,
 } from "../../units/thunks/unitThunks";
 
 import {
-    fetchAllSizes,
+  fetchAllSizes,
 } from "../../sizes/thunks/sizeThunks";
 
 import {
-    fetchAllTaxMasters,
+  fetchAllTaxMasters,
 } from "../../taxMaster/thunks/taxMasterThunks";
 
-import InvoiceCreate from "./InvoiceCreate";
-
-import {
-    generateInvoicePdf,
-} from "./InvoicePdf";
-
-const EMPTY_ARRAY = [];
-const EMPTY_OBJECT = {};
 
 /* =========================================================
-   CUSTOMER ADDRESS
+   EMPTY ITEM
 ========================================================= */
 
-const getCustomerBillingAddress = (customer) => {
-    return (
-        customer?.billingAddress ||
-        customer?.shippingAddress ||
-        null
-    );
-};
+const createEmptyItem = () => ({
+  productId: "",
+  description: "",
+  unitId: "",
+  sizeId: "",
+  quantity: 1,
+  unitPrice: 0,
+  discountAmount: 0,
+  taxMasterId: "",
+});
 
-const formatCustomerAddress = (address) => {
-    if (!address) {
-        return "";
-    }
-
-    const parts = [
-        address.attention,
-        address.address,
-        address.city,
-        address.state,
-        address.country,
-        address.zipCode,
-    ].filter(
-        (part) =>
-            part !== null &&
-            part !== undefined &&
-            String(part).trim() !== ""
-    );
-
-    return parts.join(", ");
-};
-
-/* =========================================================
-   CUSTOMER DISPLAY NAME
-========================================================= */
-
-const getCustomerDisplayName = (customer) => {
-    if (!customer) {
-        return "";
-    }
-
-    return (
-        customer.displayName ||
-        customer.companyName ||
-        [
-            customer.salutation,
-            customer.firstName,
-            customer.lastName,
-        ]
-            .filter(Boolean)
-            .join(" ")
-            .trim()
-    );
-};
-
-/* =========================================================
-   TAX BREAKDOWN
-========================================================= */
-
-const getItemTaxBreakdown = (
-    item,
-    taxMasters = []
-) => {
-    const quantity =
-        Number(item?.quantity) || 0;
-
-    const unitPrice =
-        Number(item?.unitPrice) || 0;
-
-    const discountAmount =
-        Number(item?.discountAmount) || 0;
-
-    const grossAmount =
-        quantity * unitPrice;
-
-    const taxableAmount = Math.max(
-        grossAmount - discountAmount,
-        0
-    );
-
-    const taxMaster =
-        item?.taxMaster ||
-        taxMasters.find(
-            (tax) =>
-                String(tax?.id) ===
-                String(item?.taxMasterId)
-        );
-
-    const taxType = (
-        item?.taxType ||
-        taxMaster?.taxType ||
-        ""
-    ).toUpperCase();
-
-    const explicitTaxRate =
-        item?.taxRate != null
-            ? Number(item.taxRate) || 0
-            : Number(taxMaster?.taxRate) || 0;
-
-    const hasExplicitTax =
-        item?.taxAmount != null ||
-        item?.cgstAmount != null ||
-        item?.sgstAmount != null ||
-        item?.igstAmount != null;
-
-    let taxAmount = 0;
-    let totalAmount = taxableAmount;
-
-    if (hasExplicitTax) {
-        taxAmount =
-            item?.taxAmount != null
-                ? Number(item.taxAmount) || 0
-                : (Number(item?.cgstAmount) || 0) +
-                (Number(item?.sgstAmount) || 0) +
-                (Number(item?.igstAmount) || 0);
-
-        totalAmount =
-            item?.totalAmount != null
-                ? Number(item.totalAmount) || 0
-                : taxableAmount + taxAmount;
-    } else if (
-        item?.totalAmount != null
-    ) {
-        totalAmount =
-            Number(item.totalAmount) || 0;
-
-        taxAmount = Math.max(
-            totalAmount - taxableAmount,
-            0
-        );
-    } else {
-        taxAmount =
-            (taxableAmount *
-                explicitTaxRate) /
-            100;
-
-        totalAmount =
-            taxableAmount + taxAmount;
-    }
-
-    const taxRate =
-        explicitTaxRate > 0
-            ? explicitTaxRate
-            : taxableAmount > 0
-                ? (taxAmount /
-                    taxableAmount) *
-                100
-                : 0;
-
-    let cgstAmount = 0;
-    let sgstAmount = 0;
-    let igstAmount = 0;
-
-    if (taxType === "IGST") {
-        igstAmount =
-            item?.igstAmount != null
-                ? Number(item.igstAmount) || 0
-                : taxAmount;
-    } else {
-        cgstAmount =
-            item?.cgstAmount != null
-                ? Number(item.cgstAmount) || 0
-                : taxAmount / 2;
-
-        sgstAmount =
-            item?.sgstAmount != null
-                ? Number(item.sgstAmount) || 0
-                : taxAmount / 2;
-    }
-
-    return {
-        grossAmount,
-        taxableAmount,
-        taxAmount,
-        taxRate,
-        taxType,
-        totalAmount,
-        cgstAmount,
-        sgstAmount,
-        igstAmount,
-    };
-};
 
 /* =========================================================
    COMPONENT
 ========================================================= */
 
-export const Invoice = () => {
-    const dispatch = useDispatch();
+export default function InvoiceCreate() {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
-    const [showModal, setShowModal] =
-        useState(false);
+  const customerDropdownRef = useRef(null);
+  const itemDropdownRef = useRef(null);
+  const saveMenuRef = useRef(null);
 
-    const [viewInvoice, setViewInvoice] =
-        useState(null);
+  /* =======================================================
+     REDUX
+  ======================================================= */
 
-    const [showViewModal, setShowViewModal] =
-        useState(false);
+  const invoice = useSelector(
+    (state) => state.invoice?.invoice || {}
+  );
 
-    const [viewLoading, setViewLoading] =
-        useState(false);
+  const invoiceLoading = useSelector(
+    (state) => state.invoice?.loading || false
+  );
 
-    const [pdfLoading, setPdfLoading] =
-        useState(false);
+  const customers = useSelector(
+    (state) => state.customer?.customers || []
+  );
 
-    const [searchTerm, setSearchTerm] =
-        useState("");
+  const products = useSelector(
+    (state) =>
+      state.product?.products ||
+      state.product?.content ||
+      []
+  );
 
-    const [invoiceTypeFilter, setInvoiceTypeFilter] =
-        useState("");
+  const units = useSelector(
+    (state) =>
+      state.unit?.units ||
+      state.unit?.content ||
+      []
+  );
 
-    const [currentPage, setCurrentPage] =
-        useState(1);
+  const sizes = useSelector(
+    (state) =>
+      state.size?.sizes ||
+      state.size?.content ||
+      []
+  );
 
-    const recordsPerPage = 10;
+  const taxMasters = useSelector(
+    (state) =>
+      state.taxMaster?.taxMasters ||
+      state.taxMaster?.content ||
+      []
+  );
 
-    /* =========================================================
-       REDUX
-    ========================================================= */
+  /* =======================================================
+     LOCAL UI STATE
+  ======================================================= */
 
-    const customers = useSelector(
-        (state) =>
-            state.customers?.customers ??
-            EMPTY_ARRAY
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [itemSearch, setItemSearch] = useState("");
+
+  const [openCustomer, setOpenCustomer] = useState(false);
+  const [activeItemId, setActiveItemId] = useState(null);
+  const [openRowItemDropdown, setOpenRowItemDropdown] =
+    useState(false);
+
+  const [showSummary, setShowSummary] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showGateway, setShowGateway] = useState(false);
+  const [showSaveMenu, setShowSaveMenu] = useState(false);
+
+  /* =======================================================
+     SAFE INVOICE ITEMS
+  ======================================================= */
+
+  const invoiceItems = invoice?.invoiceItems || [];
+
+  /* =======================================================
+     LOAD MASTER DATA
+  ======================================================= */
+
+  useEffect(() => {
+    dispatch(
+      loadCustomers({
+        page: 0,
+        size: 100,
+        search: "",
+        sortBy: "displayName",
+        direction: "asc",
+      })
     );
 
-    const products = useSelector(
-        (state) =>
-            state.product?.products ??
-            EMPTY_ARRAY
+    dispatch(fetchAllProducts());
+    dispatch(fetchAllUnits());
+    dispatch(fetchAllSizes());
+    dispatch(fetchAllTaxMasters());
+
+    if (!invoice.invoiceItems?.length) {
+      dispatch(setInvoiceField({ field: "invoiceType", value: "SALE_INVOICE" }));
+      dispatch(setInvoiceField({ field: "status", value: "DRAFT" }));
+      dispatch(setInvoiceField({ field: "shippingAmount", value: 0 }));
+      dispatch(setInvoiceField({ field: "invoiceItems", value: [createEmptyItem()] }));
+    }
+  }, [dispatch]);
+
+  /* =======================================================
+     RESET LOCAL UI STATE
+  ======================================================= */
+
+  const resetLocalState = () => {
+    setCustomerSearch("");
+    setItemSearch("");
+    setOpenCustomer(false);
+    setOpenRowItemDropdown(false);
+    setActiveItemId(null);
+    setShowSummary(false);
+    setShowTerms(false);
+    setShowGateway(false);
+    setShowSaveMenu(false);
+  };
+
+  /* =======================================================
+     ESCAPE
+  ======================================================= */
+
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        handleClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener(
+        "keydown",
+        handleEscape
+      );
+    };
+  }, []);
+
+  /* =======================================================
+     CLICK OUTSIDE
+  ======================================================= */
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        customerDropdownRef.current &&
+        !customerDropdownRef.current.contains(event.target)
+      ) {
+        setOpenCustomer(false);
+      }
+
+      if (
+        itemDropdownRef.current &&
+        !itemDropdownRef.current.contains(event.target)
+      ) {
+        setOpenRowItemDropdown(false);
+        setActiveItemId(null);
+      }
+
+      if (
+        saveMenuRef.current &&
+        !saveMenuRef.current.contains(event.target)
+      ) {
+        setShowSaveMenu(false);
+      }
+    };
+
+    document.addEventListener(
+      "mousedown",
+      handleClickOutside
     );
 
-    const units = useSelector(
-        (state) =>
-            state.unit?.units ??
-            EMPTY_ARRAY
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutside
+      );
+    };
+  }, []);
+
+  /* =======================================================
+     CLOSE
+  ======================================================= */
+
+  const handleClose = () => {
+    dispatch(resetInvoiceForm());
+    resetLocalState();
+    navigate("/invoices");
+  };
+
+  /* =======================================================
+     CUSTOMER SEARCH
+  ======================================================= */
+
+  const filteredCustomers = useMemo(() => {
+    const search = (
+      customerSearch ||
+      ""
+    ).toLowerCase();
+
+    return (customers || []).filter((customer) => {
+      const name =
+        customer.customerName ||
+        customer.displayName ||
+        customer.name ||
+        "";
+
+      const email =
+        customer.email ||
+        "";
+
+      const phone =
+        customer.phoneNumber ||
+        customer.mobileNumber ||
+        customer.phone ||
+        "";
+
+      return (
+        name.toLowerCase().includes(search) ||
+        email.toLowerCase().includes(search) ||
+        phone.toLowerCase().includes(search)
+      );
+    });
+  }, [
+    customers,
+    customerSearch,
+  ]);
+
+  /* =======================================================
+     PRODUCT SEARCH
+  ======================================================= */
+
+  const filteredProducts = useMemo(() => {
+    const search = (
+      itemSearch ||
+      ""
+    ).toLowerCase();
+
+    return (products || []).filter((product) => {
+      const name =
+        product.productName ||
+        product.itemName ||
+        product.name ||
+        "";
+
+      const sku =
+        product.sku ||
+        "";
+
+      return (
+        name.toLowerCase().includes(search) ||
+        sku.toLowerCase().includes(search)
+      );
+    });
+  }, [
+    products,
+    itemSearch,
+  ]);
+
+  /* =======================================================
+     FORMAT
+  ======================================================= */
+
+  const fmt = (value) =>
+    Number(value || 0).toFixed(2);
+
+  /* =======================================================
+     TAX RATE
+  ======================================================= */
+
+  const getTaxRate = (taxMasterId) => {
+    if (!taxMasterId) {
+      return 0;
+    }
+
+    const tax = taxMasters.find(
+      (item) =>
+        String(item.id) ===
+        String(taxMasterId)
     );
 
-    const sizes = useSelector(
-        (state) =>
-            state.size?.sizes ??
-            EMPTY_ARRAY
+    if (!tax) {
+      return 0;
+    }
+
+    return Number(
+      tax.taxPercentage ??
+      tax.taxRate ??
+      tax.rate ??
+      tax.percentage ??
+      0
     );
+  };
 
-    const taxMasters = useSelector(
-        (state) =>
-            state.taxMaster?.taxes ??
-            state.taxInfo?.taxes ??
-            EMPTY_ARRAY
+  /* =======================================================
+     ITEM CALCULATION
+  ======================================================= */
+
+  const getItemAmount = (item) => {
+    const quantity =
+      Number(item.quantity || 0);
+
+    const unitPrice =
+      Number(item.unitPrice || 0);
+
+    const discount =
+      Number(item.discountAmount || 0);
+
+    return Math.max(
+      quantity * unitPrice - discount,
+      0
     );
+  };
 
-    const invoiceState = useSelector(
-        (state) =>
-            state.invoice ??
-            EMPTY_OBJECT
-    );
+  const getItemTax = (item) => {
+    const amount =
+      getItemAmount(item);
 
-    const {
-        invoices = EMPTY_ARRAY,
-        exsistingInvoice = null,
-        loading = false,
-        totalElements = 0,
-    } = invoiceState;
-
-    /* =========================================================
-       INITIAL MASTER DATA
-    ========================================================= */
-
-    useEffect(() => {
-        dispatch(loadCustomers());
-        dispatch(fetchAllProducts());
-        dispatch(fetchAllUnits());
-        dispatch(fetchAllSizes());
-        dispatch(fetchAllTaxMasters());
-    }, [dispatch]);
-
-    /* =========================================================
-       FETCH INVOICES
-    ========================================================= */
-
-    useEffect(() => {
-        dispatch(
-            fetchInvoices({
-                searchParams: {
-                    page:
-                        currentPage - 1,
-                    size:
-                        recordsPerPage,
-                },
-            })
-        );
-    }, [
-        dispatch,
-        currentPage,
-    ]);
-
-    /* =========================================================
-       INVOICE LIST
-    ========================================================= */
-
-    const invoiceList = Array.isArray(
-        invoices
-    )
-        ? invoices
-        : EMPTY_ARRAY;
-
-    const sortedData = useMemo(
-        () =>
-            [...invoiceList].sort(
-                (a, b) =>
-                    Number(b?.id || 0) -
-                    Number(a?.id || 0)
-            ),
-        [invoiceList]
-    );
-
-    /* =========================================================
-       FILTER
-    ========================================================= */
-
-    const filteredData = useMemo(() => {
-        const term =
-            searchTerm
-                .toLowerCase()
-                .trim();
-
-        return sortedData.filter(
-            (item) => {
-                const invoiceNumber =
-                    String(
-                        item?.invoiceNumber ||
-                        ""
-                    ).toLowerCase();
-
-                const customerName =
-                    String(
-                        item?.customerName ||
-                        item?.customer?.displayName ||
-                        ""
-                    ).toLowerCase();
-
-                const invoiceType =
-                    String(
-                        item?.invoiceType ||
-                        ""
-                    ).toUpperCase();
-
-                const matchSearch =
-                    !term ||
-                    invoiceNumber.includes(
-                        term
-                    ) ||
-                    customerName.includes(
-                        term
-                    );
-
-                const matchInvoiceType =
-                    !invoiceTypeFilter ||
-                    invoiceType ===
-                    invoiceTypeFilter;
-
-                return (
-                    matchSearch &&
-                    matchInvoiceType
-                );
-            }
-        );
-    }, [
-        sortedData,
-        searchTerm,
-        invoiceTypeFilter,
-    ]);
-
-    /* =========================================================
-       PAGINATION
-    ========================================================= */
-
-    const totalRecords =
-        Number(totalElements) > 0
-            ? Number(totalElements)
-            : filteredData.length;
-
-    const totalPages =
-        Math.ceil(
-            totalRecords /
-            recordsPerPage
-        ) || 1;
-
-    const safeCurrentPage =
-        Math.min(
-            Math.max(
-                currentPage,
-                1
-            ),
-            totalPages
-        );
-
-    const startIndex =
-        (safeCurrentPage - 1) *
-        recordsPerPage;
-
-    const endIndex =
-        startIndex +
-        recordsPerPage;
-
-    const paginatedData =
-        filteredData.slice(
-            startIndex,
-            endIndex
-        );
-
-    useEffect(() => {
-        if (
-            currentPage >
-            totalPages
-        ) {
-            setCurrentPage(
-                totalPages
-            );
-        }
-    }, [
-        currentPage,
-        totalPages,
-    ]);
-
-    const goToPage = (page) => {
-        if (
-            page < 1 ||
-            page > totalPages
-        ) {
-            return;
-        }
-
-        setCurrentPage(page);
-    };
-
-    /* =========================================================
-       REFRESH
-    ========================================================= */
-
-    const refreshList = () => {
-        dispatch(
-            fetchInvoices({
-                searchParams: {
-                    page:
-                        currentPage - 1,
-                    size:
-                        recordsPerPage,
-                },
-            })
-        );
-    };
-
-    /* =========================================================
-       ADD
-    ========================================================= */
-
-    const handleAddInvoice = () => {
-        dispatch(
-            setExsistingInvoice(null)
-        );
-
-        setShowModal(true);
-    };
-
-    /* =========================================================
-       CLOSE
-    ========================================================= */
-
-    const closeModal = () => {
-        setShowModal(false);
-
-        dispatch(
-            resetExsistingInvoice()
-        );
-    };
-
-    /* =========================================================
-       EDIT
-    ========================================================= */
-
-    const handleUpdate = (
-        invoiceItem
-    ) => {
-        dispatch(
-            setExsistingInvoice(
-                invoiceItem
-            )
-        );
-
-        setShowModal(true);
-    };
-
-    /* =========================================================
-       DELETE
-    ========================================================= */
-
-    const handleDelete = async (
-        id
-    ) => {
-        if (
-            !window.confirm(
-                "Delete this invoice?"
-            )
-        ) {
-            return;
-        }
-
-        try {
-            await dispatch(
-                removeInvoice(id)
-            ).unwrap();
-
-            refreshList();
-
-            toast.success(
-                "Invoice deleted successfully"
-            );
-        } catch (error) {
-            toast.error(
-                typeof error === "string"
-                    ? error
-                    : error?.message ||
-                    "Failed to delete invoice"
-            );
-        }
-    };
-
-    /* =========================================================
-       VIEW
-    ========================================================= */
-
-    const handleView = async (
-        invoice
-    ) => {
-        try {
-            setViewLoading(true);
-
-            const response =
-                await dispatch(
-                    fetchInvoiceById(
-                        invoice.id
-                    )
-                ).unwrap();
-
-            setViewInvoice(response);
-            setShowViewModal(true);
-        } catch (error) {
-            toast.error(
-                typeof error === "string"
-                    ? error
-                    : error?.message ||
-                    "Failed to load invoice"
-            );
-        } finally {
-            setViewLoading(false);
-        }
-    };
-
-    /* =========================================================
-       PDF
-    ========================================================= */
-
-    const handleDownloadPdf = async (
-        invoice
-    ) => {
-        setPdfLoading(true);
-
-        try {
-            const customer =
-                customers.find(
-                    (item) =>
-                        String(
-                            item?.id
-                        ) ===
-                        String(
-                            invoice?.customerId
-                        )
-                );
-
-            await generateInvoicePdf(
-                invoice,
-                {
-                    dispatch,
-                    customers,
-                    customer,
-                    taxMasters,
-                    getCustomerBillingAddress,
-                    formatCustomerAddress,
-                }
-            );
-        } catch (error) {
-            console.error(
-                "Invoice PDF error:",
-                error
-            );
-
-            toast.error(
-                error?.message ||
-                "Failed to generate invoice PDF"
-            );
-        } finally {
-            setPdfLoading(false);
-        }
-    };
-
-    /* =========================================================
-       VIEW TOTALS
-    ========================================================= */
-
-    const viewTotals = useMemo(() => {
-        const list =
-            viewInvoice?.invoiceItems ||
-            [];
-
-        return list.reduce(
-            (acc, item) => {
-                const breakdown =
-                    getItemTaxBreakdown(
-                        item,
-                        taxMasters
-                    );
-
-                acc.subtotal +=
-                    Number(
-                        breakdown.grossAmount
-                    ) || 0;
-
-                acc.discount +=
-                    Number(
-                        item?.discountAmount
-                    ) || 0;
-
-                acc.tax +=
-                    Number(
-                        breakdown.taxAmount
-                    ) || 0;
-
-                acc.cgst +=
-                    Number(
-                        breakdown.cgstAmount
-                    ) || 0;
-
-                acc.sgst +=
-                    Number(
-                        breakdown.sgstAmount
-                    ) || 0;
-
-                acc.igst +=
-                    Number(
-                        breakdown.igstAmount
-                    ) || 0;
-
-                return acc;
-            },
-            {
-                subtotal: 0,
-                discount: 0,
-                tax: 0,
-                cgst: 0,
-                sgst: 0,
-                igst: 0,
-            }
-        );
-    }, [
-        viewInvoice,
-        taxMasters,
-    ]);
-
-    /* =========================================================
-       STATS
-    ========================================================= */
-
-    const invoiceStats = useMemo(
-        () =>
-            filteredData.reduce(
-                (acc, item) => {
-                    const status =
-                        item?.status ||
-                        "DRAFT";
-
-                    acc.totalInvoices +=
-                        1;
-
-                    acc.totalAmount +=
-                        Number(
-                            item?.grandTotal
-                        ) || 0;
-
-                    if (
-                        status ===
-                        "DRAFT"
-                    ) {
-                        acc.draftInvoices +=
-                            1;
-                    }
-
-                    if (
-                        status ===
-                        "PAID"
-                    ) {
-                        acc.paidInvoices +=
-                            1;
-                    }
-
-                    return acc;
-                },
-                {
-                    totalInvoices: 0,
-                    totalAmount: 0,
-                    draftInvoices: 0,
-                    paidInvoices: 0,
-                }
-            ),
-        [filteredData]
-    );
-
-    /* =========================================================
-       RENDER
-    ========================================================= */
+    const taxRate =
+      getTaxRate(item.taxMasterId);
 
     return (
-        <>
-            {/* =====================================================
-                HEADER
-            ===================================================== */}
+      amount *
+      taxRate /
+      100
+    );
+  };
 
-            <div className="wrapper_header">
-                <div className="mb-3">
-                    <h5 className="header_title">
-                        Invoice Management
-                    </h5>
+  /* =======================================================
+     TOTALS
+  ======================================================= */
 
-                    <p className="header_text">
-                        Manage all invoices and
-                        their billing details.
-                    </p>
-                </div>
+  const totals = useMemo(() => {
+    let subtotal = 0;
+    let discount = 0;
+    let tax = 0;
+
+    invoiceItems.forEach((item) => {
+      subtotal +=
+        Number(item.quantity || 0) *
+        Number(item.unitPrice || 0);
+
+      discount +=
+        Number(item.discountAmount || 0);
+
+      tax += getItemTax(item);
+    });
+
+    const shipping =
+      Number(
+        invoice.shippingAmount || 0
+      );
+
+    const grandTotal =
+      subtotal -
+      discount +
+      tax +
+      shipping;
+
+    return {
+      subtotal,
+      discount,
+      tax,
+      shipping,
+      grandTotal,
+    };
+  }, [
+    invoiceItems,
+    invoice.shippingAmount,
+    taxMasters,
+  ]);
+
+  /* =======================================================
+     CUSTOMER SELECT
+  ======================================================= */
+
+  const handleCustomerSelect = (customer) => {
+    const customerName =
+      customer.customerName ||
+      customer.displayName ||
+      customer.name ||
+      "";
+
+    dispatch(
+      setInvoiceField({
+        field: "customerId",
+        value: customer.id,
+      })
+    );
+
+    dispatch(
+      setInvoiceField({
+        field: "customerName",
+        value: customerName,
+      })
+    );
+
+    setCustomerSearch(customerName);
+    setOpenCustomer(false);
+  };
+
+  /* =======================================================
+     INVOICE FIELD
+  ======================================================= */
+
+  const handleInvoiceFieldChange =
+    (field) => (event) => {
+      dispatch(
+        setInvoiceField({
+          field,
+          value: event.target.value,
+        })
+      );
+    };
+
+  /* =======================================================
+     DATE
+  ======================================================= */
+
+  const handleInvoiceDateChange = (date) => {
+    if (!date) {
+      dispatch(
+        setInvoiceField({
+          field: "invoiceDate",
+          value: "",
+        })
+      );
+      return;
+    }
+
+    const value =
+      date.toISOString().split("T")[0];
+
+    dispatch(
+      setInvoiceField({
+        field: "invoiceDate",
+        value,
+      })
+    );
+  };
+
+  const handleDueDateChange = (date) => {
+    if (!date) {
+      dispatch(
+        setInvoiceField({
+          field: "dueDate",
+          value: "",
+        })
+      );
+      return;
+    }
+
+    const value =
+      date.toISOString().split("T")[0];
+
+    dispatch(
+      setInvoiceField({
+        field: "dueDate",
+        value,
+      })
+    );
+  };
+
+  /* =======================================================
+     TERMS
+  ======================================================= */
+
+  const handleTermsChange = (value) => {
+    dispatch(
+      setInvoiceField({
+        field: "termsAndConditions",
+        value,
+      })
+    );
+
+    if (!invoice.invoiceDate) {
+      return;
+    }
+
+    const invoiceDate =
+      new Date(invoice.invoiceDate);
+
+    if (value === "Net 15") {
+      invoiceDate.setDate(
+        invoiceDate.getDate() + 15
+      );
+    }
+
+    if (value === "Net 30") {
+      invoiceDate.setDate(
+        invoiceDate.getDate() + 30
+      );
+    }
+
+    if (
+      value === "Due on Receipt"
+    ) {
+      dispatch(
+        setInvoiceField({
+          field: "dueDate",
+          value: invoice.invoiceDate,
+        })
+      );
+
+      return;
+    }
+
+    dispatch(
+      setInvoiceField({
+        field: "dueDate",
+        value:
+          invoiceDate
+            .toISOString()
+            .split("T")[0],
+      })
+    );
+  };
+
+  /* =======================================================
+     ITEM FIELD
+  ======================================================= */
+
+  const updateItem = (
+    index,
+    field,
+    value
+  ) => {
+    dispatch(
+      setInvoiceItemField({
+        index,
+        field,
+        value,
+      })
+    );
+  };
+
+  /* =======================================================
+     ADD ITEM
+  ======================================================= */
+
+  const handleAddItem = () => {
+    dispatch(
+      addInvoiceItem(
+        createEmptyItem()
+      )
+    );
+  };
+
+  /* =======================================================
+     REMOVE ITEM
+  ======================================================= */
+
+  const handleRemoveItem = (index) => {
+    if (invoiceItems.length <= 1) {
+      return;
+    }
+
+    dispatch(
+      removeInvoiceItem(index)
+    );
+  };
+
+  /* =======================================================
+     PRODUCT SELECT
+  ======================================================= */
+
+  const handleProductSelect = (
+    index,
+    product
+  ) => {
+    const productName =
+      product.productName ||
+      product.itemName ||
+      product.name ||
+      "";
+
+    const sellingPrice =
+      product.sellingPrice ??
+      product.rate ??
+      product.price ??
+      0;
+
+    updateItem(
+      index,
+      "productId",
+      product.id
+    );
+
+    updateItem(
+      index,
+      "description",
+      productName
+    );
+
+    updateItem(
+      index,
+      "unitPrice",
+      Number(sellingPrice)
+    );
+
+    /*
+     * Auto-fill defaults when product
+     * contains these values.
+     */
+    if (product.unitId) {
+      updateItem(
+        index,
+        "unitId",
+        product.unitId
+      );
+    }
+
+    if (product.sizeId) {
+      updateItem(
+        index,
+        "sizeId",
+        product.sizeId
+      );
+    }
+
+    if (product.taxId) {
+      updateItem(
+        index,
+        "taxMasterId",
+        product.taxId
+      );
+    }
+
+    setItemSearch("");
+    setOpenRowItemDropdown(false);
+    setActiveItemId(null);
+
+    /*
+     * Automatically create next row
+     * when selecting the last row.
+     */
+    if (
+      index ===
+      invoiceItems.length - 1
+    ) {
+      dispatch(
+        addInvoiceItem(
+          createEmptyItem()
+        )
+      );
+    }
+  };
+
+  /* =======================================================
+     VALIDATION
+  ======================================================= */
+
+  const validateInvoice = () => {
+    if (!invoice.customerId) {
+      toast.error(
+        "Please select a customer"
+      );
+      return false;
+    }
+
+    if (!invoice.invoiceDate) {
+      toast.error(
+        "Please select invoice date"
+      );
+      return false;
+    }
+
+    if (
+      !invoice.invoiceType
+    ) {
+      toast.error(
+        "Please select invoice type"
+      );
+      return false;
+    }
+
+    const validItems =
+      invoiceItems.filter(
+        (item) =>
+          item.productId ||
+          item.description
+      );
+
+    if (!validItems.length) {
+      toast.error(
+        "Please add at least one item"
+      );
+      return false;
+    }
+
+    for (
+      let index = 0;
+      index < validItems.length;
+      index++
+    ) {
+      const item =
+        validItems[index];
+
+      if (!item.productId) {
+        toast.error(
+          `Please select product for item ${index + 1}`
+        );
+        return false;
+      }
+
+      if (
+        !item.description?.trim()
+      ) {
+        toast.error(
+          `Please enter description for item ${index + 1}`
+        );
+        return false;
+      }
+
+      if (
+        Number(item.quantity) <= 0
+      ) {
+        toast.error(
+          `Quantity must be greater than zero for item ${index + 1}`
+        );
+        return false;
+      }
+
+      if (
+        Number(item.unitPrice) < 0
+      ) {
+        toast.error(
+          `Unit price cannot be negative for item ${index + 1}`
+        );
+        return false;
+      }
+
+      if (!item.unitId) {
+        toast.error(
+          `Please select unit for item ${index + 1}`
+        );
+        return false;
+      }
+
+      if (!item.sizeId) {
+        toast.error(
+          `Please select size for item ${index + 1}`
+        );
+        return false;
+      }
+
+      if (!item.taxMasterId) {
+        toast.error(
+          `Please select tax for item ${index + 1}`
+        );
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  /* =======================================================
+     SAVE
+  ======================================================= */
+
+  const buildInvoicePayload = (status = "DRAFT") => {
+    const validItems = invoiceItems.filter(
+      (item) => item.productId || item.description
+    );
+
+    return {
+      invoiceNumber: invoice.invoiceNumber || null,
+      invoiceType: invoice.invoiceType || "SALE_INVOICE",
+      status,
+      customerId: Number(invoice.customerId),
+      invoiceDate: invoice.invoiceDate,
+      dueDate: invoice.dueDate || null,
+      shippingAmount: Number(invoice.shippingAmount || 0),
+      notes: invoice.notes?.trim() || "",
+      termsAndConditions: invoice.termsAndConditions?.trim() || "",
+      invoiceItems: validItems.map((item) => ({
+        productId: Number(item.productId),
+        description: item.description?.trim() || "",
+        unitId: Number(item.unitId),
+        sizeId: Number(item.sizeId),
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice || 0),
+        discountAmount: Number(item.discountAmount || 0),
+        taxMasterId: Number(item.taxMasterId),
+      })),
+    };
+  };
+
+  const saveInvoice = async (status, successMessage) => {
+    if (!validateInvoice()) return;
+
+    try {
+      await dispatch(
+        createInvoice(buildInvoicePayload(status))
+      ).unwrap();
+
+      toast.success(successMessage);
+      dispatch(resetInvoiceForm());
+      resetLocalState();
+      navigate(`/invoices?status=${status}`);
+    } catch (error) {
+      toast.error(
+        error?.message ||
+        error?.payload?.message ||
+        error ||
+        "Failed to create invoice"
+      );
+    }
+  };
+
+  const handleSave = async () => {
+    await saveInvoice("SENT", "Invoice created successfully");
+  };
+
+  const handleSaveDraft = async () => {
+    await saveInvoice("DRAFT", "Invoice draft saved successfully");
+  };
+
+  /* =======================================================
+     RENDER
+  ======================================================= */
+
+  return (
+    <div className="flex h-full min-h-0 bg-gray-50 font-sans text-[13px] overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+
+        {/* =================================================
+            HEADER
+        ================================================= */}
+
+        <div className="px-6 py-4 bg-white border-b border-gray-200 shrink-0">
+          <div className="flex items-center justify-between">
+
+            <div className="flex items-center gap-3">
+
+              <div className="w-7 h-7 border-2 border-gray-400 rounded-sm flex items-center justify-center">
+                <div className="w-3 h-3 border border-gray-400 rounded-sm" />
+              </div>
+
+              <h1 className="text-lg font-semibold text-gray-800">
+                New Invoice
+              </h1>
+
             </div>
 
-            {/* =====================================================
-                STATS
-            ===================================================== */}
+            <div className="flex items-center gap-4">
 
-            <div
-                className="invoice-stats-row mt-3"
-                style={{
-                    display: "grid",
-                    gridTemplateColumns:
-                        "repeat(auto-fit, minmax(220px, 1fr))",
-                    gap: "16px",
-                    marginBottom: "16px",
-                }}
-            >
-                {[
-                    {
-                        label: "Total Invoices",
-                        value:
-                            invoiceStats.totalInvoices,
-                        color: "#0ea5e9",
-                        icon:
-                            "bi-receipt-cutoff",
-                    },
-                    {
-                        label: "Total Amount",
-                        value: `₹${invoiceStats.totalAmount.toFixed(
-                            2
-                        )}`,
-                        color: "#16a34a",
-                        icon:
-                            "bi-currency-rupee",
-                    },
-                    {
-                        label: "Draft Invoices",
-                        value:
-                            invoiceStats.draftInvoices,
-                        color: "#d97706",
-                        icon:
-                            "bi-pencil-square",
-                    },
-                    {
-                        label: "Paid Invoices",
-                        value:
-                            invoiceStats.paidInvoices,
-                        color: "#7c3aed",
-                        icon:
-                            "bi-check-circle",
-                    },
-                ].map((stat) => (
-                    <div
-                        key={stat.label}
-                        style={{
-                            display: "flex",
-                            alignItems:
-                                "center",
-                            gap: "12px",
-                            background:
-                                "#fff",
-                            border:
-                                "1px solid #e5e7eb",
-                            borderRadius:
-                                "10px",
-                            padding:
-                                "14px 16px",
-                        }}
-                    >
-                        <div
-                            style={{
-                                flexShrink: 0,
-                                width: "40px",
-                                height: "40px",
-                                borderRadius:
-                                    "10px",
-                                background:
-                                    `${stat.color}1f`,
-                                display:
-                                    "flex",
-                                alignItems:
-                                    "center",
-                                justifyContent:
-                                    "center",
-                            }}
-                        >
-                            <i
-                                className={`bi ${stat.icon}`}
-                                style={{
-                                    color:
-                                        stat.color,
-                                    fontSize:
-                                        "18px",
-                                }}
-                            />
-                        </div>
+              <button
+                type="button"
+                className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700"
+              >
+                <Settings size={15} />
+                Customize invoice
+              </button>
 
-                        <div>
-                            <div
-                                style={{
-                                    color:
-                                        "#6b7280",
-                                    fontWeight: 600,
-                                    fontSize:
-                                        "11px",
-                                    letterSpacing:
-                                        "0.04em",
-                                    textTransform:
-                                        "uppercase",
-                                    marginBottom:
-                                        "4px",
-                                }}
-                            >
-                                {stat.label}
-                            </div>
+              <button
+                type="button"
+                onClick={handleClose}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={20} />
+              </button>
 
-                            <div
-                                style={{
-                                    fontSize:
-                                        "20px",
-                                    fontWeight: 700,
-                                    color:
-                                        "#111827",
-                                }}
-                            >
-                                {stat.value}
-                            </div>
-                        </div>
-                    </div>
-                ))}
             </div>
+          </div>
+        </div>
 
-            {/* =====================================================
-                FILTERS
-            ===================================================== */}
+        {/* =================================================
+            BODY
+        ================================================= */}
 
-            <div className="filter-wrapper d-flex gap-2 align-items-center mb-3 flex-wrap">
-                <div className="filter-header">
-                    <i className="bi bi-funnel-fill" />
-                    &nbsp;Filters :
-                </div>
+        <div className="flex-1 overflow-y-auto px-5 py-4">
 
-                <div className="search-item">
-                    <div className="search-box">
-                        <input
-                            className="search-input"
-                            placeholder="Search by invoice number or customer..."
-                            type="text"
-                            value={
-                                searchTerm
-                            }
-                            onChange={(e) =>
-                                setSearchTerm(
-                                    e.target.value
-                                )
-                            }
+          {/* =================================================
+              CUSTOMER
+          ================================================= */}
+
+          <div className="mb-6">
+
+            <div className="flex items-center">
+
+              <label className="w-44 text-sm font-medium text-red-500 shrink-0">
+                Customer Name*
+              </label>
+
+              <div
+                ref={customerDropdownRef}
+                className="relative w-[550px]"
+              >
+
+                <input
+                  type="text"
+                  value={
+                    customerSearch ||
+                    invoice.customerName ||
+                    ""
+                  }
+                  placeholder="Select or add a customer"
+                  onClick={() =>
+                    setOpenCustomer(
+                      !openCustomer
+                    )
+                  }
+                  onChange={(event) => {
+                    setCustomerSearch(
+                      event.target.value
+                    );
+                    setOpenCustomer(true);
+                  }}
+                  className="w-full border border-blue-500 rounded px-3 py-2 text-sm bg-white focus:outline-none"
+                />
+
+                <ChevronDown
+                  size={14}
+                  className="absolute right-3 top-3 text-gray-400"
+                />
+
+                {openCustomer && (
+                  <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-[100]">
+
+                    <div className="p-2 border-b border-gray-200">
+
+                      <div className="relative">
+
+                        <Search
+                          size={16}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
                         />
 
-                        <i className="bi bi-search search-icon" />
-                    </div>
-                </div>
-
-                <div
-                    style={{
-                        width: "200px",
-                    }}
-                >
-                    <select
-                        className="form-select"
-                        value={
-                            invoiceTypeFilter
-                        }
-                        onChange={(e) =>
-                            setInvoiceTypeFilter(
-                                e.target.value
+                        <input
+                          type="text"
+                          autoFocus
+                          placeholder="Search customer"
+                          value={customerSearch}
+                          onChange={(event) =>
+                            setCustomerSearch(
+                              event.target.value
                             )
-                        }
+                          }
+                          className="w-full border border-blue-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none"
+                        />
+
+                      </div>
+
+                    </div>
+
+                    <div className="max-h-60 overflow-y-auto">
+
+                      {filteredCustomers.length === 0 ? (
+                        <div className="px-4 py-5 text-center text-gray-400">
+                          No customers found
+                        </div>
+                      ) : (
+                        filteredCustomers.map(
+                          (customer) => {
+
+                            const name =
+                              customer.customerName ||
+                              customer.displayName ||
+                              customer.name ||
+                              "";
+
+                            return (
+                              <button
+                                type="button"
+                                key={customer.id}
+                                onClick={() =>
+                                  handleCustomerSelect(
+                                    customer
+                                  )
+                                }
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-500 hover:text-white text-left"
+                              >
+
+                                <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center font-medium shrink-0">
+                                  {name
+                                    ?.charAt(0)
+                                    ?.toUpperCase()}
+                                </div>
+
+                                <div className="min-w-0">
+
+                                  <p className="font-medium truncate">
+                                    {name}
+                                  </p>
+
+                                  <p className="text-xs opacity-70 truncate">
+                                    {customer.email ||
+                                      customer.phoneNumber ||
+                                      customer.mobileNumber ||
+                                      ""}
+                                  </p>
+
+                                </div>
+
+                              </button>
+                            );
+                          }
+                        )
+                      )}
+
+                    </div>
+
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
                     >
-                        <option value="">
-                            Select Type
-                        </option>
 
-                        <option value="SALE_INVOICE">
-                            Sale Invoice
-                        </option>
+                      <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center">
+                        <Plus size={14} />
+                      </div>
 
-                        <option value="PURCHASE_INVOICE">
-                            Purchase Invoice
-                        </option>
+                      <span className="font-medium">
+                        New Customer
+                      </span>
 
-                        <option value="STOCK_TRANSFER">
-                            Stock Transfer
-                        </option>
+                    </button>
 
-                        <option value="CREDIT_NOTE">
-                            Credit Note
-                        </option>
+                  </div>
+                )}
 
-                        <option value="DEBIT_NOTE">
-                            Debit Note
-                        </option>
-                    </select>
-                </div>
+              </div>
 
-                <button
-                    className="btn main-btn"
-                    onClick={
-                        handleAddInvoice
-                    }
-                >
-                    <i className="bi bi-plus" />
-                    &nbsp; Add Invoice
-                </button>
             </div>
 
-            {/* =====================================================
-                TABLE
-            ===================================================== */}
+          </div>
 
-            <div className="table-card">
-                <div className="table-responsive">
-                    <table className="modern-table">
-                        <thead>
-                            <tr>
-                                <th>
-                                    Invoice No.
-                                </th>
+          {/* =================================================
+              INVOICE NUMBER
+          ================================================= */}
 
-                                <th>
-                                    Type
-                                </th>
+          <div className="flex items-center mb-4">
 
-                                <th>
-                                    Customer
-                                </th>
+            <label className="w-44 text-sm font-medium text-gray-700 shrink-0">
+              Invoice Number
+            </label>
 
-                                <th>
-                                    Invoice Date
-                                </th>
+            <div className="relative w-[330px]">
 
-                                <th>
-                                    Grand Total
-                                </th>
+              <input
+                value={
+                  invoice.invoiceNumber ||
+                  ""
+                }
+                onChange={handleInvoiceFieldChange(
+                  "invoiceNumber"
+                )}
+                placeholder="Invoice number"
+                className="w-full border border-gray-300 rounded px-3 py-2 pr-8 focus:outline-none focus:border-blue-400"
+              />
 
-                                <th>
-                                    Status
-                                </th>
+              <Settings
+                size={14}
+                className="absolute right-3 top-3 text-blue-500"
+              />
 
-                                <th className="text-end">
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
+            </div>
 
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td
-                                        colSpan="7"
-                                        className="text-center py-4"
-                                    >
-                                        Loading...
-                                    </td>
-                                </tr>
-                            ) : paginatedData.length ===
-                                0 ? (
-                                <tr>
-                                    <td colSpan="7">
-                                        <div className="settings_empty">
-                                            <div className="settings_empty_icon">
-                                                <i className="fi fi-rs-file-invoice" />
-                                            </div>
+          </div>
 
-                                            <h6>
-                                                No Invoices
-                                                found
-                                            </h6>
+          {/* =================================================
+              INVOICE TYPE
+          ================================================= */}
 
-                                            <p>
-                                                Try adjusting
-                                                your search
-                                                or create a
-                                                new invoice.
-                                            </p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                paginatedData.map(
-                                    (item) => (
-                                        <tr
-                                            key={
-                                                item?.id
-                                            }
-                                        >
-                                            <td className="dt-role-name">
-                                                <i className="bi bi-receipt me-2" />
+          <div className="flex items-center mb-4">
 
-                                                {
-                                                    item?.invoiceNumber
-                                                }
-                                            </td>
+            <label className="w-44 text-sm font-medium text-gray-700 shrink-0">
+              Invoice Type
+            </label>
 
-                                            <td>
-                                                {
-                                                    item?.invoiceType
-                                                }
-                                            </td>
+            <select
+              value={
+                invoice.invoiceType ||
+                "SALE_INVOICE"
+              }
+              onChange={handleInvoiceFieldChange(
+                "invoiceType"
+              )}
+              className="w-[330px] border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:border-blue-400"
+            >
+              <option value="SALE_INVOICE">
+                Sale Invoice
+              </option>
 
-                                            <td>
-                                                {
-                                                    item?.customerName ||
-                                                    item
-                                                        ?.customer
-                                                        ?.displayName ||
-                                                    ""
-                                                }
-                                            </td>
+              <option value="SALE">
+                Sale
+              </option>
+            </select>
 
-                                            <td>
-                                                {
-                                                    item?.invoiceDate
-                                                }
-                                            </td>
+          </div>
 
-                                            <td>
-                                                ₹
-                                                {Number(
-                                                    item?.grandTotal ||
-                                                    0
-                                                ).toFixed(
-                                                    2
-                                                )}
-                                            </td>
+          {/* =================================================
+              DATE / TERMS / DUE DATE
+          ================================================= */}
 
-                                            <td>
-                                                <small
-                                                    className={`py-1 px-2 rounded-pill ${item?.status ===
-                                                            "PAID" ||
-                                                            item?.status ===
-                                                            "SENT"
-                                                            ? "bg-success-subtle text-success"
-                                                            : item?.status ===
-                                                                "CANCELLED"
-                                                                ? "bg-danger-subtle text-danger"
-                                                                : "bg-warning-subtle text-warning"
-                                                        }`}
-                                                    style={{
-                                                        fontSize:
-                                                            "10px",
-                                                    }}
-                                                >
-                                                    {item?.status ||
-                                                        "DRAFT"}
-                                                </small>
-                                            </td>
+          <div className="flex items-center mb-6">
 
-                                            <td className="d-flex justify-content-end gap-2">
-                                                <button
-                                                    type="button"
-                                                    className="dt-icon-btn dt-icon-btn--view"
-                                                    onClick={() =>
-                                                        handleView(
-                                                            item
-                                                        )
-                                                    }
-                                                    title="View Invoice"
-                                                    disabled={
-                                                        viewLoading
-                                                    }
-                                                >
-                                                    <i className="bi bi-eye" />
-                                                </button>
+            <label className="w-44 text-sm font-medium text-gray-700 shrink-0">
+              Invoice Date*
+            </label>
 
-                                                <button
-                                                    type="button"
-                                                    className="dt-icon-btn dt-icon-btn--pdf"
-                                                    onClick={() =>
-                                                        handleDownloadPdf(
-                                                            item
-                                                        )
-                                                    }
-                                                    title="Download PDF"
-                                                    disabled={
-                                                        pdfLoading
-                                                    }
-                                                >
-                                                    <i
-                                                        className="bi bi-file-earmark-pdf-fill"
-                                                        style={{
-                                                            color:
-                                                                "#c20b0b",
-                                                        }}
-                                                    />
-                                                </button>
+            <DatePicker
+              selected={
+                invoice.invoiceDate
+                  ? new Date(
+                    invoice.invoiceDate
+                  )
+                  : null
+              }
+              onChange={
+                handleInvoiceDateChange
+              }
+              dateFormat="dd/MM/yyyy"
+              placeholderText="Select date"
+              className="w-[220px] border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-400"
+            />
 
-                                                <button
-                                                    type="button"
-                                                    className="dt-icon-btn dt-icon-btn--edit"
-                                                    onClick={() =>
-                                                        handleUpdate(
-                                                            item
-                                                        )
-                                                    }
-                                                    title="Edit Invoice"
-                                                >
-                                                    <i className="bi bi-pencil" />
-                                                </button>
+            <div className="flex items-center ml-8 gap-3">
 
-                                                <button
-                                                    type="button"
-                                                    className="dt-icon-btn dt-icon-btn--delete"
-                                                    onClick={() =>
-                                                        handleDelete(
-                                                            item?.id
-                                                        )
-                                                    }
-                                                    title="Delete Invoice"
-                                                >
-                                                    <i className="bi bi-trash" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    )
-                                )
-                            )}
-                        </tbody>
+              <label className="text-sm text-gray-700">
+                Terms
+              </label>
 
-                        <tfoot className="table-footer">
-                            <tr>
-                                <td colSpan="3">
-                                    <div className="entry-count">
-                                        Showing{" "}
-                                        {totalRecords ===
-                                            0
-                                            ? 0
-                                            : startIndex +
-                                            1}{" "}
-                                        to{" "}
-                                        {Math.min(
-                                            endIndex,
-                                            totalRecords
-                                        )}{" "}
-                                        of{" "}
-                                        {
-                                            totalRecords
-                                        }{" "}
-                                        entries
-                                    </div>
-                                </td>
+              <select
+                value={
+                  invoice.termsAndConditions ||
+                  "Due on Receipt"
+                }
+                onChange={(event) =>
+                  handleTermsChange(
+                    event.target.value
+                  )
+                }
+                className="w-[150px] border border-gray-300 rounded px-3 py-2 bg-white"
+              >
+                <option value="Due on Receipt">
+                  Due on Receipt
+                </option>
 
-                                <td colSpan="4">
-                                    <div className="pagination">
-                                        <span
-                                            className={`page-btn ${safeCurrentPage ===
-                                                    1
-                                                    ? "disabled"
-                                                    : ""
-                                                }`}
-                                            onClick={() =>
-                                                goToPage(
-                                                    safeCurrentPage -
-                                                    1
-                                                )
-                                            }
-                                        >
-                                            «
-                                        </span>
+                <option value="Net 15">
+                  Net 15
+                </option>
 
-                                        {Array.from(
-                                            {
-                                                length:
-                                                    totalPages,
-                                            },
-                                            (_, i) =>
-                                                i + 1
-                                        ).map(
-                                            (page) => (
-                                                <span
-                                                    key={
-                                                        page
-                                                    }
-                                                    onClick={() =>
-                                                        goToPage(
-                                                            page
-                                                        )
-                                                    }
-                                                    className={`page-number ${safeCurrentPage ===
-                                                            page
-                                                            ? "active"
-                                                            : ""
-                                                        }`}
-                                                >
-                                                    {
-                                                        page
-                                                    }
-                                                </span>
+                <option value="Net 30">
+                  Net 30
+                </option>
+              </select>
+
+            </div>
+
+            <div className="flex items-center ml-8 gap-3">
+
+              <label className="text-sm text-gray-700">
+                Due Date
+              </label>
+
+              <DatePicker
+                selected={
+                  invoice.dueDate
+                    ? new Date(
+                      invoice.dueDate
+                    )
+                    : null
+                }
+                onChange={
+                  handleDueDateChange
+                }
+                dateFormat="dd/MM/yyyy"
+                placeholderText="Due date"
+                className="w-[150px] border border-gray-300 rounded px-3 py-2"
+              />
+
+            </div>
+
+          </div>
+
+          {/* =================================================
+              ITEM TABLE
+          ================================================= */}
+
+          <div className="border border-gray-200 rounded-lg mb-4 bg-white overflow-visible">
+
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+
+              <h3 className="text-sm font-semibold text-gray-700">
+                Item Table
+              </h3>
+
+              <button
+                type="button"
+                className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700"
+              >
+                <ScanLine size={15} />
+                Scan Item
+              </button>
+
+            </div>
+
+            <div className="overflow-x-auto">
+
+              <table className="w-full min-w-[1050px]">
+
+                <thead>
+
+                  <tr className="bg-gray-50 border-b border-gray-200">
+
+                    <th className="w-8 px-2 py-2" />
+
+                    <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
+                      Item Details
+                    </th>
+
+                    <th className="text-right px-3 py-2 text-xs font-semibold text-gray-500 uppercase w-24">
+                      Quantity
+                    </th>
+
+                    <th className="text-right px-3 py-2 text-xs font-semibold text-gray-500 uppercase w-32">
+                      Rate
+                    </th>
+
+                    <th className="text-right px-3 py-2 text-xs font-semibold text-gray-500 uppercase w-28">
+                      Amount
+                    </th>
+
+                    <th className="w-8" />
+
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  {invoiceItems.map(
+                    (item, index) => {
+
+                      const amount =
+                        getItemAmount(
+                          item
+                        );
+
+                      return (
+                        <tr
+                          key={`invoice - item - ${index} `}
+                          className="border-b border-gray-100 hover:bg-gray-50 group"
+                        >
+
+                          <td className="px-2 py-3 text-gray-300">
+                            <div className="text-lg">
+                              ⋮⋮
+                            </div>
+                          </td>
+
+                          {/* ITEM */}
+
+                          <td className="px-3 py-3 relative">
+
+                            <div className="relative">
+
+                              <input
+                                value={
+                                  item.description ||
+                                  ""
+                                }
+                                placeholder="Type or click to select an item"
+                                onClick={() => {
+                                  setActiveItemId(
+                                    index
+                                  );
+                                  setOpenRowItemDropdown(
+                                    true
+                                  );
+                                }}
+                                onChange={(event) => {
+
+                                  updateItem(
+                                    index,
+                                    "description",
+                                    event.target.value
+                                  );
+
+                                  setItemSearch(
+                                    event.target.value
+                                  );
+
+                                  setActiveItemId(
+                                    index
+                                  );
+
+                                  setOpenRowItemDropdown(
+                                    true
+                                  );
+                                }}
+                                className="w-full text-sm text-gray-700 border border-gray-200 rounded px-3 py-2 focus:outline-none focus:border-blue-400"
+                              />
+
+                              {openRowItemDropdown &&
+                                activeItemId ===
+                                index && (
+
+                                  <div
+                                    ref={
+                                      itemDropdownRef
+                                    }
+                                    className="absolute top-full left-0 mt-2 w-[520px] bg-white border border-gray-200 rounded-lg shadow-xl z-[100]"
+                                  >
+
+                                    <div className="p-2 border-b border-gray-200">
+
+                                      <div className="relative">
+
+                                        <Search
+                                          size={15}
+                                          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                        />
+
+                                        <input
+                                          autoFocus
+                                          value={
+                                            itemSearch
+                                          }
+                                          onChange={(
+                                            event
+                                          ) =>
+                                            setItemSearch(
+                                              event
+                                                .target
+                                                .value
                                             )
-                                        )}
+                                          }
+                                          placeholder="Search product"
+                                          className="w-full border border-blue-300 rounded pl-9 pr-3 py-2 text-sm focus:outline-none"
+                                        />
 
-                                        <span
-                                            className={`page-btn ${safeCurrentPage ===
-                                                    totalPages
-                                                    ? "disabled"
-                                                    : ""
-                                                }`}
-                                            onClick={() =>
-                                                goToPage(
-                                                    safeCurrentPage +
-                                                    1
-                                                )
-                                            }
-                                        >
-                                            »
-                                        </span>
+                                      </div>
+
                                     </div>
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
 
-            {/* =====================================================
-                CREATE / EDIT
-            ===================================================== */}
+                                    <div className="max-h-60 overflow-y-auto p-1">
 
-            {showModal && (
-                <InvoiceCreate
-                    existingInvoice={
-                        exsistingInvoice
-                    }
-                    customers={
-                        customers
-                    }
-                    products={
-                        products
-                    }
-                    units={
-                        units
-                    }
-                    sizes={
-                        sizes
-                    }
-                    taxMasters={
-                        taxMasters
-                    }
-                    onClose={
-                        closeModal
-                    }
-                    onSuccess={() => {
-                        closeModal();
-                        refreshList();
-                    }}
-                />
-            )}
+                                      {filteredProducts.length ===
+                                        0 ? (
+                                        <div className="px-4 py-5 text-center text-gray-400">
+                                          No products found
+                                        </div>
+                                      ) : (
+                                        filteredProducts.map(
+                                          (
+                                            product
+                                          ) => {
 
-            {/* =====================================================
-                VIEW MODAL
-            ===================================================== */}
+                                            const name =
+                                              product.productName ||
+                                              product.itemName ||
+                                              product.name ||
+                                              "";
 
-            {showViewModal &&
-                viewInvoice && (
-                    <div
-                        className="modal modal-form show d-block"
-                        style={{
-                            background:
-                                "rgba(0,0,0,0.45)",
-                        }}
-                        onMouseDown={(e) => {
-                            if (
-                                e.target ===
-                                e.currentTarget
-                            ) {
-                                setShowViewModal(
-                                    false
-                                );
-                                setViewInvoice(
-                                    null
-                                );
-                            }
-                        }}
-                    >
-                        <div className="modal-dialog modal_form modal-dialog-centered modal-xl modal-dialog-scrollable">
-                            <div className="modal-content">
+                                            const price =
+                                              product.sellingPrice ??
+                                              product.rate ??
+                                              product.price ??
+                                              0;
 
-                                {/* HEADER */}
+                                            return (
+                                              <button
+                                                type="button"
+                                                key={
+                                                  product.id
+                                                }
+                                                onClick={() =>
+                                                  handleProductSelect(
+                                                    index,
+                                                    product
+                                                  )
+                                                }
+                                                className="w-full text-left rounded-md px-3 py-3 hover:bg-blue-500 hover:text-white"
+                                              >
 
-                                <div
-                                    className="modal-header"
-                                    style={{
-                                        background:
-                                            "var(--main-color)",
-                                    }}
-                                >
-                                    <h5
-                                        className="invoice-modal-title"
-                                        style={{
-                                            color:
-                                                "#fff",
-                                        }}
-                                    >
-                                        <i className="bi bi-eye me-2" />
-                                        View Invoice
-                                    </h5>
+                                                <div className="font-semibold">
+                                                  {name}
+                                                </div>
+
+                                                <div className="text-xs opacity-70">
+                                                  {product.sku ||
+                                                    ""}
+                                                  {product.sku &&
+                                                    " • "}
+                                                  Rate: ₹
+                                                  {fmt(
+                                                    price
+                                                  )}
+                                                </div>
+
+                                              </button>
+                                            );
+                                          }
+                                        )
+                                      )}
+
+                                    </div>
 
                                     <button
-                                        className="btn-close btn-close-white"
-                                        onClick={() => {
-                                            setShowViewModal(
-                                                false
-                                            );
-
-                                            setViewInvoice(
-                                                null
-                                            );
-                                        }}
-                                        aria-label="Close"
-                                    />
-                                </div>
-
-                                {/* BODY */}
-
-                                <div className="modal-body form_content">
-
-                                    <div className="row g-3">
-
-                                        <div className="col-lg-4 col-md-6 col-12">
-                                            <label className="form-label">
-                                                Invoice Number
-                                            </label>
-
-                                            <input
-                                                className="form-control"
-                                                type="text"
-                                                value={
-                                                    viewInvoice.invoiceNumber ||
-                                                    ""
-                                                }
-                                                disabled
-                                            />
-                                        </div>
-
-                                        <div className="col-lg-4 col-md-6 col-12">
-                                            <label className="form-label">
-                                                Invoice Type
-                                            </label>
-
-                                            <input
-                                                className="form-control"
-                                                type="text"
-                                                value={
-                                                    viewInvoice.invoiceType ||
-                                                    ""
-                                                }
-                                                disabled
-                                            />
-                                        </div>
-
-                                        <div className="col-lg-4 col-md-6 col-12">
-                                            <label className="form-label">
-                                                Status
-                                            </label>
-
-                                            <input
-                                                className="form-control"
-                                                type="text"
-                                                value={
-                                                    viewInvoice.status ||
-                                                    "DRAFT"
-                                                }
-                                                disabled
-                                            />
-                                        </div>
-
-                                        <div className="col-lg-4 col-md-6 col-12">
-                                            <label className="form-label">
-                                                Invoice Date
-                                            </label>
-
-                                            <input
-                                                className="form-control"
-                                                type="date"
-                                                value={
-                                                    viewInvoice.invoiceDate ||
-                                                    ""
-                                                }
-                                                disabled
-                                            />
-                                        </div>
-
-                                        <div className="col-lg-4 col-md-6 col-12">
-                                            <label className="form-label">
-                                                Due Date
-                                            </label>
-
-                                            <input
-                                                className="form-control"
-                                                type="date"
-                                                value={
-                                                    viewInvoice.dueDate ||
-                                                    ""
-                                                }
-                                                disabled
-                                            />
-                                        </div>
-
-                                        <div className="col-lg-4 col-md-6 col-12">
-                                            <label className="form-label">
-                                                Customer
-                                            </label>
-
-                                            <input
-                                                className="form-control"
-                                                type="text"
-                                                value={
-                                                    viewInvoice.customerName ||
-                                                    viewInvoice.customer?.displayName ||
-                                                    ""
-                                                }
-                                                disabled
-                                            />
-                                        </div>
-
-                                    </div>
-
-                                    {/* CUSTOMER ADDRESS */}
-
-                                    {(viewInvoice.customer?.billingAddress ||
-                                        viewInvoice.customer?.shippingAddress) && (
-                                            <div className="mt-3">
-                                                <label className="form-label">
-                                                    Billing Address
-                                                </label>
-
-                                                <textarea
-                                                    className="form-control"
-                                                    rows="2"
-                                                    value={formatCustomerAddress(
-                                                        viewInvoice.customer?.billingAddress ||
-                                                        viewInvoice.customer?.shippingAddress
-                                                    )}
-                                                    disabled
-                                                />
-                                            </div>
-                                        )}
-
-                                    {/* ITEMS */}
-
-                                    <div className="invoice-items-section mt-4">
-
-                                        <div className="d-flex justify-content-between align-items-center mb-2">
-                                            <label className="form-label fw-semibold mb-0">
-                                                Invoice Items
-                                            </label>
-
-                                            <small className="text-muted">
-                                                {
-                                                    viewInvoice
-                                                        .invoiceItems
-                                                        ?.length ||
-                                                    0
-                                                }{" "}
-                                                items
-                                            </small>
-                                        </div>
-
-                                        <div className="table-responsive">
-                                            <table className="modern-table">
-
-                                                <thead>
-                                                    <tr>
-                                                        <th>
-                                                            Item Name
-                                                        </th>
-
-                                                        <th>
-                                                            Description
-                                                        </th>
-
-                                                        <th>
-                                                            Qty
-                                                        </th>
-
-                                                        <th>
-                                                            Unit Price
-                                                        </th>
-
-                                                        <th>
-                                                            Tax
-                                                        </th>
-
-                                                        <th>
-                                                            Discount
-                                                        </th>
-
-                                                        <th>
-                                                            Total
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-
-                                                <tbody>
-
-                                                    {(
-                                                        viewInvoice.invoiceItems ||
-                                                        []
-                                                    ).map(
-                                                        (
-                                                            item,
-                                                            index
-                                                        ) => {
-
-                                                            const breakdown =
-                                                                getItemTaxBreakdown(
-                                                                    item,
-                                                                    taxMasters
-                                                                );
-
-                                                            const quantity =
-                                                                Number(
-                                                                    item?.quantity
-                                                                ) || 0;
-
-                                                            const unitPrice =
-                                                                Number(
-                                                                    item?.unitPrice
-                                                                ) || 0;
-
-                                                            const discount =
-                                                                Number(
-                                                                    item?.discountAmount
-                                                                ) || 0;
-
-                                                            const displayTaxRate =
-                                                                Number.isInteger(
-                                                                    breakdown.taxRate
-                                                                )
-                                                                    ? breakdown.taxRate
-                                                                    : breakdown.taxRate.toFixed(
-                                                                        2
-                                                                    );
-
-                                                            return (
-                                                                <tr
-                                                                    key={
-                                                                        item?.id ||
-                                                                        index
-                                                                    }
-                                                                >
-                                                                    <td>
-                                                                        {item?.productName ||
-                                                                            item?.itemName ||
-                                                                            item?.product
-                                                                                ?.productName ||
-                                                                            ""}
-                                                                    </td>
-
-                                                                    <td>
-                                                                        {
-                                                                            item?.description
-                                                                        }
-                                                                    </td>
-
-                                                                    <td>
-                                                                        {
-                                                                            quantity
-                                                                        }
-                                                                    </td>
-
-                                                                    <td>
-                                                                        ₹
-                                                                        {unitPrice.toFixed(
-                                                                            2
-                                                                        )}
-                                                                    </td>
-
-                                                                    <td>
-                                                                        {
-                                                                            displayTaxRate
-                                                                        }
-                                                                        %
-                                                                    </td>
-
-                                                                    <td>
-                                                                        ₹
-                                                                        {discount.toFixed(
-                                                                            2
-                                                                        )}
-                                                                    </td>
-
-                                                                    <td>
-                                                                        <strong>
-                                                                            ₹
-                                                                            {breakdown.totalAmount.toFixed(
-                                                                                2
-                                                                            )}
-                                                                        </strong>
-                                                                    </td>
-                                                                </tr>
-                                                            );
-                                                        }
-                                                    )}
-
-                                                    {(
-                                                        viewInvoice.invoiceItems ||
-                                                        []
-                                                    ).length ===
-                                                        0 && (
-                                                            <tr>
-                                                                <td
-                                                                    colSpan="7"
-                                                                    className="text-center py-4"
-                                                                >
-                                                                    No invoice
-                                                                    items
-                                                                    found.
-                                                                </td>
-                                                            </tr>
-                                                        )}
-
-                                                </tbody>
-
-                                            </table>
-                                        </div>
-                                    </div>
-
-                                    {/* NOTES + TOTALS */}
-
-                                    <div className="row g-3 mt-3">
-
-                                        <div className="col-lg-7 col-md-12">
-
-                                            <div className="mb-3">
-
-                                                <label className="form-label">
-                                                    Notes
-                                                </label>
-
-                                                <textarea
-                                                    className="form-control"
-                                                    rows="4"
-                                                    value={
-                                                        viewInvoice.notes ||
-                                                        ""
-                                                    }
-                                                    disabled
-                                                />
-
-                                            </div>
-
-                                            <div>
-
-                                                <label className="form-label">
-                                                    Terms &
-                                                    Conditions
-                                                </label>
-
-                                                <textarea
-                                                    className="form-control"
-                                                    rows="4"
-                                                    value={
-                                                        viewInvoice.termsAndConditions ||
-                                                        ""
-                                                    }
-                                                    disabled
-                                                />
-
-                                            </div>
-
-                                        </div>
-
-                                        <div className="col-lg-5 col-md-12">
-
-                                            <div className="invoice-total-box">
-
-                                                <div className="invoice-total-row">
-                                                    <span>
-                                                        Subtotal
-                                                    </span>
-
-                                                    <strong>
-                                                        ₹
-                                                        {viewTotals.subtotal.toFixed(
-                                                            2
-                                                        )}
-                                                    </strong>
-                                                </div>
-
-                                                <div className="invoice-total-row">
-                                                    <span>
-                                                        Tax
-                                                    </span>
-
-                                                    <strong>
-                                                        ₹
-                                                        {viewTotals.tax.toFixed(
-                                                            2
-                                                        )}
-                                                    </strong>
-                                                </div>
-
-                                                {viewTotals.cgst >
-                                                    0 && (
-                                                        <div className="invoice-total-row tax-sub-row">
-                                                            <span>
-                                                                CGST
-                                                            </span>
-
-                                                            <strong>
-                                                                ₹
-                                                                {viewTotals.cgst.toFixed(
-                                                                    2
-                                                                )}
-                                                            </strong>
-                                                        </div>
-                                                    )}
-
-                                                {viewTotals.sgst >
-                                                    0 && (
-                                                        <div className="invoice-total-row tax-sub-row">
-                                                            <span>
-                                                                SGST
-                                                            </span>
-
-                                                            <strong>
-                                                                ₹
-                                                                {viewTotals.sgst.toFixed(
-                                                                    2
-                                                                )}
-                                                            </strong>
-                                                        </div>
-                                                    )}
-
-                                                {viewTotals.igst >
-                                                    0 && (
-                                                        <div className="invoice-total-row tax-sub-row">
-                                                            <span>
-                                                                IGST
-                                                            </span>
-
-                                                            <strong>
-                                                                ₹
-                                                                {viewTotals.igst.toFixed(
-                                                                    2
-                                                                )}
-                                                            </strong>
-                                                        </div>
-                                                    )}
-
-                                                <div className="invoice-total-row">
-                                                    <span>
-                                                        Discount
-                                                    </span>
-
-                                                    <strong>
-                                                        ₹
-                                                        {viewTotals.discount.toFixed(
-                                                            2
-                                                        )}
-                                                    </strong>
-                                                </div>
-
-                                                <div className="invoice-total-row">
-                                                    <span>
-                                                        Shipping
-                                                    </span>
-
-                                                    <strong>
-                                                        ₹
-                                                        {Number(
-                                                            viewInvoice.shippingAmount ||
-                                                            0
-                                                        ).toFixed(
-                                                            2
-                                                        )}
-                                                    </strong>
-                                                </div>
-
-                                                <div className="invoice-grand-total">
-                                                    <strong>
-                                                        Grand Total
-                                                    </strong>
-
-                                                    <strong>
-                                                        ₹
-                                                        {Number(
-                                                            viewInvoice.grandTotal ||
-                                                            0
-                                                        ).toFixed(
-                                                            2
-                                                        )}
-                                                    </strong>
-                                                </div>
-
-                                            </div>
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                                {/* FOOTER */}
-
-                                <div className="modal-footer">
-
-                                    <button
-                                        type="button"
-                                        className="btn light-btn"
-                                        onClick={() => {
-                                            setShowViewModal(
-                                                false
-                                            );
-
-                                            setViewInvoice(
-                                                null
-                                            );
-                                        }}
+                                      type="button"
+                                      className="w-full border-t border-gray-200 px-4 py-3 flex items-center gap-2 text-blue-600 hover:bg-blue-50"
                                     >
-                                        Close
+                                      <Plus size={15} />
+                                      Add New Product
                                     </button>
 
-                                </div>
+                                  </div>
+                                )}
 
                             </div>
-                        </div>
-                    </div>
-                )}
-        </>
-    );
-};
 
-export default Invoice;
+                            {/* DESCRIPTION */}
+
+                            {item.productId && (
+                              <textarea
+                                value={
+                                  item.description ||
+                                  ""
+                                }
+                                rows={2}
+                                onChange={(event) =>
+                                  updateItem(
+                                    index,
+                                    "description",
+                                    event.target.value
+                                  )
+                                }
+                                className="mt-2 w-full border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-400 resize-none"
+                              />
+                            )}
+
+                            {/* UNIT / SIZE / TAX */}
+
+                            <div className="flex gap-2 mt-2">
+
+                              <select
+                                value={
+                                  item.unitId ||
+                                  ""
+                                }
+                                onChange={(event) =>
+                                  updateItem(
+                                    index,
+                                    "unitId",
+                                    event.target.value
+                                  )
+                                }
+                                className="border border-gray-200 rounded px-2 py-1.5 text-xs bg-white"
+                              >
+                                <option value="">
+                                  Unit
+                                </option>
+
+                                {units.map(
+                                  (unit) => (
+                                    <option
+                                      key={
+                                        unit.id
+                                      }
+                                      value={
+                                        unit.id
+                                      }
+                                    >
+                                      {unit.unitName ||
+                                        unit.name ||
+                                        unit.unitCode}
+                                    </option>
+                                  )
+                                )}
+
+                              </select>
+
+                              <select
+                                value={
+                                  item.sizeId ||
+                                  ""
+                                }
+                                onChange={(event) =>
+                                  updateItem(
+                                    index,
+                                    "sizeId",
+                                    event.target.value
+                                  )
+                                }
+                                className="border border-gray-200 rounded px-2 py-1.5 text-xs bg-white"
+                              >
+                                <option value="">
+                                  Size
+                                </option>
+
+                                {sizes.map(
+                                  (size) => (
+                                    <option
+                                      key={
+                                        size.id
+                                      }
+                                      value={
+                                        size.id
+                                      }
+                                    >
+                                      {size.sizeName ||
+                                        size.name ||
+                                        size.sizeCode}
+                                    </option>
+                                  )
+                                )}
+
+                              </select>
+
+                              <select
+                                value={
+                                  item.taxMasterId ||
+                                  ""
+                                }
+                                onChange={(event) =>
+                                  updateItem(
+                                    index,
+                                    "taxMasterId",
+                                    event.target.value
+                                  )
+                                }
+                                className="border border-gray-200 rounded px-2 py-1.5 text-xs bg-white"
+                              >
+                                <option value="">
+                                  Tax
+                                </option>
+
+                                {taxMasters.map(
+                                  (tax) => {
+
+                                    const rate =
+                                      tax.taxPercentage ??
+                                      tax.taxRate ??
+                                      tax.rate ??
+                                      tax.percentage ??
+                                      0;
+
+                                    return (
+                                      <option
+                                        key={
+                                          tax.id
+                                        }
+                                        value={
+                                          tax.id
+                                        }
+                                      >
+                                        {tax.taxName ||
+                                          tax.name ||
+                                          tax.taxType ||
+                                          "Tax"}{" "}
+                                        ({rate}%)
+                                      </option>
+                                    );
+                                  }
+                                )}
+
+                              </select>
+
+                            </div>
+
+                          </td>
+
+                          {/* QUANTITY */}
+
+                          <td className="px-3 py-3">
+
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.001"
+                              value={
+                                item.quantity ??
+                                0
+                              }
+                              onChange={(event) =>
+                                updateItem(
+                                  index,
+                                  "quantity",
+                                  Number(
+                                    event.target.value
+                                  )
+                                )
+                              }
+                              className="w-full text-right text-sm border-b border-transparent focus:border-blue-400 focus:outline-none bg-transparent"
+                            />
+
+                          </td>
+
+                          {/* RATE */}
+
+                          <td className="px-3 py-3">
+
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={
+                                item.unitPrice ??
+                                0
+                              }
+                              onChange={(event) =>
+                                updateItem(
+                                  index,
+                                  "unitPrice",
+                                  Number(
+                                    event.target.value
+                                  )
+                                )
+                              }
+                              className="w-full text-right text-sm border-b border-transparent focus:border-blue-400 focus:outline-none bg-transparent"
+                            />
+
+                          </td>
+
+                          {/* AMOUNT */}
+
+                          <td className="px-3 py-3 text-right text-sm font-semibold text-gray-800">
+                            ₹{fmt(amount)}
+                          </td>
+
+                          {/* DELETE */}
+
+                          <td className="px-2 py-3">
+
+                            {invoiceItems.length >
+                              1 && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleRemoveItem(
+                                      index
+                                    )
+                                  }
+                                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+                                >
+                                  <Trash2
+                                    size={14}
+                                  />
+                                </button>
+                              )}
+
+                          </td>
+
+                        </tr>
+                      );
+                    }
+                  )}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+          {/* =================================================
+              ADD ROW
+          ================================================= */}
+
+          <div className="flex items-center gap-3 mb-6">
+
+            <button
+              type="button"
+              onClick={handleAddItem}
+              className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-400 px-3 py-1.5 rounded"
+            >
+              <Plus size={14} />
+              Add New Row
+            </button>
+
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-400 px-3 py-1.5 rounded"
+            >
+              <Plus size={14} />
+              Add Items in Bulk
+            </button>
+
+          </div>
+
+          {/* =================================================
+              NOTES + TOTAL
+          ================================================= */}
+
+          <div className="flex gap-12 mb-6">
+
+            {/* NOTES */}
+
+            <div className="flex-1 max-w-sm">
+
+              <label className="text-sm font-medium text-gray-700 block mb-2">
+                Customer Notes
+              </label>
+
+              <textarea
+                value={
+                  invoice.notes || ""
+                }
+                onChange={(event) =>
+                  dispatch(
+                    setInvoiceField({
+                      field: "notes",
+                      value:
+                        event.target.value,
+                    })
+                  )
+                }
+                rows={3}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-400 resize-none"
+              />
+
+              <p className="text-xs text-gray-400 mt-1">
+                Will be displayed on the invoice
+              </p>
+
+            </div>
+
+            {/* TOTAL */}
+
+            <div className="flex-1 max-w-sm ml-auto">
+
+              <div className="flex justify-between items-center py-3">
+
+                <span className="text-sm font-semibold text-gray-700">
+                  Total (₹)
+                </span>
+
+                <span className="text-sm font-semibold text-gray-700">
+                  ₹{fmt(
+                    totals.grandTotal
+                  )}
+                </span>
+
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowSummary(
+                    !showSummary
+                  )
+                }
+                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 w-full justify-end"
+              >
+                Total Summary
+
+                <ChevronDown
+                  size={14}
+                  className={`transition - transform ${showSummary
+                    ? "rotate-180"
+                    : ""
+                    } `}
+                />
+              </button>
+
+              {showSummary && (
+                <div className="mt-2 text-sm text-gray-600 space-y-2 border-t pt-2">
+
+                  <div className="flex justify-between">
+                    <span>
+                      Sub Total
+                    </span>
+
+                    <span>
+                      ₹{fmt(
+                        totals.subtotal
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span>
+                      Discount
+                    </span>
+
+                    <span>
+                      ₹{fmt(
+                        totals.discount
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span>
+                      Tax
+                    </span>
+
+                    <span>
+                      ₹{fmt(
+                        totals.tax
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span>
+                      Shipping
+                    </span>
+
+                    <span>
+                      ₹{fmt(
+                        totals.shipping
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between font-semibold border-t pt-2">
+                    <span>
+                      Grand Total
+                    </span>
+
+                    <span>
+                      ₹{fmt(
+                        totals.grandTotal
+                      )}
+                    </span>
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+
+          </div>
+
+          {/* =================================================
+              TERMS
+          ================================================= */}
+
+          <div className="space-y-3 mb-8">
+
+            {!showTerms ? (
+              <button
+                type="button"
+                onClick={() =>
+                  setShowTerms(true)
+                }
+                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+              >
+                <div className="w-5 h-5 rounded-full border-2 border-blue-500 flex items-center justify-center">
+                  <Plus size={12} />
+                </div>
+
+                Add Terms and conditions
+              </button>
+            ) : (
+              <div>
+
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  Terms and Conditions
+                </label>
+
+                <textarea
+                  rows={3}
+                  value={
+                    invoice.termsAndConditions ||
+                    ""
+                  }
+                  onChange={(event) =>
+                    dispatch(
+                      setInvoiceField({
+                        field:
+                          "termsAndConditions",
+                        value:
+                          event.target.value,
+                      })
+                    )
+                  }
+                  className="w-full max-w-sm border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-400 resize-none"
+                />
+
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() =>
+                setShowGateway(
+                  !showGateway
+                )
+              }
+              className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+            >
+              <div className="w-5 h-5 rounded-full border-2 border-blue-500 flex items-center justify-center">
+                <Plus size={12} />
+              </div>
+
+              Add Payment Gateway
+            </button>
+
+            {showGateway && (
+              <div className="text-sm text-gray-500 pl-7">
+                Payment gateway configuration
+                can be added here.
+              </div>
+            )}
+
+          </div>
+
+        </div>
+
+        {/* =================================================
+            FOOTER
+        ================================================= */}
+
+        <div className="border-t border-gray-200 bg-white px-6 py-4 flex items-center gap-3 z-30 shrink-0">
+
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            disabled={invoiceLoading}
+            className="border border-gray-300 text-gray-700 text-sm px-5 py-2 rounded hover:bg-gray-100 font-medium disabled:opacity-50"
+          >
+            Save as Draft
+          </button>
+
+          <div
+            ref={saveMenuRef}
+            className="relative flex items-center"
+          >
+
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={invoiceLoading}
+              className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white px-4 h-10 rounded-l font-medium"
+            >
+              {invoiceLoading
+                ? "Saving..."
+                : "Save and Send"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setShowSaveMenu(
+                  !showSaveMenu
+                )
+              }
+              className="bg-blue-500 hover:bg-blue-600 text-white w-9 h-10 rounded-r border-l border-blue-400 flex items-center justify-center"
+            >
+              <ChevronUp
+                size={12}
+              />
+            </button>
+
+            {showSaveMenu && (
+              <div className="absolute bottom-full mb-2 right-0 w-56 bg-white rounded-lg shadow-xl border border-gray-200 z-[9999] overflow-hidden">
+
+                <button
+                  type="button"
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-500 hover:text-white text-left"
+                >
+                  <FileSpreadsheet
+                    size={16}
+                  />
+                  Save and Print
+                </button>
+
+                <button
+                  type="button"
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-500 hover:text-white text-left"
+                >
+                  <UploadCloud
+                    size={16}
+                  />
+                  Save and Share
+                </button>
+
+                <button
+                  type="button"
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-500 hover:text-white text-left"
+                >
+                  <Mail size={16} />
+                  Save and Send Later
+                </button>
+
+              </div>
+            )}
+
+          </div>
+
+          <button
+            type="button"
+            onClick={handleClose}
+            className="border border-gray-300 text-gray-700 text-sm px-5 py-2 rounded hover:bg-gray-100 font-medium"
+          >
+            Cancel
+          </button>
+
+        </div>
+
+      </div>
+    </div>
+  );
+}

@@ -74,16 +74,16 @@ const invoiceSlice = createSlice({
 
   reducers: {
     /* =====================================================
-       SET EXISTING INVOICE
-    ===================================================== */
+     SET EXISTING INVOICE
+  ===================================================== */
 
     setExistingInvoice: (state, action) => {
       state.exsistingInvoice = action.payload;
     },
 
     /* =====================================================
-       CLEAR INVOICE STATE
-    ===================================================== */
+     CLEAR INVOICE STATE
+  ===================================================== */
 
     clearInvoiceState: (state) => {
       state.loading = false;
@@ -93,24 +93,27 @@ const invoiceSlice = createSlice({
     },
 
     /* =====================================================
-       CLEAR SELECTED INVOICE
-    ===================================================== */
+     CLEAR SELECTED INVOICE
+  ===================================================== */
 
     clearSelectedInvoice: (state) => {
       state.invoice = { ...emptyInvoice };
     },
 
     /* =====================================================
-       RESET INVOICE FORM
-    ===================================================== */
+     RESET INVOICE FORM
+  ===================================================== */
 
     resetInvoiceForm: (state) => {
-      state.invoice = { ...emptyInvoice };
+      state.invoice = {
+        ...emptyInvoice,
+        invoiceItems: [],
+      };
     },
 
     /* =====================================================
-       SET INVOICE FORM FIELD
-    ===================================================== */
+     SET INVOICE FORM FIELD
+  ===================================================== */
 
     setInvoiceField: (state, action) => {
       const { field, value } = action.payload;
@@ -122,11 +125,59 @@ const invoiceSlice = createSlice({
     },
 
     /* =====================================================
-       SET INVOICE ITEM
-    ===================================================== */
+     SET ALL INVOICE ITEMS
+  ===================================================== */
 
     setInvoiceItems: (state, action) => {
-      state.invoice.invoiceItems = action.payload;
+      state.invoice.invoiceItems = action.payload || [];
+    },
+
+    /* =====================================================
+     SET INVOICE ITEM FIELD
+  ===================================================== */
+
+    setInvoiceItemField: (state, action) => {
+      const { index, field, value } = action.payload;
+
+      if (!state.invoice.invoiceItems) {
+        state.invoice.invoiceItems = [];
+      }
+
+      if (index < 0 || index >= state.invoice.invoiceItems.length) {
+        return;
+      }
+
+      state.invoice.invoiceItems[index][field] = value;
+    },
+
+    /* =====================================================
+     ADD INVOICE ITEM
+  ===================================================== */
+
+    addInvoiceItem: (state, action) => {
+      if (!state.invoice.invoiceItems) {
+        state.invoice.invoiceItems = [];
+      }
+
+      state.invoice.invoiceItems.push(action.payload);
+    },
+
+    /* =====================================================
+     REMOVE INVOICE ITEM
+  ===================================================== */
+
+    removeInvoiceItem: (state, action) => {
+      const index = action.payload;
+
+      if (!state.invoice.invoiceItems) {
+        return;
+      }
+
+      if (index < 0 || index >= state.invoice.invoiceItems.length) {
+        return;
+      }
+
+      state.invoice.invoiceItems.splice(index, 1);
     },
   },
 
@@ -417,6 +468,9 @@ export const {
   resetInvoiceForm,
   setInvoiceField,
   setInvoiceItems,
+  setInvoiceItemField,
+  addInvoiceItem,
+  removeInvoiceItem,
 } = invoiceSlice.actions;
 
 /* =========================================================

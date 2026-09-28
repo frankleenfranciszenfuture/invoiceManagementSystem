@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { resetCustomerForm, resetSelectedCustomer, resetDirty } from '../../module/customer/slices/customerSlices';
 import UnsavedChangesDialog from '../dialogue/UnsavedChangesDialog';
 import {
-    toggleSidebar, showLeaveDialog,
+    toggleSidebar, showLeaveDialog, openModal,
 } from "../../module/ui/uiSlice";
 
 import {
@@ -71,12 +71,10 @@ const NAV = [
         icon: FileText,
         to: "/invoices",
         addTo: "/invoices/new",
+        basePath: "/invoices",
         dropdown: true, // ← add this
         children: [
-            { label: "All", status: "ALL" },
-            { label: "Active", status: "ACTIVE" },
-            { label: "Inactive", status: "INACTIVE" },
-            { label: "Draft", status: "DRAFT" },
+            { label: "invoices", to: "/invoices" },
         ],
     },
 

@@ -10,7 +10,7 @@ import {
 
 import {
     setExistingInvoice,
-} from "../slices/invoiceSlices";
+} from "../slices/invoiceSlice";
 
 import { openModal } from "../../ui/uiSlice";
 
