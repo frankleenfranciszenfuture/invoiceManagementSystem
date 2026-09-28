@@ -79,15 +79,15 @@ public class CustomerEntity extends BaseEntity {
     // INVOICES
     // =====================================================
 
-    @OneToMany(
-            mappedBy = "party",
-            cascade = CascadeType.ALL,
-            fetch = FetchType.LAZY
-    )
-    @JsonManagedReference
-    @Builder.Default
-    private List<InvoiceEntity> invoices =
-            new ArrayList<>();
+//    @OneToMany(
+//            mappedBy = "party",
+//            cascade = CascadeType.ALL,
+//            fetch = FetchType.LAZY
+//    )
+//    @JsonManagedReference
+//    @Builder.Default
+//    private List<InvoiceEntity> invoices =
+//            new ArrayList<>();
 
 
     // =====================================================

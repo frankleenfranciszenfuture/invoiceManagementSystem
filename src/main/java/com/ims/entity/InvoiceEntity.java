@@ -37,8 +37,8 @@ import java.util.List;
                 ),
 
                 @Index(
-                        name = "idx_invoice_party",
-                        columnList = "party_id"
+                        name = "idx_invoice_customer",
+                        columnList = "customer_id"
                 )
         }
 )
@@ -85,15 +85,15 @@ public class InvoiceEntity extends BaseEntity {
 
 
     // =====================================================
-    // PARTY
+    // CUSTOMER
     // =====================================================
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
-            name = "party_id",
+            name = "customer_id",
             nullable = false
     )
-    private CustomerEntity party;
+    private CustomerEntity customer;
 
 
     // =====================================================

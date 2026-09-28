@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +18,7 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
+@SuperBuilder
 public class ItemMasterEntity {
 
     @Id
@@ -48,7 +49,11 @@ public class ItemMasterEntity {
 
     private String imagePath;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "item")
-    private List<InvoiceItemEntity> invoiceItems = new ArrayList<>();
+//    @OneToMany(
+//            mappedBy = "itemMaster",
+//            cascade = CascadeType.ALL,
+//            fetch = FetchType.LAZY
+//    )
+//    @Builder.Default
+//    private List<InvoiceItemEntity> invoiceItems = new ArrayList<>();
 }
