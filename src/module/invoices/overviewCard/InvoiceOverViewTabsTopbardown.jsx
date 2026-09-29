@@ -1,11 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { useSelector } from "react-redux";
 
 import InvoiceDashboardTabView from "../overviewCard/tabs/InvoiceDashboardTabView";
-
-// import InvoiceTransaction from "../overviewCard/tabs/InvoiceTransaction";
-// import InvoiceRecentUpdates from "../overviewCard/tabs/InvoiceRecentUpdates";
-// import InvoicePaymentHistory from "../overviewCard/tabs/InvoicePaymentHistory";
+import InvoicePreviewTabView from "./tabs/InvoicePreviewTabView";
 
 export default function InvoiceOverViewTabsTopbardown() {
 
@@ -32,28 +29,18 @@ export default function InvoiceOverViewTabsTopbardown() {
        ACTIVE TAB
     ========================================================= */
 
-    /*
-     * activeTab is not currently stored in invoiceSlice.
-     * For now, keep Dashboard as the default tab.
-     *
-     * When Redux-controlled tabs are needed,
-     * add activeTab and setActiveTab to invoiceSlice.
-     */
-
-    const activeTab = "Dashboard";
+    const [activeTab, setActiveTab] = useState("Dashboard");
 
     /* =========================================================
        INVOICE LOADING
     ========================================================= */
 
     if (!selectedInvoice) {
-
         return (
             <div className="flex min-h-[300px] items-center justify-center bg-gray-50 p-8 text-center text-gray-500">
                 Loading invoice...
             </div>
         );
-
     }
 
     /* =========================================================
@@ -78,21 +65,26 @@ export default function InvoiceOverViewTabsTopbardown() {
             case "Dashboard":
                 return <InvoiceDashboardTabView />;
 
-            /*
             case "Transaction":
-                return <InvoiceTransaction />;
+                return <InvoicePreviewTabView />;
 
             case "Recent Updates":
-                return <InvoiceRecentUpdates />;
+                return (
+                    <div className="p-6 text-sm text-gray-500">
+                        Recent Updates coming soon...
+                    </div>
+                );
 
             case "Payment History":
-                return <InvoicePaymentHistory />;
-            */
+                return (
+                    <div className="p-6 text-sm text-gray-500">
+                        Payment History coming soon...
+                    </div>
+                );
 
             default:
                 return <InvoiceDashboardTabView />;
         }
-
     };
 
     /* =========================================================
@@ -100,7 +92,6 @@ export default function InvoiceOverViewTabsTopbardown() {
     ========================================================= */
 
     return (
-
         <div className="w-full">
 
             {/* =====================================================
@@ -115,33 +106,22 @@ export default function InvoiceOverViewTabsTopbardown() {
                         activeTab === tab;
 
                     return (
-
                         <button
                             key={tab}
                             type="button"
-                            disabled={
-                                tab !== "Dashboard"
-                            }
-                            className={`relative py-4 text-sm ${isActive
+                            onClick={() => setActiveTab(tab)}
+                            className={`relative py-4 text-sm transition-colors ${isActive
                                 ? "font-semibold text-black"
-                                : tab !== "Dashboard"
-                                    ? "cursor-not-allowed text-gray-300"
-                                    : "cursor-pointer text-gray-500 hover:text-gray-800"
+                                : "cursor-pointer text-gray-500 hover:text-gray-800"
                                 }`}
                         >
-
                             {tab}
 
                             {isActive && (
-
                                 <div className="absolute bottom-0 left-0 h-0.5 w-full bg-blue-600" />
-
                             )}
-
                         </button>
-
                     );
-
                 })}
 
             </div>
@@ -157,6 +137,5 @@ export default function InvoiceOverViewTabsTopbardown() {
             </div>
 
         </div>
-
     );
 }

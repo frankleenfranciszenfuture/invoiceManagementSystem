@@ -304,6 +304,12 @@ const invoiceSlice = createSlice({
 
       state.invoice.invoiceItems.splice(index, 1);
     },
+
+    setInvoiceTemplate: (state, action) => {
+      console.log("Reducer called:", action.payload);
+
+      state.invoiceTemplate = action.payload;
+    },
   },
 
   /* =======================================================
@@ -612,6 +618,7 @@ export const {
   setInvoiceNumberSetting,
   setInvoiceNumberSettings,
   resetInvoiceNumberSettings,
+  setInvoiceTemplate,
 } = invoiceSlice.actions;
 
 /* =========================================================

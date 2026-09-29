@@ -14,6 +14,7 @@ import CategoryCreate from "../../module/category/pages/CategoryCreate";
 import ProductCreate from "../../module/items/pages/ProductCreate"
 import InvoiceCreate from "../../module/invoices/pages/InvoiceCreate"
 import InvoiceNumberSetting from "../../module/invoices/pages/InvoiceNumberSetting";
+import ChangeTemplateModal from "../../module/invoices/overviewCard/template/ChangeTemplateModal";
 
 export default function Modal() {
 
@@ -64,6 +65,9 @@ export default function Modal() {
         // INVOICE NUMBER SETTING
         invoiceNumberSetting: InvoiceNumberSetting,
 
+        // CHANGE INVOICE TEMPLATE
+        changeTemplate: ChangeTemplateModal,
+
     };
 
 
@@ -105,8 +109,7 @@ export default function Modal() {
 
         const handleEscape = (event) => {
             if (
-                event.key === "Escape" &&
-                type === "invoiceNumberSetting"
+                event.key === "Escape"
             ) {
                 dispatch(closeModal());
             }
