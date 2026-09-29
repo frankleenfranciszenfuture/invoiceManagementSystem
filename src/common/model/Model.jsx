@@ -6,13 +6,14 @@ import { closeModal } from "../../module/ui/uiSlice";
 
 import AddContactPerson from "../../module/customer/overviewCard/model/AddContactPerson";
 
-import TaxMasterCreate from "../../module/taxMaster/pages/taxMasterCreate";
+import TaxMasterCreate from "../../module/taxMaster/pages/TaxMasterCreate";
 import SizeCreate from "../../module/sizes/pages/SizeCreate";
 import UnitCreate from "../../module/units/pages/UnitCreate";
 import SubCategoryCreate from "../../module/subCategory/pages/SubCategoryCreate";
 import CategoryCreate from "../../module/category/pages/CategoryCreate";
 import ProductCreate from "../../module/items/pages/ProductCreate"
 import InvoiceCreate from "../../module/invoices/pages/InvoiceCreate"
+import InvoiceNumberSetting from "../../module/invoices/pages/InvoiceNumberSetting";
 
 export default function Modal() {
 
@@ -59,6 +60,10 @@ export default function Modal() {
         // Invoice
         addInvoice: InvoiceCreate,
         editInvoice: InvoiceCreate,
+
+        // INVOICE NUMBER SETTING
+        invoiceNumberSetting: InvoiceNumberSetting,
+
     };
 
 
@@ -92,33 +97,27 @@ export default function Modal() {
        Hook must ALWAYS run.
     ========================================================= */
 
-    useEffect(() => {
 
+    useEffect(() => {
         if (!open) {
             return;
         }
 
-        const handleKeyDown = (event) => {
-
-            if (event.key === "Escape") {
+        const handleEscape = (event) => {
+            if (
+                event.key === "Escape" &&
+                type === "invoiceNumberSetting"
+            ) {
                 dispatch(closeModal());
             }
         };
 
-        document.addEventListener(
-            "keydown",
-            handleKeyDown
-        );
+        document.addEventListener("keydown", handleEscape);
 
         return () => {
-
-            document.removeEventListener(
-                "keydown",
-                handleKeyDown
-            );
+            document.removeEventListener("keydown", handleEscape);
         };
-
-    }, [open, dispatch]);
+    }, [open, type, dispatch]);
 
 
     /* =========================================================
@@ -325,19 +324,22 @@ export default function Modal() {
         bg-white
         shadow-2xl
 
+        flex
+        flex-col
+
         ${type === "addInvoice" ||
                             type === "editInvoice"
                             ? `
-                    w-[1100px]
-                    max-w-[98vw]
-                    h-[102vh]
-                    max-h-[92vh]
-                `
+            w-[1100px]
+            max-w-[98vw]
+            h-[92vh]
+            max-h-[92vh]
+        `
                             : `
-                    w-[950px]
-                    max-w-[95vw]
-                    max-h-[90vh]
-                `
+            w-[950px]
+            max-w-[95vw]
+            max-h-[90vh]
+        `
                         }
     `}
                     onMouseDown={(event) => {
@@ -394,7 +396,17 @@ export default function Modal() {
                         CONTENT
                     ================================================= */}
 
-                    <ModalComponent data={data} />
+                    <div
+                        className={
+                            type === "addInvoice" ||
+                                type === "editInvoice" ||
+                                type === "invoiceNumberSetting"
+                                ? "flex-1 min-h-0 overflow-y-auto"
+                                : ""
+                        }
+                    >
+                        <ModalComponent data={data} />
+                    </div>
 
                 </div>
 

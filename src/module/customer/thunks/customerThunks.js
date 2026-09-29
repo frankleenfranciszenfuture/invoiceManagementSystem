@@ -10,16 +10,16 @@ import {
 
 export const loadCustomers = createAsyncThunk(
   "customer/loadCustomers",
-
   async (params = {}, { rejectWithValue }) => {
     try {
-      const response = await fetchCustomers({
-        ...params,
-        status: params.status || "ACTIVE",
-      });
+      const response = await fetchCustomers(params);
+
+      console.log("CUSTOMER API RESULT:", response);
 
       return response;
     } catch (error) {
+      console.error("CUSTOMER API ERROR:", error);
+
       return rejectWithValue(error.response?.data || error.message);
     }
   },

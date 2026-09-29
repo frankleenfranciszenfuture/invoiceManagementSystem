@@ -371,19 +371,31 @@ const customerSlice = createSlice({
       })
 
       .addCase(loadCustomers.fulfilled, (state, action) => {
-        console.log("Redux Customer Payload:", action.payload);
-
         state.loading = false;
         state.error = null;
 
-        const data = action.payload;
+        const response = action.payload;
 
-        state.customers = data?.content || [];
+        console.log("CUSTOMER PAYLOAD:", response);
 
-        state.page = data?.pageNumber ?? 0;
-        state.pageSize = data?.pageSize ?? 10;
-        state.totalElements = data?.totalElements ?? 0;
-        state.totalPages = data?.totalPages ?? 0;
+        const customers = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.content)
+            ? response.content
+            : [];
+
+        state.customers = customers;
+
+        state.page = response?.pageNumber ?? response?.page ?? 0;
+
+        state.pageSize = response?.pageSize ?? response?.size ?? 10;
+
+        state.totalElements = response?.totalElements ?? customers.length;
+
+        state.totalPages =
+          response?.totalPages ?? (customers.length > 0 ? 1 : 0);
+
+        state.hasCustomers = customers.length > 0;
       })
 
       .addCase(loadCustomers.rejected, (state, action) => {
@@ -439,13 +451,9 @@ const customerSlice = createSlice({
       })
 
       .addCase(removeCustomer.fulfilled, (state, action) => {
-        const index = state.customers.findIndex(
-          (c) => c.id === action.payload.id,
+        state.customers = state.customers.filter(
+          (customer) => customer.id !== action.payload,
         );
-
-        if (index !== -1) {
-          state.customers[index] = action.payload;
-        }
       });
   },
 });

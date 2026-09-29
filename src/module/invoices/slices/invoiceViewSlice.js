@@ -14,15 +14,27 @@ const initialState = {
     },
     {
       label: "Active Invoices",
-      value: "ACTIVE",
-    },
-    {
-      label: "Inactive Invoices",
-      value: "INACTIVE",
+      value: "APPROVED",
     },
     {
       label: "Draft Invoices",
       value: "DRAFT",
+    },
+    {
+      label: "Sent Invoices",
+      value: "SENT",
+    },
+    {
+      label: "Paid Invoices",
+      value: "PAID",
+    },
+    {
+      label: "Overdue Invoices",
+      value: "OVERDUE",
+    },
+    {
+      label: "Cancel Invoices",
+      value: "CANCELLED",
     },
   ],
 };

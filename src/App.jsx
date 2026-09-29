@@ -211,6 +211,11 @@ export default function App() {
             element={<InvoiceCreate />}
           />
 
+          <Route
+            path="/invoices/edit/:id"
+            element={<InvoiceCreate />}
+          />
+
 
           <Route
             path="/invoices"
@@ -240,7 +245,7 @@ export default function App() {
 
           error: {
             style: {
-              background: "#dc2626",
+              background: "#d93535",
               color: "#fff",
             },
           },

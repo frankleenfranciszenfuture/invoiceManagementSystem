@@ -1954,30 +1954,30 @@ export default function ProductCreate() {
                SIZE VALIDATION
                ================================================= */
 
-            if (
-                !Array.isArray(
-                    form.sizes
-                ) ||
-                form.sizes.length === 0
-            ) {
-                nextErrors.sizes =
-                    "At least one size is required";
-            }
+            // if (
+            //     !Array.isArray(
+            //         form.sizes
+            //     ) ||
+            //     form.sizes.length === 0
+            // ) {
+            //     nextErrors.sizes =
+            //         "At least one size is required";
+            // }
 
 
             /* =================================================
                UNIT VALIDATION
                ================================================= */
 
-            if (
-                !Array.isArray(
-                    form.units
-                ) ||
-                form.units.length === 0
-            ) {
-                nextErrors.units =
-                    "At least one unit is required";
-            }
+            // if (
+            //     !Array.isArray(
+            //         form.units
+            //     ) ||
+            //     form.units.length === 0
+            // ) {
+            //     nextErrors.units =
+            //         "At least one unit is required";
+            // }
 
 
             setErrors(

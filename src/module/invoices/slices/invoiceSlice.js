@@ -6,27 +6,45 @@ import {
   createInvoice,
   editInvoice,
   removeInvoice,
+  fetchGeneratedInvoiceNumber,
 } from "../thunks/invoiceThunks";
 
 /* =========================================================
+   EMPTY INVOICE ITEM
+========================================================= */
+
+const emptyInvoiceItem = {
+  productId: "",
+  description: "",
+  unitId: "",
+  sizeId: "",
+  quantity: 1,
+  unitPrice: 0,
+  discountAmount: 0,
+  taxMasterId: "",
+};
+
+/* =========================================================
    EMPTY INVOICE FORM
-   ========================================================= */
+========================================================= */
 
 const emptyInvoice = {
   invoiceNumber: "",
-  invoiceType: "",
+  invoiceType: "SALE_INVOICE",
+
   customerId: "",
   customerName: "",
+
   invoiceDate: "",
   dueDate: "",
 
-  subtotal: "",
-  discountAmount: "",
-  taxAmount: "",
-  shippingAmount: "",
-  grandTotal: "",
+  subtotal: 0,
+  discountAmount: 0,
+  taxAmount: 0,
+  shippingAmount: 0,
+  grandTotal: 0,
 
-  status: "",
+  invoiceStatus: "DRAFT",
 
   notes: "",
   termsAndConditions: "",
@@ -36,16 +54,40 @@ const emptyInvoice = {
 
 /* =========================================================
    INITIAL STATE
-   ========================================================= */
+========================================================= */
 
 const initialState = {
+  /*
+   * Invoice listing
+   */
   invoices: [],
 
-  // Keep form initialized instead of null
-  invoice: { ...emptyInvoice },
+  /*
+   * Invoice create/edit form
+   */
+  invoice: {
+    ...emptyInvoice,
+    invoiceItems: [],
+  },
 
+  /*
+   * Invoice Number Settings
+   */
+  invoiceNumberSettings: {
+    mode: "AUTO",
+    prefix: "INV-2026-",
+    nextNumber: "0000",
+    restartFiscalYear: false,
+  },
+
+  /*
+   * Existing invoice
+   */
   exsistingInvoice: null,
 
+  /*
+   * Pagination
+   */
   pagination: {
     pageNumber: 0,
     pageSize: 20,
@@ -54,18 +96,43 @@ const initialState = {
     last: true,
   },
 
+  /*
+   * Request state
+   */
   loading: false,
-
   success: false,
-
   error: null,
-
   message: "",
 };
 
 /* =========================================================
+   HELPER
+========================================================= */
+
+const extractData = (payload) => {
+  /*
+   * Supports:
+   *
+   * {
+   *   success: true,
+   *   data: {...}
+   * }
+   *
+   * and
+   *
+   * {
+   *   data: {...}
+   * }
+   *
+   * and already-unwrapped data.
+   */
+
+  return payload?.data ?? payload;
+};
+
+/* =========================================================
    SLICE
-   ========================================================= */
+========================================================= */
 
 const invoiceSlice = createSlice({
   name: "invoice",
@@ -74,16 +141,16 @@ const invoiceSlice = createSlice({
 
   reducers: {
     /* =====================================================
-     SET EXISTING INVOICE
-  ===================================================== */
+       SET EXISTING INVOICE
+    ===================================================== */
 
     setExistingInvoice: (state, action) => {
       state.exsistingInvoice = action.payload;
     },
 
     /* =====================================================
-     CLEAR INVOICE STATE
-  ===================================================== */
+       CLEAR INVOICE REQUEST STATE
+    ===================================================== */
 
     clearInvoiceState: (state) => {
       state.loading = false;
@@ -93,18 +160,10 @@ const invoiceSlice = createSlice({
     },
 
     /* =====================================================
-     CLEAR SELECTED INVOICE
-  ===================================================== */
+       CLEAR SELECTED INVOICE
+    ===================================================== */
 
     clearSelectedInvoice: (state) => {
-      state.invoice = { ...emptyInvoice };
-    },
-
-    /* =====================================================
-     RESET INVOICE FORM
-  ===================================================== */
-
-    resetInvoiceForm: (state) => {
       state.invoice = {
         ...emptyInvoice,
         invoiceItems: [],
@@ -112,34 +171,90 @@ const invoiceSlice = createSlice({
     },
 
     /* =====================================================
-     SET INVOICE FORM FIELD
-  ===================================================== */
+   SET INVOICE NUMBER SETTING
+===================================================== */
 
-    setInvoiceField: (state, action) => {
+    setInvoiceNumberSetting: (state, action) => {
       const { field, value } = action.payload;
 
-      state.invoice = {
-        ...(state.invoice || emptyInvoice),
-        [field]: value,
+      state.invoiceNumberSettings[field] = value;
+    },
+
+    /* =====================================================
+   SET ALL INVOICE NUMBER SETTINGS
+===================================================== */
+
+    setInvoiceNumberSettings: (state, action) => {
+      state.invoiceNumberSettings = {
+        ...state.invoiceNumberSettings,
+        ...(action.payload || {}),
       };
     },
 
     /* =====================================================
-     SET ALL INVOICE ITEMS
-  ===================================================== */
+   RESET INVOICE NUMBER SETTINGS
+===================================================== */
 
-    setInvoiceItems: (state, action) => {
-      state.invoice.invoiceItems = action.payload || [];
+    resetInvoiceNumberSettings: (state) => {
+      state.invoiceNumberSettings = {
+        mode: "AUTO",
+        prefix: "INV-",
+        nextNumber: "000007",
+        restartFiscalYear: false,
+      };
     },
 
     /* =====================================================
-     SET INVOICE ITEM FIELD
-  ===================================================== */
+       RESET INVOICE FORM
+    ===================================================== */
+
+    resetInvoiceForm: (state) => {
+      state.invoice = {
+        ...emptyInvoice,
+        invoiceItems: [],
+      };
+
+      state.exsistingInvoice = null;
+      state.error = null;
+      state.success = false;
+      state.message = "";
+    },
+
+    /* =====================================================
+       SET INVOICE FORM FIELD
+    ===================================================== */
+
+    setInvoiceField: (state, action) => {
+      const { field, value } = action.payload;
+
+      if (!state.invoice) {
+        state.invoice = {
+          ...emptyInvoice,
+          invoiceItems: [],
+        };
+      }
+
+      state.invoice[field] = value;
+    },
+
+    /* =====================================================
+       SET ALL INVOICE ITEMS
+    ===================================================== */
+
+    setInvoiceItems: (state, action) => {
+      state.invoice.invoiceItems = Array.isArray(action.payload)
+        ? action.payload
+        : [];
+    },
+
+    /* =====================================================
+       SET INVOICE ITEM FIELD
+    ===================================================== */
 
     setInvoiceItemField: (state, action) => {
       const { index, field, value } = action.payload;
 
-      if (!state.invoice.invoiceItems) {
+      if (!Array.isArray(state.invoice.invoiceItems)) {
         state.invoice.invoiceItems = [];
       }
 
@@ -151,25 +266,29 @@ const invoiceSlice = createSlice({
     },
 
     /* =====================================================
-     ADD INVOICE ITEM
-  ===================================================== */
+       ADD INVOICE ITEM
+    ===================================================== */
 
     addInvoiceItem: (state, action) => {
-      if (!state.invoice.invoiceItems) {
+      if (!Array.isArray(state.invoice.invoiceItems)) {
         state.invoice.invoiceItems = [];
       }
 
-      state.invoice.invoiceItems.push(action.payload);
+      state.invoice.invoiceItems.push(
+        action.payload || {
+          ...emptyInvoiceItem,
+        },
+      );
     },
 
     /* =====================================================
-     REMOVE INVOICE ITEM
-  ===================================================== */
+       REMOVE INVOICE ITEM
+    ===================================================== */
 
     removeInvoiceItem: (state, action) => {
       const index = action.payload;
 
-      if (!state.invoice.invoiceItems) {
+      if (!Array.isArray(state.invoice.invoiceItems)) {
         return;
       }
 
@@ -194,6 +313,7 @@ const invoiceSlice = createSlice({
 
       .addCase(fetchInvoices.pending, (state) => {
         state.loading = true;
+        state.success = false;
         state.error = null;
       })
 
@@ -204,22 +324,39 @@ const invoiceSlice = createSlice({
 
         const response = action.payload;
 
-        state.invoices = response?.data?.content || [];
+        /*
+         * Supports both:
+         *
+         * response.data.content
+         *
+         * and
+         *
+         * response.content
+         */
+
+        const data = response?.data ?? response ?? {};
+
+        state.invoices = Array.isArray(data?.content) ? data.content : [];
 
         state.pagination = {
-          pageNumber: response?.data?.pageNumber ?? 0,
-          pageSize: response?.data?.pageSize ?? 20,
-          totalElements: response?.data?.totalElements ?? 0,
-          totalPages: response?.data?.totalPages ?? 0,
-          last: response?.data?.last ?? true,
+          pageNumber: data?.pageNumber ?? 0,
+          pageSize: data?.pageSize ?? 20,
+          totalElements: data?.totalElements ?? 0,
+          totalPages: data?.totalPages ?? 0,
+          last: data?.last ?? true,
         };
+
+        state.message = response?.message || "";
       })
 
       .addCase(fetchInvoices.rejected, (state, action) => {
         state.loading = false;
         state.success = false;
 
-        state.error = action.payload || "Failed to fetch invoices.";
+        state.error =
+          action.payload ||
+          action.error?.message ||
+          "Failed to fetch invoices.";
       });
 
     /* =====================================================
@@ -230,6 +367,7 @@ const invoiceSlice = createSlice({
 
       .addCase(fetchInvoiceById.pending, (state) => {
         state.loading = true;
+        state.success = false;
         state.error = null;
       })
 
@@ -238,15 +376,58 @@ const invoiceSlice = createSlice({
         state.success = true;
         state.error = null;
 
-        state.invoice = action.payload?.data ||
-          action.payload || { ...emptyInvoice };
+        const invoice = extractData(action.payload);
+
+        state.invoice = invoice || {
+          ...emptyInvoice,
+          invoiceItems: [],
+        };
+
+        /*
+         * Keep existing invoice reference also updated.
+         */
+        state.exsistingInvoice = state.invoice;
       })
 
       .addCase(fetchInvoiceById.rejected, (state, action) => {
         state.loading = false;
         state.success = false;
 
-        state.error = action.payload || "Failed to fetch invoice.";
+        state.error =
+          action.payload || action.error?.message || "Failed to fetch invoice.";
+      });
+
+    /* =====================================================
+   GENERATE INVOICE NUMBER
+===================================================== */
+
+    builder
+
+      .addCase(fetchGeneratedInvoiceNumber.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+
+      .addCase(fetchGeneratedInvoiceNumber.fulfilled, (state, action) => {
+        state.loading = false;
+        state.error = null;
+
+        const response = action.payload;
+
+        const generatedInvoice = response?.data ?? response ?? {};
+
+        state.invoice.invoiceNumber = generatedInvoice?.invoiceNumber || "";
+
+        state.message = "Invoice number generated successfully.";
+      })
+
+      .addCase(fetchGeneratedInvoiceNumber.rejected, (state, action) => {
+        state.loading = false;
+
+        state.error =
+          action.payload ||
+          action.error?.message ||
+          "Failed to generate invoice number.";
       });
 
     /* =====================================================
@@ -267,16 +448,24 @@ const invoiceSlice = createSlice({
         state.success = true;
         state.error = null;
 
-        state.message =
-          action.payload?.message || "Invoice created successfully.";
+        const response = action.payload;
 
-        const newInvoice = action.payload?.data;
+        state.message = response?.message || "Invoice created successfully.";
 
+        const newInvoice = extractData(response);
+
+        /*
+         * Add created invoice to listing.
+         */
         if (newInvoice) {
-          state.invoices.push(newInvoice);
+          state.invoices.unshift(newInvoice);
 
-          // Keep newly created invoice selected
+          /*
+           * Keep created invoice selected.
+           */
           state.invoice = newInvoice;
+
+          state.exsistingInvoice = newInvoice;
         }
       })
 
@@ -285,7 +474,9 @@ const invoiceSlice = createSlice({
         state.success = false;
 
         state.error =
-          action.payload || "Something went wrong while creating invoice.";
+          action.payload ||
+          action.error?.message ||
+          "Something went wrong while creating invoice.";
       });
 
     /* =====================================================
@@ -305,10 +496,11 @@ const invoiceSlice = createSlice({
         state.success = true;
         state.error = null;
 
-        state.message =
-          action.payload?.message || "Invoice updated successfully.";
+        const response = action.payload;
 
-        const updatedInvoice = action.payload?.data;
+        state.message = response?.message || "Invoice updated successfully.";
+
+        const updatedInvoice = extractData(response);
 
         if (updatedInvoice) {
           const index = state.invoices.findIndex(
@@ -317,9 +509,12 @@ const invoiceSlice = createSlice({
 
           if (index !== -1) {
             state.invoices[index] = updatedInvoice;
+          } else {
+            state.invoices.unshift(updatedInvoice);
           }
 
           state.invoice = updatedInvoice;
+          state.exsistingInvoice = updatedInvoice;
         }
       })
 
@@ -328,7 +523,9 @@ const invoiceSlice = createSlice({
         state.success = false;
 
         state.error =
-          action.payload || "Something went wrong while updating invoice.";
+          action.payload ||
+          action.error?.message ||
+          "Something went wrong while updating invoice.";
       });
 
     /* =====================================================
@@ -348,10 +545,17 @@ const invoiceSlice = createSlice({
         state.success = true;
         state.error = null;
 
-        state.message =
-          action.payload?.message || "Invoice deleted successfully.";
+        const response = action.payload;
 
-        const deletedId = action.payload?.data?.id || action.payload?.id;
+        state.message = response?.message || "Invoice deleted successfully.";
+
+        /*
+         * Supports:
+         *
+         * response.data.id
+         * response.id
+         */
+        const deletedId = response?.data?.id || response?.id;
 
         if (deletedId) {
           state.invoices = state.invoices.filter(
@@ -359,10 +563,16 @@ const invoiceSlice = createSlice({
           );
         }
 
-        // Clear selected invoice if the deleted invoice
-        // is currently selected
+        /*
+         * Clear selected invoice.
+         */
         if (state.invoice?.id === deletedId) {
-          state.invoice = { ...emptyInvoice };
+          state.invoice = {
+            ...emptyInvoice,
+            invoiceItems: [],
+          };
+
+          state.exsistingInvoice = null;
         }
       })
 
@@ -371,89 +581,10 @@ const invoiceSlice = createSlice({
         state.success = false;
 
         state.error =
-          action.payload || "Something went wrong while deleting invoice.";
+          action.payload ||
+          action.error?.message ||
+          "Something went wrong while deleting invoice.";
       });
-
-    /* =====================================================
-       REACTIVATE INVOICE
-    ===================================================== */
-
-    // builder
-
-    //   .addCase(reactivateInvoice.pending, (state) => {
-    //     state.loading = true;
-    //     state.success = false;
-    //     state.error = null;
-    //   })
-
-    //   .addCase(reactivateInvoice.fulfilled, (state, action) => {
-    //     state.loading = false;
-    //     state.success = true;
-    //     state.error = null;
-
-    //     state.message =
-    //       action.payload?.message || "Invoice reactivated successfully.";
-
-    //     const reactivatedInvoice = action.payload?.data;
-
-    //     if (reactivatedInvoice) {
-    //       const index = state.invoices.findIndex(
-    //         (item) => item.id === reactivatedInvoice.id,
-    //       );
-
-    //       if (index !== -1) {
-    //         state.invoices[index] = reactivatedInvoice;
-    //       } else {
-    //         state.invoices.push(reactivatedInvoice);
-    //       }
-
-    //       state.invoice = reactivatedInvoice;
-    //     }
-    //   })
-
-    //   .addCase(reactivateInvoice.rejected, (state, action) => {
-    //     state.loading = false;
-    //     state.success = false;
-
-    //     state.error =
-    //       action.payload || "Something went wrong while reactivating invoice.";
-    //   });
-
-    /* =====================================================
-       FETCH INVOICES BY STATUS
-    ===================================================== */
-
-    // builder
-
-    //   .addCase(fetchInvoicesByStatus.pending, (state) => {
-    //     state.loading = true;
-    //     state.error = null;
-    //   })
-
-    //   .addCase(fetchInvoicesByStatus.fulfilled, (state, action) => {
-    //     state.loading = false;
-    //     state.success = true;
-    //     state.error = null;
-
-    //     const response = action.payload;
-
-    //     state.invoices = response?.data?.content || [];
-
-    //     state.pagination = {
-    //       pageNumber: response?.data?.pageNumber ?? 0,
-    //       pageSize: response?.data?.pageSize ?? 20,
-    //       totalElements: response?.data?.totalElements ?? 0,
-    //       totalPages: response?.data?.totalPages ?? 0,
-    //       last: response?.data?.last ?? true,
-    //     };
-    //   })
-
-    //   .addCase(fetchInvoicesByStatus.rejected, (state, action) => {
-    //     state.loading = false;
-    //     state.success = false;
-
-    //     state.error = action.payload || "Failed to fetch invoices by status.";
-    //   });
   },
 });
 
@@ -471,6 +602,10 @@ export const {
   setInvoiceItemField,
   addInvoiceItem,
   removeInvoiceItem,
+
+  setInvoiceNumberSetting,
+  setInvoiceNumberSettings,
+  resetInvoiceNumberSettings,
 } = invoiceSlice.actions;
 
 /* =========================================================

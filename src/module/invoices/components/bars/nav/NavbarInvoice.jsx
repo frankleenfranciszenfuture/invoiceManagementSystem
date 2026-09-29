@@ -105,16 +105,16 @@ export default function NavbarInvoice() {
     // OPEN INVOICE CREATE MODAL
     // ============================================================
 
-    const handleNewInvoice = () => {
+    // const handleNewInvoice = () => {
 
-        setMoreOpen(false);
+    //     setMoreOpen(false);
 
-        dispatch(
-            openModal({
-                type: "addInvoice",
-            })
-        );
-    };
+    //     dispatch(
+    //         openModal({
+    //             type: "addInvoice",
+    //         })
+    //     );
+    // };
 
     // ============================================================
     // STATUS VIEW CHANGE
@@ -339,9 +339,10 @@ export default function NavbarInvoice() {
 
                     <button
                         type="button"
-                        onClick={
-                            handleNewInvoice
-                        }
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            navigate("/invoices/new");
+                        }}
                         className="
                             flex
                             items-center

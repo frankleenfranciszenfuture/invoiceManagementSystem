@@ -44,13 +44,9 @@ export const fetchInvoices = createAsyncThunk(
 export const fetchInvoiceById = createAsyncThunk(
   "invoice/fetchInvoiceById",
 
-  async ({ id, branchId }, { rejectWithValue }) => {
+  async (id, { rejectWithValue }) => {
     try {
-      const res = await api.get(`/invoices/${id}`, {
-        params: {
-          branchId,
-        },
-      });
+      const res = await api.get(`/invoices/${id}`);
 
       return res.data.data;
     } catch (error) {
@@ -72,13 +68,9 @@ export const fetchInvoiceById = createAsyncThunk(
 export const fetchInvoiceBySaleId = createAsyncThunk(
   "invoice/fetchInvoiceBySaleId",
 
-  async ({ saleId, branchId }, { rejectWithValue }) => {
+  async (saleId, { rejectWithValue }) => {
     try {
-      const res = await api.get(`/invoices/sale/${saleId}`, {
-        params: {
-          branchId,
-        },
-      });
+      const res = await api.get(`/invoices/sale/${saleId}`);
 
       return res.data.data;
     } catch (error) {
@@ -100,13 +92,9 @@ export const fetchInvoiceBySaleId = createAsyncThunk(
 export const fetchInvoiceByPurchaseId = createAsyncThunk(
   "invoice/fetchInvoiceByPurchaseId",
 
-  async ({ purchaseId, branchId }, { rejectWithValue }) => {
+  async (purchaseId, { rejectWithValue }) => {
     try {
-      const res = await api.get(`/invoices/purchase/${purchaseId}`, {
-        params: {
-          branchId,
-        },
-      });
+      const res = await api.get(`/invoices/purchase/${purchaseId}`);
 
       return res.data.data;
     } catch (error) {
@@ -128,13 +116,9 @@ export const fetchInvoiceByPurchaseId = createAsyncThunk(
 export const fetchInvoiceByStockTransferId = createAsyncThunk(
   "invoice/fetchInvoiceByStockTransferId",
 
-  async ({ stockTransferId, branchId }, { rejectWithValue }) => {
+  async (stockTransferId, { rejectWithValue }) => {
     try {
-      const res = await api.get(`/invoices/stock-transfer/${stockTransferId}`, {
-        params: {
-          branchId,
-        },
-      });
+      const res = await api.get(`/invoices/stock-transfer/${stockTransferId}`);
 
       return res.data.data;
     } catch (error) {
@@ -156,17 +140,21 @@ export const fetchInvoiceByStockTransferId = createAsyncThunk(
 export const createInvoice = createAsyncThunk(
   "invoice/createInvoice",
 
-  async ({ id, data }, { rejectWithValue }) => {
+  async (data, { rejectWithValue }) => {
     try {
-      const res = await api.post("/invoices", data, {
-        params: {
-          branchId: id,
-        },
-      });
+      console.log(
+        "CREATE INVOICE REQUEST BODY:",
+        JSON.stringify(data, null, 2),
+      );
+
+      const res = await api.post("/invoices", data);
+
+      console.log("CREATE INVOICE RESPONSE:", res.data);
 
       return res.data.data;
     } catch (error) {
       console.error("Create invoice error:", error);
+      console.error("Response:", error?.response?.data);
 
       return rejectWithValue(
         error?.response?.data?.message ||
@@ -184,13 +172,9 @@ export const createInvoice = createAsyncThunk(
 export const editInvoice = createAsyncThunk(
   "invoice/editInvoice",
 
-  async ({ id, branchId, data }, { rejectWithValue }) => {
+  async ({ id, data }, { rejectWithValue }) => {
     try {
-      const res = await api.put(`/invoices/${id}`, data, {
-        params: {
-          branchId,
-        },
-      });
+      const res = await api.put(`/invoices/${id}`, data);
 
       return res.data.data;
     } catch (error) {
@@ -212,17 +196,9 @@ export const editInvoice = createAsyncThunk(
 export const cancelInvoice = createAsyncThunk(
   "invoice/cancelInvoice",
 
-  async ({ id, branchId }, { rejectWithValue }) => {
+  async (id, { rejectWithValue }) => {
     try {
-      const res = await api.put(
-        `/invoices/${id}/cancel`,
-        {},
-        {
-          params: {
-            branchId,
-          },
-        },
-      );
+      const res = await api.put(`/invoices/${id}/cancel`, {});
 
       return res.data.data;
     } catch (error) {
@@ -244,13 +220,9 @@ export const cancelInvoice = createAsyncThunk(
 export const removeInvoice = createAsyncThunk(
   "invoice/removeInvoice",
 
-  async ({ id, branchId }, { rejectWithValue }) => {
+  async (id, { rejectWithValue }) => {
     try {
-      await api.delete(`/invoices/${id}`, {
-        params: {
-          branchId,
-        },
-      });
+      await api.delete(`/invoices/${id}`);
 
       return id;
     } catch (error) {
@@ -260,6 +232,30 @@ export const removeInvoice = createAsyncThunk(
         error?.response?.data?.message ||
           error?.message ||
           "Failed to delete invoice.",
+      );
+    }
+  },
+);
+
+/* =========================================================
+   GENERATE INVOICE NUMBER
+========================================================= */
+
+export const fetchGeneratedInvoiceNumber = createAsyncThunk(
+  "invoice/fetchGeneratedInvoiceNumber",
+
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/invoices/generate");
+
+      return response.data.data;
+    } catch (error) {
+      console.error("Generate invoice number error:", error);
+
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Failed to generate invoice number.",
       );
     }
   },

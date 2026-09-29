@@ -39,12 +39,11 @@ const NAV = [
         to: "/customers",
         addTo: "/customers/new",
         queryKey: "status",
+        basePath: "/customers",
         dropdown: true, // ← add this
         children: [
-            { label: "All", status: "ALL" },
-            { label: "Active", status: "ACTIVE" },
-            { label: "Inactive", status: "INACTIVE" },
-            { label: "Draft", status: "DRAFT" },
+            { label: "Customers", status: "ALL" },
+
         ],
     },
     {
@@ -58,7 +57,7 @@ const NAV = [
 
             { label: "Categories", to: "/categories" },
             { label: "Sub Categories", to: "/subCategoires" },
-            { label: "Parties", to: "/parties" },
+            // { label: "Parties", to: "/parties" },
             { label: "Sizes", to: "/sizes" },
             { label: "Units", to: "/units" },
             { label: "Taxes", to: "/taxes" },
@@ -71,10 +70,12 @@ const NAV = [
         icon: FileText,
         to: "/invoices",
         addTo: "/invoices/new",
+        queryKey: "status",
         basePath: "/invoices",
         dropdown: true, // ← add this
         children: [
-            { label: "invoices", to: "/invoices" },
+            { label: "Invoices", status: "ALL" },
+
         ],
     },
 
