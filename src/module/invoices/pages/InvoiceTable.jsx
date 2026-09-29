@@ -587,12 +587,15 @@ export default function InvoiceTable({
                                             invoice.id ||
                                             index
                                         }
+                                        onClick={() => handleView(invoice)}
                                         className="
-                        border-b
-                        border-gray-100
-                        hover:bg-gray-50
-                        text-sm
-                    "
+                                                border-b
+                                                border-gray-100
+                                                hover:bg-gray-50
+                                                text-sm
+                                                cursor-pointer
+                                                transition-colors
+                                            "
                                     >
 
                                         {/* INVOICE */}

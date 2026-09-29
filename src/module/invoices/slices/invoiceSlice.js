@@ -96,6 +96,8 @@ const initialState = {
     last: true,
   },
 
+  isDirty: false,
+
   /*
    * Request state
    */
@@ -263,6 +265,10 @@ const invoiceSlice = createSlice({
       }
 
       state.invoice.invoiceItems[index][field] = value;
+    },
+
+    setInvoiceDirty: (state, action) => {
+      state.isDirty = action.payload;
     },
 
     /* =====================================================

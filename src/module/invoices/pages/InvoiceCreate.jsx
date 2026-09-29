@@ -142,64 +142,51 @@ export default function InvoiceCreate() {
   ======================================================= */
 
   const modal = useSelector(
-    (state) =>
-      state.ui?.modal
+    (state) => state.ui?.modal
   );
 
-
-  /* =======================================================
-     ADD MODAL
-  ======================================================= */
-
   const isAddModal =
-    modal?.open &&
+    modal?.open === true &&
     modal?.type === "addInvoice";
 
-
-  /* =======================================================
-     EDIT MODAL
-  ======================================================= */
-
   const isEditModal =
-    modal?.open &&
+    modal?.open === true &&
     modal?.type === "editInvoice";
-
-
-  /* =======================================================
-     EDIT INVOICE ID
-     
-     Can come from:
-     1. Edit modal -> modal.data.id
-     2. Edit route -> /invoices/edit/:id
-  ======================================================= */
-
-  const editInvoiceId =
-    modal?.data?.id || id || null;
-
-
-  /* =======================================================
-     UNIFIED EDIT MODE
-  ======================================================= */
-
-  const isEdit =
-    Boolean(editInvoiceId);
-
-
-  /* =======================================================
-     UNIFIED ADD MODE
-  ======================================================= */
-
-  const isAdd =
-    !isEdit;
-
-
-  /* =======================================================
-     MODAL MODE
-  ======================================================= */
 
   const isModal =
     isAddModal ||
     isEditModal;
+
+
+  /* =======================================================
+     EDIT ID
+  ======================================================= */
+
+  const editInvoiceId = isEditModal
+    ? modal?.data?.id ?? null
+    : !isModal
+      ? id ?? null
+      : null;
+
+
+  /* =======================================================
+     MODES
+  ======================================================= */
+
+  const isEdit =
+    isEditModal ||
+    (!isModal && Boolean(id));
+
+  const isAdd =
+    isAddModal ||
+    (!isModal && !id);
+  // /* =======================================================
+  //    MODAL MODE
+  // ======================================================= */
+
+  // const isModal =
+  //   isAddModal ||
+  //   isEditModal;
 
 
   /* =======================================================
@@ -748,445 +735,528 @@ export default function InvoiceCreate() {
      2. editInvoice modal
   ========================================================= */
 
+  // useEffect(() => {
+  //   if (
+  //     !isEdit ||
+  //     !editInvoiceId
+  //   ) {
+  //     return;
+  //   }
+
+
+  //   const loadInvoice =
+  //     async () => {
+  //       try {
+
+  //         /*
+  //          * Clear previous invoice state
+  //          * before loading edit data.
+  //          */
+  //         dispatch(
+  //           resetInvoiceForm()
+  //         );
+
+
+  //         /*
+  //          * Clear local state.
+  //          */
+  //         setCustomerSearch("");
+  //         setItemSearch("");
+  //         setOpenCustomer(false);
+  //         setOpenRowItemDropdown(false);
+  //         setActiveItemId(null);
+  //         setShowSummary(true);
+  //         setShowGateway(false);
+  //         setShowSaveMenu(false);
+  //         setShowCustomerDetails(false);
+
+
+  //         const result =
+  //           await dispatch(
+  //             fetchInvoiceById(
+  //               editInvoiceId
+  //             )
+  //           ).unwrap();
+
+
+  //         console.log(
+  //           "EDIT INVOICE RESPONSE:",
+  //           result
+  //         );
+
+
+  //         /* ==========================================
+  //            RESPONSE EXTRACTION
+  //         ========================================== */
+
+  //         const existingInvoice =
+  //           result?.data?.data ||
+  //           result?.data?.invoice ||
+  //           result?.data ||
+  //           result?.invoice ||
+  //           result;
+
+
+  //         console.log(
+  //           "EXTRACTED EXISTING INVOICE:",
+  //           existingInvoice
+  //         );
+
+
+  //         if (
+  //           !existingInvoice ||
+  //           typeof existingInvoice !==
+  //           "object"
+  //         ) {
+  //           toast.error(
+  //             "Invoice data not found"
+  //           );
+
+  //           return;
+  //         }
+
+
+  //         /* ==========================================
+  //            INVOICE NUMBER
+  //         ========================================== */
+
+  //         dispatch(
+  //           setInvoiceField({
+  //             field:
+  //               "invoiceNumber",
+  //             value:
+  //               existingInvoice
+  //                 .invoiceNumber ||
+  //               "",
+  //           })
+  //         );
+
+
+  //         /* ==========================================
+  //            INVOICE TYPE
+  //         ========================================== */
+
+  //         dispatch(
+  //           setInvoiceField({
+  //             field:
+  //               "invoiceType",
+  //             value:
+  //               existingInvoice
+  //                 .invoiceType ||
+  //               "SALE_INVOICE",
+  //           })
+  //         );
+
+
+  //         /* ==========================================
+  //            STATUS
+  //         ========================================== */
+
+  //         dispatch(
+  //           setInvoiceField({
+  //             field:
+  //               "invoiceStatus",
+  //             value:
+  //               existingInvoice.invoiceStatus ||
+  //               existingInvoice.status ||
+  //               "DRAFT",
+  //           })
+  //         );
+
+
+  //         /* ==========================================
+  //            CUSTOMER ID
+  //         ========================================== */
+
+  //         dispatch(
+  //           setInvoiceField({
+  //             field:
+  //               "customerId",
+  //             value:
+  //               existingInvoice
+  //                 .customerId ||
+  //               existingInvoice
+  //                 .customer?.id ||
+  //               "",
+  //           })
+  //         );
+
+
+  //         /* ==========================================
+  //            CUSTOMER NAME
+  //         ========================================== */
+
+  //         dispatch(
+  //           setInvoiceField({
+  //             field:
+  //               "customerName",
+  //             value:
+  //               existingInvoice
+  //                 .customerName ||
+  //               existingInvoice
+  //                 .customer?.customerName ||
+  //               existingInvoice
+  //                 .customer?.displayName ||
+  //               existingInvoice
+  //                 .customer?.companyName ||
+  //               "",
+  //           })
+  //         );
+
+
+  //         /* ==========================================
+  //            INVOICE DATE
+  //         ========================================== */
+
+  //         dispatch(
+  //           setInvoiceField({
+  //             field:
+  //               "invoiceDate",
+  //             value:
+  //               existingInvoice
+  //                 .invoiceDate ||
+  //               "",
+  //           })
+  //         );
+
+
+  //         /* ==========================================
+  //            DUE DATE
+  //         ========================================== */
+
+  //         dispatch(
+  //           setInvoiceField({
+  //             field:
+  //               "dueDate",
+  //             value:
+  //               existingInvoice
+  //                 .dueDate ||
+  //               "",
+  //           })
+  //         );
+
+
+  //         /* ==========================================
+  //            SHIPPING
+  //         ========================================== */
+
+  //         dispatch(
+  //           setInvoiceField({
+  //             field:
+  //               "shippingAmount",
+  //             value:
+  //               Number(
+  //                 existingInvoice
+  //                   .shippingAmount ||
+  //                 0
+  //               ),
+  //           })
+  //         );
+
+
+  //         /* ==========================================
+  //            DISCOUNT
+  //         ========================================== */
+
+  //         dispatch(
+  //           setInvoiceField({
+  //             field:
+  //               "discountAmount",
+  //             value:
+  //               Number(
+  //                 existingInvoice
+  //                   .discountAmount ||
+  //                 0
+  //               ),
+  //           })
+  //         );
+
+
+  //         /* ==========================================
+  //            NOTES
+  //         ========================================== */
+
+  //         dispatch(
+  //           setInvoiceField({
+  //             field:
+  //               "notes",
+  //             value:
+  //               existingInvoice
+  //                 .notes ||
+  //               "",
+  //           })
+  //         );
+
+
+  //         /* ==========================================
+  //            TERMS
+  //         ========================================== */
+
+  //         dispatch(
+  //           setInvoiceField({
+  //             field:
+  //               "termsAndConditions",
+  //             value:
+  //               existingInvoice
+  //                 .termsAndConditions ||
+  //               "",
+  //           })
+  //         );
+
+
+  //         /* ==========================================
+  //            INVOICE ITEMS
+  //         ========================================== */
+
+  //         const existingItems =
+  //           Array.isArray(
+  //             existingInvoice
+  //               .invoiceItems
+  //           )
+  //             ? existingInvoice
+  //               .invoiceItems
+  //             : [];
+
+
+  //         const mappedItems =
+  //           existingItems.length
+  //             ? existingItems.map(
+  //               (item) => ({
+  //                 id:
+  //                   item.id ||
+  //                   null,
+
+  //                 productId:
+  //                   item.productId ||
+  //                   item.product?.id ||
+  //                   "",
+
+  //                 description:
+  //                   item.description ||
+  //                   item.product
+  //                     ?.productName ||
+  //                   item.product
+  //                     ?.itemName ||
+  //                   item.product
+  //                     ?.name ||
+  //                   "",
+
+  //                 unitId:
+  //                   item.unitId ||
+  //                   item.unit?.id ||
+  //                   "",
+
+  //                 sizeId:
+  //                   item.sizeId ||
+  //                   item.size?.id ||
+  //                   "",
+
+  //                 quantity:
+  //                   Number(
+  //                     item.quantity ||
+  //                     0
+  //                   ),
+
+  //                 unitPrice:
+  //                   Number(
+  //                     item.unitPrice ||
+  //                     0
+  //                   ),
+
+  //                 discountAmount:
+  //                   Number(
+  //                     item.discountAmount ||
+  //                     0
+  //                   ),
+
+  //                 taxMasterId:
+  //                   item.taxMasterId ||
+  //                   item.taxMaster?.id ||
+  //                   "",
+  //               })
+  //             )
+  //             : [
+  //               createEmptyItem(),
+  //             ];
+
+
+  //         dispatch(
+  //           setInvoiceField({
+  //             field:
+  //               "invoiceItems",
+  //             value:
+  //               mappedItems,
+  //           })
+  //         );
+
+
+  //         /* ==========================================
+  //            DISCOUNT MODE
+  //         ========================================== */
+
+  //         if (
+  //           existingInvoice
+  //             .discountMode
+  //         ) {
+
+  //           setDiscountMode(
+  //             existingInvoice
+  //               .discountMode
+  //           );
+
+  //         } else if (
+  //           Number(
+  //             existingInvoice
+  //               .discountAmount ||
+  //             0
+  //           ) > 0
+  //         ) {
+
+  //           setDiscountMode(
+  //             "COMMON"
+  //           );
+
+  //         } else {
+
+  //           const hasProductDiscount =
+  //             existingItems.some(
+  //               (item) =>
+  //                 Number(
+  //                   item?.discountAmount ||
+  //                   0
+  //                 ) > 0
+  //             );
+
+
+  //           setDiscountMode(
+  //             hasProductDiscount
+  //               ? "PRODUCT"
+  //               : "COMMON"
+  //           );
+  //         }
+
+
+  //         /* ==========================================
+  //            TERMS VISIBILITY
+  //         ========================================== */
+
+  //         setShowTerms(
+  //           Boolean(
+  //             existingInvoice
+  //               .termsAndConditions
+  //           )
+  //         );
+
+  //       } catch (error) {
+
+  //         console.error(
+  //           "LOAD INVOICE ERROR:",
+  //           error
+  //         );
+
+
+  //         toast.error(
+  //           error?.message ||
+  //           error?.payload?.message ||
+  //           error?.response?.data
+  //             ?.message ||
+  //           "Failed to load invoice"
+  //         );
+  //       }
+  //     };
+
+
+  //   loadInvoice();
+
+  // }, [
+  //   dispatch,
+  //   isEdit,
+  //   editInvoiceId,
+  // ]);
+
   useEffect(() => {
-    if (
-      !isEdit ||
-      !editInvoiceId
-    ) {
+    // ADD MODAL MUST NEVER LOAD AN INVOICE
+    if (isAddModal) {
       return;
     }
 
-
-    const loadInvoice =
-      async () => {
-        try {
-
-          /*
-           * Clear previous invoice state
-           * before loading edit data.
-           */
-          dispatch(
-            resetInvoiceForm()
-          );
-
-
-          /*
-           * Clear local state.
-           */
-          setCustomerSearch("");
-          setItemSearch("");
-          setOpenCustomer(false);
-          setOpenRowItemDropdown(false);
-          setActiveItemId(null);
-          setShowSummary(true);
-          setShowGateway(false);
-          setShowSaveMenu(false);
-          setShowCustomerDetails(false);
-
-
-          const result =
-            await dispatch(
-              fetchInvoiceById(
-                editInvoiceId
-              )
-            ).unwrap();
-
-
-          console.log(
-            "EDIT INVOICE RESPONSE:",
-            result
-          );
-
-
-          /* ==========================================
-             RESPONSE EXTRACTION
-          ========================================== */
-
-          const existingInvoice =
-            result?.data?.data ||
-            result?.data?.invoice ||
-            result?.data ||
-            result?.invoice ||
-            result;
-
-
-          console.log(
-            "EXTRACTED EXISTING INVOICE:",
-            existingInvoice
-          );
-
-
-          if (
-            !existingInvoice ||
-            typeof existingInvoice !==
-            "object"
-          ) {
-            toast.error(
-              "Invoice data not found"
-            );
-
-            return;
-          }
-
-
-          /* ==========================================
-             INVOICE NUMBER
-          ========================================== */
-
-          dispatch(
-            setInvoiceField({
-              field:
-                "invoiceNumber",
-              value:
-                existingInvoice
-                  .invoiceNumber ||
-                "",
-            })
-          );
-
-
-          /* ==========================================
-             INVOICE TYPE
-          ========================================== */
-
-          dispatch(
-            setInvoiceField({
-              field:
-                "invoiceType",
-              value:
-                existingInvoice
-                  .invoiceType ||
-                "SALE_INVOICE",
-            })
-          );
-
-
-          /* ==========================================
-             STATUS
-          ========================================== */
-
-          dispatch(
-            setInvoiceField({
-              field:
-                "invoiceStatus",
-              value:
-                existingInvoice.invoiceStatus ||
-                existingInvoice.status ||
-                "DRAFT",
-            })
-          );
-
-
-          /* ==========================================
-             CUSTOMER ID
-          ========================================== */
-
-          dispatch(
-            setInvoiceField({
-              field:
-                "customerId",
-              value:
-                existingInvoice
-                  .customerId ||
-                existingInvoice
-                  .customer?.id ||
-                "",
-            })
-          );
-
-
-          /* ==========================================
-             CUSTOMER NAME
-          ========================================== */
-
-          dispatch(
-            setInvoiceField({
-              field:
-                "customerName",
-              value:
-                existingInvoice
-                  .customerName ||
-                existingInvoice
-                  .customer?.customerName ||
-                existingInvoice
-                  .customer?.displayName ||
-                existingInvoice
-                  .customer?.companyName ||
-                "",
-            })
-          );
-
-
-          /* ==========================================
-             INVOICE DATE
-          ========================================== */
-
-          dispatch(
-            setInvoiceField({
-              field:
-                "invoiceDate",
-              value:
-                existingInvoice
-                  .invoiceDate ||
-                "",
-            })
-          );
-
-
-          /* ==========================================
-             DUE DATE
-          ========================================== */
-
-          dispatch(
-            setInvoiceField({
-              field:
-                "dueDate",
-              value:
-                existingInvoice
-                  .dueDate ||
-                "",
-            })
-          );
-
-
-          /* ==========================================
-             SHIPPING
-          ========================================== */
-
-          dispatch(
-            setInvoiceField({
-              field:
-                "shippingAmount",
-              value:
-                Number(
-                  existingInvoice
-                    .shippingAmount ||
-                  0
-                ),
-            })
-          );
-
-
-          /* ==========================================
-             DISCOUNT
-          ========================================== */
-
-          dispatch(
-            setInvoiceField({
-              field:
-                "discountAmount",
-              value:
-                Number(
-                  existingInvoice
-                    .discountAmount ||
-                  0
-                ),
-            })
-          );
-
-
-          /* ==========================================
-             NOTES
-          ========================================== */
-
-          dispatch(
-            setInvoiceField({
-              field:
-                "notes",
-              value:
-                existingInvoice
-                  .notes ||
-                "",
-            })
-          );
-
-
-          /* ==========================================
-             TERMS
-          ========================================== */
-
-          dispatch(
-            setInvoiceField({
-              field:
-                "termsAndConditions",
-              value:
-                existingInvoice
-                  .termsAndConditions ||
-                "",
-            })
-          );
-
-
-          /* ==========================================
-             INVOICE ITEMS
-          ========================================== */
-
-          const existingItems =
-            Array.isArray(
-              existingInvoice
-                .invoiceItems
-            )
-              ? existingInvoice
-                .invoiceItems
-              : [];
-
-
-          const mappedItems =
-            existingItems.length
-              ? existingItems.map(
-                (item) => ({
-                  id:
-                    item.id ||
-                    null,
-
-                  productId:
-                    item.productId ||
-                    item.product?.id ||
-                    "",
-
-                  description:
-                    item.description ||
-                    item.product
-                      ?.productName ||
-                    item.product
-                      ?.itemName ||
-                    item.product
-                      ?.name ||
-                    "",
-
-                  unitId:
-                    item.unitId ||
-                    item.unit?.id ||
-                    "",
-
-                  sizeId:
-                    item.sizeId ||
-                    item.size?.id ||
-                    "",
-
-                  quantity:
-                    Number(
-                      item.quantity ||
-                      0
-                    ),
-
-                  unitPrice:
-                    Number(
-                      item.unitPrice ||
-                      0
-                    ),
-
-                  discountAmount:
-                    Number(
-                      item.discountAmount ||
-                      0
-                    ),
-
-                  taxMasterId:
-                    item.taxMasterId ||
-                    item.taxMaster?.id ||
-                    "",
-                })
-              )
-              : [
-                createEmptyItem(),
-              ];
-
-
-          dispatch(
-            setInvoiceField({
-              field:
-                "invoiceItems",
-              value:
-                mappedItems,
-            })
-          );
-
-
-          /* ==========================================
-             DISCOUNT MODE
-          ========================================== */
-
-          if (
-            existingInvoice
-              .discountMode
-          ) {
-
-            setDiscountMode(
-              existingInvoice
-                .discountMode
-            );
-
-          } else if (
-            Number(
-              existingInvoice
-                .discountAmount ||
-              0
-            ) > 0
-          ) {
-
-            setDiscountMode(
-              "COMMON"
-            );
-
-          } else {
-
-            const hasProductDiscount =
-              existingItems.some(
-                (item) =>
-                  Number(
-                    item?.discountAmount ||
-                    0
-                  ) > 0
-              );
-
-
-            setDiscountMode(
-              hasProductDiscount
-                ? "PRODUCT"
-                : "COMMON"
-            );
-          }
-
-
-          /* ==========================================
-             TERMS VISIBILITY
-          ========================================== */
-
-          setShowTerms(
-            Boolean(
-              existingInvoice
-                .termsAndConditions
-            )
-          );
-
-        } catch (error) {
-
+    // EDIT MODAL WITHOUT ID
+    if (isEditModal && !modal?.data?.id) {
+      console.error(
+        "Edit invoice opened without invoice ID:",
+        modal
+      );
+
+      toast.error("Invoice ID is missing");
+      return;
+    }
+
+    // Nothing to load
+    if (!isEdit || !editInvoiceId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadInvoice = async () => {
+      try {
+        console.log(
+          "Loading invoice ID:",
+          editInvoiceId
+        );
+
+        dispatch(resetInvoiceForm());
+
+        const result = await dispatch(
+          fetchInvoiceById(editInvoiceId)
+        ).unwrap();
+
+        if (cancelled) {
+          return;
+        }
+
+        const existingInvoice =
+          result?.data?.data ||
+          result?.data?.invoice ||
+          result?.data ||
+          result?.invoice ||
+          result;
+
+        if (!existingInvoice) {
+          toast.error("Invoice not found");
+          return;
+        }
+
+        // KEEP YOUR EXISTING FIELD MAPPING HERE
+
+      } catch (error) {
+        if (!cancelled) {
           console.error(
-            "LOAD INVOICE ERROR:",
+            "Failed to load invoice:",
             error
           );
 
-
           toast.error(
-            error?.message ||
-            error?.payload?.message ||
-            error?.response?.data
-              ?.message ||
             "Failed to load invoice"
           );
         }
-      };
-
+      }
+    };
 
     loadInvoice();
 
+    return () => {
+      cancelled = true;
+    };
+
   }, [
-    dispatch,
+    isAddModal,
+    isEditModal,
     isEdit,
     editInvoiceId,
+    modal?.data?.id,
+    dispatch,
   ]);
-
 
   /* =========================================================
      CLICK OUTSIDE

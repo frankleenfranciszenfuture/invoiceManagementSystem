@@ -43,24 +43,22 @@ export const fetchInvoices = createAsyncThunk(
 
 export const fetchInvoiceById = createAsyncThunk(
   "invoice/fetchInvoiceById",
-
   async (id, { rejectWithValue }) => {
     try {
+      if (id === undefined || id === null || id === "") {
+        return rejectWithValue("Invoice ID is required");
+      }
+
       const res = await api.get(`/invoices/${id}`);
 
-      return res.data.data;
+      return res.data;
     } catch (error) {
-      console.error("Fetch invoice error:", error);
-
       return rejectWithValue(
-        error?.response?.data?.message ||
-          error?.message ||
-          "Failed to fetch invoice.",
+        error.response?.data || error.message || "Failed to load invoice",
       );
     }
   },
 );
-
 /* =========================================================
    GET SALE INVOICE
 ========================================================= */

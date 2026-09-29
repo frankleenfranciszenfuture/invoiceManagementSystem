@@ -42,6 +42,7 @@ import CategoryDashboard from "./module/category/pages/CategoryDashboard";
 import ProductOverViewDashboard from "./module/items/overviewCard/ProductOverViewDashboard";
 import InvoiceCreate from "./module/invoices/pages/InvoiceCreate";
 import InvoiceDashboard from "./module/invoices/pages/InvoiceDashboard";
+import InvoiceOverViewDashboard from "./module/invoices/overviewCard/InvoiceOverViewDashboard";
 
 export default function App() {
   const dispatch = useDispatch();
@@ -222,6 +223,10 @@ export default function App() {
             element={<InvoiceDashboard />}
           />
 
+          <Route
+            path="/invoices/view/:id"
+            element={<InvoiceOverViewDashboard />}
+          />
 
         </Route>
 
