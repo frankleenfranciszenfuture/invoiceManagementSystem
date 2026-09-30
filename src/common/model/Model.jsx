@@ -16,6 +16,8 @@ import InvoiceCreate from "../../module/invoices/pages/InvoiceCreate"
 import InvoiceNumberSetting from "../../module/invoices/pages/InvoiceNumberSetting";
 import ChangeTemplateModal from "../../module/invoices/overviewCard/template/ChangeTemplateModal";
 import RoleCreate from "../../module/role/pages/RoleCreate";
+import BankAccountCreate from "../../module/bankAccount/pages/BankAccountCreate";
+import CompanyCreate from "../../module/company/pages/CompanyCreate";
 
 export default function Modal() {
 
@@ -72,6 +74,14 @@ export default function Modal() {
         // Role
         addRole: RoleCreate,
         editRole: RoleCreate,
+
+        // bankAccount
+        addBankAccount: BankAccountCreate,
+        editBankAccount: BankAccountCreate,
+
+        // company
+        addCompany: CompanyCreate,
+        editCompany: CompanyCreate,
 
     };
 

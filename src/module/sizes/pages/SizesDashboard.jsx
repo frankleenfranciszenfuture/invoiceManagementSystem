@@ -312,7 +312,7 @@ export default function SizeDashboard() {
                                         w-7
                                         h-7
                                         rounded-full
-                                        bg-blue-600
+                                        bg-blue-500
                                         flex
                                         items-center
                                         justify-center
@@ -364,14 +364,14 @@ export default function SizeDashboard() {
                                         flex
                                         items-center
                                         gap-2
-                                        bg-blue-600
+                                        bg-blue-500
                                         text-white
                                         text-sm
                                         font-medium
                                         px-4
                                         py-2
                                         rounded-md
-                                        hover:bg-blue-700
+                                        hover:bg-blue-600
                                         transition-colors
                                         whitespace-nowrap
                                     "

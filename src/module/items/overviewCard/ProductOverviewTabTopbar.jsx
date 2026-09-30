@@ -12,6 +12,8 @@ import { useNavigate } from "react-router-dom";
 
 import { setExsistingProduct } from "../slices/productSlice";
 
+import { openModal } from "../../ui/uiSlice";
+
 export default function ProductOverviewTabTopbar() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -52,12 +54,23 @@ export default function ProductOverviewTabTopbar() {
     // =========================================================
 
     const handleEdit = () => {
+        if (!currentProduct) {
+            return;
+        }
+
+        // Keep product available in Redux
         dispatch(
             setExsistingProduct(currentProduct)
         );
 
-        navigate(
-            `/products/edit/${currentProduct.id}`
+        // Open edit modal with the complete product
+        dispatch(
+            openModal({
+                type: "editProduct",
+                data: {
+                    ...currentProduct,
+                },
+            })
         );
     };
 

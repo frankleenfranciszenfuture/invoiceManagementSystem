@@ -569,8 +569,8 @@ export default function SubCategoryTable({
                                                         text-sm
                                                         font-bold
                                                         ${getAvatarColor(
-                                                            subCategory.name
-                                                        )}
+                                                        subCategory.name
+                                                    )}
                                                     `}
                                                 >
 
@@ -706,8 +706,8 @@ export default function SubCategoryTable({
                                                     font-medium
                                                     truncate
                                                     ${getSubCategoryCodeColor(
-                                                        subCategory.subCategoryCode
-                                                    )}
+                                                    subCategory.subCategoryCode
+                                                )}
                                                 `}
                                                 title={
                                                     subCategory.subCategoryCode ||
@@ -772,11 +772,10 @@ export default function SubCategoryTable({
                                                     rounded-full
                                                     text-xs
                                                     font-medium
-                                                    ${
-                                                        statusColor[
-                                                            subCategory.status
-                                                        ] ||
-                                                        "bg-gray-100 text-gray-700"
+                                                    ${statusColor[
+                                                    subCategory.status
+                                                    ] ||
+                                                    "bg-gray-100 text-gray-700"
                                                     }
                                                 `}
                                             >
@@ -1023,7 +1022,7 @@ export default function SubCategoryTable({
                                 items-center
                                 justify-center
                                 rounded-lg
-                                bg-indigo-600
+                                bg-blue-500
                                 text-white
                                 text-sm
                                 font-medium

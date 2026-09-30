@@ -184,9 +184,10 @@ export default function NavbarTaxMaster() {
                         items-center
                         gap-1
                         rounded-md
-                        bg-blue-600
+                        bg-blue-500
                         px-3
                         py-2
+                        hover:bg-blue-600
                         cursor-pointer
                     "
                 >
@@ -325,8 +326,7 @@ export default function NavbarTaxMaster() {
                     flex
                     overflow-hidden
                     rounded-md
-                    border
-                    border-blue-600
+                    border-blue-100
                     shadow-sm
                 ">
 
@@ -339,13 +339,13 @@ export default function NavbarTaxMaster() {
                             flex
                             items-center
                             gap-1
-                            bg-blue-600
+                            bg-blue-500
                             px-3
                             py-2
                             text-sm
                             font-medium
                             text-white
-                            hover:bg-blue-700
+                            hover:bg-blue-600
                         "
                     >
 

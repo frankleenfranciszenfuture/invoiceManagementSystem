@@ -36,7 +36,7 @@ export const settings = [
       {
         label: "Organization Profile",
         icon: Building2,
-        path: "/settings/organization",
+        path: "/companies",
       },
       {
         label: "Branding",
@@ -44,9 +44,9 @@ export const settings = [
         path: "/settings/branding",
       },
       {
-        label: "AI Integration",
+        label: "Bank Account",
         icon: Bot,
-        path: "/settings/ai",
+        path: "/bankAccount",
       },
       {
         label: "Usage Stats",

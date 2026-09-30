@@ -23,7 +23,9 @@
     "react-recharts": "^1.1.0",
     "react-redux": "^9.3.0",
     "react-router-dom": "^7.18.2",
+    "react-simple-maps": "^5.0.5",
     "react-toastify": "^11.1.0",
+    "recharts": "^3.10.1",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {

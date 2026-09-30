@@ -45,6 +45,9 @@ import InvoiceDashboard from "./module/invoices/pages/InvoiceDashboard";
 import InvoiceOverViewDashboard from "./module/invoices/overviewCard/InvoiceOverViewDashboard";
 import RoleDashboard from "./module/role/pages/RoleDashboard";
 import GlobalModalToast from "./common/toast/GlobalModalToast";
+import BankAccountDashboard from "./module/bankAccount/pages/BankAccountDashboard";
+import CompanyDashboard from "./module/company/pages/CompanyDashboard";
+import ProductCreate from "./module/items/pages/ProductCreate";
 
 export default function App() {
   const dispatch = useDispatch();
@@ -146,6 +149,11 @@ export default function App() {
           />
 
           <Route
+            path="/items/new"
+            element={<ProductCreate />}
+          />
+
+          <Route
             path="/items/table"
             element={<ProductTable />}
           />
@@ -214,6 +222,25 @@ export default function App() {
             element={<RoleDashboard />}
           />
 
+
+          {/* =================================================
+                        BankAccount
+              ================================================= */}
+
+          <Route
+            path="/bankAccount"
+            element={<BankAccountDashboard />}
+          />
+
+
+          {/* =================================================
+                        Company
+              ================================================= */}
+
+          <Route
+            path="/companies"
+            element={<CompanyDashboard />}
+          />
 
           {/* =================================================
                         Invoices

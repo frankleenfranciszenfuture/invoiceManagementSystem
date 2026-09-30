@@ -28,6 +28,10 @@ import invoiceReducer from "../module/invoices/slices/invoiceSlice";
 import invoiceViewReducer from "../module/invoices/slices/invoiceViewSlice";
 import roleReducer from "../module/role/slices/roleSlice";
 import roleViewReducer from "../module/role/slices/roleViewSlice";
+import bankAccountReducer from "../module/bankAccount/slices/bankAccountSlice";
+import bankAccountViewReducer from "../module/bankAccount/slices/bankAccountViewSlice";
+import companyReducer from "../module/company/slices/companySlice";
+import companyViewReducer from "../module/company/slices/companyViewSlice";
 
 export const store = configureStore({
   reducer: {
@@ -64,7 +68,7 @@ export const store = configureStore({
     product: productReducer,
     productView: productViewReducer,
 
-    //product
+    //role
 
     role: roleReducer,
     roleView: roleViewReducer,
@@ -73,6 +77,16 @@ export const store = configureStore({
 
     invoice: invoiceReducer,
     invoiceView: invoiceViewReducer,
+
+    //bankAccount
+
+    bankAccount: bankAccountReducer,
+    bankAccountView: bankAccountViewReducer,
+
+    //company
+
+    company: companyReducer,
+    companyView: companyViewReducer,
   },
 });
 

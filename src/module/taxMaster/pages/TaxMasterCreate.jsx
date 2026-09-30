@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { X } from "lucide-react";
+import { BadgePercent, CheckCircle, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { closeModal } from "../../ui/uiSlice";
@@ -505,7 +505,7 @@ export default function TaxMasterCreate() {
             className="
                 w-[950px]
                 h-[650px]
-                max-w-[65vw]
+                max-h-[85vh]
                 bg-white
                 rounded-lg
                 shadow-2xl
@@ -528,37 +528,44 @@ export default function TaxMasterCreate() {
                     px-6
                     py-4
                     border-b
-                    border-gray-200
-                    bg-blue-700
+                    border-blue-100
+                    bg-blue-500
                 "
             >
 
                 <div>
-
                     <h2
                         className="
-                            text-[24px]
-                            font-semibold
-                            text-gray-100
-                        "
+            flex
+            items-center
+            gap-3
+            text-[24px]
+            font-semibold
+            text-gray-100
+        "
                     >
+                        <BadgePercent
+                            size={34}
+                            strokeWidth={2}
+                        />
+
                         {isEdit
                             ? "Edit Tax"
                             : "Add New Tax"}
                     </h2>
 
-                    <p
+                    {/* <p
                         className="
-                            text-sm
-                            text-gray-100
-                            mt-1
-                        "
+        text-md
+        text-gray-100
+        mb-2
+        ml-[46px]
+    "
                     >
                         {isEdit
                             ? "Update tax master details"
                             : "Create a new tax master"}
-                    </p>
-
+                    </p> */}
                 </div>
 
                 {/* CLOSE */}
@@ -1187,11 +1194,11 @@ export default function TaxMasterCreate() {
                             h-10
                             px-6
                             rounded-md
-                            bg-blue-600
+                            bg-blue-500
                             text-white
                             text-sm
                             font-medium
-                            hover:bg-blue-700
+                            hover:bg-blue-600
                             transition
                             disabled:opacity-50
                             disabled:cursor-not-allowed

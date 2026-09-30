@@ -14,6 +14,7 @@ import {
     createRole,
     updateRole,
 } from "../thunks/roleThunks";
+import { UserKeyIcon } from "lucide-react";
 
 export default function RoleCreate() {
 
@@ -321,7 +322,7 @@ export default function RoleCreate() {
             className="
                 w-[950px]
                 h-[650px]
-                max-w-[65vw]
+                 max-h-[85vh]
                 bg-white
                 rounded-lg
                 shadow-2xl
@@ -345,7 +346,7 @@ export default function RoleCreate() {
                     py-4
                     border-b
                     border-gray-200
-                    bg-blue-700
+                    bg-blue-500
                 "
             >
 
@@ -353,17 +354,25 @@ export default function RoleCreate() {
 
                     <h2
                         className="
-                            text-[24px]
-                            font-semibold
-                            text-gray-100
-                        "
+                              flex
+                              items-center
+                              gap-3
+                              text-[24px]
+                              font-semibold
+                              text-gray-100
+                          "
                     >
+
+                        <UserKeyIcon
+                            size={34}
+                            strokeWidth={2}
+                        />
                         {isEdit
                             ? "Edit Role"
                             : "Add New Role"}
                     </h2>
 
-                    <p
+                    {/* <p
                         className="
                             text-sm
                             text-gray-100
@@ -373,7 +382,7 @@ export default function RoleCreate() {
                         {isEdit
                             ? "Update role details"
                             : "Create a new role"}
-                    </p>
+                    </p> */}
 
                 </div>
 
@@ -631,11 +640,11 @@ export default function RoleCreate() {
                             h-10
                             px-6
                             rounded-md
-                            bg-blue-600
+                            bg-blue-500
                             text-white
                             text-sm
                             font-medium
-                            hover:bg-blue-700
+                            hover:bg-blue-600
                             transition
                             disabled:opacity-50
                             disabled:cursor-not-allowed

@@ -184,10 +184,11 @@ export default function NavbarUnit() {
                         items-center
                         gap-1
                         rounded-md
-                        bg-blue-600
+                        bg-blue-500
                         px-3
                         py-2
                         cursor-pointer
+                        hover:bg-blue-600
                     "
                 >
 
@@ -327,8 +328,7 @@ export default function NavbarUnit() {
                     flex
                     overflow-hidden
                     rounded-md
-                    border
-                    border-blue-600
+                    border-blue-100
                     shadow-sm
                 ">
 
@@ -341,13 +341,13 @@ export default function NavbarUnit() {
                             flex
                             items-center
                             gap-1
-                            bg-blue-600
+                            bg-blue-500
                             px-3
                             py-2
                             text-sm
                             font-medium
                             text-white
-                            hover:bg-blue-700
+                            hover:bg-blue-600
                         "
                     >
 

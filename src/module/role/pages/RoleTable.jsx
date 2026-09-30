@@ -881,7 +881,7 @@ export default function RoleTable({
                                 items-center
                                 justify-center
                                 rounded-lg
-                                bg-indigo-600
+                                bg-blue-500
                                 text-white
                                 text-sm
                                 font-medium

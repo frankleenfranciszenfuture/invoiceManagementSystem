@@ -61,11 +61,11 @@ export default function SettingsMenu() {
             {/* Panel */}
             <div
                 ref={menuRef}
-                className="absolute right-0 top-12 z-50 w-[390px] h-[720px] rounded-xl border bg-white shadow-2xl overflow-hidden"
+                className="absolute right-0 top-12 z-50 w-[390px] h-[780px] rounded-xl border border-blue-100 bg-gray-100 shadow-2xl overflow-hidden"
             >
                 {/* Header */}
-                <div className="border-b p-5">
-                    <div className="flex items-center justify-between">
+                <div className="border-b p-5 ">
+                    <div className="flex items-center justify-between ">
                         <h2 className="text-2xl font-semibold">
                             Settings
                         </h2>
@@ -95,9 +95,9 @@ export default function SettingsMenu() {
                 </div>
 
                 {/* Body */}
-                <div className="h-[620px] overflow-y-auto">
+                <div className="h-[620px] overflow-y-auto ">
                     {filteredSettings.length === 0 ? (
-                        <div className="flex h-full items-center justify-center">
+                        <div className="flex h-full items-center justify-center ">
                             <p className="text-gray-400">
                                 No settings found
                             </p>
@@ -106,9 +106,9 @@ export default function SettingsMenu() {
                         filteredSettings.map((section) => (
                             <div
                                 key={section.title}
-                                className="py-3"
+                                className="py-3 "
                             >
-                                <div className="px-5 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                                <div className="px-5 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-900">
                                     {section.title}
                                 </div>
 
@@ -127,7 +127,7 @@ export default function SettingsMenu() {
                                             }}
                                             className={`mx-3 mb-1 flex w-[calc(100%-24px)] items-center gap-3 rounded-lg px-3 py-2.5 text-left transition ${active
                                                 ? "bg-blue-600 text-white"
-                                                : "text-gray-700 hover:bg-gray-100"
+                                                : "text-gray-700 hover:text-white hover:bg-blue-500"
                                                 }`}
                                         >
                                             <Icon
@@ -135,7 +135,7 @@ export default function SettingsMenu() {
                                                 className={
                                                     active
                                                         ? "text-white"
-                                                        : "text-gray-400"
+                                                        : "text-gray-700"
                                                 }
                                             />
 

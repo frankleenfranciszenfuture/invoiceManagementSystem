@@ -20,6 +20,9 @@ import {
     setSelectedProductView,
     setProductStatus,
 } from "../slices/productViewSlice";
+import { setExsistingProduct } from "../slices/productSlice";
+
+import { openModal } from "../../ui/uiSlice";
 
 export default function ProductOverViewSiderTopbar() {
     const dispatch = useDispatch();
@@ -101,7 +104,14 @@ export default function ProductOverViewSiderTopbar() {
     const handleNewProduct = () => {
         setDropdownOpen(false);
 
-        navigate("/products/new");
+        dispatch(setExsistingProduct(null));
+
+        dispatch(
+            openModal({
+                type: "addProduct",
+                data: null,
+            })
+        )
     };
 
     /* =========================================================

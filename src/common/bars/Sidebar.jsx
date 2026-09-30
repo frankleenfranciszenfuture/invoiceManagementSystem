@@ -50,7 +50,7 @@ const NAV = [
     {
         label: "Items",
         icon: Package,
-        to: "/items",
+        to: "/dashboard",
         addTo: "/items/new",
         basePath: "/items",
         dropdown: true,
@@ -58,11 +58,11 @@ const NAV = [
 
             { label: "Categories", to: "/categories" },
             { label: "Sub Categories", to: "/subCategoires" },
-            { label: "Parties", to: "/parties" },
+            // { label: "Parties", to: "/parties" },
             { label: "Sizes", to: "/sizes" },
             { label: "Units", to: "/units" },
-            { label: "Taxes", to: "/taxes" },
-            { label: "Products", to: "/items" },
+            // { label: "Taxes", to: "/taxes" },
+            { label: "Items", to: "/items" },
         ],
     },
 
@@ -74,7 +74,7 @@ const NAV = [
         basePath: "/invoices",
         dropdown: true, // ← add this
         children: [
-            { label: "invoices", to: "/invoices" },
+            { label: "Invoices", to: "/invoices" },
         ],
     },
 
