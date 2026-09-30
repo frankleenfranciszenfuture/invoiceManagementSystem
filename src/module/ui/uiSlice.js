@@ -2,32 +2,45 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   sidebarOpen: true,
-  modal: { open: false, type: null, data: null }, // type: 'createInvoice' | 'createCustomer' | 'editCustomer' | 'viewInvoice'
+
+  // Common modal
+  // type examples:
+  // addRole, editRole, addSize, editSize,
+  // addCustomer, editCustomer, createInvoice, editInvoice
+  modal: {
+    open: false,
+    type: null,
+    data: null,
+  },
+
   showQuickAddMenu: null,
 
-  leaveDialog: { open: false, nextRoute: null },
+  // Leave dialog
+  leaveDialog: {
+    open: false,
+    nextRoute: null,
+  },
 
-  //quick modelview
+  // Quick modal view
   quickCreateOpen: false,
 
-  // profile Menu
+  // Profile menu
   profileMenuOpen: false,
 
-  //NotificationMenuOpen
+  // Notification menu
   notificationsOpen: false,
 
-  // settingsMenuOpen
+  // Settings menu
   settingsOpen: false,
 
-  //invoicenew
+  // Invoice new menu
   invoiceNewMenuOpen: false,
 
-  //customer model
+  // Customer modal
   customerModalOpen: false,
-
   isCustomerModalOpen: false,
 
-  //invoicenumber change
+  // Invoice number change
   showInvoiceNumberModal: false,
 };
 
@@ -36,9 +49,17 @@ const uiSlice = createSlice({
   initialState,
 
   reducers: {
-    toggleSidebar: (s) => {
-      s.sidebarOpen = !s.sidebarOpen;
+    // =====================================================
+    // SIDEBAR
+    // =====================================================
+
+    toggleSidebar: (state) => {
+      state.sidebarOpen = !state.sidebarOpen;
     },
+
+    // =====================================================
+    // LEAVE DIALOG
+    // =====================================================
 
     showLeaveDialog: (state, action) => {
       state.leaveDialog.open = true;
@@ -50,33 +71,45 @@ const uiSlice = createSlice({
       state.leaveDialog.nextRoute = null;
     },
 
+    // =====================================================
+    // COMMON MODAL
+    // =====================================================
+
     openModal: (state, action) => {
-      state.modal.open = true;
-      state.modal.type = action.payload.type;
-      state.modal.data = action.payload.data || null;
+      state.modal = {
+        open: true,
+        type: action.payload?.type || null,
+        data: action.payload?.data || null,
+      };
     },
 
     closeModal: (state) => {
-      state.modal.open = false;
-      state.modal.type = null;
-      state.modal.data = null;
+      state.modal = {
+        open: false,
+        type: null,
+        data: null,
+      };
     },
 
-    // quick add menu
+    // =====================================================
+    // QUICK CREATE
+    // =====================================================
+
     openQuickCreate: (state) => {
       state.quickCreateOpen = true;
     },
+
     closeQuickCreate: (state) => {
       state.quickCreateOpen = false;
     },
 
     toggleQuickCreate: (state) => {
-      console.log("Before:", state.quickCreateOpen);
       state.quickCreateOpen = !state.quickCreateOpen;
-      console.log("After:", state.quickCreateOpen);
     },
 
-    // profile Menu
+    // =====================================================
+    // PROFILE MENU
+    // =====================================================
 
     toggleProfileMenu: (state) => {
       state.profileMenuOpen = !state.profileMenuOpen;
@@ -86,17 +119,21 @@ const uiSlice = createSlice({
       state.profileMenuOpen = false;
     },
 
-    // NotificationMenu
+    // =====================================================
+    // NOTIFICATIONS
+    // =====================================================
 
     toggleNotifications: (state) => {
-      state.notificationsOpen = !state.profileMenuOpen;
+      state.notificationsOpen = !state.notificationsOpen;
     },
 
     closeNotifications: (state) => {
       state.notificationsOpen = false;
     },
 
-    // Settings
+    // =====================================================
+    // SETTINGS
+    // =====================================================
 
     toggleSettings: (state) => {
       state.settingsOpen = !state.settingsOpen;
@@ -106,6 +143,10 @@ const uiSlice = createSlice({
       state.settingsOpen = false;
     },
 
+    // =====================================================
+    // INVOICE NEW MENU
+    // =====================================================
+
     toggleInvoiceNewMenuOpen: (state) => {
       state.invoiceNewMenuOpen = !state.invoiceNewMenuOpen;
     },
@@ -114,18 +155,24 @@ const uiSlice = createSlice({
       state.invoiceNewMenuOpen = false;
     },
 
-    //customermodel
-    openCustomerModal(state) {
+    // =====================================================
+    // CUSTOMER MODAL
+    // =====================================================
+
+    openCustomerModal: (state) => {
       state.customerModalOpen = true;
       state.isCustomerModalOpen = true;
     },
 
-    closeCustomerModal(state) {
+    closeCustomerModal: (state) => {
       state.customerModalOpen = false;
       state.isCustomerModalOpen = false;
     },
 
-    //invoiceNumber chnage
+    // =====================================================
+    // INVOICE NUMBER MODAL
+    // =====================================================
+
     openInvoiceNumberModal: (state) => {
       state.showInvoiceNumberModal = true;
     },
@@ -137,42 +184,45 @@ const uiSlice = createSlice({
 });
 
 export const {
+  // Sidebar
   toggleSidebar,
+
+  // Common modal
   openModal,
   closeModal,
-  toggleQuickAddMenu,
-  closeQuickAddMenu,
+
+  // Leave dialog
   showLeaveDialog,
   hideLeaveDialog,
 
-  // quick view menu
+  // Quick create
   openQuickCreate,
   closeQuickCreate,
   toggleQuickCreate,
 
-  // profile menu
+  // Profile
   toggleProfileMenu,
   closeProfileMenu,
 
-  // toggleNotificationsMenu
+  // Notifications
   toggleNotifications,
   closeNotifications,
 
-  // toggleSettings
-
+  // Settings
   toggleSettings,
   closeSettingsMenu,
 
-  // invoicenew menu
+  // Invoice new menu
   toggleInvoiceNewMenuOpen,
   closeInvoiceNewMenuOpen,
 
-  //customer model
+  // Customer modal
   openCustomerModal,
   closeCustomerModal,
 
-  //invoiceNumber chnage
+  // Invoice number modal
   openInvoiceNumberModal,
   closeInvoiceNumberModal,
 } = uiSlice.actions;
+
 export default uiSlice.reducer;

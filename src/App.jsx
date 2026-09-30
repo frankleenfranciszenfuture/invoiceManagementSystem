@@ -43,6 +43,8 @@ import ProductOverViewDashboard from "./module/items/overviewCard/ProductOverVie
 import InvoiceCreate from "./module/invoices/pages/InvoiceCreate";
 import InvoiceDashboard from "./module/invoices/pages/InvoiceDashboard";
 import InvoiceOverViewDashboard from "./module/invoices/overviewCard/InvoiceOverViewDashboard";
+import RoleDashboard from "./module/role/pages/RoleDashboard";
+import GlobalModalToast from "./common/toast/GlobalModalToast";
 
 export default function App() {
   const dispatch = useDispatch();
@@ -204,6 +206,16 @@ export default function App() {
 
 
           {/* =================================================
+                        Role
+              ================================================= */}
+
+          <Route
+            path="/roles"
+            element={<RoleDashboard />}
+          />
+
+
+          {/* =================================================
                         Invoices
               ================================================= */}
 
@@ -233,25 +245,36 @@ export default function App() {
       </Routes>
 
       {/* =====================================================
-                TOAST
-            ===================================================== */}
+                  GLOBAL MODAL TOAST
+          ===================================================== */}
+
+      {/* <GlobalModalToast /> */}
+
+      {/* =====================================================
+                  TOAST
+          ===================================================== */}
 
       <Toaster
         position="top-center"
+        containerStyle={{
+          zIndex: 99999,
+        }}
         toastOptions={{
           duration: 3000,
 
           success: {
             style: {
-              background: "#16a34a",
-              color: "#fff",
+              background: "#dcfce7",
+              color: "#15803d",
+              border: "1px solid #bbf7d0",
             },
           },
 
           error: {
             style: {
-              background: "#d93535",
-              color: "#fff",
+              background: "#ffffff",
+              color: "#d00505",
+              border: "1px solid #fecaca",
             },
           },
         }}

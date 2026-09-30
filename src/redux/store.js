@@ -26,6 +26,8 @@ import subCategoryReducer from "../module/subCategory/slices/subCategorySlice";
 import categoryReducer from "../module/category/slices/categorySlice";
 import invoiceReducer from "../module/invoices/slices/invoiceSlice";
 import invoiceViewReducer from "../module/invoices/slices/invoiceViewSlice";
+import roleReducer from "../module/role/slices/roleSlice";
+import roleViewReducer from "../module/role/slices/roleViewSlice";
 
 export const store = configureStore({
   reducer: {
@@ -61,6 +63,11 @@ export const store = configureStore({
 
     product: productReducer,
     productView: productViewReducer,
+
+    //product
+
+    role: roleReducer,
+    roleView: roleViewReducer,
 
     //invoice
 

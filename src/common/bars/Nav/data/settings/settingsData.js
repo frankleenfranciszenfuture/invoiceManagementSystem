@@ -72,7 +72,7 @@ export const settings = [
       {
         label: "Taxes",
         icon: Receipt,
-        path: "/settings/taxes",
+        path: "/taxes",
       },
       {
         label: "Direct Taxes",

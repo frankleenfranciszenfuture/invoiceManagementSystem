@@ -15,6 +15,7 @@ import ProductCreate from "../../module/items/pages/ProductCreate"
 import InvoiceCreate from "../../module/invoices/pages/InvoiceCreate"
 import InvoiceNumberSetting from "../../module/invoices/pages/InvoiceNumberSetting";
 import ChangeTemplateModal from "../../module/invoices/overviewCard/template/ChangeTemplateModal";
+import RoleCreate from "../../module/role/pages/RoleCreate";
 
 export default function Modal() {
 
@@ -67,6 +68,10 @@ export default function Modal() {
 
         // CHANGE INVOICE TEMPLATE
         changeTemplate: ChangeTemplateModal,
+
+        // Role
+        addRole: RoleCreate,
+        editRole: RoleCreate,
 
     };
 

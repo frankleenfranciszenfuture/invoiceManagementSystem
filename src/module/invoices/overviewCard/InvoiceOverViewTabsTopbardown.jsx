@@ -49,7 +49,7 @@ export default function InvoiceOverViewTabsTopbardown() {
 
     const tabs = [
         "Dashboard",
-        "Transaction",
+        "InvoicePreview",
         "Recent Updates",
         "Payment History",
     ];
@@ -65,7 +65,7 @@ export default function InvoiceOverViewTabsTopbardown() {
             case "Dashboard":
                 return <InvoiceDashboardTabView />;
 
-            case "Transaction":
+            case "InvoicePreview":
                 return <InvoicePreviewTabView />;
 
             case "Recent Updates":
