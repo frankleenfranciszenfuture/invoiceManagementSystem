@@ -27,6 +27,7 @@ import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -181,16 +182,19 @@ public class GlobalExceptionHandler {
      * Catch All Exception
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Object>> handleException(
-            Exception ex) {
+    public ResponseEntity<Map<String, Object>> handleException(
+            Exception ex
+    ) {
 
-        ex.printStackTrace(); // Remove or replace with logger in production
+        Map<String, Object> response = new LinkedHashMap<>();
 
-        return buildResponse(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "Something went wrong.",
-                null
-        );
+        response.put("success", false);
+        response.put("message", "Something went wrong. Please try again.");
+        response.put("timestamp", LocalDateTime.now());
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(response);
     }
 
     /**
@@ -486,5 +490,31 @@ public class GlobalExceptionHandler {
                         "message", "API endpoint not found: " + ex.getResourcePath()
                 ));
     }
+
+    /**
+     * Handles all RuntimeException thrown from services/controllers.
+     */
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Map<String, Object>> handleRuntimeException(
+            RuntimeException ex
+    ) {
+
+        Map<String, Object> response = new LinkedHashMap<>();
+
+        response.put("success", false);
+        response.put("message", ex.getMessage());
+        response.put("timestamp", LocalDateTime.now());
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(response);
+    }
+
+
+        /**
+         * Handles any unexpected exception.
+         */
+
+
 
 }
