@@ -1,5 +1,6 @@
 package com.ims.dtos.invoice;
 
+import com.ims.enums.InvoiceStatus;
 import com.ims.enums.InvoiceType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
@@ -81,7 +82,7 @@ public class InvoiceCreateRequest {
 
     private String termsAndConditions;
 
-
+    private InvoiceStatus invoiceStatus;
     // =====================================================
     // ITEMS
     // =====================================================

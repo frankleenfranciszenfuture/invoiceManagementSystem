@@ -1,12 +1,12 @@
 package com.ims.controller.invoice;
 
-
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
 import com.ims.dtos.invoice.InvoiceCreateRequest;
 import com.ims.dtos.invoice.InvoiceResponse;
 import com.ims.dtos.invoice.InvoiceSearchRequest;
 import com.ims.dtos.invoice.InvoiceUpdateRequest;
+import com.ims.service.serviceInterface.invoice.InvoiceNumberService;
 import com.ims.service.serviceInterface.invoice.InvoiceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +20,27 @@ import org.springframework.web.bind.annotation.*;
 public class InvoiceController {
 
     private final InvoiceService invoiceService;
+    private final InvoiceNumberService invoiceNumberService;
+
+    // =====================================================
+    // GENERATE INVOICE NUMBER
+    // =====================================================
+
+    @GetMapping("/generate")
+    public ApiResponse<InvoiceResponse> generateInvoiceNumber() {
+
+        InvoiceResponse response = new InvoiceResponse();
+
+        response.setInvoiceNumber(
+                invoiceNumberService.generateInvoiceNumber()
+        );
+
+        return ApiResponse.success(
+                response,
+                "Invoice number generated successfully."
+
+        );
+    }
 
 
     // =====================================================

@@ -218,47 +218,21 @@ public class InvoiceNumberServiceImpl
     @Override
     public String generateInvoiceNumber() {
 
-        int year =
-                LocalDate.now().getYear();
-
-        String prefix =
-                "NT_INV" + year + "-";
-
+        int year = LocalDate.now().getYear();
+        String prefix = "INV" + year + " -";
 
         Optional<InvoiceEntity> latestInvoice =
-                invoiceRepository
-                        .findTopByInvoiceNumberStartingWithOrderByInvoiceNumberDesc(
-                                prefix
-                        );
-
+                invoiceRepository.findTopByInvoiceNumberStartingWithOrderByInvoiceNumberDesc(prefix);
 
         int nextNumber = 1;
 
-
         if (latestInvoice.isPresent()) {
-
-            String lastInvoiceNumber =
-                    latestInvoice
-                            .get()
-                            .getInvoiceNumber();
-
-
-            String sequence =
-                    lastInvoiceNumber.substring(
-                            prefix.length()
-                    );
-
-
-            nextNumber =
-                    Integer.parseInt(sequence) + 1;
+            String lastInvoiceNumber = latestInvoice.get().getInvoiceNumber();
+            String sequence = lastInvoiceNumber.substring(prefix.length());
+            nextNumber = Integer.parseInt(sequence) + 1;
         }
 
-
-        return prefix +
-                String.format(
-                        "%03d",
-                        nextNumber
-                );
+        return prefix + String.format("%04d", nextNumber);
     }
 
 }

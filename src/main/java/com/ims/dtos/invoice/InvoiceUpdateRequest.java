@@ -71,7 +71,7 @@ public class InvoiceUpdateRequest {
     // STATUS
     // =====================================================
 
-    private InvoiceStatus status;
+    private InvoiceStatus invoiceStatus;
 
 
     // =====================================================

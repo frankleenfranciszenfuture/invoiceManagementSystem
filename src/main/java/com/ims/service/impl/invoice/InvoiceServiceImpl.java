@@ -148,7 +148,9 @@ public class InvoiceServiceImpl implements InvoiceService {
                                 request.getTermsAndConditions()
                         )
                         .status(
-                                InvoiceStatus.DRAFT
+                                request.getInvoiceStatus() != null
+                                        ? request.getInvoiceStatus()
+                                        : InvoiceStatus.DRAFT
                         )
                         .active(true)
                         .build();
@@ -453,10 +455,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         // 6. UPDATE STATUS
         // =====================================================
 
-        if (request.getStatus() != null) {
+        if (request.getInvoiceStatus() != null) {
 
             invoice.setStatus(
-                    request.getStatus()
+                    request.getInvoiceStatus()
             );
         }
 
