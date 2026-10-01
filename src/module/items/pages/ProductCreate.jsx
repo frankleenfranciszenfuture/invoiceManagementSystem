@@ -5,6 +5,9 @@ import React, {
     useState,
 } from "react";
 
+import { useNavigate } from "react-router-dom";
+import { openModal } from "../../ui/uiSlice";
+
 import {
     useDispatch,
     useSelector,
@@ -76,6 +79,10 @@ function SearchSelect({
     disabled = false,
     required = false,
     error = "",
+
+    // Add new option
+    addLabel = "",
+    onAdd = null,
 }) {
     const wrapperRef = useRef(null);
 
@@ -364,29 +371,62 @@ function SearchSelect({
                     {/* OPTIONS */}
                     <div className="max-h-52 overflow-y-auto">
                         {filteredOptions.length === 0 ? (
-                            <div
-                                className="
-                                    px-4
-                                    py-6
-                                    text-center
-                                    text-sm
-                                    text-gray-400
-                                "
-                            >
-                                {emptyMessage}
-                            </div>
+                            <>
+                                <div
+                                    className="
+                px-4
+                py-4
+                text-center
+                text-sm
+                text-gray-400
+            "
+                                >
+                                    {emptyMessage}
+                                </div>
+
+                                {onAdd && search.trim() && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            onAdd(search.trim());
+
+                                            setOpen(false);
+                                            setSearch("");
+                                        }}
+                                        className="
+                    w-full
+                    px-4
+                    py-2.5
+                    border-t
+                    border-gray-100
+                    flex
+                    items-center
+                    gap-2
+                    text-left
+                    text-sm
+                    text-blue-600
+                    hover:bg-blue-50
+                    transition
+                "
+                                    >
+                                        <span className="text-lg leading-none">
+                                            +
+                                        </span>
+
+                                        <span className="font-medium">
+                                            {addLabel || "New"}
+                                        </span>
+                                    </button>
+                                )}
+                            </>
                         ) : (
                             filteredOptions.map(
                                 (item, index) => {
                                     const key =
-                                        getSafeOptionKey(
-                                            item
-                                        );
+                                        getSafeOptionKey(item);
 
                                     const optionLabel =
-                                        getSafeOptionLabel(
-                                            item
-                                        );
+                                        getSafeOptionLabel(item);
 
                                     const selected =
                                         String(key) ===
@@ -401,42 +441,33 @@ function SearchSelect({
                                             type="button"
                                             onClick={() => {
                                                 if (
-                                                    key ===
-                                                    null ||
-                                                    key ===
-                                                    undefined
+                                                    key === null ||
+                                                    key === undefined
                                                 ) {
                                                     return;
                                                 }
 
-                                                onChange?.(
-                                                    key
-                                                );
+                                                onChange?.(key);
 
-                                                setOpen(
-                                                    false
-                                                );
-
-                                                setSearch(
-                                                    ""
-                                                );
+                                                setOpen(false);
+                                                setSearch("");
                                             }}
                                             className={`
-                                                w-full
-                                                px-4
-                                                py-2.5
-                                                flex
-                                                items-center
-                                                justify-between
-                                                text-left
-                                                text-sm
-                                                transition
+                            w-full
+                            px-4
+                            py-2.5
+                            flex
+                            items-center
+                            justify-between
+                            text-left
+                            text-sm
+                            transition
 
-                                                ${selected
+                            ${selected
                                                     ? "bg-blue-50 text-blue-700"
                                                     : "text-gray-700 hover:bg-gray-50"
                                                 }
-                                            `}
+                        `}
                                         >
                                             <span className="truncate">
                                                 {optionLabel ||
@@ -489,6 +520,8 @@ const SearchMultiSelect = ({
     placeholder = "Select",
     required = false,
     error,
+    addLabel = "",
+    onCreate = null
 }) => {
     const [search, setSearch] = useState("");
     const [open, setOpen] = useState(false);
@@ -696,20 +729,21 @@ const SearchMultiSelect = ({
                                             handleSelect(option)
                                         }
                                         className={`
-                                            w-full
-                                            px-3
-                                            py-2.5
-                                            text-left
-                                            text-sm
-                                            flex
-                                            items-center
-                                            justify-between
-                                            transition
-                                            ${selectedOption
+                    w-full
+                    px-3
+                    py-2.5
+                    text-left
+                    text-sm
+                    flex
+                    items-center
+                    justify-between
+                    transition
+
+                    ${selectedOption
                                                 ? "bg-gray-50 text-gray-400 cursor-not-allowed"
                                                 : "text-gray-700 hover:bg-blue-50"
                                             }
-                                        `}
+                `}
                                     >
                                         <span>{label}</span>
 
@@ -722,8 +756,44 @@ const SearchMultiSelect = ({
                                 );
                             })
                         ) : (
-                            <div className="px-3 py-3 text-sm text-gray-400">
-                                No options found
+                            <div className="px-3 py-3">
+                                <div className="text-sm text-gray-400 text-center mb-2">
+                                    No options found
+                                </div>
+
+                                {onCreate && search.trim() && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            onCreate(search.trim());
+
+                                            setOpen(false);
+                                            setSearch("");
+                                        }}
+                                        className="
+                    w-full
+                    px-3
+                    py-2.5
+                    rounded-md
+                    flex
+                    items-center
+                    gap-2
+                    text-left
+                    text-sm
+                    text-blue-600
+                    hover:bg-blue-50
+                    transition
+                "
+                                    >
+                                        <span className="text-lg leading-none">
+                                            +
+                                        </span>
+
+                                        <span className="font-medium">
+                                            {addLabel || "New"}
+                                        </span>
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -743,7 +813,7 @@ export default function ProductCreate() {
     const dispatch =
         useDispatch();
 
-
+    const navigate = useNavigate();
     /* =======================================================
        MODAL
        ======================================================= */
@@ -808,7 +878,9 @@ export default function ProductCreate() {
                 EMPTY_ARRAY
         );
 
-
+    const existingProduct = useSelector(
+        (state) => state.product.exsistingProduct
+    );
     /* =======================================================
        MODAL MODE
        ======================================================= */
@@ -1026,129 +1098,32 @@ export default function ProductCreate() {
        NORMALIZE EDIT SIZES
        ======================================================= */
 
-    const normalizeSelectedSizes = (
-        data
-    ) => {
-
-        /*
-         * First try sizeIds because they are
-         * the actual IDs that should be saved.
-         */
-
-        if (
-            Array.isArray(
-                data?.sizeIds
-            ) &&
-            data.sizeIds.length > 0
-        ) {
-            const mapped =
-                data.sizeIds
-                    .map(
-                        (id) =>
-                            sizes.find(
-                                (size) =>
-                                    String(
-                                        getSizeKey(
-                                            size
-                                        )
-                                    ) ===
-                                    String(id)
-                            )
-                    )
-                    .filter(Boolean);
-
-            if (mapped.length > 0) {
-                return mapped;
-            }
+    const normalizeSelectedSizes = (data) => {
+        if (!Array.isArray(data?.sizes)) {
+            return [];
         }
 
-
-        /*
-         * Fallback for APIs returning full
-         * sizes instead of sizeIds.
-         */
-
-        if (
-            Array.isArray(
-                data?.sizes
+        return data.sizes
+            .map((size) =>
+                typeof size === "object"
+                    ? Number(size.id)
+                    : Number(size)
             )
-        ) {
-            return data.sizes
-                .map(
-                    (item) => {
+            .filter((id) => !Number.isNaN(id));
+    };
 
-                        if (
-                            item &&
-                            typeof item ===
-                            "object"
-                        ) {
-                            const id =
-                                getSizeKey(
-                                    item
-                                );
-
-                            const master =
-                                sizes.find(
-                                    (
-                                        size
-                                    ) =>
-                                        String(
-                                            getSizeKey(
-                                                size
-                                            )
-                                        ) ===
-                                        String(
-                                            id
-                                        )
-                                );
-
-                            return (
-                                master ||
-                                item
-                            );
-                        }
-
-                        return sizes.find(
-                            (size) =>
-                                String(
-                                    getSizeKey(
-                                        size
-                                    )
-                                ) ===
-                                String(item)
-                        );
-                    }
-                )
-                .filter(Boolean);
+    const normalizeSelectedUnits = (data) => {
+        if (!Array.isArray(data?.units)) {
+            return [];
         }
 
-        /*
-         * Backward compatibility with
-         * a single sizeId.
-         */
-
-        if (
-            data?.sizeId !==
-            undefined &&
-            data?.sizeId !==
-            null &&
-            data?.sizeId !== ""
-        ) {
-            return sizes
-                .filter(
-                    (size) =>
-                        String(
-                            getSizeKey(
-                                size
-                            )
-                        ) ===
-                        String(
-                            data.sizeId
-                        )
-                );
-        }
-
-        return [];
+        return data.units
+            .map((unit) =>
+                typeof unit === "object"
+                    ? Number(unit.id)
+                    : Number(unit)
+            )
+            .filter((id) => !Number.isNaN(id));
     };
 
 
@@ -1156,130 +1131,130 @@ export default function ProductCreate() {
        NORMALIZE EDIT UNITS
        ======================================================= */
 
-    const normalizeSelectedUnits = (
-        data
-    ) => {
+    // const normalizeSelectedUnits = (
+    //     data
+    // ) => {
 
-        /*
-         * First try unitIds.
-         */
+    //     /*
+    //      * First try unitIds.
+    //      */
 
-        if (
-            Array.isArray(
-                data?.unitIds
-            ) &&
-            data.unitIds.length > 0
-        ) {
-            const mapped =
-                data.unitIds
-                    .map(
-                        (id) =>
-                            units.find(
-                                (unit) =>
-                                    String(
-                                        getUnitKey(
-                                            unit
-                                        )
-                                    ) ===
-                                    String(id)
-                            )
-                    )
-                    .filter(Boolean);
+    //     if (
+    //         Array.isArray(
+    //             data?.unitIds
+    //         ) &&
+    //         data.unitIds.length > 0
+    //     ) {
+    //         const mapped =
+    //             data.unitIds
+    //                 .map(
+    //                     (id) =>
+    //                         units.find(
+    //                             (unit) =>
+    //                                 String(
+    //                                     getUnitKey(
+    //                                         unit
+    //                                     )
+    //                                 ) ===
+    //                                 String(id)
+    //                         )
+    //                 )
+    //                 .filter(Boolean);
 
-            if (mapped.length > 0) {
-                return mapped;
-            }
-        }
-
-
-        /*
-         * Fallback for APIs returning
-         * complete unit objects.
-         */
-
-        if (
-            Array.isArray(
-                data?.units
-            )
-        ) {
-            return data.units
-                .map(
-                    (item) => {
-
-                        if (
-                            item &&
-                            typeof item ===
-                            "object"
-                        ) {
-                            const id =
-                                getUnitKey(
-                                    item
-                                );
-
-                            const master =
-                                units.find(
-                                    (
-                                        unit
-                                    ) =>
-                                        String(
-                                            getUnitKey(
-                                                unit
-                                            )
-                                        ) ===
-                                        String(
-                                            id
-                                        )
-                                );
-
-                            return (
-                                master ||
-                                item
-                            );
-                        }
-
-                        return units.find(
-                            (unit) =>
-                                String(
-                                    getUnitKey(
-                                        unit
-                                    )
-                                ) ===
-                                String(item)
-                        );
-                    }
-                )
-                .filter(Boolean);
-        }
+    //         if (mapped.length > 0) {
+    //             return mapped;
+    //         }
+    //     }
 
 
-        /*
-         * Backward compatibility with
-         * a single unitId.
-         */
+    //     /*
+    //      * Fallback for APIs returning
+    //      * complete unit objects.
+    //      */
 
-        if (
-            data?.unitId !==
-            undefined &&
-            data?.unitId !==
-            null &&
-            data?.unitId !== ""
-        ) {
-            return units
-                .filter(
-                    (unit) =>
-                        String(
-                            getUnitKey(
-                                unit
-                            )
-                        ) ===
-                        String(
-                            data.unitId
-                        )
-                );
-        }
+    //     if (
+    //         Array.isArray(
+    //             data?.units
+    //         )
+    //     ) {
+    //         return data.units
+    //             .map(
+    //                 (item) => {
 
-        return [];
-    };
+    //                     if (
+    //                         item &&
+    //                         typeof item ===
+    //                         "object"
+    //                     ) {
+    //                         const id =
+    //                             getUnitKey(
+    //                                 item
+    //                             );
+
+    //                         const master =
+    //                             units.find(
+    //                                 (
+    //                                     unit
+    //                                 ) =>
+    //                                     String(
+    //                                         getUnitKey(
+    //                                             unit
+    //                                         )
+    //                                     ) ===
+    //                                     String(
+    //                                         id
+    //                                     )
+    //                             );
+
+    //                         return (
+    //                             master ||
+    //                             item
+    //                         );
+    //                     }
+
+    //                     return units.find(
+    //                         (unit) =>
+    //                             String(
+    //                                 getUnitKey(
+    //                                     unit
+    //                                 )
+    //                             ) ===
+    //                             String(item)
+    //                     );
+    //                 }
+    //             )
+    //             .filter(Boolean);
+    //     }
+
+
+    //     /*
+    //      * Backward compatibility with
+    //      * a single unitId.
+    //      */
+
+    //     if (
+    //         data?.unitId !==
+    //         undefined &&
+    //         data?.unitId !==
+    //         null &&
+    //         data?.unitId !== ""
+    //     ) {
+    //         return units
+    //             .filter(
+    //                 (unit) =>
+    //                     String(
+    //                         getUnitKey(
+    //                             unit
+    //                         )
+    //                     ) ===
+    //                     String(
+    //                         data.unitId
+    //                     )
+    //             );
+    //     }
+
+    //     return [];
+    // };
 
 
     /* =======================================================
@@ -1287,52 +1262,37 @@ export default function ProductCreate() {
        ======================================================= */
 
     useEffect(() => {
-
         if (!isOpen || !isEdit) {
             return;
         }
 
-        const data =
-            modal?.data;
+        const data = modal?.data;
 
         if (!data) {
             return;
         }
 
+        // ============================================
+        // IMAGE
+        // ============================================
 
-        const imageUrl =
-            data.imageUrl ??
-            "";
-
+        const imageUrl = data.imageUrl ?? "";
 
         setImagePreview(
             imageUrl
-                ? getProductImageUrl(
-                    imageUrl
-                )
+                ? getProductImageUrl(imageUrl)
                 : ""
         );
 
+        // ============================================
+        // SIZE / UNIT IDS
+        // API RESPONSE:
+        // sizes: [{ id, name, ... }]
+        // units: [{ id, name, ... }]
+        // ============================================
 
-        /*
-         * IMPORTANT:
-         *
-         * This effect depends on sizes and units.
-         * If edit data contains IDs before master
-         * data has loaded, it will run again after
-         * sizes/units are available.
-         */
-
-        const selectedSizes =
-            normalizeSelectedSizes(
-                data
-            );
-
-        const selectedUnits =
-            normalizeSelectedUnits(
-                data
-            );
-
+        const selectedSizes = normalizeSelectedSizes(data);
+        const selectedUnits = normalizeSelectedUnits(data);
 
         console.log(
             "========== EDIT PRODUCT =========="
@@ -1345,29 +1305,20 @@ export default function ProductCreate() {
 
         console.log(
             "EDIT SIZE IDS:",
-            data.sizeIds
-        );
-
-        console.log(
-            "EDIT UNIT IDS:",
-            data.unitIds
-        );
-
-        console.log(
-            "SELECTED SIZES:",
             selectedSizes
         );
 
         console.log(
-            "SELECTED UNITS:",
+            "EDIT UNIT IDS:",
             selectedUnits
         );
 
+        // ============================================
+        // SET FORM
+        // ============================================
 
         setForm({
-            id:
-                data.id ??
-                null,
+            id: data.id ?? null,
 
             categoryId:
                 data.categoryId ??
@@ -1412,27 +1363,21 @@ export default function ProductCreate() {
                 data.maximumStock ??
                 "",
 
-            /*
-             * ALL existing sizes.
-             */
-            sizes:
-                selectedSizes,
+            // Existing selected size IDs
+            sizes: selectedSizes,
 
-            /*
-             * ALL existing units.
-             */
-            units:
-                selectedUnits,
+            // Existing selected unit IDs
+            units: selectedUnits,
 
             status:
                 data.status ??
                 "ACTIVE",
 
-            image:
-                null,
+            // New image only
+            image: null,
 
-            imageUrl:
-                imageUrl,
+            // Existing image URL
+            imageUrl: imageUrl,
         });
 
         setErrors({});
@@ -2199,13 +2144,20 @@ export default function ProductCreate() {
                 form.maximumStock || 0
             ),
 
+            // IMPORTANT:
+            // Always send these arrays.
+            // [] means remove all existing selections.
             sizeIds,
 
             unitIds,
 
             status: form.status || "ACTIVE",
 
-            image: form.image || null,
+            // Existing image should not be replaced
+            // unless user selected a new image.
+            ...(form.image
+                ? { image: form.image }
+                : {}),
         };
 
         console.log(
@@ -2221,13 +2173,38 @@ export default function ProductCreate() {
             let result;
 
             if (isEdit) {
+
+                // ========================================
+                // UPDATE
+                // ========================================
+
+                const productId = form.id;
+
+                console.log(
+                    "UPDATING PRODUCT ID:",
+                    productId
+                );
+
+                if (!productId) {
+                    toast.error(
+                        "Product ID is missing"
+                    );
+                    return;
+                }
+
                 result = await dispatch(
                     updateProduct({
                         id: productId,
                         data: payload,
                     })
                 ).unwrap();
+
             } else {
+
+                // ========================================
+                // CREATE
+                // ========================================
+
                 result = await dispatch(
                     createProduct(payload)
                 ).unwrap();
@@ -2244,22 +2221,33 @@ export default function ProductCreate() {
                     : "Product created successfully"
             );
 
-            // Close modal
+            // ============================================
+            // CLOSE
+            // ============================================
+
             handleClose();
 
-            // Reset form
-            dispatch(resetProductForm());
+            // ============================================
+            // RESET
+            // ============================================
+
+            dispatch(
+                resetProductForm()
+            );
 
         } catch (error) {
+
             console.error(
                 "Product save error:",
                 error
             );
 
             toast.error(
-                error?.message ||
-                error?.response?.data?.message ||
-                "Failed to save product"
+                typeof error === "string"
+                    ? error
+                    : error?.message ||
+                    error?.response?.data?.message ||
+                    "Failed to save product"
             );
         }
     };
@@ -2790,6 +2778,37 @@ export default function ProductCreate() {
                                     <SearchSelect
                                         value={form.categoryId}
                                         options={categories || []}
+                                        onChange={(value) =>
+                                            handleChange("categoryId", value)
+                                        }
+                                        getOptionKey={(item) =>
+                                            item.id
+                                        }
+                                        getOptionLabel={(item) =>
+                                            item.categoryName ||
+                                            item.name ||
+
+                                            ""
+                                        }
+                                        placeholder="Select Category"
+                                        required
+                                        error={errors.categoryId}
+
+                                        addLabel="New Category"
+                                        onAdd={(searchValue) => {
+                                            dispatch(
+                                                openModal({
+                                                    type: "addCategory",
+                                                    data: {
+                                                        categoryName: searchValue,
+                                                    },
+                                                })
+                                            );
+                                        }}
+                                    />
+                                    {/* <SearchSelect
+                                        value={form.categoryId}
+                                        options={categories || []}
                                         onChange={
                                             handleCategoryChange
                                         }
@@ -2806,7 +2825,7 @@ export default function ProductCreate() {
                                         error={
                                             errors.categoryId
                                         }
-                                    />
+                                    /> */}
 
                                 </div>
 
@@ -2823,6 +2842,37 @@ export default function ProductCreate() {
                                     </label>
 
                                     <SearchSelect
+                                        value={form.subCategoryId}
+                                        options={filteredSubCategories || []}
+                                        onChange={(value) =>
+                                            handleChange("subCategoryId", value)
+                                        }
+                                        getOptionKey={(item) =>
+                                            item.id
+                                        }
+                                        getOptionLabel={(item) =>
+                                            item.subCategoryName ||
+                                            item.name ||
+
+                                            ""
+                                        }
+                                        placeholder="Select SubCategory"
+                                        required
+                                        error={errors.subCategoryId}
+
+                                        addLabel="New SubCategory"
+                                        onAdd={(searchValue) => {
+                                            dispatch(
+                                                openModal({
+                                                    type: "addSubCategory",
+                                                    data: {
+                                                        subCategoryName: searchValue,
+                                                    },
+                                                })
+                                            );
+                                        }}
+                                    />
+                                    {/* <SearchSelect
                                         value={
                                             form.subCategoryId
                                         }
@@ -2856,7 +2906,7 @@ export default function ProductCreate() {
                                         error={
                                             errors.subCategoryId
                                         }
-                                    />
+                                    /> */}
 
                                 </div>
 
@@ -3147,7 +3197,6 @@ export default function ProductCreate() {
                                 {/* TAX */}
 
                                 <div>
-
                                     <label className={labelClass}>
                                         Tax
                                         <span className="text-red-500 ml-1">
@@ -3159,10 +3208,7 @@ export default function ProductCreate() {
                                         value={form.taxId}
                                         options={taxes || []}
                                         onChange={(value) =>
-                                            handleChange(
-                                                "taxId",
-                                                value
-                                            )
+                                            handleChange("taxId", value)
                                         }
                                         getOptionKey={(item) =>
                                             item.id
@@ -3176,8 +3222,19 @@ export default function ProductCreate() {
                                         placeholder="Select tax"
                                         required
                                         error={errors.taxId}
-                                    />
 
+                                        addLabel="New Tax"
+                                        onAdd={(searchValue) => {
+                                            dispatch(
+                                                openModal({
+                                                    type: "addTaxMaster",
+                                                    data: {
+                                                        taxName: searchValue,
+                                                    },
+                                                })
+                                            );
+                                        }}
+                                    />
                                 </div>
 
                             </div>
@@ -3425,15 +3482,11 @@ export default function ProductCreate() {
                                 </label>
 
                                 <SearchMultiSelect
-                                    selected={
-                                        form.sizes || []
-                                    }
+                                    selected={form.sizes || []}
                                     options={sizes || []}
                                     onAdd={handleAddSize}
                                     onRemove={handleRemoveSize}
-                                    getOptionKey={(item) =>
-                                        item.id
-                                    }
+                                    getOptionKey={(item) => item.id}
                                     getOptionLabel={(item) =>
                                         item.sizeName ||
                                         item.name ||
@@ -3441,6 +3494,17 @@ export default function ProductCreate() {
                                         ""
                                     }
                                     placeholder="Select sizes"
+                                    addLabel="New Size"
+                                    onCreate={(searchValue) => {
+                                        dispatch(
+                                            openModal({
+                                                type: "addSize",
+                                                data: {
+                                                    sizeName: searchValue,
+                                                },
+                                            })
+                                        );
+                                    }}
                                 />
 
                                 {Array.isArray(form.sizes) &&
@@ -3546,15 +3610,11 @@ export default function ProductCreate() {
                                 </label>
 
                                 <SearchMultiSelect
-                                    selected={
-                                        form.units || []
-                                    }
+                                    selected={form.units || []}
                                     options={units || []}
                                     onAdd={handleAddUnit}
                                     onRemove={handleRemoveUnit}
-                                    getOptionKey={(item) =>
-                                        item.id
-                                    }
+                                    getOptionKey={(item) => item.id}
                                     getOptionLabel={(item) =>
                                         item.unitName ||
                                         item.name ||
@@ -3562,6 +3622,17 @@ export default function ProductCreate() {
                                         ""
                                     }
                                     placeholder="Select units"
+                                    addLabel="New Unit"
+                                    onCreate={(searchValue) => {
+                                        dispatch(
+                                            openModal({
+                                                type: "addUnit",
+                                                data: {
+                                                    unitName: searchValue,
+                                                },
+                                            })
+                                        );
+                                    }}
                                 />
 
                                 {Array.isArray(form.units) &&

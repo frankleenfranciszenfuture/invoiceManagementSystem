@@ -70,6 +70,9 @@ const unitSlice = createSlice({
       state.exsistingUnit = action.payload;
     },
 
+    clearError: (state) => {
+      state.error = null;
+    },
     /* =====================================================
        CLEAR UNIT STATE
        ===================================================== */
@@ -513,6 +516,7 @@ const unitSlice = createSlice({
 
 export const {
   setExsistingUnit,
+  clearError,
   clearUnitState,
   clearSelectedUnit,
   resetUnitForm,

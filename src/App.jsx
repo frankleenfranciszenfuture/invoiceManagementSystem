@@ -48,6 +48,7 @@ import GlobalModalToast from "./common/toast/GlobalModalToast";
 import BankAccountDashboard from "./module/bankAccount/pages/BankAccountDashboard";
 import CompanyDashboard from "./module/company/pages/CompanyDashboard";
 import ProductCreate from "./module/items/pages/ProductCreate";
+import ProductCreateSimple from "./module/items/pages/ProductCreateSimple";
 
 export default function App() {
   const dispatch = useDispatch();
@@ -151,6 +152,16 @@ export default function App() {
           <Route
             path="/items/new"
             element={<ProductCreate />}
+          />
+
+          <Route
+            path="/items/editSimple/:id"
+            element={<ProductCreateSimple />}
+          />
+
+          <Route
+            path="/items/newSimple"
+            element={<ProductCreateSimple />}
           />
 
           <Route
@@ -287,7 +298,7 @@ export default function App() {
           zIndex: 99999,
         }}
         toastOptions={{
-          duration: 3000,
+          duration: 2000,
 
           success: {
             style: {

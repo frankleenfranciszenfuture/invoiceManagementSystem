@@ -76,6 +76,10 @@ const categorySlice = createSlice({
       state.exsistingCategory = action.payload;
     },
 
+    clearError: (state) => {
+      state.error = null;
+    },
+
     /* =====================================================
        CLEAR CATEGORY STATE
        ===================================================== */
@@ -523,6 +527,7 @@ const categorySlice = createSlice({
 
 export const {
   setExsistingCategory,
+  clearError,
   clearCategoryState,
   clearSelectedCategory,
   resetCategoryForm,

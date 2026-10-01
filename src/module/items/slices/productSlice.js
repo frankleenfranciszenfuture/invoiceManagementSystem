@@ -99,6 +99,9 @@ const productSlice = createSlice({
       state.exsistingProduct = action.payload;
     },
 
+    clearError: (state) => {
+      state.error = null;
+    },
     /* =====================================================
        CLEAR PRODUCT STATE
     ===================================================== */
@@ -625,6 +628,7 @@ const productSlice = createSlice({
 
 export const {
   setExsistingProduct,
+  clearError,
 
   clearProductState,
 

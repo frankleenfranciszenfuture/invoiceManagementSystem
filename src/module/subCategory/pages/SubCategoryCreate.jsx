@@ -344,6 +344,8 @@ export default function SubCategoryCreate() {
             displayOrder:
                 displayOrder,
 
+            status: form.status || "ACTIVE",
+
         };
 
         try {

@@ -18,6 +18,10 @@ import {
     setSelectedBankAccountView,
 } from "../slices/bankAccountViewSlice";
 
+import {
+    clearError,
+} from "../slices/bankAccountSlice"
+
 import { openModal } from "../../ui/uiSlice";
 
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
@@ -182,6 +186,16 @@ export default function BankAccountDashboard() {
         error,
         bankAccountStatus,
     ]);
+
+    useEffect(() => {
+        if (!error) return;
+
+        const timer = setTimeout(() => {
+            dispatch(clearError());
+        }, 2000);
+
+        return () => clearTimeout(timer);
+    }, [error, dispatch]);
 
     // ============================================================
     // FILTER BANK ACCOUNTS BY STATUS

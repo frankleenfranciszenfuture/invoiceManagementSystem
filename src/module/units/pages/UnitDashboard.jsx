@@ -13,6 +13,10 @@ import {
     setSelectedUnitView,
 } from "../slices/unitViewSlice";
 
+import {
+    clearError,
+} from "../slices/unitSlice"
+
 import { openModal } from "../../ui/uiSlice";
 
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
@@ -146,6 +150,16 @@ export default function UnitDashboard() {
         error,
         unitStatus,
     ]);
+
+    useEffect(() => {
+        if (!error) return;
+
+        const timer = setTimeout(() => {
+            dispatch(clearError());
+        }, 2000);
+
+        return () => clearTimeout(timer);
+    }, [error, dispatch]);
 
     // ============================================================
     // FILTER UNITS BY STATUS

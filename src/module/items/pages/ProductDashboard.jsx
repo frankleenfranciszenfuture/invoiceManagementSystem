@@ -33,6 +33,10 @@ import {
 } from "../slices/productViewSlice";
 
 import {
+    clearError
+} from "../slices/productSlice"
+
+import {
     openModal,
 } from "../../ui/uiSlice";
 
@@ -64,6 +68,9 @@ export default function ProductDashboard() {
         (state) =>
             state.product?.error
     );
+
+
+
 
     // ============================================================
     // PRODUCT FILTER STATE
@@ -194,6 +201,15 @@ export default function ProductDashboard() {
         productStatus,
     ]);
 
+    useEffect(() => {
+        if (!error) return;
+
+        const timer = setTimeout(() => {
+            dispatch(clearError());
+        }, 2000);
+
+        return () => clearTimeout(timer);
+    }, [error, dispatch]);
     // ============================================================
     // CREATE PRODUCT MODAL
     // ============================================================

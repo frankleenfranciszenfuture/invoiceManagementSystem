@@ -352,9 +352,7 @@ export default function NavbarProduct() {
 
                     <button
                         type="button"
-                        onClick={
-                            handleNewProduct
-                        }
+                        onClick={() => navigate("/items/newSimple")}
                         className="
                             flex
                             items-center
@@ -425,6 +423,7 @@ export default function NavbarProduct() {
                                 shadow-lg
                                 z-50
                                 overflow-hidden
+                                
                             "
                         >
 
@@ -441,16 +440,16 @@ export default function NavbarProduct() {
                                     py-3
                                     text-left
                                     text-sm
-                                    text-gray-700
-                                    hover:bg-blue-50
-                                    hover:text-blue-600
+                                    text-gray-900
+                                    hover:bg-blue-500
+                                    hover:text-white
                                 "
                             >
                                 Product
                             </button>
 
 
-                            {/* ADD PRODUCT */}
+                            {/* ADD Category */}
 
                             <button
                                 type="button"
@@ -462,7 +461,7 @@ export default function NavbarProduct() {
 
                                     dispatch(
                                         openModal({
-                                            type: "addProduct",
+                                            type: "addCategory",
                                             data: null,
                                         })
                                     );
@@ -474,78 +473,157 @@ export default function NavbarProduct() {
                                     py-3
                                     text-left
                                     text-sm
-                                    text-gray-700
-                                    hover:bg-blue-50
-                                    hover:text-blue-600
+                                    text-gray-900
+                                    hover:bg-blue-500
+                                    hover:text-white
                                 "
                             >
-                                Add Product
+                                Add Category
+                            </button>
+
+
+                            {/* ADD SubCategory */}
+
+                            <button
+                                type="button"
+                                onClick={() => {
+
+                                    setMoreOpen(
+                                        false
+                                    );
+
+                                    dispatch(
+                                        openModal({
+                                            type: "addSubCategory",
+                                            data: null,
+                                        })
+                                    );
+
+                                }}
+                                className="
+                                    w-full
+                                    px-4
+                                    py-3
+                                    text-left
+                                    text-sm
+                                    text-gray-900
+                                    hover:bg-blue-500
+                                    hover:text-white
+                                "
+                            >
+                                Add SubCategory
+                            </button>
+
+
+                            {/* ADD Sizes */}
+
+                            <button
+                                type="button"
+                                onClick={() => {
+
+                                    setMoreOpen(
+                                        false
+                                    );
+
+                                    dispatch(
+                                        openModal({
+                                            type: "addSize",
+                                            data: null,
+                                        })
+                                    );
+
+                                }}
+                                className="
+                                    w-full
+                                    px-4
+                                    py-3
+                                    text-left
+                                    text-sm
+                                    text-gray-900
+                                    hover:bg-blue-500
+                                    hover:text-white
+                                "
+                            >
+                                Add Sizes
+                            </button>
+
+                            {/* ADD Units */}
+
+                            <button
+                                type="button"
+                                onClick={() => {
+
+                                    setMoreOpen(
+                                        false
+                                    );
+
+                                    dispatch(
+                                        openModal({
+                                            type: "addUnit",
+                                            data: null,
+                                        })
+                                    );
+
+                                }}
+                                className="
+                                    w-full
+                                    px-4
+                                    py-3
+                                    text-left
+                                    text-sm
+                                    text-gray-900
+                                    hover:bg-blue-500
+                                    hover:text-white
+                                "
+                            >
+                                Add Units
+                            </button>
+
+                            {/* ADD Taxes */}
+
+                            <button
+                                type="button"
+                                onClick={() => {
+
+                                    setMoreOpen(
+                                        false
+                                    );
+
+                                    dispatch(
+                                        openModal({
+                                            type: "addTaxMaster",
+                                            data: null,
+                                        })
+                                    );
+
+                                }}
+                                className="
+                                    w-full
+                                    px-4
+                                    py-3
+                                    text-left
+                                    text-sm
+                                    text-gray-900
+                                    hover:bg-blue-500
+                                    hover:text-white
+                                "
+                            >
+                                Add Taxes
                             </button>
 
 
                             {/* PRODUCT SETTINGS */}
 
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(
-                                        false
-                                    );
-
-                                    // Product Settings action
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-blue-50
-                                    hover:text-blue-600
-                                "
-                            >
-                                Product Settings
-                            </button>
 
 
                             {/* DIVIDER */}
 
-                            <div
-                                className="
-                                    border-t
-                                    border-gray-100
-                                "
-                            />
+
 
 
                             {/* OTHER SETTINGS */}
 
-                            <button
-                                type="button"
-                                onClick={() => {
 
-                                    setMoreOpen(
-                                        false
-                                    );
-
-                                    // Other Settings action
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-gray-50
-                                "
-                            >
-                                Other Settings
-                            </button>
 
                         </div>
 

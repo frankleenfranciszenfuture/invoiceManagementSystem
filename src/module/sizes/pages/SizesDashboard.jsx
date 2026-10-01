@@ -9,6 +9,7 @@ import NavbarSize from "../components/bars/nav/NavbarSize";
 import { fetchAllSizes } from "../thunks/sizeThunks";
 
 import {
+    clearError,
     setSizeStatus,
     setSelectedSizeView,
 } from "../slices/sizeSlice";
@@ -110,6 +111,16 @@ export default function SizeDashboard() {
         );
 
     }, [dispatch]);
+
+    useEffect(() => {
+        if (!error) return;
+
+        const timer = setTimeout(() => {
+            dispatch(clearError());
+        }, 2000);
+
+        return () => clearTimeout(timer);
+    }, [error, dispatch]);
 
     // ============================================================
     // DEBUG

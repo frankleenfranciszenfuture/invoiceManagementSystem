@@ -646,318 +646,254 @@ export default function CompanyCreate() {
        VALIDATION
     ======================================================= */
 
-    const validate =
-        () => {
+    const validateCompanyTabs = () => {
+        const newErrors = {};
 
-            const nextErrors =
-                {};
+        // =========================================================
+        // BASIC DETAILS
+        // =========================================================
 
+        if (!form.companyName?.trim()) {
+            newErrors.companyName =
+                "Company name is required";
+        }
 
-            /* =================================================
-               COMPANY NAME
-            ================================================= */
+        if (!form.companyCode?.trim()) {
+            newErrors.companyCode =
+                "Company code is required";
+        }
 
-            if (
-                !form.companyName?.trim()
-            ) {
+        if (form.email?.trim()) {
+            const emailRegex =
+                /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-                nextErrors.companyName =
-                    "Company name is required";
+            if (!emailRegex.test(form.email.trim())) {
+                newErrors.email =
+                    "Enter a valid email address";
             }
+        }
 
+        if (!form.phone?.trim()) {
+            newErrors.phone =
+                "Phone number is required";
+        } else if (
+            !/^\d{10}$/.test(form.phone.trim())
+        ) {
+            newErrors.phone =
+                "Phone number must contain 10 digits";
+        }
 
-            /* =================================================
-               COMPANY CODE
-            ================================================= */
+        if (
+            form.alternatePhone?.trim() &&
+            !/^\d{10}$/.test(
+                form.alternatePhone.trim()
+            )
+        ) {
+            newErrors.alternatePhone =
+                "Alternate phone must contain 10 digits";
+        }
 
-            if (
-                !form.companyCode?.trim()
-            ) {
+        // =========================================================
+        // TAX & COMPLIANCE
+        // =========================================================
 
-                nextErrors.companyCode =
-                    "Company code is required";
-            }
-
-
-            /* =================================================
-               EMAIL
-            ================================================= */
-
-            if (
-                form.email?.trim()
-            ) {
-
-                const emailRegex =
-                    /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-                if (
-                    !emailRegex.test(
-                        form.email.trim()
-                    )
-                ) {
-
-                    nextErrors.email =
-                        "Enter a valid email address";
-                }
-            }
-
-
-            /* =================================================
-               PHONE
-            ================================================= */
+        if (form.gstNumber?.trim()) {
+            const gstRegex =
+                /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 
             if (
-                !form.phone?.trim()
-            ) {
-
-                nextErrors.phone =
-                    "Phone number is required";
-
-            } else if (
-                !/^\d{10}$/.test(
-                    form.phone.trim()
+                !gstRegex.test(
+                    form.gstNumber
+                        .trim()
+                        .toUpperCase()
                 )
             ) {
-
-                nextErrors.phone =
-                    "Phone number must contain 10 digits";
+                newErrors.gstNumber =
+                    "Enter a valid GST number";
             }
+        }
 
-
-            /* =================================================
-               ALTERNATE PHONE
-            ================================================= */
+        if (form.panNumber?.trim()) {
+            const panRegex =
+                /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
             if (
-                form.alternatePhone?.trim() &&
-                !/^\d{10}$/.test(
-                    form.alternatePhone.trim()
+                !panRegex.test(
+                    form.panNumber
+                        .trim()
+                        .toUpperCase()
                 )
             ) {
-
-                nextErrors.alternatePhone =
-                    "Alternate phone must contain 10 digits";
+                newErrors.panNumber =
+                    "Enter a valid PAN number";
             }
+        }
 
-
-            /* =================================================
-               GST
-            ================================================= */
+        if (form.tanNumber?.trim()) {
+            const tanRegex =
+                /^[A-Z]{4}[0-9]{5}[A-Z]$/;
 
             if (
-                form.gstNumber?.trim()
-            ) {
-
-                const gstRegex =
-                    /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
-
-                if (
-                    !gstRegex.test(
-                        form.gstNumber
-                            .trim()
-                            .toUpperCase()
-                    )
-                ) {
-
-                    nextErrors.gstNumber =
-                        "Enter a valid GST number";
-                }
-            }
-
-
-            /* =================================================
-               PAN
-            ================================================= */
-
-            if (
-                form.panNumber?.trim()
-            ) {
-
-                const panRegex =
-                    /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-
-                if (
-                    !panRegex.test(
-                        form.panNumber
-                            .trim()
-                            .toUpperCase()
-                    )
-                ) {
-
-                    nextErrors.panNumber =
-                        "Enter a valid PAN number";
-                }
-            }
-
-
-            /* =================================================
-               TAN
-            ================================================= */
-
-            if (
-                form.tanNumber?.trim()
-            ) {
-
-                const tanRegex =
-                    /^[A-Z]{4}[0-9]{5}[A-Z]$/;
-
-                if (
-                    !tanRegex.test(
-                        form.tanNumber
-                            .trim()
-                            .toUpperCase()
-                    )
-                ) {
-
-                    nextErrors.tanNumber =
-                        "Enter a valid TAN number";
-                }
-            }
-
-
-            /* =================================================
-               ADDRESS
-            ================================================= */
-
-            if (
-                !form.addressLine1?.trim()
-            ) {
-
-                nextErrors.addressLine1 =
-                    "Address is required";
-            }
-
-
-            /* =================================================
-               CITY
-            ================================================= */
-
-            if (
-                !form.city?.trim()
-            ) {
-
-                nextErrors.city =
-                    "City is required";
-            }
-
-
-            /* =================================================
-               STATE
-            ================================================= */
-
-            if (
-                !form.state?.trim()
-            ) {
-
-                nextErrors.state =
-                    "State is required";
-            }
-
-
-            /* =================================================
-               COUNTRY
-            ================================================= */
-
-            if (
-                !form.country?.trim()
-            ) {
-
-                nextErrors.country =
-                    "Country is required";
-            }
-
-
-            /* =================================================
-               PINCODE
-            ================================================= */
-
-            if (
-                !form.pincode?.trim()
-            ) {
-
-                nextErrors.pincode =
-                    "Pincode is required";
-
-            } else if (
-                !/^\d{6}$/.test(
-                    form.pincode.trim()
+                !tanRegex.test(
+                    form.tanNumber
+                        .trim()
+                        .toUpperCase()
                 )
             ) {
-
-                nextErrors.pincode =
-                    "Pincode must contain 6 digits";
+                newErrors.tanNumber =
+                    "Enter a valid TAN number";
             }
+        }
 
+        // =========================================================
+        // ADDRESS
+        // =========================================================
 
-            /* =================================================
-               INVOICE PREFIX
-            ================================================= */
+        if (!form.addressLine1?.trim()) {
+            newErrors.addressLine1 =
+                "Address is required";
+        }
 
-            if (
-                !form.invoicePrefix?.trim()
-            ) {
+        if (!form.city?.trim()) {
+            newErrors.city =
+                "City is required";
+        }
 
-                nextErrors.invoicePrefix =
-                    "Invoice prefix is required";
-            }
+        if (!form.state?.trim()) {
+            newErrors.state =
+                "State is required";
+        }
 
+        if (!form.country?.trim()) {
+            newErrors.country =
+                "Country is required";
+        }
 
-            /* =================================================
-               INVOICE START NUMBER
-            ================================================= */
+        if (!form.pincode?.trim()) {
+            newErrors.pincode =
+                "Pincode is required";
+        } else if (
+            !/^\d{6}$/.test(
+                form.pincode.trim()
+            )
+        ) {
+            newErrors.pincode =
+                "Pincode must contain 6 digits";
+        }
 
-            if (
-                form.invoiceStartNumber ===
-                "" ||
-                form.invoiceStartNumber ===
-                null ||
-                Number(
-                    form.invoiceStartNumber
-                ) < 1
-            ) {
+        // =========================================================
+        // INVOICE SETTINGS
+        // =========================================================
 
-                nextErrors.invoiceStartNumber =
-                    "Enter a valid invoice start number";
-            }
+        if (!form.invoicePrefix?.trim()) {
+            newErrors.invoicePrefix =
+                "Invoice prefix is required";
+        }
 
+        if (
+            form.invoiceStartNumber === "" ||
+            form.invoiceStartNumber === null ||
+            Number(form.invoiceStartNumber) < 1
+        ) {
+            newErrors.invoiceStartNumber =
+                "Enter a valid invoice start number";
+        }
 
-            /* =================================================
-               CURRENCY
-            ================================================= */
+        if (!form.currency?.trim()) {
+            newErrors.currency =
+                "Currency is required";
+        }
 
-            if (
-                !form.currency?.trim()
-            ) {
+        if (!form.financialYearStart) {
+            newErrors.financialYearStart =
+                "Financial year start is required";
+        }
 
-                nextErrors.currency =
-                    "Currency is required";
-            }
+        // =========================================================
+        // SET ERRORS
+        // =========================================================
 
+        setErrors(newErrors);
 
-            /* =================================================
-               FINANCIAL YEAR
-            ================================================= */
+        // =========================================================
+        // BASIC TAB
+        // =========================================================
 
-            if (
-                !form.financialYearStart
-            ) {
+        if (
+            newErrors.companyName ||
+            newErrors.companyCode ||
+            newErrors.email ||
+            newErrors.phone ||
+            newErrors.alternatePhone
+        ) {
+            setActiveTab("basic");
 
-                nextErrors.financialYearStart =
-                    "Financial year start is required";
-            }
-
-
-            setErrors(
-                nextErrors
+            toast.error(
+                "Please complete Basic Details"
             );
 
+            return false;
+        }
 
-            return (
-                Object.keys(
-                    nextErrors
-                ).length === 0
+        // =========================================================
+        // ADDRESS TAB
+        // =========================================================
+
+        if (
+            newErrors.addressLine1 ||
+            newErrors.city ||
+            newErrors.state ||
+            newErrors.country ||
+            newErrors.pincode
+        ) {
+            setActiveTab("address");
+
+            toast.error(
+                "Please complete Address Details"
             );
-        };
+
+            return false;
+        }
+
+        // =========================================================
+        // TAX TAB
+        // =========================================================
+
+        if (
+            newErrors.gstNumber ||
+            newErrors.panNumber ||
+            newErrors.tanNumber
+        ) {
+            setActiveTab("tax");
+
+            toast.error(
+                "Please correct Tax & Compliance fields"
+            );
+
+            return false;
+        }
+
+        // =========================================================
+        // INVOICE TAB
+        // =========================================================
+
+        if (
+            newErrors.invoicePrefix ||
+            newErrors.invoiceStartNumber ||
+            newErrors.currency ||
+            newErrors.financialYearStart
+        ) {
+            setActiveTab("invoice");
+
+            toast.error(
+                "Please complete Invoice Settings"
+            );
+
+            return false;
+        }
+
+        return true;
+    };
 
 
     /* =======================================================
@@ -970,7 +906,7 @@ export default function CompanyCreate() {
             event.preventDefault();
 
 
-            if (!validate()) {
+            if (!validateCompanyTabs()) {
                 return;
             }
 
@@ -1086,9 +1022,7 @@ export default function CompanyCreate() {
                     form.financialYearStart ||
                     null,
 
-                status:
-                    form.status ||
-                    "ACTIVE",
+                status: form.status || "ACTIVE",
 
                 /* =============================================
                    IMPORTANT
@@ -1220,6 +1154,7 @@ export default function CompanyCreate() {
   ======================================================= */
 
     const tabs = [
+
         {
             id: "basic",
             label: "Basic Details",
@@ -1240,6 +1175,7 @@ export default function CompanyCreate() {
             id: "branding",
             label: "Branding",
         },
+
     ];
 
     const inputClass = (field) => `
@@ -1491,6 +1427,282 @@ export default function CompanyCreate() {
                     bg-gray-50/50
                 "
                 >
+
+                    {/* =================================================
+                    BRANDING
+                ================================================= */}
+
+                    {activeTab === "branding" && (
+
+                        <div>
+
+                            <div className="mb-6">
+
+                                <h3 className={sectionTitleClass}>
+                                    Branding
+                                </h3>
+
+                                <p
+                                    className="
+                                    text-xs
+                                    text-gray-500
+                                    mt-1
+                                "
+                                >
+                                    Upload the company logo and authorized
+                                    signature used in invoice documents.
+                                </p>
+
+                            </div>
+
+
+                            <div
+                                className="
+                                grid
+                                grid-cols-2
+                                gap-6
+                            "
+                            >
+
+                                {/* =================================================
+                                LOGO
+                            ================================================= */}
+
+                                <div>
+
+                                    <label className={labelClass}>
+                                        Company Logo
+                                    </label>
+
+                                    <label
+                                        className="
+                                        w-full
+                                        h-[230px]
+                                        border-2
+                                        border-dashed
+                                        border-gray-300
+                                        rounded-lg
+                                        flex
+                                        items-center
+                                        justify-center
+                                        overflow-hidden
+                                        cursor-pointer
+                                        hover:border-blue-500
+                                        hover:bg-blue-50/30
+                                        transition
+                                        bg-white
+                                    "
+                                    >
+
+                                        {logoPreview ? (
+
+                                            <img
+                                                src={logoPreview}
+                                                alt="Company Logo"
+                                                className="
+                                                w-full
+                                                h-full
+                                                object-contain
+                                                p-5
+                                            "
+                                            />
+
+                                        ) : (
+
+                                            <div
+                                                className="
+                                                text-center
+                                                text-gray-400
+                                            "
+                                            >
+
+                                                <Upload
+                                                    size={30}
+                                                    className="
+                                                    mx-auto
+                                                    mb-3
+                                                "
+                                                />
+
+                                                <p
+                                                    className="
+                                                    text-sm
+                                                    font-medium
+                                                    text-gray-600
+                                                "
+                                                >
+                                                    Choose company logo
+                                                </p>
+
+                                                <p
+                                                    className="
+                                                    text-xs
+                                                    mt-1
+                                                "
+                                                >
+                                                    JPG / PNG / WEBP
+                                                </p>
+
+                                            </div>
+
+                                        )}
+
+                                        <input
+                                            type="file"
+                                            accept="
+                                            image/jpeg,
+                                            image/png,
+                                            image/webp
+                                        "
+                                            className="hidden"
+                                            onChange={handleLogoChange}
+                                        />
+
+                                    </label>
+
+
+                                    {form.logo && (
+
+                                        <p
+                                            className="
+                                            text-xs
+                                            text-gray-500
+                                            mt-2
+                                            truncate
+                                        "
+                                            title={form.logo.name}
+                                        >
+                                            {form.logo.name}
+                                        </p>
+
+                                    )}
+
+                                </div>
+
+
+                                {/* =================================================
+                                SIGNATURE
+                            ================================================= */}
+
+                                <div>
+
+                                    <label className={labelClass}>
+                                        Authorized Signature
+                                    </label>
+
+                                    <label
+                                        className="
+                                        w-full
+                                        h-[230px]
+                                        border-2
+                                        border-dashed
+                                        border-gray-300
+                                        rounded-lg
+                                        flex
+                                        items-center
+                                        justify-center
+                                        overflow-hidden
+                                        cursor-pointer
+                                        hover:border-blue-500
+                                        hover:bg-blue-50/30
+                                        transition
+                                        bg-white
+                                    "
+                                    >
+
+                                        {signaturePreview ? (
+
+                                            <img
+                                                src={signaturePreview}
+                                                alt="Authorized Signature"
+                                                className="
+                                                w-full
+                                                h-full
+                                                object-contain
+                                                p-6
+                                            "
+                                            />
+
+                                        ) : (
+
+                                            <div
+                                                className="
+                                                text-center
+                                                text-gray-400
+                                            "
+                                            >
+
+                                                <Upload
+                                                    size={30}
+                                                    className="
+                                                    mx-auto
+                                                    mb-3
+                                                "
+                                                />
+
+                                                <p
+                                                    className="
+                                                    text-sm
+                                                    font-medium
+                                                    text-gray-600
+                                                "
+                                                >
+                                                    Choose signature
+                                                </p>
+
+                                                <p
+                                                    className="
+                                                    text-xs
+                                                    mt-1
+                                                "
+                                                >
+                                                    JPG / PNG / WEBP
+                                                </p>
+
+                                            </div>
+
+                                        )}
+
+                                        <input
+                                            type="file"
+                                            accept="
+                                            image/jpeg,
+                                            image/png,
+                                            image/webp
+                                        "
+                                            className="hidden"
+                                            onChange={
+                                                handleSignatureChange
+                                            }
+                                        />
+
+                                    </label>
+
+
+                                    {form.signature && (
+
+                                        <p
+                                            className="
+                                            text-xs
+                                            text-gray-500
+                                            mt-2
+                                            truncate
+                                        "
+                                            title={form.signature.name}
+                                        >
+                                            {form.signature.name}
+                                        </p>
+
+                                    )}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    )}
+
 
                     {/* =================================================
                     BASIC DETAILS
@@ -2464,281 +2676,6 @@ export default function CompanyCreate() {
 
                     )}
 
-
-                    {/* =================================================
-                    BRANDING
-                ================================================= */}
-
-                    {activeTab === "branding" && (
-
-                        <div>
-
-                            <div className="mb-6">
-
-                                <h3 className={sectionTitleClass}>
-                                    Branding
-                                </h3>
-
-                                <p
-                                    className="
-                                    text-xs
-                                    text-gray-500
-                                    mt-1
-                                "
-                                >
-                                    Upload the company logo and authorized
-                                    signature used in invoice documents.
-                                </p>
-
-                            </div>
-
-
-                            <div
-                                className="
-                                grid
-                                grid-cols-2
-                                gap-6
-                            "
-                            >
-
-                                {/* =================================================
-                                LOGO
-                            ================================================= */}
-
-                                <div>
-
-                                    <label className={labelClass}>
-                                        Company Logo
-                                    </label>
-
-                                    <label
-                                        className="
-                                        w-full
-                                        h-[230px]
-                                        border-2
-                                        border-dashed
-                                        border-gray-300
-                                        rounded-lg
-                                        flex
-                                        items-center
-                                        justify-center
-                                        overflow-hidden
-                                        cursor-pointer
-                                        hover:border-blue-500
-                                        hover:bg-blue-50/30
-                                        transition
-                                        bg-white
-                                    "
-                                    >
-
-                                        {logoPreview ? (
-
-                                            <img
-                                                src={logoPreview}
-                                                alt="Company Logo"
-                                                className="
-                                                w-full
-                                                h-full
-                                                object-contain
-                                                p-5
-                                            "
-                                            />
-
-                                        ) : (
-
-                                            <div
-                                                className="
-                                                text-center
-                                                text-gray-400
-                                            "
-                                            >
-
-                                                <Upload
-                                                    size={30}
-                                                    className="
-                                                    mx-auto
-                                                    mb-3
-                                                "
-                                                />
-
-                                                <p
-                                                    className="
-                                                    text-sm
-                                                    font-medium
-                                                    text-gray-600
-                                                "
-                                                >
-                                                    Choose company logo
-                                                </p>
-
-                                                <p
-                                                    className="
-                                                    text-xs
-                                                    mt-1
-                                                "
-                                                >
-                                                    JPG / PNG / WEBP
-                                                </p>
-
-                                            </div>
-
-                                        )}
-
-                                        <input
-                                            type="file"
-                                            accept="
-                                            image/jpeg,
-                                            image/png,
-                                            image/webp
-                                        "
-                                            className="hidden"
-                                            onChange={handleLogoChange}
-                                        />
-
-                                    </label>
-
-
-                                    {form.logo && (
-
-                                        <p
-                                            className="
-                                            text-xs
-                                            text-gray-500
-                                            mt-2
-                                            truncate
-                                        "
-                                            title={form.logo.name}
-                                        >
-                                            {form.logo.name}
-                                        </p>
-
-                                    )}
-
-                                </div>
-
-
-                                {/* =================================================
-                                SIGNATURE
-                            ================================================= */}
-
-                                <div>
-
-                                    <label className={labelClass}>
-                                        Authorized Signature
-                                    </label>
-
-                                    <label
-                                        className="
-                                        w-full
-                                        h-[230px]
-                                        border-2
-                                        border-dashed
-                                        border-gray-300
-                                        rounded-lg
-                                        flex
-                                        items-center
-                                        justify-center
-                                        overflow-hidden
-                                        cursor-pointer
-                                        hover:border-blue-500
-                                        hover:bg-blue-50/30
-                                        transition
-                                        bg-white
-                                    "
-                                    >
-
-                                        {signaturePreview ? (
-
-                                            <img
-                                                src={signaturePreview}
-                                                alt="Authorized Signature"
-                                                className="
-                                                w-full
-                                                h-full
-                                                object-contain
-                                                p-6
-                                            "
-                                            />
-
-                                        ) : (
-
-                                            <div
-                                                className="
-                                                text-center
-                                                text-gray-400
-                                            "
-                                            >
-
-                                                <Upload
-                                                    size={30}
-                                                    className="
-                                                    mx-auto
-                                                    mb-3
-                                                "
-                                                />
-
-                                                <p
-                                                    className="
-                                                    text-sm
-                                                    font-medium
-                                                    text-gray-600
-                                                "
-                                                >
-                                                    Choose signature
-                                                </p>
-
-                                                <p
-                                                    className="
-                                                    text-xs
-                                                    mt-1
-                                                "
-                                                >
-                                                    JPG / PNG / WEBP
-                                                </p>
-
-                                            </div>
-
-                                        )}
-
-                                        <input
-                                            type="file"
-                                            accept="
-                                            image/jpeg,
-                                            image/png,
-                                            image/webp
-                                        "
-                                            className="hidden"
-                                            onChange={
-                                                handleSignatureChange
-                                            }
-                                        />
-
-                                    </label>
-
-
-                                    {form.signature && (
-
-                                        <p
-                                            className="
-                                            text-xs
-                                            text-gray-500
-                                            mt-2
-                                            truncate
-                                        "
-                                            title={form.signature.name}
-                                        >
-                                            {form.signature.name}
-                                        </p>
-
-                                    )}
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    )}
 
                 </div>
 

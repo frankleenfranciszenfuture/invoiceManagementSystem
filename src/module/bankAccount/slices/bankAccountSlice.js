@@ -89,6 +89,9 @@ const bankAccountSlice = createSlice({
       state.exsistingBankAccount = action.payload;
     },
 
+    clearError: (state) => {
+      state.error = null;
+    },
     /* =====================================================
            CLEAR BANK ACCOUNT STATE
         ===================================================== */
@@ -563,6 +566,8 @@ const bankAccountSlice = createSlice({
 
 export const {
   setExsistingBankAccount,
+
+  clearError,
 
   clearBankAccountState,
 

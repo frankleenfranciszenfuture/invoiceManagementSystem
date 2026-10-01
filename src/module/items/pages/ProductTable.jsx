@@ -106,15 +106,11 @@ export default function ProductTable({ products = [] }) {
         try {
 
             dispatch(
-                openModal({
-                    type: "editProduct",
-                    data: product,
-                })
+                setExsistingProduct(product)
             );
 
-            console.log(
-                "PRODUCT MODAL OPEN DISPATCHED"
-            );
+            navigate(`/items/editSimple/${product.id}`);
+
 
         } catch (error) {
 
@@ -207,22 +203,7 @@ export default function ProductTable({ products = [] }) {
         );
     }
 
-    /* =====================================================
-       ERROR
-    ===================================================== */
 
-    if (error) {
-
-        return (
-            <div className="bg-white rounded-xl border border-red-200 p-8 text-center">
-
-                <p className="text-red-500">
-                    {error}
-                </p>
-
-            </div>
-        );
-    }
 
     /* =====================================================
        EMPTY STATE

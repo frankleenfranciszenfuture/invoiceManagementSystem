@@ -270,32 +270,6 @@ export default function SizeTable({
         );
     }
 
-    /* =====================================================
-       ERROR
-    ===================================================== */
-
-    if (error) {
-
-        return (
-
-            <div
-                className="
-                    bg-white
-                    rounded-xl
-                    border
-                    border-red-200
-                    p-8
-                    text-center
-                "
-            >
-
-                <p className="text-red-500">
-                    {error}
-                </p>
-
-            </div>
-        );
-    }
 
     /* =====================================================
        EMPTY STATE

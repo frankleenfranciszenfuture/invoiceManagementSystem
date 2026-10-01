@@ -55,8 +55,8 @@ const buildProductFormData = (data) => {
   const formData = new FormData();
 
   /* =======================================================
-     PRODUCT JSON
-     ======================================================= */
+       PRODUCT JSON
+    ======================================================= */
 
   const product = {
     productName: data.productName?.trim() || "",
@@ -118,11 +118,13 @@ const buildProductFormData = (data) => {
       : [],
 
     status: data.status || "ACTIVE",
+
+    description: data.description?.trim() || "",
   };
 
   /* =======================================================
-     APPEND PRODUCT JSON
-     ======================================================= */
+       APPEND PRODUCT JSON
+    ======================================================= */
 
   formData.append(
     "product",
@@ -132,8 +134,8 @@ const buildProductFormData = (data) => {
   );
 
   /* =======================================================
-     PRODUCT IMAGE
-     ======================================================= */
+       PRODUCT IMAGE
+    ======================================================= */
 
   if (data.image instanceof File) {
     formData.append("image", data.image);

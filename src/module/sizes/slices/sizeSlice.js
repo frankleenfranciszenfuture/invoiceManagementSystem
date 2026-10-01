@@ -69,6 +69,9 @@ const sizeSlice = createSlice({
       state.exsistingSize = action.payload;
     },
 
+    clearError: (state) => {
+      state.error = null;
+    },
     /* =====================================================
        CLEAR SIZE STATE
        ===================================================== */
@@ -516,6 +519,7 @@ const sizeSlice = createSlice({
 
 export const {
   setExsistingSize,
+  clearError,
   clearSizeState,
   clearSelectedSize,
   resetSizeForm,

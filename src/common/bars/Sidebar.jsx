@@ -50,17 +50,11 @@ const NAV = [
     {
         label: "Items",
         icon: Package,
-        to: "/dashboard",
-        addTo: "/items/new",
+        to: "/items",
+        addTo: "/items/newSimple",
         basePath: "/items",
         dropdown: true,
         children: [
-
-            { label: "Categories", to: "/categories" },
-            { label: "Sub Categories", to: "/subCategoires" },
-            // { label: "Parties", to: "/parties" },
-            { label: "Sizes", to: "/sizes" },
-            { label: "Units", to: "/units" },
             // { label: "Taxes", to: "/taxes" },
             { label: "Items", to: "/items" },
         ],

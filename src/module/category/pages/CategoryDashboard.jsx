@@ -12,6 +12,7 @@ import {
 import {
     setCategoryStatus,
     setSelectedCategoryView,
+    clearError
 } from "../slices/categorySlice";
 
 import { openModal } from "../../ui/uiSlice";
@@ -167,6 +168,16 @@ export default function CategoryDashboard() {
         categoryStatus,
     ]);
 
+
+    useEffect(() => {
+        if (!error) return;
+
+        const timer = setTimeout(() => {
+            dispatch(clearError());
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, [error, dispatch]);
     // ============================================================
     // FILTER CATEGORIES BY STATUS
     // ============================================================
