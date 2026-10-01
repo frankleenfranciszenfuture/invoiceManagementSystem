@@ -49,6 +49,7 @@ import BankAccountDashboard from "./module/bankAccount/pages/BankAccountDashboar
 import CompanyDashboard from "./module/company/pages/CompanyDashboard";
 import ProductCreate from "./module/items/pages/ProductCreate";
 import ProductCreateSimple from "./module/items/pages/ProductCreateSimple";
+import CompanyOverViewDashboard from "./module/company/overviewCard/CompanyOverViewDashboard";
 
 export default function App() {
   const dispatch = useDispatch();
@@ -251,6 +252,11 @@ export default function App() {
           <Route
             path="/companies"
             element={<CompanyDashboard />}
+          />
+
+          <Route
+            path="/companies/view/:id"
+            element={<CompanyOverViewDashboard />}
           />
 
           {/* =================================================
