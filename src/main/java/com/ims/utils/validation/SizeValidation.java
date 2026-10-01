@@ -1,8 +1,11 @@
 package com.ims.utils.validation;
 
 import com.ims.entity.SizeEntity;
+import com.ims.enums.Status;
+import com.ims.exception.BadRequestException;
 import com.ims.exception.DuplicateResourceException;
 import com.ims.exception.ResourceNotFoundException;
+import com.ims.repository.ProductRepository;
 import com.ims.repository.SizeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -12,7 +15,7 @@ import org.springframework.stereotype.Component;
 public class SizeValidation {
 
     private final SizeRepository sizeRepository;
-
+    private final ProductRepository productRepository;
 
     // =====================================================
     // VALIDATE SIZE
@@ -219,6 +222,71 @@ public class SizeValidation {
 
             throw new DuplicateResourceException(
                     "Size code already exists."
+            );
+        }
+    }
+
+    // =====================================================
+// SIZE STATUS VALIDATION
+// =====================================================
+
+    public void validateCanChangeStatus(
+            SizeEntity size,
+            Status requestedStatus
+    ) {
+
+        if (size == null) {
+            throw new BadRequestException(
+                    "Size is required."
+            );
+        }
+
+        if (requestedStatus == null) {
+            throw new BadRequestException(
+                    "Status is required."
+            );
+        }
+
+        if (requestedStatus != Status.INACTIVE) {
+            return;
+        }
+
+        if (size.getStatus() == Status.INACTIVE) {
+            return;
+        }
+
+        boolean used =
+                productRepository.existsBySizesId(
+                        size.getId()
+                );
+
+        if (used) {
+            throw new BadRequestException(
+                    "Size cannot be made INACTIVE because it is already used by a product."
+            );
+        }
+    }
+
+    // =====================================================
+// SIZE DELETE VALIDATION
+// =====================================================
+
+    public void validateCanDelete(
+            Long sizeId
+    ) {
+
+        if (sizeId == null) {
+            throw new BadRequestException(
+                    "Size ID is required."
+            );
+        }
+
+        boolean used =
+                productRepository.existsBySizesId(sizeId);
+
+        if (used) {
+            throw new BadRequestException(
+                    "Size cannot be deleted because it is already used by a product."
             );
         }
     }

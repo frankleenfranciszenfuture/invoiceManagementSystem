@@ -108,6 +108,11 @@ public class SubCategoryServiceImpl implements SubCategoryService {
         SubCategoryEntity entity =
                 subCategoryValidation.validateSubCategory(id);
 
+        subCategoryValidation.validateCanChangeStatus(
+                entity,
+                request.getStatus()
+        );
+
         // Validate category
         CategoryEntity category =
                 categoryValidation.validateCategory(

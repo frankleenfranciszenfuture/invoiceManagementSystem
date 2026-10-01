@@ -1,5 +1,6 @@
 package com.ims.dtos.subCategory;
 
+import com.ims.enums.Status;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -38,6 +39,6 @@ public class UpdateSubCategoryRequest {
     private Integer displayOrder;
 
 
-    private Boolean active;
+    private Status status;
 
 }

@@ -3,10 +3,12 @@ package com.ims.utils.validation;
 
 import com.ims.entity.CategoryEntity;
 import com.ims.entity.SubCategoryEntity;
+import com.ims.enums.Status;
 import com.ims.exception.BadRequestException;
 import com.ims.exception.DuplicateResourceException;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.repository.CategoryRepository;
+import com.ims.repository.ProductRepository;
 import com.ims.repository.SubCategoryRepository;
 import com.ims.utils.apiConstants.SubCategoryConstants;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +20,7 @@ public class SubCategoryValidation {
 
     private final CategoryRepository categoryRepository;
     private final SubCategoryRepository subCategoryRepository;
-
+    private final ProductRepository productRepository;
 
     // =====================================================
     // VALIDATE CATEGORY
@@ -355,6 +357,49 @@ public class SubCategoryValidation {
 
             throw new DuplicateResourceException(
                     "Sub category name already exists in this category."
+            );
+        }
+    }
+
+    // =====================================================
+// SUB CATEGORY STATUS VALIDATION
+// =====================================================
+
+    public void validateCanChangeStatus(
+            SubCategoryEntity subCategory,
+            Status requestedStatus
+    ) {
+
+        if (subCategory == null) {
+            throw new BadRequestException(
+                    "Sub Category is required."
+            );
+        }
+
+        if (requestedStatus == null) {
+            throw new BadRequestException(
+                    "Status is required."
+            );
+        }
+
+        // Only restrict INACTIVE
+        if (requestedStatus != Status.INACTIVE) {
+            return;
+        }
+
+        // Already inactive
+        if (subCategory.getStatus() == Status.INACTIVE) {
+            return;
+        }
+
+        boolean subCategoryUsed =
+                productRepository.existsBySubCategoryId(
+                        subCategory.getId()
+                );
+
+        if (subCategoryUsed) {
+            throw new BadRequestException(
+                    "Sub Category cannot be made INACTIVE because it is already used by a product."
             );
         }
     }

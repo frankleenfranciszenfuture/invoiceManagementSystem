@@ -1,5 +1,6 @@
 package com.ims.dtos.subCategory;
 
+import com.ims.enums.Status;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -19,5 +20,7 @@ public class CreateSubCategoryRequest {
     private Long categoryId;
 
     private Integer displayOrder;
+
+    private Status status;
 
 }

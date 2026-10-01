@@ -135,6 +135,11 @@ public class UnitServiceImpl implements UnitService {
         UnitEntity unit =
                 unitValidation.validateUnit(id);
 
+
+        unitValidation.validateCanChangeStatus(
+                unit,
+                request.getStatus()
+        );
         // =====================================================
         // VALIDATE DUPLICATE NAME
         // Exclude current unit
@@ -280,6 +285,7 @@ public class UnitServiceImpl implements UnitService {
         // =====================================================
         // SOFT DELETE
         // =====================================================
+        unitValidation.validateCanDelete(id);
 
         unit.setActive(false);
 

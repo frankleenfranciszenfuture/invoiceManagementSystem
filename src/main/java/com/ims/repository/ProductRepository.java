@@ -199,5 +199,11 @@ public interface ProductRepository extends
     Optional<ProductEntity> findByIdForAudit(
             @Param("id") Long id
     );
+
+    boolean existsBySubCategoryId(Long subCategoryId);
+
+    boolean existsBySizesId(Long sizeId);
+
+    boolean existsByUnitsId(Long unitId);
 }
 

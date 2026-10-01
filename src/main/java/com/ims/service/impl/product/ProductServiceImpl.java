@@ -264,6 +264,15 @@ public class ProductServiceImpl implements ProductService {
         );
 
         // =====================================================
+// 2. VALIDATE STATUS CHANGE
+// =====================================================
+
+        productValidation.validateCanChangeStatus(
+                product,
+                request.getStatus()
+        );
+
+        // =====================================================
         // 3. VALIDATE DUPLICATE NAME
         // =====================================================
 

@@ -1,8 +1,11 @@
 package com.ims.utils.validation;
 
 import com.ims.entity.UnitEntity;
+import com.ims.enums.Status;
+import com.ims.exception.BadRequestException;
 import com.ims.exception.DuplicateResourceException;
 import com.ims.exception.ResourceNotFoundException;
+import com.ims.repository.ProductRepository;
 import com.ims.repository.UnitRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -12,7 +15,7 @@ import org.springframework.stereotype.Component;
 public class UnitValidation {
 
     private final UnitRepository unitRepository;
-
+    private final ProductRepository productRepository;
     // =====================================================
     // VALIDATE UNIT
     // =====================================================
@@ -130,6 +133,72 @@ public class UnitValidation {
 
             throw new DuplicateResourceException(
                     "Unit code already exists."
+            );
+        }
+    }
+
+    // =====================================================
+// UNIT STATUS VALIDATION
+// =====================================================
+
+    public void validateCanChangeStatus(
+            UnitEntity unit,
+            Status requestedStatus
+    ) {
+
+        if (unit == null) {
+            throw new BadRequestException(
+                    "Unit is required."
+            );
+        }
+
+        if (requestedStatus == null) {
+            throw new BadRequestException(
+                    "Status is required."
+            );
+        }
+
+        if (requestedStatus != Status.INACTIVE) {
+            return;
+        }
+
+        if (unit.getStatus() == Status.INACTIVE) {
+            return;
+        }
+
+        boolean used =
+                productRepository.existsByUnitsId(
+                        unit.getId()
+                );
+
+        if (used) {
+            throw new BadRequestException(
+                    "Unit cannot be made INACTIVE because it is already used by a product."
+            );
+        }
+    }
+
+
+    // =====================================================
+// UNIT DELETE VALIDATION
+// =====================================================
+
+    public void validateCanDelete(
+            Long unitId
+    ) {
+
+        if (unitId == null) {
+            throw new BadRequestException(
+                    "Unit ID is required."
+            );
+        }
+
+        boolean used =
+                productRepository.existsByUnitsId(unitId);
+
+        if (used) {
+            throw new BadRequestException(
+                    "Unit cannot be deleted because it is already used by a product."
             );
         }
     }

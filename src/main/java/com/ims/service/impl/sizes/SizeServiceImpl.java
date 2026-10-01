@@ -154,7 +154,10 @@ public class SizeServiceImpl implements SizeService {
         SizeEntity size =
                 sizeValidation.validateSize(id);
 
-
+        sizeValidation.validateCanChangeStatus(
+                size,
+                request.getStatus()
+        );
         // =====================================================
         // DUPLICATE VALIDATION
         // Exclude current record
@@ -308,7 +311,7 @@ public class SizeServiceImpl implements SizeService {
         SizeEntity size =
                 sizeValidation.validateSize(id);
 
-
+        sizeValidation.validateCanDelete(id);
         // =====================================================
         // SOFT DELETE
         // =====================================================

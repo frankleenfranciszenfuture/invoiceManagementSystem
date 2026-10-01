@@ -6,6 +6,7 @@ import com.ims.entity.ProductEntity;
 import com.ims.entity.SizeEntity;
 import com.ims.entity.SubCategoryEntity;
 import com.ims.entity.TaxMasterEntity;
+import com.ims.enums.Status;
 import com.ims.exception.BadRequestException;
 import com.ims.exception.DuplicateResourceException;
 import com.ims.exception.ResourceNotFoundException;
@@ -28,7 +29,7 @@ public class ProductValidation {
     private final SizeRepository sizeRepository;
     private final UnitRepository unitRepository;
     private final TaxMasterRepository taxMasterRepository;
-
+    private final InvoiceItemRepository invoiceItemRepository;
 
     // =====================================================
     // CREATE VALIDATION
@@ -571,5 +572,48 @@ public class ProductValidation {
                                 "Active unit not found."
                         )
                 );
+    }
+
+    // =====================================================
+// PRODUCT STATUS
+// =====================================================
+
+    public void validateCanChangeStatus(
+            ProductEntity product,
+            Status requestedStatus
+    ) {
+
+        if (product == null) {
+            throw new BadRequestException(
+                    "Product is required."
+            );
+        }
+
+        if (requestedStatus == null) {
+            throw new BadRequestException(
+                    "Status is required."
+            );
+        }
+
+        // No validation required unless changing to INACTIVE
+        if (requestedStatus != Status.INACTIVE) {
+            return;
+        }
+
+        // Already inactive
+        if (product.getStatus() == Status.INACTIVE) {
+            return;
+        }
+
+        boolean productUsed =
+                invoiceItemRepository.existsByProductId(
+                        product.getId()
+                );
+
+        if (productUsed) {
+            throw new BadRequestException(
+                    "Product cannot be made INACTIVE because it has already been used in a transaction."
+            );
+        }
     }
 }
