@@ -527,9 +527,9 @@ export default function CreateCustomer({
 
 
     return (
-        <div className="flex h-screen bg-gray-50 font-sans text-[13px] overflow-hidden">
+        <div className="min-h-screen bg-gray-50 font-sans text-[13px]">
             {/* Form Container Wrapper allowing separate inner scrolling */}
-            <div className="flex-1 min-h-0 bg-white overflow-y-auto">
+            <div className="flex-1 min-h-0 bg-white ">
                 <div className="px-6 py-5 max-w-30xl w-full ">
                     <h1 className="flex items-center gap-2 text-xl font-medium text-gray-800 mb-4">
                         <Users2Icon className="w-6 h-6" />
@@ -1075,7 +1075,7 @@ export default function CreateCustomer({
                         </a>
                     </div>
                     {/* Action buttons */}
-                    <div className="flex-1 flex flex-col overflow-hidden relative h-full  gap-3 mt-8 pb-10">
+                    <div className="mt-8 pb-10">
                         <CustomerBottomActionBar
                             onSave={() => handleSave("ACTIVE")}
                             onCancel={handleCancel}

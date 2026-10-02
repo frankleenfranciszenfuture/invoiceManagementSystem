@@ -311,21 +311,23 @@ export default function Modal() {
 
             <div
                 className="
-                    ntm-modal-overlay
+        ntm-modal-overlay
+        fixed
+        top-0
+        right-0
+        bottom-0
+        left-[240px]
 
-                    fixed
-                    inset-0
+        z-[99999]
 
-                    z-[99999]
+        flex
+        items-center
+        justify-center
 
-                    flex
-                    items-center
-                    justify-center
+        bg-black/50
 
-                    bg-black/50
-
-                    p-4
-                "
+        p-4
+    "
                 onMouseDown={handleBackdropClick}
             >
 

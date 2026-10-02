@@ -2662,7 +2662,7 @@ export default function InvoiceCreate() {
                   ref={
                     customerDropdownRef
                   }
-                  className="relative w-[550px]"
+                  className="relative w-[350px]"
                 >
 
                   <div className="flex">
@@ -2902,13 +2902,13 @@ export default function InvoiceCreate() {
 
               {invoice.customerId && (
 
-                <div className="flex gap-16 mt-5">
+                <div className="flex gap-3 mt-5">
 
                   {/* BILLING */}
 
                   <div className="w-[240px]">
 
-                    <p className="text-sm uppercase text-gray-600 mb-3">
+                    <p className="text-sm uppercase text-blue-600 mb-3">
                       Billing Address
                     </p>
 
@@ -2943,7 +2943,7 @@ export default function InvoiceCreate() {
 
                   <div>
 
-                    <p className="text-sm uppercase text-gray-600 mb-3">
+                    <p className="text-sm uppercase text-blue-600 mb-3">
                       Shipping Address
                     </p>
 
@@ -2977,12 +2977,12 @@ export default function InvoiceCreate() {
                       <span className="h-4 w-px bg-gray-300" />
 
 
-                      <button
+                      {/* <button
                         type="button"
                         className="text-sm text-blue-600 hover:underline"
                       >
                         + Dropshipping Address
-                      </button>
+                      </button> */}
 
                     </div>
 
@@ -2998,7 +2998,7 @@ export default function InvoiceCreate() {
 
             {invoice.customerId && (
 
-              <div className="ml-auto w-64 shrink-0">
+              <div className="ml-auto w-60 shrink-0">
 
                 <button
                   type="button"
@@ -3007,7 +3007,7 @@ export default function InvoiceCreate() {
                       (v) => !v
                     )
                   }
-                  className="w-full h-11 px-4 flex items-center justify-between bg-slate-600 hover:bg-slate-700 text-white rounded-l-md font-semibold text-sm"
+                  className="w-full h-11 px-4 flex items-center justify-between bg-slate-600 hover:bg-slate-700 text-white rounded-md font-semibold text-sm"
                 >
 
                   <span className="truncate">
@@ -4421,7 +4421,7 @@ export default function InvoiceCreate() {
             FOOTER
         ================================================= */}
 
-        <div className="border-t border-gray-200 bg-white px-6 py-4 flex items-center gap-3 z-30 shrink-0">
+        <div className="border-t border-gray-200 bg-white px-3 py-2 flex items-center gap-3 z-30 shrink-0">
 
           {/* SAVE DRAFT */}
 
