@@ -1,23 +1,17 @@
 package com.ims.service.impl.access;
 
-import com.ims.entity.*;
-import com.ims.enums.Status;
-import com.ims.exception.BadRequestException;
+import com.ims.entity.RoleEntity;
+import com.ims.entity.UserEntity;
 import com.ims.exception.ResourceNotFoundException;
-import com.ims.exception.ValidationException;
-import com.ims.repository.*;
-
+import com.ims.repository.RoleRepository;
+import com.ims.repository.UserRepository;
 import com.ims.service.impl.common.CurrentUserService;
 import com.ims.service.serviceInterface.access.AccessService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -31,32 +25,43 @@ public class AccessServiceImpl implements AccessService {
     private final CurrentUserService currentUserService;
 
 
-    //user
+    // =====================================================
+    // USER
+    // =====================================================
+
     @Override
     public UserEntity findAccessibleUser(Long id) {
 
         return userRepository.findById(id)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("User not found."));
+                        new ResourceNotFoundException(
+                                "User not found."));
     }
+
 
     @Override
-    public List<UserEntity> findAccessibleUsers() {
+    public Page<UserEntity> findAccessibleUsers(
+            Pageable pageable) {
 
-        return userRepository.findAll();
+        return userRepository.findAll(pageable);
     }
 
 
-    //role
+    // =====================================================
+    // ROLE
+    // =====================================================
 
     @Override
     public RoleEntity findAccessibleRole(Long id) {
 
-        RoleEntity role = roleRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("role not found."));
+        RoleEntity role =
+                roleRepository.findById(id)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Role not found."));
 
-        String roleName = role.getRoleName();
+        String roleName =
+                role.getRoleName();
 
         /*
          * System roles are accessible to everyone.
@@ -77,12 +82,10 @@ public class AccessServiceImpl implements AccessService {
         return role;
     }
 
+
     @Override
     public List<RoleEntity> findAccessibleRoles() {
-
 
         return roleRepository.findAll();
     }
 }
-
-

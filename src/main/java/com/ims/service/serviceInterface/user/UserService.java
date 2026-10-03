@@ -1,22 +1,25 @@
 package com.ims.service.serviceInterface.user;
-;
 
+
+import com.ims.common.PageResponse;
 import com.ims.dtos.user.UserRequest;
 import com.ims.dtos.user.UserResponse;
-
-import java.util.List;
 
 public interface UserService {
 
     UserResponse createUser(UserRequest request);
 
-    List<UserResponse> getAllUsers();
+    PageResponse<UserResponse> getAllUsers(
+            int page,
+            int size,
+            String sortBy,
+            String direction);
 
     UserResponse getUser(Long id);
 
-    UserResponse updateUser(Long id, UserRequest request);
+    UserResponse updateUser(
+            Long id,
+            UserRequest request);
 
     void deleteUser(Long id);
 }
-
-

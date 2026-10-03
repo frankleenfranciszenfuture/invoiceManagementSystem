@@ -1,23 +1,25 @@
 package com.ims.service.impl.user;
 
+import com.ims.common.PageResponse;
 import com.ims.dtos.user.UserRequest;
 import com.ims.dtos.user.UserResponse;
-import com.ims.entity.*;
+import com.ims.entity.RoleEntity;
+import com.ims.entity.UserEntity;
 import com.ims.mapper.user.UserMapper;
-
 import com.ims.repository.UserRepository;
-
 import com.ims.service.impl.common.CurrentUserService;
 import com.ims.service.serviceInterface.access.AccessService;
 import com.ims.service.serviceInterface.user.UserService;
 import com.ims.utils.base.BaseEntityUtil;
 import com.ims.utils.validation.UserValidation;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +35,10 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
 
 
+    // =====================================================
+    // CREATE USER
+    // =====================================================
+
     @Override
     public UserResponse createUser(UserRequest request) {
 
@@ -44,22 +50,30 @@ public class UserServiceImpl implements UserService {
                 currentUser);
 
         RoleEntity role =
-                accessService.findAccessibleRole(request.getRoleId());
+                accessService.findAccessibleRole(
+                        request.getRoleId());
 
         UserEntity user =
                 userMapper.toEntity(request);
 
         user.setName(
-                request.getName().trim().toUpperCase());
+                request.getName()
+                        .trim()
+                        .toUpperCase());
 
         user.setEmail(
-                request.getEmail().trim().toLowerCase());
+                request.getEmail()
+                        .trim()
+                        .toLowerCase());
 
         user.setUserId(
-                request.getEmail().trim().toLowerCase());
+                request.getEmail()
+                        .trim()
+                        .toLowerCase());
 
         user.setPassword(
-                passwordEncoder.encode(request.getPassword()));
+                passwordEncoder.encode(
+                        request.getPassword()));
 
         user.setRole(role);
 
@@ -74,17 +88,43 @@ public class UserServiceImpl implements UserService {
     }
 
 
-    @Override
-    public List<UserResponse> getAllUsers() {
+    // =====================================================
+    // GET ALL USERS - PAGINATED
+    // =====================================================
 
-        return accessService.findAccessibleUsers()
-                .stream()
-                .map(userMapper::toDTO)
-                .toList();
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<UserResponse> getAllUsers(
+            int page,
+            int size,
+            String sortBy,
+            String direction) {
+
+        Sort sort =
+                direction.equalsIgnoreCase("desc")
+                        ? Sort.by(sortBy).descending()
+                        : Sort.by(sortBy).ascending();
+
+        Pageable pageable =
+                PageRequest.of(
+                        page,
+                        size,
+                        sort);
+
+        Page<UserEntity> userPage =
+                accessService.findAccessibleUsers(
+                        pageable);
+
+        return toPageResponse(userPage);
     }
 
 
+    // =====================================================
+    // GET USER
+    // =====================================================
+
     @Override
+    @Transactional(readOnly = true)
     public UserResponse getUser(Long id) {
 
         return userMapper.toDTO(
@@ -92,9 +132,14 @@ public class UserServiceImpl implements UserService {
     }
 
 
+    // =====================================================
+    // UPDATE USER
+    // =====================================================
+
     @Override
-    public UserResponse updateUser(Long id,
-                                   UserRequest request) {
+    public UserResponse updateUser(
+            Long id,
+            UserRequest request) {
 
         UserEntity currentUser =
                 currentUserService.getCurrentUser();
@@ -108,33 +153,45 @@ public class UserServiceImpl implements UserService {
                 currentUser);
 
         RoleEntity role =
-                accessService.findAccessibleRole(request.getRoleId());
+                accessService.findAccessibleRole(
+                        request.getRoleId());
 
-        boolean roleChanged =
-                request.getRoleId() != null
-                        && !user.getRole().getId().equals(role.getId());
+        userMapper.updateEntity(
+                request,
+                user);
 
-        userMapper.updateEntity(request, user);
+        user.setName(
+                request.getName()
+                        .trim()
+                        .toUpperCase());
 
-        user.setName(request.getName().trim().toUpperCase());
-
-        user.setEmail(request.getEmail().trim().toLowerCase());
+        user.setEmail(
+                request.getEmail()
+                        .trim()
+                        .toLowerCase());
 
         if (request.getPassword() != null &&
                 !request.getPassword().isBlank()) {
 
             user.setPassword(
-                    passwordEncoder.encode(request.getPassword()));
+                    passwordEncoder.encode(
+                            request.getPassword()));
         }
 
         user.setRole(role);
 
         baseEntityUtil.prepareForUpdate(user);
-        UserEntity savedUser = userRepository.save(user);
+
+        UserEntity savedUser =
+                userRepository.save(user);
 
         return userMapper.toDTO(savedUser);
     }
 
+
+    // =====================================================
+    // DELETE USER
+    // =====================================================
 
     @Override
     public void deleteUser(Long id) {
@@ -144,4 +201,25 @@ public class UserServiceImpl implements UserService {
     }
 
 
+    // =====================================================
+    // PAGE RESPONSE
+    // =====================================================
+
+    private PageResponse<UserResponse> toPageResponse(
+            Page<UserEntity> page) {
+
+        return PageResponse.<UserResponse>builder()
+                .content(
+                        page.getContent()
+                                .stream()
+                                .map(userMapper::toDTO)
+                                .toList()
+                )
+                .pageNumber(page.getNumber())
+                .pageSize(page.getSize())
+                .totalElements(page.getTotalElements())
+                .totalPages(page.getTotalPages())
+                .last(page.isLast())
+                .build();
+    }
 }

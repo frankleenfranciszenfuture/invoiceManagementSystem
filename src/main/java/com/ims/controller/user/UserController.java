@@ -1,6 +1,8 @@
 package com.ims.controller.user;
 
 import com.ims.common.ApiResponse;
+
+import com.ims.common.PageResponse;
 import com.ims.dtos.user.UserRequest;
 import com.ims.dtos.user.UserResponse;
 import com.ims.service.serviceInterface.user.UserService;
@@ -9,14 +11,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
+
+
+    // =====================================================
+    // CREATE USER
+    // =====================================================
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
@@ -30,19 +35,47 @@ public class UserController {
                 .build();
     }
 
-    @GetMapping("/get-all")
-    public ApiResponse<List<UserResponse>> getAllUsers(){
 
-        return ApiResponse.<List<UserResponse>>builder()
+    // =====================================================
+    // GET ALL USERS - PAGINATED
+    // =====================================================
+
+    @GetMapping("/get-all")
+    public ApiResponse<PageResponse<UserResponse>> getAllUsers(
+
+            @RequestParam(defaultValue = "0")
+            int page,
+
+            @RequestParam(defaultValue = "10")
+            int size,
+
+            @RequestParam(defaultValue = "createdAt")
+            String sortBy,
+
+            @RequestParam(defaultValue = "desc")
+            String direction) {
+
+        return ApiResponse.<PageResponse<UserResponse>>builder()
                 .success(true)
                 .message("Users fetched successfully.")
-                .data(userService.getAllUsers())
+                .data(
+                        userService.getAllUsers(
+                                page,
+                                size,
+                                sortBy,
+                                direction)
+                )
                 .build();
     }
 
+
+    // =====================================================
+    // GET USER BY ID
+    // =====================================================
+
     @GetMapping("/getById/{id}")
     public ApiResponse<UserResponse> getUser(
-            @PathVariable Long id){
+            @PathVariable Long id) {
 
         return ApiResponse.<UserResponse>builder()
                 .success(true)
@@ -50,6 +83,11 @@ public class UserController {
                 .data(userService.getUser(id))
                 .build();
     }
+
+
+    // =====================================================
+    // UPDATE USER
+    // =====================================================
 
     @PutMapping("/update/{id}")
     public ApiResponse<UserResponse> updateUser(
@@ -63,9 +101,14 @@ public class UserController {
                 .build();
     }
 
+
+    // =====================================================
+    // DELETE USER
+    // =====================================================
+
     @DeleteMapping("/delete/{id}")
     public ApiResponse<Void> deleteUser(
-            @PathVariable Long id){
+            @PathVariable Long id) {
 
         userService.deleteUser(id);
 

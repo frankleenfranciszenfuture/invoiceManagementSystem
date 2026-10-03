@@ -11,10 +11,8 @@ public interface AccessService {
 
     UserEntity findAccessibleUser(Long id);
 
-    List<UserEntity> findAccessibleUsers();
+    Page<UserEntity> findAccessibleUsers(Pageable pageable);
 
-
-    //role
     RoleEntity findAccessibleRole(Long id);
 
     List<RoleEntity> findAccessibleRoles();
