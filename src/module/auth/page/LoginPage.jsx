@@ -91,200 +91,244 @@ const LoginPage = () => {
     }
 
 
+    // Drop this in place of your existing `return (...)`.
+    // Keeps your state/handlers: form, setForm, handleSubmit, loading, error,
+    // isCreateAccount, assets.zenfutureLogo. Needs: import { Link } from "react-router-dom";
+
     return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-100 flex flex-col items-center px-4 py-6">
 
-        <div
-            className="relative min-h-screen bg-cover bg-center bg-no-repeat"
-            style={{ backgroundImage: `url(${assets.bg2})` }}
-        >
-            <div className="absolute inset-0 bg-blue/30"></div>
+            {/* Brand */}
+            <Link to="/" className="flex items-center gap-3 no-underline">
+                <img
+                    src={assets.zenfutureLogo}
+                    alt="ZenFuture"
+                    className="w-10 h-10 rounded-xl bg-slate-900 object-cover"
+                />
 
-            <div className="relative z-10 flex items-center justify-left min-h-screen px-60 py-30">
-                {/* Login Card */}
+                <div className="leading-tight">
+                    <div className="text-base font-semibold text-slate-900">
+                        ZenFuture
+                    </div>
 
-                <div className="absolute top-5 left-[30px] right-[30px] flex items-center justify-between">
-                    {/* Left Side */}
-                    <Link to="/" className="flex items-center gap-2 no-underline">
-                        <img
-                            src={assets.zenfutureLogo}
-                            alt="zf"
-                            className="
-          w-10 h-10
-          rounded-xl
-          bg-gradient-to-br
-          from-cyan-600
-          to-indigo-500
-          flex items-center justify-center
-          overflow-hidden
-          cursor-pointer"
-                        />
-
-                        <span className="text-xs font-bold text-white">
-                            ZenFuture Technologies
-                        </span>
-                    </Link>
-
-                    {/* Right Side */}
-                    <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-1 text-sm text-white hover:bg-white/10 px-2 py-1.5 rounded">
-                            {user?.orgName}
-                            <ChevronDown className="w-3.5 h-3.5" />
-                        </button>
-
-                        <button className="w-8 h-8 rounded bg-blue-600 hover:bg-blue-700 flex items-center justify-center text-white">
-                            <Plus className="w-4 h-4" />
-                        </button>
-
-                        <button className="text-white hover:text-gray-300">
-                            <Bell className="w-[18px] h-[18px]" />
-                        </button>
-
-                        <button className="text-white hover:text-gray-300">
-                            <Settings className="w-[18px] h-[18px]" />
-                        </button>
-
-                        <button
-                            type="submit"
-                            disabled={signingIn}
-                            className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors disabled:opacity-60"
-                        >
-                            {signingIn ? "Signing in..." : "Login"}
-                        </button>
+                    <div className="text-[10px] tracking-[0.2em] text-slate-500 uppercase">
+                        Invoice Management
                     </div>
                 </div>
+            </Link>
 
-                <div
-                    className="bg-cover bg-center relative overflow-hidden rounded-2xl border border-gray-400 p-10 max-w-lg w-full
-shadow-[0_0_20px_rgba(99,102,241,0.5),0_0_40px_rgba(168,85,247,0.4)]"
-                >
-                    {/* Logo */}
-                    <div className="flex justify-center mb-3 ">
-                        <div
-                            onClick={openFilePicker}
+            {/* Card */}
+            <div
+                className="
+                mt-8
+                w-full
+                max-w-md
+                bg-white/90
+                backdrop-blur
+                rounded-2xl
+                shadow-lg
+                shadow-slate-300/40
+                border
+                border-blue
+                p-7
+            "
+            >
+                <h1 className="text-2xl font-bold text-slate-900">
+                    {isCreateAccount ? "Create your account" : "Welcome back"}
+                </h1>
+
+                <p className="mt-1 text-sm text-slate-500">
+                    {isCreateAccount
+                        ? "Sign up to your workspace"
+                        : "Sign in to your workspace"}
+                </p>
+
+                {error && (
+                    <div className="mt-4 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+
+                    {/* Email */}
+                    <div>
+                        <label
+                            htmlFor="email"
                             className="
-          w-25 h-25
-          rounded-3xl
-          bg-gradient-to-br
-          from-cyan-400
-          to-indigo-500
-          flex items-center justify-center
-          overflow-hidden
-          cursor-pointer
-        
-        "
+                            block
+                            text-[11px]
+                            font-medium
+                            tracking-[0.15em]
+                            text-slate-500
+                            uppercase
+                            mb-1.5
+                        "
                         >
-                            {image ? (
-                                <img
-                                    src={image}
-                                    alt="Logo"
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                <svg
-                                    viewBox="0 0 24 24"
-                                    className="w-6 h-6 text-white"
-                                    fill="currentColor"
-                                >
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
-                                </svg>
-                            )}
-                        </div>
+                            Email
+                        </label>
+
+                        <input
+                            id="email"
+                            type="text"
+                            required
+                            value={form.email}
+                            onChange={(e) =>
+                                setForm({
+                                    ...form,
+                                    email: e.target.value,
+                                })
+                            }
+                            placeholder="admin@gmail.com"
+                            className="
+                            w-full
+                            px-4
+                            py-3
+                            text-sm
+                            text-slate-900
+                            bg-white
+                            border
+                            border-slate-200
+                            rounded-xl
+                            focus:outline-none
+                            focus:ring-2
+                            focus:ring-indigo-300
+                            placeholder-slate-300
+                        "
+                        />
                     </div>
 
-                    <input
-                        type="file"
-                        id="logo-upload"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                        className="hidden"
-                    />
-
-                    <h1 className="text-center text-3xl font-bold text-gray-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
-                        Welcome to ZenFuture
-                    </h1>
-                    {isCreateAccount ? (
-                        <p className="text-center text-sm text-gray-400 mt-2 mb-6">
-                            Create Account to continue to Invoice Management
-                        </p>
-                    ) : (
-                        <p className="text-center text-sm text-gray-400 mt-2 mb-6">
-                            Login to continue to Invoice Management
-                        </p>
-                    )}
-
-                    {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3 mb-4">
-                            {error}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                                Email
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={form.email}
-                                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                placeholder="admin@gmail.com"
-                                className="w-full px-4 py-2.5 text-sm text-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300 placeholder-gray-300"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                                Password
-                            </label>
-                            <input
-                                type="password"
-                                required
-                                value={form.password}
-                                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                placeholder="••••••••"
-                                className="w-full px-4 py-2.5 text-sm text-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300 placeholder-gray-300"
-                            />
-                        </div>
-
-                        <div className="flex justify-between mb-4">
-                            <Link
-                                to="/reset-password"
-                                className="text-sm text-blue-600 hover:text-blue-700"
-                            >
-                                Forget password?
-                            </Link>
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors disabled:opacity-60"
+                    {/* Password */}
+                    <div>
+                        <label
+                            htmlFor="password"
+                            className="
+                            block
+                            text-[11px]
+                            font-medium
+                            tracking-[0.15em]
+                            text-slate-500
+                            uppercase
+                            mb-1.5
+                        "
                         >
-                            {loading
-                                ? "Signing in..."
-                                : isCreateAccount
-                                    ? "Sign Up"
-                                    : "Login"}
-                        </button>
-                    </form>
+                            Password
+                        </label>
 
-                    <div className="mt-6 bg-gray-50 rounded-xl p-3 text-xs text-gray-500 space-y-1">
-                        <p className="font-semibold text-gray-600 mb-1">
-                            Default credentials:
-                        </p>
-                        <p>
-                            Admin:{" "}
-                            <span className="font-mono text-gray-700">admin / admin@123</span>
-                        </p>
-                        <p>
-                            Agent:{" "}
-                            <span className="font-mono text-gray-700">
-                                agent1 / agent@123
-                            </span>
-                        </p>
+                        <input
+                            id="password"
+                            type="password"
+                            required
+                            value={form.password}
+                            onChange={(e) =>
+                                setForm({
+                                    ...form,
+                                    password: e.target.value,
+                                })
+                            }
+                            placeholder="••••••••"
+                            className="
+                            w-full
+                            px-4
+                            py-3
+                            text-sm
+                            text-slate-900
+                            bg-white
+                            border
+                            border-slate-200
+                            rounded-xl
+                            focus:outline-none
+                            focus:ring-2
+                            focus:ring-indigo-300
+                            placeholder-slate-300
+                        "
+                        />
                     </div>
+
+                    {/* Forgot Password */}
+                    <div className="flex justify-end">
+                        <Link
+                            to="/reset-password"
+                            className="
+                            text-xs
+                            text-indigo-500
+                            hover:text-indigo-600
+                            no-underline
+                        "
+                        >
+                            Forgot password?
+                        </Link>
+                    </div>
+
+                    {/* Submit */}
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="
+                        w-full
+                        py-3
+                        rounded-xl
+                        bg-slate-900
+                        hover:bg-slate-800
+                        text-white
+                        text-sm
+                        font-semibold
+                        transition-colors
+                        disabled:opacity-60
+                    "
+                    >
+                        {loading
+                            ? "Signing in..."
+                            : isCreateAccount
+                                ? "Sign up"
+                                : "Sign in"}
+                    </button>
+                </form>
+
+                {/* Demo credentials */}
+                <div
+                    className="
+                    mt-5
+                    bg-slate-100
+                    rounded-xl
+                    px-4
+                    py-3
+                    text-xs
+                    text-slate-500
+                    leading-relaxed
+                "
+                >
+                    Demo:{" "}
+                    <span className="font-mono text-slate-800">
+                        admin / admin@123
+                    </span>{" "}
+                    (Admin) or{" "}
+                    <span className="font-mono text-slate-800">
+                        agent1 / agent@123
+                    </span>{" "}
+                    (Agent)
                 </div>
             </div>
+
+            {/* Footer */}
+            <p className="mt-6 text-sm text-slate-500">
+                {isCreateAccount ? "Already have an account? " : "New here? "}
+
+                <button
+                    type="button"
+                    onClick={() => setIsCreateAccount(!isCreateAccount)}
+                    className="
+                    text-indigo-500
+                    hover:text-indigo-600
+                    bg-transparent
+                    border-0
+                    cursor-pointer
+                    p-0
+                "
+                >
+                    {isCreateAccount ? "Sign in" : "Request an account"}
+                </button>
+            </p>
         </div>
     );
 };

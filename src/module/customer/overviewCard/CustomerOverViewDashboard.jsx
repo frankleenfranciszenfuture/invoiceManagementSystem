@@ -28,7 +28,7 @@ export default function CustomerOverViewDashboard() {
             <div className="flex flex-1 min-h-0">
 
                 {/* Customer Details */}
-                <div className="w-[387px] shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+                <div className="w-[300px] shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
                     <CustomerOverViewSiderTopbar />
                     <CustomerOverViewSiderDetails />
                 </div>

@@ -65,7 +65,7 @@ export default function InvoiceOverViewDashboard() {
                     LEFT SIDEBAR
                 ================================================= */}
 
-                <div className="flex w-[387px] shrink-0 flex-col overflow-y-auto border-r border-gray-200 bg-white">
+                <div className="flex w-[287px] shrink-0 flex-col overflow-y-auto border-r border-gray-200 bg-white">
 
                     <InvoiceOverViewSiderTopbar />
 
@@ -81,7 +81,7 @@ export default function InvoiceOverViewDashboard() {
 
                     <InvoiceOverviewTabTopbar />
 
-                    <div className="min-h-0 flex-1 overflow-y-auto">
+                    <div className="min-h-0 flex-1">
 
                         <InvoiceOverViewTabsTopbardown />
 

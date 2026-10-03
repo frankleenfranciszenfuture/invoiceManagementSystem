@@ -50,6 +50,7 @@ import CompanyDashboard from "./module/company/pages/CompanyDashboard";
 import ProductCreate from "./module/items/pages/ProductCreate";
 import ProductCreateSimple from "./module/items/pages/ProductCreateSimple";
 import CompanyOverViewDashboard from "./module/company/overviewCard/CompanyOverViewDashboard";
+import UserDashboard from "./module/users/pages/UserDashboard";
 
 export default function App() {
   const dispatch = useDispatch();
@@ -232,6 +233,17 @@ export default function App() {
           <Route
             path="/roles"
             element={<RoleDashboard />}
+          />
+
+
+
+          {/* =================================================
+                        User
+              ================================================= */}
+
+          <Route
+            path="/users"
+            element={<UserDashboard />}
           />
 
 

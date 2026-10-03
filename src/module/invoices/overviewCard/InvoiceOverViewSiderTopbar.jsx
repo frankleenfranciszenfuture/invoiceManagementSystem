@@ -121,11 +121,8 @@ export default function InvoiceOverViewSiderTopbar() {
 
         dispatch(setExistingInvoice(null));
 
-        dispatch(
-            openModal({
-                type: "addInvoice",
-                data: null,
-            })
+        navigate(
+            `/invoices/new`
         );
     };
 
@@ -203,7 +200,7 @@ export default function InvoiceOverViewSiderTopbar() {
                                             view
                                         )
                                     }
-                                    className={`w-full border-b border-gray-100 px-4 py-2.5 text-left text-sm transition-colors ${selectedInvoiceView ===
+                                    className={`w-full border-b border-gray-100 px-2 py-2.5 text-left text-sm transition-colors ${selectedInvoiceView ===
                                         view.label
                                         ? "bg-blue-500 text-white"
                                         : "text-gray-700 hover:bg-blue-500 hover:text-white"

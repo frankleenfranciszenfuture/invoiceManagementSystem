@@ -73,7 +73,7 @@ export default function AppLayout() {
                 min-w-0
                 transition-all
                 duration-300
-                ${sidebarOpen ? "lg:ml-60" : "lg:ml-16"}
+                ${sidebarOpen ? "lg:ml-50" : "lg:ml-14"}
             `}
             >
                 <Navbar title={pageTitle} />

@@ -131,7 +131,7 @@ export default function Siderbar() {
                 className={`
           fixed top-0 left-0 h-full z-30 bg-[#080c39] border-r border-white/10
           flex flex-col transition-all duration-300
-          ${open ? "w-60" : "w-16 overflow-visible"}
+          ${open ? "w-50" : "w-14 overflow-visible"}
         `}
             >
                 {/* LOGO */}

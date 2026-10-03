@@ -81,7 +81,7 @@ export default function CustomerPayDueOverviewCard() {
     );
 
     return (
-        <div className="w-[709px] bg-white border-r border-gray-200 overflow-y-auto  rounded-md bg-white mt-5">
+        <div className="w-[370px] bg-white border-r border-gray-200 overflow-y-auto  rounded-md bg-white mt-5">
             <div className="col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm">
                 <div className="flex items-center justify-left px-5 border-b border-gray-50">
                     <button

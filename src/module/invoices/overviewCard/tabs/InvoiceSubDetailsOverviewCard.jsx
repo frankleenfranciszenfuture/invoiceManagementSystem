@@ -571,7 +571,7 @@ export default function InvoiceSubDetailsOverviewCard() {
 
                 {!showInvoiceDetails && (
 
-                    <div className="space-y-1 border-b border-gray-200 px-5 py-3 text-sm text-gray-600">
+                    <div className="space-y-2 border-gray-200 px-5 py-3 text-sm text-gray-600">
 
                         <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">
 

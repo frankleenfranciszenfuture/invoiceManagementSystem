@@ -8,34 +8,39 @@ export default function InvoiceDashboardTabView() {
 
     return (
 
-        <div className="px-3 py-2">
+        // <div className="px-3 py-2">
 
-            <div className="flex gap-8">
+        //     <div className="flex gap-8">
 
-                {/* =================================================
-                    LEFT COLUMN
-                ================================================= */}
+        //         {/* =================================================
+        //             LEFT COLUMN
+        //         ================================================= */}
 
-                <div className="flex-1">
+        //         <div className="flex-1">
 
-                    <InvoiceSubDetailsOverviewCard />
+        //             <InvoiceSubDetailsOverviewCard />
 
-                </div>
+        //         </div>
 
-                {/* =================================================
-                    RIGHT COLUMN
-                ================================================= */}
+        //         {/* =================================================
+        //             RIGHT COLUMN
+        //         ================================================= */}
 
-                <div className="flex-1">
+        //         <div className="flex-1">
 
-                    <InvoicePayDueOverviewCard />
+        //             <InvoicePayDueOverviewCard />
 
-                    <InvoiceSalesOverviewCard />
+        //             <InvoiceSalesOverviewCard />
 
-                </div>
+        //         </div>
 
-            </div>
+        //     </div>
 
+        // </div>
+
+        <div className="px-3 py-2 space-y-3">
+            <InvoiceSubDetailsOverviewCard />
+            <InvoicePayDueOverviewCard />
         </div>
     );
 }

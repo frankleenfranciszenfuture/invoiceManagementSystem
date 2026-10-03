@@ -55,11 +55,10 @@ const twoDigitsToWords = (
   const ones =
     num % 10;
 
-  return `${TENS[tens]}${
-    ones
-      ? ` ${ONES[ones]}`
-      : ""
-  }`;
+  return `${TENS[tens]}${ones
+    ? ` ${ONES[ones]}`
+    : ""
+    }`;
 };
 
 const threeDigitsToWords = (
@@ -78,11 +77,10 @@ const threeDigitsToWords = (
   }
 
   if (rest) {
-    words += `${
-      words ? " " : ""
-    }${twoDigitsToWords(
-      rest
-    )}`;
+    words += `${words ? " " : ""
+      }${twoDigitsToWords(
+        rest
+      )}`;
   }
 
   return words;
@@ -172,7 +170,7 @@ const amountInWords = (
   const paise =
     Math.round(
       (value - rupees) *
-        100
+      100
     );
 
   let words = `${currency} ${integerToIndianWords(
@@ -266,7 +264,7 @@ const getItemTaxBreakdown = (
   const taxableAmount =
     Math.max(
       grossAmount -
-        discount,
+      discount,
       0
     );
 
@@ -286,11 +284,11 @@ const getItemTaxBreakdown = (
   const taxRate =
     item?.taxRate != null
       ? Number(
-          item.taxRate
-        ) || 0
+        item.taxRate
+      ) || 0
       : Number(
-          taxMaster?.taxRate
-        ) || 0;
+        taxMaster?.taxRate
+      ) || 0;
 
   const hasExplicitTax =
     item?.taxAmount != null ||
@@ -306,26 +304,26 @@ const getItemTaxBreakdown = (
     taxAmount =
       item?.taxAmount != null
         ? Number(
-            item.taxAmount
-          ) || 0
+          item.taxAmount
+        ) || 0
         : (Number(
-              item?.cgstAmount
-            ) || 0) +
-          (Number(
-            item?.sgstAmount
-          ) || 0) +
-          (Number(
-            item?.igstAmount
-          ) || 0);
+          item?.cgstAmount
+        ) || 0) +
+        (Number(
+          item?.sgstAmount
+        ) || 0) +
+        (Number(
+          item?.igstAmount
+        ) || 0);
 
     totalAmount =
       item?.totalAmount !=
-      null
+        null
         ? Number(
-            item.totalAmount
-          ) || 0
+          item.totalAmount
+        ) || 0
         : taxableAmount +
-          taxAmount;
+        taxAmount;
   } else {
     taxAmount =
       (taxableAmount *
@@ -347,22 +345,22 @@ const getItemTaxBreakdown = (
     igstAmount =
       item?.igstAmount != null
         ? Number(
-            item.igstAmount
-          ) || 0
+          item.igstAmount
+        ) || 0
         : taxAmount;
   } else {
     cgstAmount =
       item?.cgstAmount != null
         ? Number(
-            item.cgstAmount
-          ) || 0
+          item.cgstAmount
+        ) || 0
         : taxAmount / 2;
 
     sgstAmount =
       item?.sgstAmount != null
         ? Number(
-            item.sgstAmount
-          ) || 0
+          item.sgstAmount
+        ) || 0
         : taxAmount / 2;
   }
 
@@ -465,7 +463,7 @@ const InvoicePdfTemplate = ({
     invoiceType
   ) => {
     switch (
-      invoiceType
+    invoiceType
     ) {
       case "SALE":
       case "SALE_INVOICE":
@@ -551,12 +549,10 @@ const InvoicePdfTemplate = ({
       <table
         style={{
           width: "100%",
-          borderCollapse:
-            "collapse",
-          tableLayout:
-            "fixed",
-          border:
-            "1px solid #000",
+          borderCollapse: "collapse",
+          tableLayout: "fixed",
+          border: "1px solid #000",
+          boxSizing: "border-box",
         }}
       >
         <tbody>
@@ -573,18 +569,12 @@ const InvoicePdfTemplate = ({
               style={{
                 width: "51%",
                 height: "270px",
-                border:
-                  "1px solid #000",
-                padding:
-                  "5px 7px",
-                verticalAlign:
-                  "top",
-                fontSize:
-                  "11px",
-                lineHeight:
-                  "14px",
-                boxSizing:
-                  "border-box",
+                border: "1px solid #000",
+                padding: "6px 7px",
+                verticalAlign: "top",
+                fontSize: "11px",
+                lineHeight: "14px",
+                boxSizing: "border-box",
               }}
             >
               {/* COMPANY */}
@@ -863,114 +853,113 @@ const InvoicePdfTemplate = ({
                 {resolvePartyAddress(
                   invoice
                 ) && (
-                  <div
-                    style={{
-                      maxWidth:
-                        "90%",
-                      lineHeight:
-                        "14px",
-                    }}
-                  >
-                    {resolvePartyAddress(
-                      invoice
-                    )}
-                  </div>
-                )}
+                    <div
+                      style={{
+                        maxWidth:
+                          "90%",
+                        lineHeight:
+                          "14px",
+                      }}
+                    >
+                      {resolvePartyAddress(
+                        invoice
+                      )}
+                    </div>
+                  )}
 
                 {(invoice.partyGstin ||
                   invoice.party
                     ?.gstin ||
                   invoice.party
                     ?.gstNumber) && (
-                  <div
-                    style={{
-                      display:
-                        "flex",
-                      lineHeight:
-                        "14px",
-                    }}
-                  >
-                    <span
+                    <div
                       style={{
-                        width:
-                          "75px",
-                        flexShrink:
-                          0,
+                        display:
+                          "flex",
+                        lineHeight:
+                          "14px",
                       }}
                     >
-                      GSTIN/UIN
-                    </span>
+                      <span
+                        style={{
+                          width:
+                            "75px",
+                          flexShrink:
+                            0,
+                        }}
+                      >
+                        GSTIN/UIN
+                      </span>
 
-                    <span
-                      style={{
-                        width:
-                          "10px",
-                        flexShrink:
-                          0,
-                      }}
-                    >
-                      :
-                    </span>
+                      <span
+                        style={{
+                          width:
+                            "10px",
+                          flexShrink:
+                            0,
+                        }}
+                      >
+                        :
+                      </span>
 
-                    <span>
-                      {invoice.partyGstin ||
-                        invoice.party
-                          ?.gstin ||
-                        invoice.party
-                          ?.gstNumber}
-                    </span>
-                  </div>
-                )}
+                      <span>
+                        {invoice.partyGstin ||
+                          invoice.party
+                            ?.gstin ||
+                          invoice.party
+                            ?.gstNumber}
+                      </span>
+                    </div>
+                  )}
 
                 {(invoice.partyState ||
                   invoice.party
                     ?.state) && (
-                  <div
-                    style={{
-                      display:
-                        "flex",
-                      lineHeight:
-                        "14px",
-                    }}
-                  >
-                    <span
+                    <div
                       style={{
-                        width:
-                          "75px",
-                        flexShrink:
-                          0,
+                        display:
+                          "flex",
+                        lineHeight:
+                          "14px",
                       }}
                     >
-                      State
-                    </span>
+                      <span
+                        style={{
+                          width:
+                            "75px",
+                          flexShrink:
+                            0,
+                        }}
+                      >
+                        State
+                      </span>
 
-                    <span
-                      style={{
-                        width:
-                          "10px",
-                        flexShrink:
-                          0,
-                      }}
-                    >
-                      :
-                    </span>
+                      <span
+                        style={{
+                          width:
+                            "10px",
+                          flexShrink:
+                            0,
+                        }}
+                      >
+                        :
+                      </span>
 
-                    <span>
-                      {invoice.partyState ||
-                        invoice.party
-                          ?.state}
+                      <span>
+                        {invoice.partyState ||
+                          invoice.party
+                            ?.state}
 
-                      {(invoice.partyStateCode ||
-                        invoice.party
-                          ?.stateCode) &&
-                        `, Code : ${
-                          invoice.partyStateCode ||
+                        {(invoice.partyStateCode ||
+                          invoice.party
+                            ?.stateCode) &&
+                          `, Code : ${invoice.partyStateCode ||
                           invoice.party
                             ?.stateCode
-                        }`}
-                    </span>
-                  </div>
-                )}
+                          }`}
+                      </span>
+                    </div>
+                  )}
               </div>
             </td>
 
@@ -981,23 +970,20 @@ const InvoicePdfTemplate = ({
             <td
               style={{
                 width: "49%",
+                height: "270px",
                 padding: 0,
-                border:
-                  "1px solid #000",
-                verticalAlign:
-                  "top",
+                border: "1px solid #000",
+                verticalAlign: "top",
+                boxSizing: "border-box",
               }}
             >
               <table
                 style={{
-                  width:
-                    "100%",
-                  height:
-                    "270px",
-                  borderCollapse:
-                    "collapse",
-                  tableLayout:
-                    "fixed",
+                  width: "100%",
+                  height: "270px",
+                  borderCollapse: "collapse",
+                  tableLayout: "fixed",
+                  boxSizing: "border-box",
                 }}
               >
                 <tbody>
@@ -1416,7 +1402,7 @@ const InvoicePdfTemplate = ({
 
                   <col
                     style={{
-                      width: "6%",
+                      width: "8%",
                     }}
                   />
 
@@ -1522,7 +1508,7 @@ const InvoicePdfTemplate = ({
                       const taxableAmount =
                         Math.max(
                           grossAmount -
-                            discount,
+                          discount,
                           0
                         );
 
@@ -1640,7 +1626,7 @@ const InvoicePdfTemplate = ({
 
                               {!isIgst &&
                                 breakdown.cgstAmount >
-                                  0 && (
+                                0 && (
                                   <div
                                     style={{
                                       fontSize:
@@ -1656,7 +1642,7 @@ const InvoicePdfTemplate = ({
                                     }}
                                   >
                                     {invoice.invoiceType ===
-                                    "PURCHASE"
+                                      "PURCHASE"
                                       ? "CGST Input"
                                       : "CGST Output"}
                                   </div>
@@ -1664,7 +1650,7 @@ const InvoicePdfTemplate = ({
 
                               {!isIgst &&
                                 breakdown.sgstAmount >
-                                  0 && (
+                                0 && (
                                   <div
                                     style={{
                                       fontSize:
@@ -1680,7 +1666,7 @@ const InvoicePdfTemplate = ({
                                     }}
                                   >
                                     {invoice.invoiceType ===
-                                    "PURCHASE"
+                                      "PURCHASE"
                                       ? "SGST Input"
                                       : "SGST Output"}
                                   </div>
@@ -1688,7 +1674,7 @@ const InvoicePdfTemplate = ({
 
                               {isIgst &&
                                 breakdown.igstAmount >
-                                  0 && (
+                                0 && (
                                   <div
                                     style={{
                                       fontSize:
@@ -1704,7 +1690,7 @@ const InvoicePdfTemplate = ({
                                     }}
                                   >
                                     {invoice.invoiceType ===
-                                    "PURCHASE"
+                                      "PURCHASE"
                                       ? "IGST Input"
                                       : "IGST Output"}
                                   </div>
@@ -1774,34 +1760,27 @@ const InvoicePdfTemplate = ({
                             <td
                               style={{
                                 ...pdfItemCell,
-                                textAlign:
-                                  "right",
-                                paddingRight:
-                                  "6px",
-                                verticalAlign:
-                                  "top",
+                                textAlign: "right",
+                                paddingRight: "6px",
+                                verticalAlign: "top",
                               }}
                             >
                               <div
                                 style={{
-                                  fontWeight:
-                                    "bold",
+                                  fontWeight: "bold",
+                                  fontSize: "10px",
+                                  lineHeight: "12px",
                                 }}
                               >
-                                {taxableAmount.toFixed(
-                                  2
-                                )}
+                                {taxableAmount.toFixed(2)}
                               </div>
 
                               {hasDescriptionLine && (
                                 <div
                                   style={{
-                                    fontSize:
-                                      "9px",
-                                    marginTop:
-                                      "2px",
-                                    visibility:
-                                      "hidden",
+                                    fontSize: "9px",
+                                    marginTop: "2px",
+                                    visibility: "hidden",
                                   }}
                                 >
                                   &nbsp;
@@ -1811,12 +1790,9 @@ const InvoicePdfTemplate = ({
                               {hasDiscountLine && (
                                 <div
                                   style={{
-                                    fontSize:
-                                      "9px",
-                                    marginTop:
-                                      "2px",
-                                    visibility:
-                                      "hidden",
+                                    fontSize: "9px",
+                                    marginTop: "2px",
+                                    visibility: "hidden",
                                   }}
                                 >
                                   &nbsp;
@@ -1824,53 +1800,41 @@ const InvoicePdfTemplate = ({
                               )}
 
                               {!isIgst &&
-                                breakdown.cgstAmount >
-                                  0 && (
+                                breakdown.cgstAmount > 0 && (
                                   <div
                                     style={{
-                                      fontWeight:
-                                        "bold",
-                                      marginTop:
-                                        "6px",
+                                      fontWeight: "bold",
+                                      fontSize: "10px",
+                                      marginTop: "6px",
                                     }}
                                   >
-                                    {breakdown.cgstAmount.toFixed(
-                                      2
-                                    )}
+                                    {breakdown.cgstAmount.toFixed(2)}
                                   </div>
                                 )}
 
                               {!isIgst &&
-                                breakdown.sgstAmount >
-                                  0 && (
+                                breakdown.sgstAmount > 0 && (
                                   <div
                                     style={{
-                                      fontWeight:
-                                        "bold",
-                                      marginTop:
-                                        "2px",
+                                      fontWeight: "bold",
+                                      fontSize: "10px",
+                                      marginTop: "2px",
                                     }}
                                   >
-                                    {breakdown.sgstAmount.toFixed(
-                                      2
-                                    )}
+                                    {breakdown.sgstAmount.toFixed(2)}
                                   </div>
                                 )}
 
                               {isIgst &&
-                                breakdown.igstAmount >
-                                  0 && (
+                                breakdown.igstAmount > 0 && (
                                   <div
                                     style={{
-                                      fontWeight:
-                                        "bold",
-                                      marginTop:
-                                        "6px",
+                                      fontWeight: "bold",
+                                      fontSize: "10px",
+                                      marginTop: "6px",
                                     }}
                                   >
-                                    {breakdown.igstAmount.toFixed(
-                                      2
-                                    )}
+                                    {breakdown.igstAmount.toFixed(2)}
                                   </div>
                                 )}
                             </td>
@@ -1887,71 +1851,71 @@ const InvoicePdfTemplate = ({
                   {Number(
                     invoice.shippingAmount
                   ) > 0 && (
-                    <tr>
-                      <td
-                        style={
-                          pdfItemCell
-                        }
-                      />
+                      <tr>
+                        <td
+                          style={
+                            pdfItemCell
+                          }
+                        />
 
-                      <td
-                        style={{
-                          ...pdfItemCell,
-                          textAlign:
-                            "right",
-                          paddingRight:
-                            "6px",
-                          fontStyle:
-                            "italic",
-                        }}
-                      >
-                        Add: Shipping /
-                        Freight Charges
-                      </td>
+                        <td
+                          style={{
+                            ...pdfItemCell,
+                            textAlign:
+                              "right",
+                            paddingRight:
+                              "6px",
+                            fontStyle:
+                              "italic",
+                          }}
+                        >
+                          Add: Shipping /
+                          Freight Charges
+                        </td>
 
-                      <td
-                        style={
-                          pdfItemCell
-                        }
-                      />
+                        <td
+                          style={
+                            pdfItemCell
+                          }
+                        />
 
-                      <td
-                        style={
-                          pdfItemCell
-                        }
-                      />
+                        <td
+                          style={
+                            pdfItemCell
+                          }
+                        />
 
-                      <td
-                        style={
-                          pdfItemCell
-                        }
-                      />
+                        <td
+                          style={
+                            pdfItemCell
+                          }
+                        />
 
-                      <td
-                        style={
-                          pdfItemCell
-                        }
-                      />
+                        <td
+                          style={
+                            pdfItemCell
+                          }
+                        />
 
-                      <td
-                        style={{
-                          ...pdfItemCell,
-                          textAlign:
-                            "right",
-                          paddingRight:
-                            "6px",
-                          fontWeight:
-                            "bold",
-                        }}
-                      >
-                        {Number(
-                          invoice.shippingAmount
-                        ).toFixed(
-                          2
-                        )}
-                      </td>
-                    </tr>
-                  )}
+                        <td
+                          style={{
+                            ...pdfItemCell,
+                            textAlign:
+                              "right",
+                            paddingRight:
+                              "6px",
+                            fontWeight:
+                              "bold",
+                          }}
+                        >
+                          {Number(
+                            invoice.shippingAmount
+                          ).toFixed(
+                            2
+                          )}
+                        </td>
+                      </tr>
+                    )}
 
                   {/* ==================================================
                       EMPTY SPACE
@@ -2045,7 +2009,7 @@ const InvoicePdfTemplate = ({
                       ₹{" "}
                       {Number(
                         invoice.grandTotal ||
-                          0
+                        0
                       ).toFixed(
                         2
                       )}
@@ -2480,97 +2444,50 @@ const InvoicePdfTemplate = ({
  */
 
 const pdfMetaCell = {
-  border:
-    "1px solid #000",
-
-  padding:
-    "3px 5px",
-
-  verticalAlign:
-    "top",
-
-  fontSize:
-    "13px",
-
-  lineHeight:
-    "1.1",
+  border: "1px solid #000",
+  padding: "4px 5px",
+  verticalAlign: "top",
+  fontSize: "11px",
+  lineHeight: "1.1",
+  boxSizing: "border-box",
 };
 
 const pdfMetaLabel = {
-  fontSize:
-    "12px",
-
-  fontWeight:
-    "normal",
-
-  lineHeight:
-    "1.05",
+  fontSize: "9px",
+  fontWeight: "normal",
+  lineHeight: "11px",
 };
 
 const pdfMetaValue = {
-  fontSize:
-    "12px",
-
-  fontWeight:
-    "bold",
-
-  marginTop:
-    "2px",
-
-  lineHeight:
-    "1.1",
+  fontSize: "10px",
+  fontWeight: "bold",
+  marginTop: "2px",
+  lineHeight: "12px",
+  wordBreak: "break-word",
 };
 
 const pdfItemHeader = {
-  border:
-    "1px solid #000",
-
-  padding:
-    "4px 3px",
-
-  background:
-    "#fff",
-
-  color:
-    "#000",
-
-  fontWeight:
-    "bold",
-
-  fontSize:
-    "13px",
-
-  textAlign:
-    "center",
-
-  verticalAlign:
-    "middle",
-
-  lineHeight:
-    "1.05",
+  border: "1px solid #000",
+  padding: "4px 3px",
+  background: "#fff",
+  color: "#000",
+  fontWeight: "bold",
+  fontSize: "10px",
+  textAlign: "center",
+  verticalAlign: "middle",
+  lineHeight: "11px",
+  boxSizing: "border-box",
 };
 
 const pdfItemCell = {
-  border:
-    "1px solid #000",
-
-  padding:
-    "3px 3px",
-
-  fontSize:
-    "12px",
-
-  color:
-    "#000",
-
-  textAlign:
-    "center",
-
-  verticalAlign:
-    "top",
-
-  lineHeight:
-    "1.1",
+  border: "1px solid #000",
+  padding: "3px 4px",
+  fontSize: "10px",
+  color: "#000",
+  textAlign: "center",
+  verticalAlign: "top",
+  lineHeight: "12px",
+  boxSizing: "border-box",
 };
 
 const bankRowStyle = {

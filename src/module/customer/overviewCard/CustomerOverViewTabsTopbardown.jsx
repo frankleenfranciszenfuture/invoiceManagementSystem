@@ -72,7 +72,7 @@ export default function CustomerOverViewTabsTopbardown() {
             </div>
 
             {/* Tab Content */}
-            <div className="min-h-[700px] bg-gray-50 p-6">
+            <div className="min-h-[700px] bg-gray-50 px-1 ">
                 {renderTabContent()}
             </div>
         </div>

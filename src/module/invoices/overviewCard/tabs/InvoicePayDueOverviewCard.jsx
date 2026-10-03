@@ -135,7 +135,7 @@ export default function InvoicePayDueOverviewCard() {
                 INVOICE DETAILS HEADER
             ================================================= */}
 
-            <div className="mb-2 flex items-center justify-left border border-gray-50 px-5">
+            <div className="mb-2 flex items-center justify-left border border-gray-50 px-5 rounded-lg">
 
                 <button
                     type="button"
@@ -162,7 +162,7 @@ export default function InvoicePayDueOverviewCard() {
                     "
                 >
 
-                    Invoice Details
+                    Invoice custom Details
 
                     <ChevronDown
                         size={14}

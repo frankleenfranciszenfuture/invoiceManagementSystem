@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useSelector } from "react-redux";
 
 import InvoiceDashboardTabView from "../overviewCard/tabs/InvoiceDashboardTabView";
-import InvoicePreviewTabView from "./tabs/InvoicePreviewTabView";
+import InvoicePreviewTabView from "./tabs/InvoicePreviewCard";
 
 export default function InvoiceOverViewTabsTopbardown() {
 

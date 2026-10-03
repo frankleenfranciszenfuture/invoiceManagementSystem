@@ -47,14 +47,14 @@ export default function CustomerOverViewSiderTopbar() {
     };
 
     return (
-        <div className="flex items-center justify-between px-2 py-3 bg-white border-b border-gray-200">
+        <div className="flex items-center justify-between px-2.5 py-4 text-sm bg-white border-b border-gray-200">
 
             {/* Left - Customer View Dropdown */}
             <div ref={dropdownRef} className="relative">
 
                 <div
                     onClick={() => setDropdownOpen((prev) => !prev)}
-                    className="flex items-center gap-1 cursor-pointer select-none rounded-md bg-blue-500 px-3 py-1.5 hover:bg-blue-400"
+                    className="flex items-center gap-1 cursor-pointer select-none rounded-md bg-blue-500 px-2 py-1.5 hover:bg-blue-400"
                 >
                     <h2 className="text-sm font-medium text-white">
                         {selectedView}
@@ -89,7 +89,7 @@ export default function CustomerOverViewSiderTopbar() {
                                 navigate("/customers/new");
                                 setDropdownOpen(false);
                             }}
-                            className="w-full border-t border-gray-200 px-4 py-2.5 text-left text-sm font-medium text-blue-600 hover:bg-gray-50"
+                            className="w-full border-t border-gray-200 px-2 py-1.5 text-left text-sm font-medium text-blue-600 hover:bg-gray-50"
                         >
                             + New View
                         </button>

@@ -18,6 +18,8 @@ import ChangeTemplateModal from "../../module/invoices/overviewCard/template/Cha
 import RoleCreate from "../../module/role/pages/RoleCreate";
 import BankAccountCreate from "../../module/bankAccount/pages/BankAccountCreate";
 import CompanyCreate from "../../module/company/pages/CompanyCreate";
+import UserCreate from "../../module/users/pages/UserCreate";
+
 
 export default function Modal() {
 
@@ -75,6 +77,10 @@ export default function Modal() {
         addRole: RoleCreate,
         editRole: RoleCreate,
 
+        // User
+        addUser: UserCreate,
+        editUser: UserCreate,
+
         // bankAccount
         addBankAccount: BankAccountCreate,
         editBankAccount: BankAccountCreate,
@@ -82,6 +88,8 @@ export default function Modal() {
         // company
         addCompany: CompanyCreate,
         editCompany: CompanyCreate,
+
+
 
     };
 
@@ -159,6 +167,34 @@ export default function Modal() {
         return null;
     }
 
+
+    const modalSizeClass = {
+        addInvoice: "w-[1050px] max-w-[92vw] max-h-[90vh]",
+        editInvoice: "w-[1050px] max-w-[92vw] max-h-[90vh]",
+
+        addBankAccount: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        editBankAccount: "w-[950px] max-w-[92vw] max-h-[90vh]",
+
+        addProduct: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        editProduct: "w-[950px] max-w-[92vw] max-h-[90vh]",
+
+        addCompany: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        editCompany: "w-[950px] max-w-[92vw] max-h-[90vh]",
+
+        addRole: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        editRole: "w-[950px] max-w-[92vw] max-h-[90vh]",
+
+        addUser: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        editUser: "w-[950px] max-w-[92vw] max-h-[90vh]",
+
+        addTaxMaster: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        editTaxMaster: "w-[950px] max-w-[92vw] max-h-[90vh]",
+
+
+        changeTemplate: "w-[950px] max-w-[92vw] max-h-[90vh]",
+
+        addContactPerson: "w-[950px] max-w-[92vw] max-h-[90vh]",
+    };
 
     /* =========================================================
        RENDER
@@ -316,7 +352,7 @@ export default function Modal() {
         top-0
         right-0
         bottom-0
-        left-[240px]
+        left-[200px]
 
         z-[99999]
 
@@ -332,44 +368,29 @@ export default function Modal() {
             >
 
                 {/* =================================================
-                    MODAL
-                ================================================= */}
+    MODAL
+================================================= */}
 
                 <div
                     className={`
         ntm-modal-container
         relative
+        flex
+        flex-col
         overflow-hidden
         rounded-xl
         bg-white
         shadow-2xl
 
-        flex
-        flex-col
-
-        ${type === "addInvoice" ||
-                            type === "editInvoice"
-                            ? `
-            w-[1100px]
-            max-w-[98vw]
-            h-[92vh]
-            max-h-[92vh]
-        `
-                            : `
-            w-[950px]
-            max-w-[95vw]
-            max-h-[90vh]
-        `
-                        }
+        ${modalSizeClass[type] || "w-[900px] max-w-[90vw] max-h-[85vh]"}
     `}
-                    onMouseDown={(event) => {
-                        event.stopPropagation();
-                    }}
                 >
 
+
+
                     {/* =================================================
-                        CLOSE BUTTON
-                    ================================================= */}
+        CLOSE BUTTON
+    ================================================= */}
 
                     <button
                         type="button"
@@ -377,57 +398,55 @@ export default function Modal() {
                             dispatch(closeModal());
                         }}
                         className="
-                            absolute
+            absolute
+            right-3
+            top-3
+            z-[100]
 
-                            right-3
-                            top-3
+            flex
+            h-9
+            w-9
+            shrink-0
+            items-center
+            justify-center
 
-                            z-[100]
+            rounded-full
+            bg-white
 
-                            flex
-                            h-9
-                            w-9
+            text-gray-500
+            shadow-md
 
-                            items-center
-                            justify-center
+            transition-all
+            duration-200
 
-                            rounded-full
+            hover:bg-gray-100
+            hover:text-gray-800
 
-                            bg-white
-
-                            text-gray-500
-
-                            shadow-md
-
-                            transition-all
-                            duration-200
-
-                            hover:bg-gray-100
-                            hover:text-gray-800
-
-                            active:scale-90
-                        "
+            active:scale-90
+        "
                     >
                         <X size={20} />
                     </button>
 
-
                     {/* =================================================
-                        CONTENT
-                    ================================================= */}
+        CONTENT
+    ================================================= */}
 
                     <div
-                        className={
-                            type === "addInvoice" ||
+                        className={`
+            min-h-0
+            w-full
+
+            ${type === "addInvoice" ||
                                 type === "editInvoice" ||
                                 type === "invoiceNumberSetting"
-                                ? "flex-1 min-h-0 overflow-y-auto"
+                                ? "flex-1 overflow-y-auto overflow-x-hidden"
                                 : ""
-                        }
+                            }
+        `}
                     >
                         <ModalComponent data={data} />
                     </div>
-
                 </div>
 
             </div>
