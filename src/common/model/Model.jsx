@@ -19,7 +19,8 @@ import RoleCreate from "../../module/role/pages/RoleCreate";
 import BankAccountCreate from "../../module/bankAccount/pages/BankAccountCreate";
 import CompanyCreate from "../../module/company/pages/CompanyCreate";
 import UserCreate from "../../module/users/pages/UserCreate";
-
+import RolePermissionCreate from "../../module/rolePermission/pages/RolePermissionCreate";
+import UserPermissionCreate from "../../module/userPermission/pages/UserPermissionCreate";
 
 export default function Modal() {
 
@@ -90,6 +91,16 @@ export default function Modal() {
         editCompany: CompanyCreate,
 
 
+        //rolePermission
+
+        addRolePermission: RolePermissionCreate,
+        editRolePermission: RolePermissionCreate,
+
+
+        //rolePermission
+
+        addUserPermission: UserPermissionCreate,
+        editUserPermission: UserPermissionCreate
 
     };
 
@@ -169,6 +180,7 @@ export default function Modal() {
 
 
     const modalSizeClass = {
+
         addInvoice: "w-[1050px] max-w-[92vw] max-h-[90vh]",
         editInvoice: "w-[1050px] max-w-[92vw] max-h-[90vh]",
 
@@ -184,18 +196,23 @@ export default function Modal() {
         addRole: "w-[950px] max-w-[92vw] max-h-[90vh]",
         editRole: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
+        // USER
         addUser: "w-[950px] max-w-[92vw] max-h-[90vh]",
         editUser: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
         addTaxMaster: "w-[950px] max-w-[92vw] max-h-[90vh]",
         editTaxMaster: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
+        addRolePermission: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        editRolePermission: "w-[950px] max-w-[92vw] max-h-[90vh]",
+
+        addUserPermission: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        editUserPermission: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
         changeTemplate: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
         addContactPerson: "w-[950px] max-w-[92vw] max-h-[90vh]",
     };
-
     /* =========================================================
        RENDER
     ========================================================= */

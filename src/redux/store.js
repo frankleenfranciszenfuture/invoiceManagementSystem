@@ -35,6 +35,10 @@ import bankAccountViewReducer from "../module/bankAccount/slices/bankAccountView
 import companyReducer from "../module/company/slices/companySlice";
 import companyViewReducer from "../module/company/slices/companyViewSlice";
 
+import rolePermissionReducer from "../module/rolePermission/slices/rolePermissionSlice";
+import permissionReducer from "../module/permission/slices/permissionSlice";
+import userPermissionReducer from "../module/permission/slices/permissionSlice";
+
 export const store = configureStore({
   reducer: {
     // Auth
@@ -75,7 +79,7 @@ export const store = configureStore({
     role: roleReducer,
     roleView: roleViewReducer,
 
-    //role
+    //user
 
     user: userReducer,
     userView: userViewReducer,
@@ -94,6 +98,12 @@ export const store = configureStore({
 
     company: companyReducer,
     companyView: companyViewReducer,
+
+    //Permission
+
+    permission: permissionReducer,
+    rolePermission: rolePermissionReducer,
+    userPermission: userPermissionReducer,
   },
 });
 

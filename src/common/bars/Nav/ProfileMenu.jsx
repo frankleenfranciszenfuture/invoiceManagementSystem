@@ -5,7 +5,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { closeProfileMenu } from "../../../module/ui/uiSlice";
 
 import {
-    logout,
     logoutUser,
 } from "../../../module/auth/slice/authSlice";
 

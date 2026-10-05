@@ -51,6 +51,9 @@ import ProductCreate from "./module/items/pages/ProductCreate";
 import ProductCreateSimple from "./module/items/pages/ProductCreateSimple";
 import CompanyOverViewDashboard from "./module/company/overviewCard/CompanyOverViewDashboard";
 import UserDashboard from "./module/users/pages/UserDashboard";
+import RoleOverViewCardDashboard from "./module/role/overViewCard/roleOverViewCardDashboard";
+import UserOverViewCardDashboard from "./module/users/overviewCard/UserOverViewCardDashboard";
+
 
 export default function App() {
   const dispatch = useDispatch();
@@ -235,6 +238,10 @@ export default function App() {
             element={<RoleDashboard />}
           />
 
+          <Route
+            path="/roles/view/:id"
+            element={<RoleOverViewCardDashboard />}
+          />
 
 
           {/* =================================================
@@ -246,6 +253,10 @@ export default function App() {
             element={<UserDashboard />}
           />
 
+          <Route
+            path="/users/view/:id"
+            element={<UserOverViewCardDashboard />}
+          />
 
           {/* =================================================
                         BankAccount

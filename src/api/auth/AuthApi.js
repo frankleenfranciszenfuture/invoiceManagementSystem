@@ -1,53 +1,30 @@
-import api from "../api";
+import api from "../../api/api";
 
-export const authApi = {
-  login: async (credentials) => {
-    const response = await api.post("/login", credentials, {
-      withCredentials: true,
-    });
-
-    return response.data;
-  },
-
-  isAuthenticated: async () => {
-    const response = await api.get("/is-authenticated", {
-      withCredentials: true,
-    });
-
-    return response.data;
-  },
-
-  logout: async () => {
-    const response = await api.post(
-      "/logout",
-      {},
-      {
-        withCredentials: true,
-      },
-    );
-
-    return response.data;
-  },
+const login = async (credentials) => {
+  const response = await api.post("/auth/login", credentials);
+  return response.data;
 };
 
-// import axios from "axios";
+const isAuthenticated = async () => {
+  const response = await api.get("/auth/is-authenticated");
+  return response.data;
+};
 
-// const API_URL = "http://localhost:8081/api/v1.0";
+const getCurrentUser = async () => {
+  const response = await api.get("/auth/me");
+  return response.data;
+};
 
-// export const authApi = {
-//   login: async (credentials) => {
-//     const response = await axios.post(`${API_URL}/login`, credentials, {
-//       withCredentials: true,
-//     });
-//     return response.data;
-//   },
+const logout = async () => {
+  const response = await api.post("/auth/logout");
+  return response.data;
+};
 
-//   logout: async () => {
-//     const response = await axios.post(
-//       `${API_URL}/logout`,
-//       {},
-//       { withCredentials: true },
-//     );
-//     return response.data;
-//   },
-// };
+const authApi = {
+  login,
+  isAuthenticated,
+  getCurrentUser,
+  logout,
+};
+
+export default authApi;

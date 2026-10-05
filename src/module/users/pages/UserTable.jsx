@@ -1,5 +1,7 @@
+
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
 import {
     fetchAllUsers,
@@ -26,6 +28,7 @@ export default function UserTable({
 }) {
 
     const dispatch = useDispatch();
+    const navigate = useNavigate();
 
     /* =====================================================
        REDUX STATE
@@ -113,6 +116,32 @@ export default function UserTable({
                     type: "editUser",
                     data: user,
                 })
+            );
+
+        } catch (error) {
+
+            toast.error(
+                "Failed to open user"
+            );
+        }
+    };
+
+    /* =====================================================
+          VIEW USER
+       ===================================================== */
+
+    const handleView = (user) => {
+
+        try {
+
+            dispatch(
+                setExsistingUser(
+                    user
+                )
+            );
+
+            navigate(
+                `/users/view/${user.id}`
             );
 
         } catch (error) {
@@ -523,6 +552,11 @@ export default function UserTable({
                                         user.id ||
                                         index
                                     }
+                                    onClick={() =>
+                                        handleView(
+                                            user
+                                        )
+                                    }
                                     className="
                                         border-b
                                         border-gray-100
@@ -558,19 +592,20 @@ export default function UserTable({
 
                                             <div
                                                 className={`
-                                                    w-9
-                                                    h-9
-                                                    min-w-[36px]
-                                                    rounded-full
-                                                    flex
-                                                    items-center
-                                                    justify-center
-                                                    text-sm
-                                                    font-bold
+w - 9
+h - 9
+min - w - [36px]
+rounded - full
+flex
+items - center
+justify - center
+text - sm
+font - bold
                                                     ${getAvatarColor(
                                                     user.name
-                                                )}
-                                                `}
+                                                )
+                                                    }
+`}
                                             >
 
                                                 {
@@ -712,12 +747,12 @@ export default function UserTable({
 
                                         <span
                                             className={`
-                                                inline-block
-                                                px-2
-                                                py-1
-                                                rounded-full
-                                                text-xs
-                                                font-medium
+inline - block
+px - 2
+py - 1
+rounded - full
+text - xs
+font - medium
                                                 ${statusColor[
                                                 String(
                                                     user.status ||
@@ -726,7 +761,7 @@ export default function UserTable({
                                                 ] ||
                                                 "bg-gray-100 text-gray-700"
                                                 }
-                                            `}
+`}
                                         >
                                             {
                                                 user.status ||
@@ -750,16 +785,17 @@ export default function UserTable({
 
                                         <span
                                             className={`
-                                                inline-block
-                                                px-2
-                                                py-1
-                                                rounded-full
-                                                text-xs
-                                                font-medium
+inline - block
+px - 2
+py - 1
+rounded - full
+text - xs
+font - medium
                                                 ${getVerificationColor(
                                                 user.accountVerified
-                                            )}
-                                            `}
+                                            )
+                                                }
+`}
                                         >
 
                                             {

@@ -451,6 +451,11 @@ export default function RoleTable({
                                             role.id ||
                                             index
                                         }
+                                        onClick={() =>
+                                            handleView(
+                                                role
+                                            )
+                                        }
                                         className="
                                             border-b
                                             border-gray-100
