@@ -156,6 +156,57 @@ public class AuthServiceImpl implements AuthService {
     }
 
     // ===============================
+// CURRENT USER
+// ===============================
+    @Override
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<AuthResponse>> getCurrentUser(
+            String email
+    ) {
+
+        if (email == null || email.isBlank()) {
+
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(
+                            ApiResponse.<AuthResponse>builder()
+                                    .success(false)
+                                    .message("User is not authenticated.")
+                                    .build()
+                    );
+        }
+
+        UserEntity user = userRepository
+                .findByEmail(email)
+                .orElseThrow(() ->
+                        new RuntimeException("User not found")
+                );
+
+        AuthResponse response = AuthResponse.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .roleId(
+                        user.getRole() != null
+                                ? user.getRole().getId()
+                                : null
+                )
+                .roleName(
+                        user.getRole() != null
+                                ? user.getRole().getRoleName()
+                                : null
+                )
+                .build();
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        response,
+                        "Current user fetched successfully."
+                )
+        );
+    }
+
+    // ===============================
     // SEND RESET OTP
     // ===============================
     @Override

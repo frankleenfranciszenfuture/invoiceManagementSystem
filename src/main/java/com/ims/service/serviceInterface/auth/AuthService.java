@@ -16,6 +16,8 @@ public interface AuthService {
 
     ResponseEntity<Boolean> isAuthenticated(String email);
 
+    ResponseEntity<ApiResponse<AuthResponse>> getCurrentUser(String email);
+
     void sendResetOtp(String email);
 
     void resetPassword(ResetPasswordRequest request);

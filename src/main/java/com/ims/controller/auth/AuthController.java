@@ -20,6 +20,7 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/auth")
 public class AuthController {
 
     private final AuthService authService;
@@ -35,6 +36,15 @@ public class AuthController {
     public ResponseEntity<Boolean> isAuthenticated(
             @CurrentSecurityContext(expression = "authentication?.name") String email) {
         return authService.isAuthenticated(email);
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<AuthResponse>> getCurrentUser(
+            @CurrentSecurityContext(
+                    expression = "authentication?.name"
+            ) String email) {
+
+        return authService.getCurrentUser(email);
     }
 
     @PostMapping("/send-reset-otp")
