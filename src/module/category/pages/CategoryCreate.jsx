@@ -1,7 +1,8 @@
-
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { BadgePercent, ChartColumnStackedIcon, X } from "lucide-react";
+import {
+    ChartColumnStackedIcon,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
 import { closeModal } from "../../ui/uiSlice";
@@ -16,11 +17,13 @@ import {
     updateCategory,
 } from "../thunks/categoryThunks";
 
+import {
+    getUserPermission,
+} from "../../menuPermission/thunks/menuPermissionThunks";
 
 export default function CategoryCreate() {
 
     const dispatch = useDispatch();
-
 
     // =========================================================
     // REDUX
@@ -37,6 +40,29 @@ export default function CategoryCreate() {
         (state) => state.category
     );
 
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
+
+    const isAuthenticated = useSelector(
+        (state) =>
+            state.auth?.isAuthenticated === true
+    );
+
+    const authChecking = useSelector(
+        (state) =>
+            state.auth?.authChecking === true
+    );
+
+    const permissions = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissions || []
+    );
+
+    const permissionLoading = useSelector(
+        (state) =>
+            state.menuPermission?.loading === true
+    );
 
     // =========================================================
     // ADD / EDIT MODE
@@ -52,8 +78,15 @@ export default function CategoryCreate() {
             modal.type === "editCategory"
         );
 
-    const [errors, setErrors] =
-        useState({});
+    // =========================================================
+    // LOCAL STATE
+    // =========================================================
+
+    const [errors, setErrors] = useState({});
+
+    const [activeTab, setActiveTab] =
+        useState("category");
+
     // =========================================================
     // FORM
     // =========================================================
@@ -67,12 +100,310 @@ export default function CategoryCreate() {
         status: "ACTIVE",
     };
 
+    // =========================================================
+    // NORMALIZE
+    // =========================================================
+
+    const normalizeModule = (value) =>
+        String(value ?? "")
+            .trim()
+            .toLowerCase();
+
+    const normalizeAction = (value) =>
+        String(value ?? "")
+            .trim()
+            .toUpperCase();
+
+    // =========================================================
+    // ROLE
+    // =========================================================
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+    const normalizedRole =
+        normalizeAction(roleName);
+
+    const isSuperAdmin =
+        normalizedRole === "SUPER_ADMIN";
+
+    const isAdmin =
+        normalizedRole === "ADMIN";
+
+    const hasFullAccess =
+        isSuperAdmin || isAdmin;
+
+    // =========================================================
+    // PERMISSION CHECK
+    // =========================================================
+
+    const hasPermission = (
+        moduleName,
+        actionName
+    ) => {
+
+        // -----------------------------------------------------
+        // ADMIN / SUPER ADMIN
+        // -----------------------------------------------------
+
+        if (hasFullAccess) {
+            return true;
+        }
+
+        // -----------------------------------------------------
+        // NORMALIZE REQUEST
+        // -----------------------------------------------------
+
+        const requestedModule =
+            normalizeModule(moduleName);
+
+        const requestedAction =
+            normalizeAction(actionName);
+
+        // -----------------------------------------------------
+        // PERMISSION LIST
+        // -----------------------------------------------------
+
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+        // -----------------------------------------------------
+        // FIND PERMISSION
+        // -----------------------------------------------------
+
+        return permissions.some(
+            (permission) => {
+
+                const permissionModule =
+                    normalizeModule(
+                        permission?.moduleName ||
+                        permission?.module?.moduleName ||
+                        permission?.module?.name
+                    );
+
+                // -------------------------------------------------
+                // MODULE MUST MATCH
+                // -------------------------------------------------
+
+                if (
+                    permissionModule !==
+                    requestedModule
+                ) {
+                    return false;
+                }
+
+                // -------------------------------------------------
+                // INACTIVE PERMISSION
+                // -------------------------------------------------
+
+                if (
+                    permission?.active === false ||
+                    normalizeAction(
+                        permission?.status
+                    ) === "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                // -------------------------------------------------
+                // DIRECT ACTION
+                // -------------------------------------------------
+
+                const permissionAction =
+                    normalizeAction(
+                        permission?.actionName ||
+                        permission?.action?.actionName ||
+                        permission?.action?.name
+                    );
+
+                if (
+                    permissionAction ===
+                    requestedAction
+                ) {
+
+                    return (
+                        permission?.allowed === true ||
+                        permission?.allowed === "true"
+                    );
+                }
+
+                // -------------------------------------------------
+                // GROUPED ACTIONS
+                // -------------------------------------------------
+
+                if (
+                    Array.isArray(
+                        permission?.actions
+                    )
+                ) {
+
+                    return permission.actions.some(
+                        (action) => {
+
+                            if (
+                                typeof action ===
+                                "string"
+                            ) {
+
+                                return (
+                                    normalizeAction(
+                                        action
+                                    ) ===
+                                    requestedAction
+                                );
+                            }
+
+                            const actionName =
+                                normalizeAction(
+                                    action?.actionName ||
+                                    action?.name
+                                );
+
+                            return (
+                                actionName ===
+                                requestedAction &&
+                                (
+                                    action?.allowed ===
+                                    true ||
+                                    action?.allowed ===
+                                    "true"
+                                ) &&
+                                action?.active !== false &&
+                                normalizeAction(
+                                    action?.status
+                                ) !==
+                                "INACTIVE"
+                            );
+                        }
+                    );
+                }
+
+                return false;
+            }
+        );
+    };
+
+    // =========================================================
+    // CREATE / EDIT PERMISSION
+    // =========================================================
+
+    const requiredAction =
+        isEdit
+            ? "EDIT"
+            : "CREATE";
+
+    const hasRequiredPermission =
+        hasPermission(
+            "Categories",
+            requiredAction
+        );
+
+    // =========================================================
+    // LOAD PERMISSIONS IF NECESSARY
+    // =========================================================
+
+    useEffect(() => {
+
+        if (!isOpen) {
+            return;
+        }
+
+        if (authChecking) {
+            return;
+        }
+
+        if (!isAuthenticated) {
+            return;
+        }
+
+        if (hasFullAccess) {
+            return;
+        }
+
+        // -----------------------------------------------------
+        // If permissions are not available, load them.
+        // Sidebar normally loads these already, but this
+        // protects direct modal access as well.
+        // -----------------------------------------------------
+
+        if (
+            !Array.isArray(permissions) ||
+            permissions.length === 0
+        ) {
+
+            dispatch(
+                getUserPermission()
+            );
+        }
+
+    }, [
+        isOpen,
+        authChecking,
+        isAuthenticated,
+        hasFullAccess,
+        permissions.length,
+        dispatch,
+    ]);
+
+    // =========================================================
+    // BLOCK UNAUTHORIZED ACCESS
+    // =========================================================
+
+    useEffect(() => {
+
+        if (!isOpen) {
+            return;
+        }
+
+        if (authChecking) {
+            return;
+        }
+
+        if (permissionLoading) {
+            return;
+        }
+
+        if (!hasRequiredPermission) {
+
+            toast.error(
+                isEdit
+                    ? "You do not have permission to edit categories."
+                    : "You do not have permission to create categories."
+            );
+
+            dispatch(closeModal());
+
+            dispatch(
+                resetCategoryForm()
+            );
+
+            setErrors({});
+            setActiveTab("category");
+        }
+
+    }, [
+        isOpen,
+        authChecking,
+        permissionLoading,
+        hasRequiredPermission,
+        isEdit,
+        dispatch,
+    ]);
 
     // =========================================================
     // CHANGE FIELD
     // =========================================================
 
-    const handleChange = (field, value) => {
+    const handleChange = (
+        field,
+        value
+    ) => {
 
         dispatch(
             setCategoryField({
@@ -81,8 +412,25 @@ export default function CategoryCreate() {
             })
         );
 
-    };
+        // -----------------------------------------------------
+        // Clear field error while typing
+        // -----------------------------------------------------
 
+        setErrors((previous) => {
+
+            if (!previous[field]) {
+                return previous;
+            }
+
+            const updated = {
+                ...previous,
+            };
+
+            delete updated[field];
+
+            return updated;
+        });
+    };
 
     // =========================================================
     // CLOSE MODAL
@@ -90,16 +438,15 @@ export default function CategoryCreate() {
 
     const handleClose = () => {
 
-        dispatch(
-            closeModal()
-        );
+        dispatch(closeModal());
 
         dispatch(
             resetCategoryForm()
         );
 
+        setErrors({});
+        setActiveTab("category");
     };
-
 
     // =========================================================
     // ESCAPE KEY
@@ -113,10 +460,13 @@ export default function CategoryCreate() {
 
         const handleEscape = (event) => {
 
-            if (event.key === "Escape") {
+            if (
+                event.key === "Escape" &&
+                !loading
+            ) {
+
                 handleClose();
             }
-
         };
 
         document.addEventListener(
@@ -130,11 +480,12 @@ export default function CategoryCreate() {
                 "keydown",
                 handleEscape
             );
-
         };
 
-    }, [isOpen]);
-
+    }, [
+        isOpen,
+        loading,
+    ]);
 
     // =========================================================
     // LOAD EXISTING DATA FOR EDIT
@@ -151,7 +502,6 @@ export default function CategoryCreate() {
             const existingCategory =
                 modal.data;
 
-
             dispatch(
                 setCategoryField({
                     field: "id",
@@ -160,7 +510,6 @@ export default function CategoryCreate() {
                         null,
                 })
             );
-
 
             dispatch(
                 setCategoryField({
@@ -171,7 +520,6 @@ export default function CategoryCreate() {
                 })
             );
 
-
             dispatch(
                 setCategoryField({
                     field: "categoryName",
@@ -180,7 +528,6 @@ export default function CategoryCreate() {
                         "",
                 })
             );
-
 
             dispatch(
                 setCategoryField({
@@ -191,7 +538,6 @@ export default function CategoryCreate() {
                 })
             );
 
-
             dispatch(
                 setCategoryField({
                     field: "displayOrder",
@@ -200,7 +546,6 @@ export default function CategoryCreate() {
                         1,
                 })
             );
-
 
             dispatch(
                 setCategoryField({
@@ -220,10 +565,20 @@ export default function CategoryCreate() {
         dispatch,
     ]);
 
+    // =========================================================
+    // VALIDATION
+    // =========================================================
+
     const validateCategory = () => {
+
         const newErrors = {};
 
-        if (!String(form.categoryName ?? "").trim()) {
+        if (
+            !String(
+                form.categoryName ?? ""
+            ).trim()
+        ) {
+
             newErrors.categoryName =
                 "Category Name is required";
         }
@@ -233,9 +588,14 @@ export default function CategoryCreate() {
             form.displayOrder === null ||
             form.displayOrder === undefined
         ) {
+
             newErrors.displayOrder =
                 "Display Order is required";
-        } else if (Number(form.displayOrder) < 1) {
+
+        } else if (
+            Number(form.displayOrder) < 1
+        ) {
+
             newErrors.displayOrder =
                 "Display Order must be at least 1";
         }
@@ -246,6 +606,7 @@ export default function CategoryCreate() {
             newErrors.categoryName ||
             newErrors.displayOrder
         ) {
+
             setActiveTab("category");
 
             toast.error(
@@ -257,6 +618,7 @@ export default function CategoryCreate() {
 
         return true;
     };
+
     // =========================================================
     // SAVE
     // CREATE / UPDATE
@@ -266,30 +628,31 @@ export default function CategoryCreate() {
 
         e.preventDefault();
 
-        if (!validateCategory()) {
-            return;
-        }
-        // =====================================================
-        // CATEGORY NAME
-        // =====================================================
+        // -----------------------------------------------------
+        // Permission check AGAIN before API call
+        // -----------------------------------------------------
 
-        if (!form.categoryName?.trim()) {
+        if (!hasRequiredPermission) {
 
             toast.error(
-                "Category name is required"
+                isEdit
+                    ? "You do not have permission to edit categories."
+                    : "You do not have permission to create categories."
             );
 
             return;
         }
 
+        // -----------------------------------------------------
+        // Validation
+        // -----------------------------------------------------
 
-        // =====================================================
-        // DISPLAY ORDER
-        // =====================================================
+        if (!validateCategory()) {
+            return;
+        }
 
         const displayOrder =
             Number(form.displayOrder);
-
 
         if (
             !Number.isInteger(displayOrder) ||
@@ -303,7 +666,6 @@ export default function CategoryCreate() {
             return;
         }
 
-
         // =====================================================
         // PAYLOAD
         // =====================================================
@@ -316,14 +678,11 @@ export default function CategoryCreate() {
             description:
                 form.description?.trim() || "",
 
-            displayOrder:
-                displayOrder,
+            displayOrder,
 
             status:
                 form.status || "ACTIVE",
-
         };
-
 
         try {
 
@@ -337,7 +696,6 @@ export default function CategoryCreate() {
                     form.id ??
                     modal.data?.id;
 
-
                 if (!categoryId) {
 
                     toast.error(
@@ -347,7 +705,6 @@ export default function CategoryCreate() {
                     return;
                 }
 
-
                 await dispatch(
                     updateCategory({
                         id: categoryId,
@@ -355,13 +712,11 @@ export default function CategoryCreate() {
                     })
                 ).unwrap();
 
-
                 toast.success(
                     "Category updated successfully"
                 );
 
             }
-
 
             // =================================================
             // CREATE
@@ -373,25 +728,23 @@ export default function CategoryCreate() {
                     createCategory(payload)
                 ).unwrap();
 
-
                 toast.success(
                     "Category created successfully"
                 );
-
             }
-
 
             // =================================================
             // CLOSE + RESET
             // =================================================
 
-            dispatch(
-                closeModal()
-            );
+            dispatch(closeModal());
 
             dispatch(
                 resetCategoryForm()
             );
+
+            setErrors({});
+            setActiveTab("category");
 
         } catch (error) {
 
@@ -399,7 +752,6 @@ export default function CategoryCreate() {
                 "Category save error:",
                 error
             );
-
 
             toast.error(
                 typeof error === "string"
@@ -412,11 +764,8 @@ export default function CategoryCreate() {
                             : "Failed to create category"
                     )
             );
-
         }
-
     };
-
 
     // =========================================================
     // DO NOT RENDER
@@ -426,8 +775,76 @@ export default function CategoryCreate() {
         return null;
     }
 
+    // =========================================================
+    // PERMISSION LOADING
+    // =========================================================
 
-    const [activeTab, setActiveTab] = useState("category");
+    if (
+        !authChecking &&
+        !hasFullAccess &&
+        permissionLoading
+    ) {
+
+        return (
+            <div
+                className="
+                    w-[950px]
+                    max-w-[95vw]
+                    h-[300px]
+                    max-h-[88vh]
+                    bg-white
+                    rounded-xl
+                    shadow-2xl
+                    flex
+                    items-center
+                    justify-center
+                "
+            >
+
+                <div className="text-center">
+
+                    <div
+                        className="
+                            w-8
+                            h-8
+                            border-2
+                            border-blue-200
+                            border-t-blue-600
+                            rounded-full
+                            animate-spin
+                            mx-auto
+                        "
+                    />
+
+                    <p
+                        className="
+                            mt-3
+                            text-sm
+                            text-gray-500
+                        "
+                    >
+                        Checking permissions...
+                    </p>
+
+                </div>
+
+            </div>
+        );
+    }
+
+    // =========================================================
+    // UNAUTHORIZED
+    // =========================================================
+
+    if (
+        !hasRequiredPermission
+    ) {
+        return null;
+    }
+
+    // =========================================================
+    // TABS
+    // =========================================================
 
     const tabs = [
         {
@@ -440,33 +857,37 @@ export default function CategoryCreate() {
         },
     ];
 
+    // =========================================================
+    // CLASSES
+    // =========================================================
+
     const inputClass = `
-    w-full
-    h-11
-    px-3
-    border
-    border-gray-300
-    rounded-md
-    text-sm
-    text-gray-700
-    bg-white
-    outline-none
-    transition
-    focus:border-blue-500
-    focus:ring-1
-    focus:ring-blue-500
-    disabled:bg-gray-100
-    disabled:text-gray-500
-    disabled:cursor-not-allowed
-`;
+        w-full
+        h-11
+        px-3
+        border
+        border-gray-300
+        rounded-md
+        text-sm
+        text-gray-700
+        bg-white
+        outline-none
+        transition
+        focus:border-blue-500
+        focus:ring-1
+        focus:ring-blue-500
+        disabled:bg-gray-100
+        disabled:text-gray-500
+        disabled:cursor-not-allowed
+    `;
 
     const labelClass = `
-    block
-    text-xs
-    font-medium
-    text-gray-600
-    mb-1.5
-`;
+        block
+        text-xs
+        font-medium
+        text-gray-600
+        mb-1.5
+    `;
 
     // =========================================================
     // UI
@@ -475,64 +896,66 @@ export default function CategoryCreate() {
     return (
         <div
             className="
-            w-[950px]
-            max-w-[95vw]
-            h-[700px]
-            max-h-[88vh]
-            bg-white
-            rounded-xl
-            shadow-2xl
-            overflow-hidden
-            flex
-            flex-col
-        "
+                w-[950px]
+                max-w-[95vw]
+                h-[700px]
+                max-h-[88vh]
+                bg-white
+                rounded-xl
+                shadow-2xl
+                overflow-hidden
+                flex
+                flex-col
+            "
         >
 
             {/* =================================================
-            HEADER
-        ================================================= */}
+                HEADER
+            ================================================= */}
 
             <div
                 className="
-                shrink-0
-                h-[68px]
-                flex
-                items-center
-                justify-between
-                px-6
-                border-b
-                border-gray-200
-                bg-white
-            "
+                    shrink-0
+                    h-[68px]
+                    flex
+                    items-center
+                    justify-between
+                    px-6
+                    border-b
+                    border-gray-200
+                    bg-white
+                "
             >
 
                 <div className="flex items-center gap-3">
 
                     <div
                         className="
-                        w-9
-                        h-9
-                        rounded-lg
-                        bg-blue-50
-                        flex
-                        items-center
-                        justify-center
-                    "
+                            w-9
+                            h-9
+                            rounded-lg
+                            bg-blue-50
+                            flex
+                            items-center
+                            justify-center
+                        "
                     >
+
                         <ChartColumnStackedIcon
                             size={20}
                             className="text-blue-600"
                         />
+
                     </div>
 
                     <div>
 
                         <h2
                             className="
-                            text-[17px]
-                            font-semibold
-                            text-gray-800
-                        "
+                                text-[17px]
+                                font-semibold
+                                text-gray-800
+                            "
                         >
                             {isEdit
                                 ? "Edit Category"
@@ -541,10 +964,10 @@ export default function CategoryCreate() {
 
                         <p
                             className="
-                            text-xs
-                            text-gray-500
-                            mt-0.5
-                        "
+                                text-xs
+                                text-gray-500
+                                mt-0.5
+                            "
                         >
                             {isEdit
                                 ? "Update category information"
@@ -557,28 +980,27 @@ export default function CategoryCreate() {
 
             </div>
 
-
             {/* =================================================
-            TABS
-        ================================================= */}
+                TABS
+            ================================================= */}
 
             <div
                 className="
-                shrink-0
-                px-6
-                border-b
-                border-gray-200
-                bg-white
-            "
+                    shrink-0
+                    px-6
+                    border-b
+                    border-gray-200
+                    bg-white
+                "
             >
 
                 <div
                     className="
-                    flex
-                    items-center
-                    gap-8
-                    h-[52px]
-                "
+                        flex
+                        items-center
+                        gap-8
+                        h-[52px]
+                    "
                 >
 
                     {tabs.map((tab) => {
@@ -601,27 +1023,27 @@ export default function CategoryCreate() {
                                     setActiveTab(tab.id)
                                 }
                                 className={`
-                                relative
-                                h-full
-                                text-sm
-                                font-medium
-                                transition
+                                    relative
+                                    h-full
+                                    text-sm
+                                    font-medium
+                                    transition
 
-                                ${active
+                                    ${active
                                         ? "text-blue-600"
                                         : hasError
                                             ? "text-red-500"
                                             : "text-gray-500 hover:text-gray-800"
                                     }
-                            `}
+                                `}
                             >
 
                                 <span
                                     className="
-                                    flex
-                                    items-center
-                                    gap-1.5
-                                "
+                                        flex
+                                        items-center
+                                        gap-1.5
+                                    "
                                 >
 
                                     {tab.label}
@@ -629,11 +1051,11 @@ export default function CategoryCreate() {
                                     {hasError && (
                                         <span
                                             className="
-                                            w-1.5
-                                            h-1.5
-                                            rounded-full
-                                            bg-red-500
-                                        "
+                                                w-1.5
+                                                h-1.5
+                                                rounded-full
+                                                bg-red-500
+                                            "
                                         />
                                     )}
 
@@ -642,14 +1064,14 @@ export default function CategoryCreate() {
                                 {active && (
                                     <span
                                         className="
-                                        absolute
-                                        left-0
-                                        right-0
-                                        bottom-0
-                                        h-[2px]
-                                        bg-blue-600
-                                        rounded-t
-                                    "
+                                            absolute
+                                            left-0
+                                            right-0
+                                            bottom-0
+                                            h-[2px]
+                                            bg-blue-600
+                                            rounded-t
+                                        "
                                     />
                                 )}
 
@@ -661,76 +1083,73 @@ export default function CategoryCreate() {
 
             </div>
 
-
             {/* =================================================
-            FORM
-        ================================================= */}
+                FORM
+            ================================================= */}
 
             <form
                 onSubmit={handleSave}
                 className="
-                flex
-                flex-col
-                flex-1
-                min-h-0
-                overflow-hidden
-            "
+                    flex
+                    flex-col
+                    flex-1
+                    min-h-0
+                    overflow-hidden
+                "
             >
 
                 {/* =================================================
-                SCROLL BODY
-            ================================================= */}
+                    SCROLL BODY
+                ================================================= */}
 
                 <div
                     className="
-                    flex-1
-                    min-h-0
-                    overflow-y-auto
-                    overflow-x-hidden
-                    px-7
-                    py-6
-                    bg-gray-50/50
-                "
+                        flex-1
+                        min-h-0
+                        overflow-y-auto
+                        overflow-x-hidden
+                        px-7
+                        py-6
+                        bg-gray-50/50
+                    "
                 >
 
                     {/* =================================================
-                    CATEGORY INFORMATION
-                ================================================= */}
+                        CATEGORY INFORMATION
+                    ================================================= */}
 
                     {activeTab === "category" && (
 
                         <div>
 
-                            {/* SECTION HEADER */}
-
                             <div
                                 className="
-                                mb-6
-                                flex
-                                items-start
-                                justify-between
-                                gap-6
-                            "
+                                    mb-6
+                                    flex
+                                    items-start
+                                    justify-between
+                                    gap-6
+                                "
                             >
 
                                 <div>
 
                                     <h3
                                         className="
-                                        text-base
-                                        font-semibold
-                                        text-gray-800
-                                    "
+                                            text-base
+                                            font-semibold
+                                            text-gray-800
+                                        "
                                     >
                                         Category Information
                                     </h3>
 
                                     <p
                                         className="
-                                        text-xs
-                                        text-gray-500
-                                        mt-1
-                                    "
+                                            text-xs
+                                            text-gray-500
+                                            mt-1
+                                        "
                                     >
                                         Configure the basic category
                                         information.
@@ -738,70 +1157,59 @@ export default function CategoryCreate() {
 
                                 </div>
 
-
-                                {/* STATUS */}
-
                                 <div
                                     className="
-                                    flex
-                                    items-center
-                                    gap-3
-                                    shrink-0
-                                "
+                                        flex
+                                        items-center
+                                        gap-3
+                                        shrink-0
+                                    "
                                 >
 
                                     <label
                                         className="
-                                        text-md
-                                        font-semibold
-                                        text-gray-600
-                                    "
+                                            text-md
+                                            font-semibold
+                                            text-gray-600
+                                        "
                                     >
                                         Status :
                                     </label>
 
                                     <span
                                         className={`
-                                        inline-flex
-                                        items-center
-                                        justify-center
-                                        min-w-[85px]
-                                        h-7
-                                        px-3
-                                        rounded-full
-                                        text-sm
-                                        font-bold
+                                            inline-flex
+                                            items-center
+                                            justify-center
+                                            min-w-[85px]
+                                            h-7
+                                            px-3
+                                            rounded-full
+                                            text-sm
+                                            font-bold
 
-                                        ${form.status ===
-                                                "ACTIVE"
+                                            ${form.status === "ACTIVE"
                                                 ? "bg-green-50 text-green-700"
-                                                : form.status ===
-                                                    "INACTIVE"
+                                                : form.status === "INACTIVE"
                                                     ? "bg-red-50 text-red-700"
                                                     : "bg-yellow-50 text-yellow-700"
                                             }
-                                    `}
+                                        `}
                                     >
-                                        {form.status ||
-                                            "ACTIVE"}
+                                        {form.status || "ACTIVE"}
                                     </span>
 
                                 </div>
 
                             </div>
 
-
-                            {/* =================================================
-                            CATEGORY FIELDS
-                        ================================================= */}
-
                             <div
                                 className="
-                                grid
-                                grid-cols-2
-                                gap-x-6
-                                gap-y-5
-                            "
+                                    grid
+                                    grid-cols-2
+                                    gap-x-6
+                                    gap-y-5
+                                "
                             >
 
                                 {/* CATEGORY NAME */}
@@ -815,9 +1223,9 @@ export default function CategoryCreate() {
 
                                         <span
                                             className="
-                                            text-red-500
-                                            ml-1
-                                        "
+                                                text-red-500
+                                                ml-1
+                                            "
                                         >
                                             *
                                         </span>
@@ -827,8 +1235,7 @@ export default function CategoryCreate() {
                                     <input
                                         type="text"
                                         value={
-                                            form.categoryName ??
-                                            ""
+                                            form.categoryName ?? ""
                                         }
                                         onChange={(e) =>
                                             handleChange(
@@ -838,24 +1245,22 @@ export default function CategoryCreate() {
                                         }
                                         placeholder="Enter category name"
                                         className={inputClass}
+                                        disabled={loading}
                                     />
 
                                     {errors.categoryName && (
                                         <p
                                             className="
-                                            text-xs
-                                            text-red-500
-                                            mt-1
-                                        "
+                                                text-xs
+                                                text-red-500
+                                                mt-1
+                                            "
                                         >
-                                            {
-                                                errors.categoryName
-                                            }
+                                            {errors.categoryName}
                                         </p>
                                     )}
 
                                 </div>
-
 
                                 {/* DISPLAY ORDER */}
 
@@ -868,9 +1273,9 @@ export default function CategoryCreate() {
 
                                         <span
                                             className="
-                                            text-red-500
-                                            ml-1
-                                        "
+                                                text-red-500
+                                                ml-1
+                                            "
                                         >
                                             *
                                         </span>
@@ -881,8 +1286,7 @@ export default function CategoryCreate() {
                                         type="number"
                                         min="1"
                                         value={
-                                            form.displayOrder ??
-                                            1
+                                            form.displayOrder ?? 1
                                         }
                                         onChange={(e) =>
                                             handleChange(
@@ -892,32 +1296,26 @@ export default function CategoryCreate() {
                                         }
                                         placeholder="Enter display order"
                                         className={inputClass}
+                                        disabled={loading}
                                     />
 
                                     {errors.displayOrder && (
                                         <p
                                             className="
-                                            text-xs
-                                            text-red-500
-                                            mt-1
-                                        "
+                                                text-xs
+                                                text-red-500
+                                                mt-1
+                                            "
                                         >
-                                            {
-                                                errors.displayOrder
-                                            }
+                                            {errors.displayOrder}
                                         </p>
                                     )}
 
                                 </div>
 
-
                                 {/* DESCRIPTION */}
 
-                                <div
-                                    className="
-                                    col-span-2
-                                "
-                                >
+                                <div className="col-span-2">
 
                                     <label
                                         className={labelClass}
@@ -928,8 +1326,7 @@ export default function CategoryCreate() {
                                     <textarea
                                         rows={5}
                                         value={
-                                            form.description ??
-                                            ""
+                                            form.description ?? ""
                                         }
                                         onChange={(e) =>
                                             handleChange(
@@ -939,22 +1336,23 @@ export default function CategoryCreate() {
                                         }
                                         placeholder="Enter category description"
                                         className="
-                                        w-full
-                                        px-3
-                                        py-3
-                                        border
-                                        border-gray-300
-                                        rounded-md
-                                        text-sm
-                                        text-gray-700
-                                        bg-white
-                                        outline-none
-                                        resize-none
-                                        transition
-                                        focus:border-blue-500
-                                        focus:ring-1
-                                        focus:ring-blue-500
-                                    "
+                                            w-full
+                                            px-3
+                                            py-3
+                                            border
+                                            border-gray-300
+                                            rounded-md
+                                            text-sm
+                                            text-gray-700
+                                            bg-white
+                                            outline-none
+                                            resize-none
+                                            transition
+                                            focus:border-blue-500
+                                            focus:ring-1
+                                            focus:ring-blue-500
+                                        "
+                                        disabled={loading}
                                     />
 
                                 </div>
@@ -962,13 +1360,11 @@ export default function CategoryCreate() {
                             </div>
 
                         </div>
-
                     )}
 
-
                     {/* =================================================
-                    SETTINGS
-                ================================================= */}
+                        SETTINGS
+                    ================================================= */}
 
                     {activeTab === "settings" && (
 
@@ -978,29 +1374,26 @@ export default function CategoryCreate() {
 
                                 <h3
                                     className="
-                                    text-base
-                                    font-semibold
-                                    text-gray-800
-                                "
+                                        text-base
+                                        font-semibold
+                                        text-gray-800
+                                    "
                                 >
                                     Category Settings
                                 </h3>
 
                                 <p
                                     className="
-                                    text-xs
-                                    text-gray-500
-                                    mt-1
-                                "
+                                        text-xs
+                                        text-gray-500
+                                        mt-1
+                                    "
                                 >
                                     Configure the category availability
                                     and status.
                                 </p>
 
                             </div>
-
-
-                            {/* STATUS */}
 
                             <div className="max-w-[460px]">
 
@@ -1012,8 +1405,7 @@ export default function CategoryCreate() {
 
                                 <select
                                     value={
-                                        form.status ??
-                                        "ACTIVE"
+                                        form.status ?? "ACTIVE"
                                     }
                                     onChange={(e) =>
                                         handleChange(
@@ -1022,6 +1414,7 @@ export default function CategoryCreate() {
                                         )
                                     }
                                     className={inputClass}
+                                    disabled={loading}
                                 >
 
                                     <option value="ACTIVE">
@@ -1040,89 +1433,81 @@ export default function CategoryCreate() {
 
                             </div>
 
-
-                            {/* CATEGORY STATE */}
-
                             <div
                                 className="
-                                mt-7
-                                border
-                                border-gray-200
-                                rounded-lg
-                                bg-white
-                                p-5
-                            "
+                                    mt-7
+                                    border
+                                    border-gray-200
+                                    rounded-lg
+                                    bg-white
+                                    p-5
+                                "
                             >
 
                                 <div
                                     className="
-                                    flex
-                                    items-center
-                                    justify-between
-                                "
+                                        flex
+                                        items-center
+                                        justify-between
+                                    "
                                 >
 
                                     <div>
 
                                         <p
                                             className="
-                                            text-sm
-                                            font-medium
-                                            text-gray-800
-                                        "
+                                                text-sm
+                                                font-medium
+                                                text-gray-800
+                                            "
                                         >
                                             Category Status
                                         </p>
 
                                         <p
                                             className="
-                                            text-xs
-                                            text-gray-500
-                                            mt-1
-                                        "
+                                                text-xs
+                                                text-gray-500
+                                                mt-1
+                                            "
                                         >
                                             This category is currently
                                             set to{" "}
 
                                             <span
                                                 className="
-                                                font-medium
-                                                text-gray-700
-                                            "
+                                                    font-medium
+                                                    text-gray-700
+                                                "
                                             >
-                                                {form.status ||
-                                                    "ACTIVE"}
+                                                {form.status || "ACTIVE"}
                                             </span>
 
                                         </p>
 
                                     </div>
 
-
                                     <span
                                         className={`
-                                        inline-flex
-                                        items-center
-                                        justify-center
-                                        min-w-[85px]
-                                        h-7
-                                        px-3
-                                        rounded-full
-                                        text-xs
-                                        font-medium
+                                            inline-flex
+                                            items-center
+                                            justify-center
+                                            min-w-[85px]
+                                            h-7
+                                            px-3
+                                            rounded-full
+                                            text-xs
+                                            font-medium
 
-                                        ${form.status ===
-                                                "ACTIVE"
+                                            ${form.status === "ACTIVE"
                                                 ? "bg-green-50 text-green-700"
-                                                : form.status ===
-                                                    "INACTIVE"
+                                                : form.status === "INACTIVE"
                                                     ? "bg-red-50 text-red-700"
                                                     : "bg-yellow-50 text-yellow-700"
                                             }
-                                    `}
+                                        `}
                                     >
-                                        {form.status ||
-                                            "ACTIVE"}
+                                        {form.status || "ACTIVE"}
                                     </span>
 
                                 </div>
@@ -1130,35 +1515,33 @@ export default function CategoryCreate() {
                             </div>
 
                         </div>
-
                     )}
 
                 </div>
 
-
                 {/* =================================================
-                FOOTER
-            ================================================= */}
+                    FOOTER
+                ================================================= */}
 
                 <div
                     className="
-                    shrink-0
-                    h-[68px]
-                    flex
-                    items-center
-                    justify-between
-                    px-6
-                    border-t
-                    border-gray-200
-                    bg-white
-                "
+                        shrink-0
+                        h-[68px]
+                        flex
+                        items-center
+                        justify-between
+                        px-6
+                        border-t
+                        border-gray-200
+                        bg-white
+                    "
                 >
 
                     <div
                         className="
-                        text-xs
-                        text-gray-500
-                    "
+                            text-xs
+                            text-gray-500
+                        "
                     >
 
                         <span className="text-red-500">
@@ -1169,13 +1552,12 @@ export default function CategoryCreate() {
 
                     </div>
 
-
                     <div
                         className="
-                        flex
-                        items-center
-                        gap-3
-                    "
+                            flex
+                            items-center
+                            gap-3
+                        "
                     >
 
                         {/* CANCEL */}
@@ -1185,43 +1567,45 @@ export default function CategoryCreate() {
                             onClick={handleClose}
                             disabled={loading}
                             className="
-                            h-10
-                            px-5
-                            rounded-md
-                            border
-                            border-gray-300
-                            text-sm
-                            font-medium
-                            text-gray-700
-                            bg-white
-                            hover:bg-gray-50
-                            transition
-                            disabled:opacity-50
-                            disabled:cursor-not-allowed
-                        "
+                                h-10
+                                px-5
+                                rounded-md
+                                border
+                                border-gray-300
+                                text-sm
+                                font-medium
+                                text-gray-700
+                                bg-white
+                                hover:bg-gray-50
+                                transition
+                                disabled:opacity-50
+                                disabled:cursor-not-allowed
+                            "
                         >
                             Cancel
                         </button>
-
 
                         {/* SAVE */}
 
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={
+                                loading ||
+                                !hasRequiredPermission
+                            }
                             className="
-                            h-10
-                            px-6
-                            rounded-md
-                            bg-blue-600
-                            text-white
-                            text-sm
-                            font-medium
-                            hover:bg-blue-700
-                            transition
-                            disabled:opacity-50
-                            disabled:cursor-not-allowed
-                        "
+                                h-10
+                                px-6
+                                rounded-md
+                                bg-blue-600
+                                text-white
+                                text-sm
+                                font-medium
+                                hover:bg-blue-700
+                                transition
+                                disabled:opacity-50
+                                disabled:cursor-not-allowed
+                            "
                         >
                             {loading
                                 ? isEdit

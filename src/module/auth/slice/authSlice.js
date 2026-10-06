@@ -1,148 +1,51 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 
-import authApi from "../../../api/auth/AuthApi";
+import {
+  loginUser,
+  checkAuthentication,
+  logoutUser,
+} from "../../auth/thunks/authThunks";
 
-import { fetchRolePermissionsByRoleId } from "../../rolePermission/thunks/rolePermissionThunks";
+import { clearMenuPermissions } from "../../menuPermission/slices/menuPermissionSlice";
 
-// ============================================================
-// LOGIN
-// ============================================================
+/* ============================================================
+   LOCAL STORAGE
+============================================================ */
 
-export const loginUser = createAsyncThunk(
-  "auth/loginUser",
+const getStoredUser = () => {
+  try {
+    const storedUser = localStorage.getItem("user");
 
-  async (credentials, { dispatch, rejectWithValue }) => {
-    try {
-      const response = await authApi.login(credentials);
-
-      const user = response?.data;
-
-      // --------------------------------------------------------
-      // LOAD ROLE PERMISSIONS
-      // --------------------------------------------------------
-
-      if (user?.roleId != null) {
-        try {
-          await dispatch(fetchRolePermissionsByRoleId(user.roleId)).unwrap();
-        } catch (permissionError) {
-          /*
-           * Permission loading failure must NOT
-           * make login fail.
-           */
-          console.warn("Role permission loading failed:", permissionError);
-        }
-      }
-
-      return response;
-    } catch (error) {
-      return rejectWithValue(
-        error?.response?.data || error?.message || "Login failed",
-      );
+    if (!storedUser) {
+      return null;
     }
-  },
-);
 
-// ============================================================
-// CHECK AUTHENTICATION
-// ============================================================
+    return JSON.parse(storedUser);
+  } catch (error) {
+    console.error("Failed to parse stored user:", error);
 
-export const checkAuthentication = createAsyncThunk(
-  "auth/checkAuthentication",
+    localStorage.removeItem("user");
 
-  async (_, { dispatch, rejectWithValue }) => {
-    try {
-      // --------------------------------------------------------
-      // 1. CHECK SESSION
-      // --------------------------------------------------------
+    return null;
+  }
+};
 
-      const authenticated = await authApi.isAuthenticated();
-
-      const isLoggedIn =
-        authenticated === true ||
-        authenticated?.data === true ||
-        authenticated?.data?.authenticated === true;
-
-      // --------------------------------------------------------
-      // NOT AUTHENTICATED
-      // --------------------------------------------------------
-
-      if (!isLoggedIn) {
-        return {
-          authenticated: false,
-          user: null,
-        };
-      }
-
-      // --------------------------------------------------------
-      // 2. RESTORE CURRENT USER
-      // --------------------------------------------------------
-
-      const response = await authApi.getCurrentUser();
-
-      const user = response?.data || response;
-
-      // --------------------------------------------------------
-      // 3. RESTORE ROLE PERMISSIONS
-      // --------------------------------------------------------
-
-      if (user?.roleId != null) {
-        try {
-          await dispatch(fetchRolePermissionsByRoleId(user.roleId)).unwrap();
-        } catch (permissionError) {
-          /*
-           * Do NOT reject authentication because
-           * permission loading failed.
-           *
-           * ADMIN can still access everything through
-           * the Sidebar ADMIN bypass.
-           */
-          console.warn("Role permission restoration failed:", permissionError);
-        }
-      }
-
-      return {
-        authenticated: true,
-        user,
-      };
-    } catch (error) {
-      return rejectWithValue(
-        error?.response?.data ||
-          error?.message ||
-          "Authentication check failed",
-      );
-    }
-  },
-);
-
-// ============================================================
-// LOGOUT
-// ============================================================
-
-export const logoutUser = createAsyncThunk(
-  "auth/logoutUser",
-
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await authApi.logout();
-
-      return response;
-    } catch (error) {
-      return rejectWithValue(
-        error?.response?.data || error?.message || "Logout failed",
-      );
-    }
-  },
-);
-
-// ============================================================
-// INITIAL STATE
-// ============================================================
+/* ============================================================
+   INITIAL STATE
+============================================================ */
 
 const initialState = {
-  user: null,
+  user: getStoredUser(),
 
+  /*
+   * Do not assume that having a user in localStorage means
+   * the backend session is still valid.
+   */
   isAuthenticated: false,
 
+  /*
+   * App starts by checking the backend session.
+   */
   authChecking: true,
 
   loading: false,
@@ -152,9 +55,9 @@ const initialState = {
   message: "",
 };
 
-// ============================================================
-// SLICE
-// ============================================================
+/* ============================================================
+   SLICE
+============================================================ */
 
 const authSlice = createSlice({
   name: "auth",
@@ -162,17 +65,49 @@ const authSlice = createSlice({
   initialState,
 
   reducers: {
+    /* ====================================================
+           CLEAR ERROR
+        ==================================================== */
+
     clearAuthError: (state) => {
       state.error = null;
     },
+
+    /* ====================================================
+           CLEAR MESSAGE
+        ==================================================== */
+
+    clearAuthMessage: (state) => {
+      state.message = "";
+    },
+
+    /* ====================================================
+           SET CURRENT USER
+        ==================================================== */
+
+    setCurrentUser: (state, action) => {
+      state.user = action.payload;
+
+      /*
+       * If a user is explicitly set, authentication is
+       * considered ready.
+       */
+      state.isAuthenticated = !!action.payload;
+
+      state.authChecking = false;
+    },
   },
 
-  extraReducers: (builder) => {
-    // ========================================================
-    // LOGIN
-    // ========================================================
+  /* ========================================================
+       ASYNC THUNKS
+    ======================================================== */
 
+  extraReducers: (builder) => {
     builder
+
+      /* =====================================================
+           LOGIN
+        ===================================================== */
 
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
@@ -185,13 +120,14 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
 
-        state.isAuthenticated = true;
-
         state.authChecking = false;
 
-        state.user = action.payload?.data || null;
+        state.isAuthenticated = true;
 
-        state.message = action.payload?.message || "Login successful";
+        state.user = action.payload?.user || null;
+
+        state.message =
+          action.payload?.loginResponse?.message || "Login successful.";
 
         state.error = null;
       })
@@ -199,20 +135,21 @@ const authSlice = createSlice({
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
 
-        state.isAuthenticated = false;
-
         state.authChecking = false;
+
+        state.isAuthenticated = false;
 
         state.user = null;
 
-        state.error = action.payload || "Login failed";
-      });
+        state.error =
+          action.payload || action.error?.message || "Login failed.";
 
-    // ========================================================
-    // CHECK AUTHENTICATION
-    // ========================================================
+        state.message = "";
+      })
 
-    builder
+      /* =====================================================
+           CHECK AUTHENTICATION
+        ===================================================== */
 
       .addCase(checkAuthentication.pending, (state) => {
         state.authChecking = true;
@@ -223,32 +160,9 @@ const authSlice = createSlice({
       .addCase(checkAuthentication.fulfilled, (state, action) => {
         state.authChecking = false;
 
-        const authenticated = action.payload?.authenticated === true;
+        state.isAuthenticated = true;
 
-        state.isAuthenticated = authenticated;
-
-        if (authenticated) {
-          /*
-           * CRITICAL:
-           *
-           * Restore logged-in user after
-           * browser refresh.
-           *
-           * Example:
-           *
-           * {
-           *   id: 1,
-           *   name: "ADMIN",
-           *   email: "admin@ims.com",
-           *   roleId: 1,
-           *   roleName: "ADMIN"
-           * }
-           */
-
-          state.user = action.payload?.user || null;
-        } else {
-          state.user = null;
-        }
+        state.user = action.payload?.user || null;
 
         state.error = null;
       })
@@ -260,48 +174,56 @@ const authSlice = createSlice({
 
         state.user = null;
 
-        state.error = action.payload || "Authentication check failed";
-      });
+        state.error = action.payload || action.error?.message || null;
+      })
 
-    // ========================================================
-    // LOGOUT
-    // ========================================================
+      /* =====================================================
+           LOGOUT
+        ===================================================== */
 
-    builder
+      .addCase(logoutUser.pending, (state) => {
+        state.loading = true;
+      })
 
       .addCase(logoutUser.fulfilled, (state) => {
-        state.user = null;
-
-        state.isAuthenticated = false;
+        state.loading = false;
 
         state.authChecking = false;
 
-        state.loading = false;
+        state.isAuthenticated = false;
+
+        state.user = null;
 
         state.error = null;
 
-        state.message = "Logged out successfully";
+        state.message = "";
       })
 
       .addCase(logoutUser.rejected, (state, action) => {
-        /*
-         * Even when server logout fails,
-         * clear client authentication.
-         */
-
-        state.user = null;
-
-        state.isAuthenticated = false;
+        state.loading = false;
 
         state.authChecking = false;
 
-        state.loading = false;
+        state.isAuthenticated = false;
 
-        state.error = action.payload || "Logout failed";
+        state.user = null;
+
+        state.error = action.payload || action.error?.message || null;
+
+        state.message = "";
       });
   },
 });
 
-export const { clearAuthError } = authSlice.actions;
+/* ============================================================
+   ACTIONS
+============================================================ */
+
+export const { clearAuthError, clearAuthMessage, setCurrentUser } =
+  authSlice.actions;
+
+/* ============================================================
+   REDUCER
+============================================================ */
 
 export default authSlice.reducer;

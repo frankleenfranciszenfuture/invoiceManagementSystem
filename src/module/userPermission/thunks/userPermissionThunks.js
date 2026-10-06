@@ -437,3 +437,84 @@ export const deleteUserPermission = createAsyncThunk(
     }
   },
 );
+
+/*
+ * =========================================================
+ * FETCH CURRENT LOGGED-IN USER PERMISSIONS
+ *
+ * GET /user-permissions/user/{userId}
+ *
+ * IMPORTANT:
+ *
+ * This uses the same backend endpoint as
+ * fetchUserPermissionsByUserId.
+ *
+ * The difference is only Redux state handling:
+ *
+ * - fetchUserPermissionsByUserId
+ *      -> User Permission Matrix
+ *      -> selected/editing user
+ *
+ * - fetchCurrentUserPermissions
+ *      -> Sidebar
+ *      -> currently logged-in user
+ *
+ * Keeping them separate prevents the Permission Matrix
+ * from accidentally changing Sidebar permissions.
+ * =========================================================
+ */
+
+export const fetchCurrentUserPermissions = createAsyncThunk(
+  "userPermission/fetchCurrentUserPermissions",
+
+  async (userId, { rejectWithValue }) => {
+    try {
+      const id = Number(userId);
+
+      /*
+       * -----------------------------------------------------
+       * VALIDATE USER ID
+       * -----------------------------------------------------
+       */
+
+      if (!Number.isInteger(id) || id <= 0) {
+        return rejectWithValue("Valid user ID is required.");
+      }
+
+      console.log("========== FETCH CURRENT USER PERMISSIONS ==========");
+
+      console.log("Current logged-in user ID:", id);
+
+      /*
+       * -----------------------------------------------------
+       * API REQUEST
+       * -----------------------------------------------------
+       */
+
+      const response = await api.get(`/user-permissions/user/${id}`);
+
+      console.log("CURRENT USER PERMISSIONS API RESPONSE:", response.data);
+
+      /*
+       * -----------------------------------------------------
+       * RETURN USER ID + DATA
+       *
+       * The Redux slice needs the user ID so it can track
+       * which logged-in user's permissions are currently
+       * loaded.
+       * -----------------------------------------------------
+       */
+
+      return {
+        userId: id,
+        data: response.data,
+      };
+    } catch (error) {
+      console.error("fetchCurrentUserPermissions error:", error);
+
+      return rejectWithValue(
+        getErrorMessage(error, "Failed to fetch current user permissions."),
+      );
+    }
+  },
+);

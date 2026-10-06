@@ -6,7 +6,7 @@ import { closeProfileMenu } from "../../../module/ui/uiSlice";
 
 import {
     logoutUser,
-} from "../../../module/auth/slice/authSlice";
+} from "../../../module/auth/thunks/authThunks";
 
 import toast from "react-hot-toast";
 

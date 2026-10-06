@@ -5,6 +5,7 @@ import {
   fetchAllRolePermissions,
   fetchRolePermissionById,
   fetchRolePermissionsByRoleId,
+  fetchCurrentRolePermissions,
   updateRolePermission,
   deleteRolePermission,
 } from "../thunks/rolePermissionThunks";
@@ -170,14 +171,20 @@ const buildMyPermissions = (permissions = []) => {
  */
 
 const extractPermissionData = (response) => {
-  const data = response?.data;
-
-  if (Array.isArray(data)) {
-    return data;
+  if (Array.isArray(response)) {
+    return response;
   }
 
-  if (Array.isArray(data?.content)) {
-    return data.content;
+  if (Array.isArray(response?.data)) {
+    return response.data;
+  }
+
+  if (Array.isArray(response?.data?.content)) {
+    return response.data.content;
+  }
+
+  if (Array.isArray(response?.content)) {
+    return response.content;
   }
 
   return [];
@@ -220,6 +227,28 @@ const initialState = {
    */
 
   myPermissions: [],
+
+  /*
+   * ========================================================
+   * CURRENT LOGGED-IN USER'S ROLE PERMISSIONS
+   *
+   * IMPORTANT:
+   *
+   * rolePermissions belongs to the selected/editing role
+   * in the Role Permission Matrix.
+   *
+   * currentRolePermissions belongs to the role of the
+   * currently logged-in user and is used by Sidebar.
+   *
+   * These MUST remain separate.
+   * ========================================================
+   */
+
+  currentRolePermissions: [],
+
+  currentRolePermissionsLoading: false,
+
+  currentRolePermissionsLoadedForRoleId: null,
 
   /*
    * Current permission form.
@@ -303,12 +332,6 @@ const rolePermissionSlice = createSlice({
   initialState,
 
   reducers: {
-    /*
-     * ========================================================
-     * RESET FORM
-     * ========================================================
-     */
-
     resetRolePermissionForm: (state) => {
       state.rolePermission = {
         ...emptyRolePermission,
@@ -323,23 +346,11 @@ const rolePermissionSlice = createSlice({
       state.success = false;
     },
 
-    /*
-     * ========================================================
-     * SET SELECTED ROLE
-     * ========================================================
-     */
-
     setSelectedRole: (state, action) => {
       state.selectedRoleId = action.payload?.roleId ?? null;
 
       state.selectedRoleName = action.payload?.roleName || "";
     },
-
-    /*
-     * ========================================================
-     * CLEAR SELECTED ROLE
-     * ========================================================
-     */
 
     clearSelectedRole: (state) => {
       state.selectedRoleId = null;
@@ -355,31 +366,13 @@ const rolePermissionSlice = createSlice({
       state.rolePermissionsLoaded = false;
     },
 
-    /*
-     * ========================================================
-     * CLEAR ERROR
-     * ========================================================
-     */
-
     clearRolePermissionError: (state) => {
       state.error = null;
     },
 
-    /*
-     * ========================================================
-     * CLEAR MESSAGE
-     * ========================================================
-     */
-
     clearRolePermissionMessage: (state) => {
       state.message = "";
     },
-
-    /*
-     * ========================================================
-     * RESET ROLE PERMISSIONS
-     * ========================================================
-     */
 
     resetRolePermissions: (state) => {
       state.rolePermissions = [];
@@ -395,6 +388,18 @@ const rolePermissionSlice = createSlice({
       };
 
       state.exsistingRolePermission = null;
+    },
+
+    // ========================================================
+    // CLEAR CURRENT LOGGED-IN USER ROLE PERMISSIONS
+    // ========================================================
+
+    clearCurrentRolePermissions: (state) => {
+      state.currentRolePermissions = [];
+
+      state.currentRolePermissionsLoading = false;
+
+      state.currentRolePermissionsLoadedForRoleId = null;
     },
   },
 
@@ -741,6 +746,77 @@ const rolePermissionSlice = createSlice({
       );
 
     // ========================================================
+    // FETCH CURRENT LOGGED-IN USER'S ROLE PERMISSIONS
+    // ========================================================
+    //
+    // GET:
+    //
+    // /role-permissions/role/{roleId}
+    //
+    // IMPORTANT:
+    //
+    // This is intentionally separate from
+    // fetchRolePermissionsByRoleId.
+    //
+    // fetchRolePermissionsByRoleId
+    //     -> rolePermissions
+    //     -> Role Permission Matrix
+    //
+    // fetchCurrentRolePermissions
+    //     -> currentRolePermissions
+    //     -> Sidebar
+    //
+    // ========================================================
+
+    builder
+
+      .addCase(
+        fetchCurrentRolePermissions.pending,
+
+        (state) => {
+          state.currentRolePermissionsLoading = true;
+
+          state.error = null;
+        },
+      )
+
+      .addCase(fetchCurrentRolePermissions.fulfilled, (state, action) => {
+        state.currentRolePermissionsLoading = false;
+
+        state.error = null;
+
+        const response = action.payload;
+
+        const permissions = extractPermissionData(response?.data);
+
+        state.currentRolePermissions = permissions;
+
+        const roleId = Number(response?.roleId);
+
+        state.currentRolePermissionsLoadedForRoleId =
+          Number.isInteger(roleId) && roleId > 0 ? roleId : null;
+
+        console.log("CURRENT ROLE PERMISSIONS LOADED:", {
+          roleId,
+          permissions,
+        });
+      })
+
+      .addCase(
+        fetchCurrentRolePermissions.rejected,
+
+        (state, action) => {
+          state.currentRolePermissionsLoading = false;
+
+          state.currentRolePermissions = [];
+
+          state.currentRolePermissionsLoadedForRoleId = null;
+
+          state.error =
+            action.payload || "Failed to fetch current role permissions.";
+        },
+      );
+    // ========================================================
     // UPDATE ROLE PERMISSION
     // ========================================================
 
@@ -933,6 +1009,7 @@ export const {
   clearRolePermissionError,
   clearRolePermissionMessage,
   resetRolePermissions,
+  clearCurrentRolePermissions,
 } = rolePermissionSlice.actions;
 
 /*

@@ -114,6 +114,86 @@ export const fetchRolePermissionsByRoleId = createAsyncThunk(
 );
 
 /* =========================================================
+   FETCH CURRENT LOGGED-IN USER'S ROLE PERMISSIONS
+
+   GET /role-permissions/role/{roleId}
+
+   IMPORTANT:
+
+   This uses the same backend endpoint as
+   fetchRolePermissionsByRoleId.
+
+   The difference is Redux state separation:
+
+   - fetchRolePermissionsByRoleId
+        -> Role Permission Matrix
+        -> selected/editing role
+
+   - fetchCurrentRolePermissions
+        -> Sidebar
+        -> logged-in user's current role
+
+   This prevents the Sidebar from accidentally using
+   permissions belonging to another role being edited.
+   ========================================================= */
+
+export const fetchCurrentRolePermissions = createAsyncThunk(
+  "rolePermission/fetchCurrentRolePermissions",
+
+  async (roleId, { rejectWithValue }) => {
+    try {
+      const id = Number(roleId);
+
+      /*
+       * -----------------------------------------------------
+       * VALIDATE ROLE ID
+       * -----------------------------------------------------
+       */
+
+      if (!Number.isInteger(id) || id <= 0) {
+        return rejectWithValue("Valid role ID is required.");
+      }
+
+      console.log("========== FETCH CURRENT ROLE PERMISSIONS ==========");
+
+      console.log("Current logged-in user's role ID:", id);
+
+      /*
+       * -----------------------------------------------------
+       * API REQUEST
+       * -----------------------------------------------------
+       */
+
+      const res = await api.get(`/role-permissions/role/${id}`);
+
+      console.log("CURRENT ROLE PERMISSIONS:", res.data);
+
+      /*
+       * -----------------------------------------------------
+       * RETURN ROLE ID + DATA
+       *
+       * Redux needs the role ID so we know which role's
+       * permissions are currently loaded for the Sidebar.
+       * -----------------------------------------------------
+       */
+
+      return {
+        roleId: id,
+        data: res.data,
+      };
+    } catch (error) {
+      console.error("Fetch current role permissions error:", error);
+
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          error?.message ||
+          "Failed to fetch current role permissions.",
+      );
+    }
+  },
+);
+/* =========================================================
    UPDATE ROLE PERMISSION
    ========================================================= */
 

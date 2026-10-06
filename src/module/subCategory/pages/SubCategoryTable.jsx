@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -10,7 +11,9 @@ import {
     setExsistingSubCategory,
 } from "../slices/subCategorySlice";
 
-import { openModal } from "../../ui/uiSlice";
+import {
+    openModal,
+} from "../../ui/uiSlice";
 
 import {
     ChevronDown,
@@ -27,16 +30,17 @@ export default function SubCategoryTable({
 
     const dispatch = useDispatch();
 
-    /* =====================================================
-       REDUX STATE
-    ===================================================== */
+    // =====================================================
+    // REDUX STATE
+    // =====================================================
 
     const {
         loading,
         error,
         pagination,
     } = useSelector(
-        (state) => state.subCategory || {}
+        (state) =>
+            state.subCategory || {}
     );
 
     const {
@@ -49,13 +53,289 @@ export default function SubCategoryTable({
     const currentSubCategories =
         subCategories || [];
 
-    /* =====================================================
-       DELETE SUB CATEGORY
-    ===================================================== */
+    // =====================================================
+    // AUTH
+    // =====================================================
 
-    const handleDelete = async (id) => {
+    const user = useSelector(
+        (state) =>
+            state.auth?.user
+    );
 
-        if (!window.confirm("Delete this sub category?")) {
+    // =====================================================
+    // USER PERMISSIONS
+    // =====================================================
+
+    const permissions = useSelector(
+        (state) =>
+            Array.isArray(
+                state.menuPermission?.userPermissions
+            )
+                ? state.menuPermission.userPermissions
+                : []
+    );
+
+    const permissionLoading = useSelector(
+        (state) =>
+            state.menuPermission
+                ?.userPermissionsLoading === true
+    );
+
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission
+                ?.userPermissionsLoaded === true
+    );
+
+    // =====================================================
+    // ROLE
+    // =====================================================
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+    const normalizedRole =
+        String(roleName)
+            .trim()
+            .toUpperCase();
+
+    const isSuperAdmin =
+        normalizedRole === "SUPER_ADMIN";
+
+    const isAdmin =
+        normalizedRole === "ADMIN";
+
+    const hasFullAccess =
+        isSuperAdmin ||
+        isAdmin;
+
+    // =====================================================
+    // PERMISSION CHECKER
+    //
+    // Supports:
+    //
+    // FLAT
+    //
+    // {
+    //     moduleName: "Sub Categories",
+    //     actionName: "EDIT",
+    //     allowed: true
+    // }
+    //
+    // GROUPED
+    //
+    // {
+    //     moduleName: "Sub Categories",
+    //     actions: [
+    //         {
+    //             actionName: "EDIT",
+    //             allowed: true
+    //         }
+    //     ]
+    // }
+    // =====================================================
+
+    const hasPermission = (
+        moduleName,
+        actionName
+    ) => {
+
+        // ADMIN / SUPER_ADMIN
+        if (hasFullAccess) {
+            return true;
+        }
+
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+        const requestedModule =
+            String(moduleName)
+                .trim()
+                .toLowerCase();
+
+        const requestedAction =
+            String(actionName)
+                .trim()
+                .toUpperCase();
+
+        return permissions.some(
+            (permission) => {
+
+                const permissionModule =
+                    String(
+                        permission?.moduleName ||
+                        permission?.module?.moduleName ||
+                        permission?.module?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toLowerCase();
+
+                if (
+                    permissionModule !==
+                    requestedModule
+                ) {
+                    return false;
+                }
+
+                // =================================================
+                // IGNORE INACTIVE PERMISSION
+                // =================================================
+
+                if (
+                    permission?.active === false
+                ) {
+                    return false;
+                }
+
+                if (
+                    String(
+                        permission?.status || ""
+                    )
+                        .trim()
+                        .toUpperCase() ===
+                    "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                // =================================================
+                // GROUPED PERMISSION
+                // =================================================
+
+                if (
+                    Array.isArray(
+                        permission?.actions
+                    )
+                ) {
+
+                    return permission.actions.some(
+                        (action) => {
+
+                            const permissionAction =
+                                String(
+                                    action?.actionName ||
+                                    action?.action?.actionName ||
+                                    action?.action?.name ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toUpperCase();
+
+                            const allowed =
+                                action?.allowed === true ||
+                                action?.allowed === "true";
+
+                            return (
+                                permissionAction ===
+                                requestedAction &&
+                                allowed
+                            );
+                        }
+                    );
+                }
+
+                // =================================================
+                // FLAT PERMISSION
+                // =================================================
+
+                const permissionAction =
+                    String(
+                        permission?.actionName ||
+                        permission?.action?.actionName ||
+                        permission?.action?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase();
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction ===
+                    requestedAction &&
+                    allowed
+                );
+            }
+        );
+    };
+
+    // =====================================================
+    // SUB CATEGORY PERMISSIONS
+    // =====================================================
+
+    const canEditSubCategory =
+        hasPermission(
+            "SubCategories",
+            "EDIT"
+        );
+
+    const canDeleteSubCategory =
+        hasPermission(
+            "SubCategories",
+            "DELETE"
+        );
+
+    // =====================================================
+    // ANY ACTION AVAILABLE
+    // =====================================================
+
+    const canPerformAction =
+        canEditSubCategory ||
+        canDeleteSubCategory;
+
+    // =====================================================
+    // DELETE SUB CATEGORY
+    // =====================================================
+
+    const handleDelete = async (
+        id
+    ) => {
+
+        // =================================================
+        // PERMISSION CHECK
+        // =================================================
+
+        if (
+            !hasFullAccess &&
+            !permissionsLoaded
+        ) {
+
+            toast.error(
+                "Permissions are still loading. Please try again."
+            );
+
+            return;
+        }
+
+        if (
+            !canDeleteSubCategory
+        ) {
+
+            toast.error(
+                "You do not have permission to delete sub categories."
+            );
+
+            return;
+        }
+
+        // =================================================
+        // CONFIRM
+        // =================================================
+
+        if (
+            !window.confirm(
+                "Delete this sub category?"
+            )
+        ) {
             return;
         }
 
@@ -84,13 +364,13 @@ export default function SubCategoryTable({
         }
     };
 
-    /* =====================================================
-       VIEW SUB CATEGORY
-       Currently kept same pattern as SizeTable.
-       View button is disabled/commented in UI.
-    ===================================================== */
+    // =====================================================
+    // VIEW SUB CATEGORY
+    // =====================================================
 
-    const handleView = (subCategory) => {
+    const handleView = (
+        subCategory
+    ) => {
 
         try {
 
@@ -100,9 +380,6 @@ export default function SubCategoryTable({
                 )
             );
 
-            // Add navigation here later if needed.
-            // navigate(`/sub-categories/view/${subCategory.id}`);
-
         } catch (error) {
 
             toast.error(
@@ -111,18 +388,49 @@ export default function SubCategoryTable({
         }
     };
 
-    /* =====================================================
-       EDIT SUB CATEGORY
-    ===================================================== */
+    // =====================================================
+    // EDIT SUB CATEGORY
+    // =====================================================
 
-    const handleEdit = (subCategory) => {
+    const handleEdit = (
+        subCategory
+    ) => {
+
+        // =================================================
+        // PERMISSION CHECK
+        // =================================================
+
+        if (
+            !hasFullAccess &&
+            !permissionsLoaded
+        ) {
+
+            toast.error(
+                "Permissions are still loading. Please try again."
+            );
+
+            return;
+        }
+
+        if (
+            !canEditSubCategory
+        ) {
+
+            toast.error(
+                "You do not have permission to edit sub categories."
+            );
+
+            return;
+        }
 
         try {
 
             dispatch(
                 openModal({
-                    type: "editSubCategory",
-                    data: subCategory,
+                    type:
+                        "editSubCategory",
+                    data:
+                        subCategory,
                 })
             );
 
@@ -134,11 +442,13 @@ export default function SubCategoryTable({
         }
     };
 
-    /* =====================================================
-       SUB CATEGORY INITIALS
-    ===================================================== */
+    // =====================================================
+    // SUB CATEGORY INITIALS
+    // =====================================================
 
-    const initials = (name) =>
+    const initials = (
+        name
+    ) =>
         name
             ?.split(" ")
             .map(
@@ -147,11 +457,12 @@ export default function SubCategoryTable({
             )
             .join("")
             .slice(0, 2)
-            .toUpperCase() || "SC";
+            .toUpperCase() ||
+        "SC";
 
-    /* =====================================================
-       STATUS COLORS
-    ===================================================== */
+    // =====================================================
+    // STATUS COLORS
+    // =====================================================
 
     const statusColor = {
 
@@ -166,11 +477,13 @@ export default function SubCategoryTable({
 
     };
 
-    /* =====================================================
-       SUB CATEGORY NAME COLOR
-    ===================================================== */
+    // =====================================================
+    // SUB CATEGORY NAME COLOR
+    // =====================================================
 
-    const getSubCategoryNameColor = (name) => {
+    const getSubCategoryNameColor = (
+        name
+    ) => {
 
         if (!name) {
             return "bg-gray-100 text-gray-700";
@@ -186,9 +499,9 @@ export default function SubCategoryTable({
         return "bg-purple-100 text-purple-700";
     };
 
-    /* =====================================================
-       SUB CATEGORY CODE COLOR
-    ===================================================== */
+    // =====================================================
+    // SUB CATEGORY CODE COLOR
+    // =====================================================
 
     const getSubCategoryCodeColor = (
         subCategoryCode
@@ -204,24 +517,30 @@ export default function SubCategoryTable({
                 .toUpperCase();
 
         const lastPart =
-            value.split("-").pop();
+            value
+                .split("-")
+                .pop();
 
-        // Last part is only numbers
-        if (/^\d+$/.test(lastPart)) {
+        if (
+            /^\d+$/.test(lastPart)
+        ) {
+
             return "bg-gray-100 text-orange-400";
         }
 
-        // Last part contains letters
-        if (/^[A-Z]+$/.test(lastPart)) {
+        if (
+            /^[A-Z]+$/.test(lastPart)
+        ) {
+
             return "bg-gray-100 text-pink-400";
         }
 
         return "bg-gray-100 text-gray-700";
     };
 
-    /* =====================================================
-       AVATAR COLORS
-    ===================================================== */
+    // =====================================================
+    // AVATAR COLORS
+    // =====================================================
 
     const avatarColors = [
 
@@ -256,9 +575,44 @@ export default function SubCategoryTable({
         return avatarColors[index];
     };
 
-    /* =====================================================
-       LOADING
-    ===================================================== */
+    // =====================================================
+    // PERMISSION LOADING
+    // =====================================================
+
+    if (
+        !hasFullAccess &&
+        (
+            permissionLoading ||
+            !permissionsLoaded
+        )
+    ) {
+
+        return (
+            <div
+                className="
+                flex
+                items-center
+                justify-center
+                py-10
+                "
+            >
+
+                <p
+                    className="
+                    text-sm
+                    text-gray-500
+                    "
+                >
+                    Loading permissions...
+                </p>
+
+            </div>
+        );
+    }
+
+    // =====================================================
+    // LOADING
+    // =====================================================
 
     if (loading) {
 
@@ -266,14 +620,18 @@ export default function SubCategoryTable({
 
             <div
                 className="
-                    flex
-                    items-center
-                    justify-center
-                    py-10
+                flex
+                items-center
+                justify-center
+                py-10
                 "
             >
 
-                <p className="text-gray-500">
+                <p
+                    className="
+                    text-gray-500
+                    "
+                >
                     Loading sub categories...
                 </p>
 
@@ -281,9 +639,9 @@ export default function SubCategoryTable({
         );
     }
 
-    /* =====================================================
-       ERROR
-    ===================================================== */
+    // =====================================================
+    // ERROR
+    // =====================================================
 
     if (error) {
 
@@ -291,16 +649,20 @@ export default function SubCategoryTable({
 
             <div
                 className="
-                    bg-white
-                    rounded-xl
-                    border
-                    border-red-200
-                    p-8
-                    text-center
+                bg-white
+                rounded-xl
+                border
+                border-red-200
+                p-8
+                text-center
                 "
             >
 
-                <p className="text-red-500">
+                <p
+                    className="
+                    text-red-500
+                    "
+                >
                     {error}
                 </p>
 
@@ -308,36 +670,42 @@ export default function SubCategoryTable({
         );
     }
 
-    /* =====================================================
-       EMPTY STATE
-    ===================================================== */
+    // =====================================================
+    // EMPTY STATE
+    // =====================================================
 
-    if (!currentSubCategories.length) {
+    if (
+        !currentSubCategories.length
+    ) {
 
         return (
 
             <div
                 className="
-                    bg-white
-                    rounded-2xl
-                    border
-                    border-gray-200
-                    p-8
-                    text-center
+                bg-white
+                rounded-2xl
+                border
+                border-gray-200
+                p-8
+                text-center
                 "
             >
 
                 <ListTree
                     className="
-                        mx-auto
-                        mb-3
-                        h-10
-                        w-10
-                        text-gray-300
+                    mx-auto
+                    mb-3
+                    h-10
+                    w-10
+                    text-gray-300
                     "
                 />
 
-                <p className="text-gray-500">
+                <p
+                    className="
+                    text-gray-500
+                    "
+                >
                     No sub categories found.
                 </p>
 
@@ -345,20 +713,20 @@ export default function SubCategoryTable({
         );
     }
 
-    /* =====================================================
-       TABLE
-    ===================================================== */
+    // =====================================================
+    // TABLE
+    // =====================================================
 
     return (
 
         <div
             className="
-                bg-white
-                rounded-xl
-                border
-                border-gray-200
-                overflow-visible
-                w-full
+            bg-white
+            rounded-xl
+            border
+            border-gray-200
+            overflow-visible
+            w-full
             "
         >
 
@@ -368,16 +736,16 @@ export default function SubCategoryTable({
 
             <div
                 className="
-                    w-full
-                    overflow-visible
+                w-full
+                overflow-visible
                 "
             >
 
                 <table
                     className="
-                        w-full
-                        table-fixed
-                        border-collapse
+                    w-full
+                    table-fixed
+                    border-collapse
                     "
                 >
 
@@ -387,111 +755,99 @@ export default function SubCategoryTable({
 
                     <thead
                         className="
-                            bg-gray-100
-                            border-b
-                            border-gray-300
+                        bg-gray-100
+                        border-b
+                        border-gray-300
                         "
                     >
 
                         <tr>
 
-                            {/* SUB CATEGORY NAME */}
-
                             <th
                                 className="
-                                    w-[22%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
+                                w-[22%]
+                                px-2
+                                py-3
+                                font-medium
+                                text-sm
+                                text-gray-600
+                                uppercase
+                                text-left
                                 "
                             >
                                 Sub Category
                             </th>
 
-                            {/* CATEGORY */}
-
                             <th
                                 className="
-                                    w-[18%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
+                                w-[18%]
+                                px-2
+                                py-3
+                                font-medium
+                                text-sm
+                                text-gray-600
+                                uppercase
+                                text-left
                                 "
                             >
                                 Category
                             </th>
 
-                            {/* SUB CATEGORY CODE */}
-
                             <th
                                 className="
-                                    w-[18%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
+                                w-[18%]
+                                px-2
+                                py-3
+                                font-medium
+                                text-sm
+                                text-gray-600
+                                uppercase
+                                text-left
                                 "
                             >
                                 Sub Category Code
                             </th>
 
-                            {/* DESCRIPTION */}
-
                             <th
                                 className="
-                                    w-[22%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
+                                w-[22%]
+                                px-2
+                                py-3
+                                font-medium
+                                text-sm
+                                text-gray-600
+                                uppercase
+                                text-left
                                 "
                             >
                                 Description
                             </th>
 
-                            {/* STATUS */}
-
                             <th
                                 className="
-                                    w-[12%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
+                                w-[12%]
+                                px-2
+                                py-3
+                                font-medium
+                                text-sm
+                                text-gray-600
+                                uppercase
+                                text-left
                                 "
                             >
                                 Status
                             </th>
 
-                            {/* ACTIONS */}
-
                             <th
                                 className="
-                                    w-[10%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-right
+                                w-[10%]
+                                px-2
+                                py-3
+                                font-medium
+                                text-sm
+                                text-gray-600
+                                uppercase
+                                text-right
                                 "
                             >
                                 Actions
@@ -525,12 +881,12 @@ export default function SubCategoryTable({
                                             index
                                         }
                                         className="
-                                            border-b
-                                            border-gray-100
-                                            hover:bg-gray-50
-                                            text-sm
-                                            cursor-pointer
-                                            transition-colors
+                                        border-b
+                                        border-gray-100
+                                        hover:bg-gray-50
+                                        text-sm
+                                        cursor-pointer
+                                        transition-colors
                                         "
                                     >
 
@@ -540,38 +896,37 @@ export default function SubCategoryTable({
 
                                         <td
                                             className="
-                                                px-2
-                                                py-3
-                                                overflow-hidden
+                                            px-2
+                                            py-3
+                                            overflow-hidden
                                             "
                                         >
 
                                             <div
                                                 className="
-                                                    flex
-                                                    items-center
-                                                    gap-2
-                                                    min-w-0
+                                                flex
+                                                items-center
+                                                gap-2
+                                                min-w-0
                                                 "
                                             >
 
-                                                {/* AVATAR */}
-
                                                 <div
                                                     className={`
-                                                        w-9
-                                                        h-9
-                                                        min-w-[36px]
-                                                        rounded-full
-                                                        flex
-                                                        items-center
-                                                        justify-center
-                                                        text-sm
-                                                        font-bold
-                                                        ${getAvatarColor(
+w - 9
+h - 9
+min - w - [36px]
+rounded - full
+flex
+items - center
+justify - center
+text - sm
+font - bold
+                                                    ${getAvatarColor(
                                                         subCategory.name
-                                                    )}
-                                                    `}
+                                                    )
+                                                        }
+`}
                                                 >
 
                                                     {
@@ -582,19 +937,17 @@ export default function SubCategoryTable({
 
                                                 </div>
 
-                                                {/* NAME */}
-
                                                 <div
                                                     className="
-                                                        min-w-0
+                                                    min-w-0
                                                     "
                                                 >
 
                                                     <p
                                                         className="
-                                                            font-medium
-                                                            text-gray-800
-                                                            truncate
+                                                        font-medium
+                                                        text-gray-800
+                                                        truncate
                                                         "
                                                         title={
                                                             subCategory.name ||
@@ -609,8 +962,8 @@ export default function SubCategoryTable({
 
                                                     <p
                                                         className="
-                                                            text-xs
-                                                            text-gray-500
+                                                        text-xs
+                                                        text-gray-500
                                                         "
                                                     >
                                                         ID: #
@@ -631,23 +984,23 @@ export default function SubCategoryTable({
 
                                         <td
                                             className="
-                                                px-2
-                                                py-3
-                                                overflow-hidden
+                                            px-2
+                                            py-3
+                                            overflow-hidden
                                             "
                                         >
 
                                             <div
                                                 className="
-                                                    min-w-0
+                                                min-w-0
                                                 "
                                             >
 
                                                 <p
                                                     className="
-                                                        font-medium
-                                                        text-gray-700
-                                                        truncate
+                                                    font-medium
+                                                    text-gray-700
+                                                    truncate
                                                     "
                                                     title={
                                                         subCategory.categoryName ||
@@ -662,9 +1015,9 @@ export default function SubCategoryTable({
 
                                                 <p
                                                     className="
-                                                        text-xs
-                                                        text-gray-500
-                                                        truncate
+                                                    text-xs
+                                                    text-gray-500
+                                                    truncate
                                                     "
                                                     title={
                                                         subCategory.categoryCode ||
@@ -687,28 +1040,29 @@ export default function SubCategoryTable({
 
                                         <td
                                             className="
-                                                px-2
-                                                py-3
-                                                overflow-hidden
+                                            px-2
+                                            py-3
+                                            overflow-hidden
                                             "
                                         >
 
                                             <p
                                                 className={`
-                                                    inline-flex
-                                                    items-center
-                                                    w-fit
-                                                    max-w-full
-                                                    px-2.5
-                                                    py-1
-                                                    rounded-md
-                                                    text-xs
-                                                    font-medium
-                                                    truncate
-                                                    ${getSubCategoryCodeColor(
+inline - flex
+items - center
+w - fit
+max - w - full
+px - 2.5
+py - 1
+rounded - md
+text - xs
+font - medium
+truncate
+                                                ${getSubCategoryCodeColor(
                                                     subCategory.subCategoryCode
-                                                )}
-                                                `}
+                                                )
+                                                    }
+`}
                                                 title={
                                                     subCategory.subCategoryCode ||
                                                     ""
@@ -728,16 +1082,16 @@ export default function SubCategoryTable({
 
                                         <td
                                             className="
-                                                px-2
-                                                py-3
-                                                overflow-hidden
+                                            px-2
+                                            py-3
+                                            overflow-hidden
                                             "
                                         >
 
                                             <p
                                                 className="
-                                                    truncate
-                                                    text-gray-700
+                                                truncate
+                                                text-gray-700
                                                 "
                                                 title={
                                                     subCategory.description ||
@@ -758,26 +1112,26 @@ export default function SubCategoryTable({
 
                                         <td
                                             className="
-                                                px-2
-                                                py-3
-                                                overflow-hidden
+                                            px-2
+                                            py-3
+                                            overflow-hidden
                                             "
                                         >
 
                                             <span
                                                 className={`
-                                                    inline-block
-                                                    px-2
-                                                    py-1
-                                                    rounded-full
-                                                    text-xs
-                                                    font-medium
-                                                    ${statusColor[
+inline - block
+px - 2
+py - 1
+rounded - full
+text - xs
+font - medium
+                                                ${statusColor[
                                                     subCategory.status
                                                     ] ||
                                                     "bg-gray-100 text-gray-700"
                                                     }
-                                                `}
+`}
                                             >
                                                 {
                                                     subCategory.status ||
@@ -793,57 +1147,64 @@ export default function SubCategoryTable({
 
                                         <td
                                             className="
-                                                relative
-                                                overflow-visible
-                                                px-2
-                                                py-3
+                                            relative
+                                            overflow-visible
+                                            px-2
+                                            py-3
                                             "
                                             onClick={(e) =>
                                                 e.stopPropagation()
                                             }
                                         >
 
-                                            <div
-                                                className="
-                                                    flex
-                                                    justify-end
-                                                "
-                                            >
+                                            {/* =================================================
+                                                HIDE ACTION BUTTON COMPLETELY
+                                                IF USER HAS NO EDIT/DELETE ACCESS
+                                            ================================================= */}
+
+                                            {canPerformAction && (
 
                                                 <div
                                                     className="
-                                                        relative
-                                                        group
-                                                        inline-block
+                                                    flex
+                                                    justify-end
                                                     "
                                                 >
 
-                                                    {/* ACTION BUTTON */}
-
-                                                    <button
-                                                        type="button"
+                                                    <div
                                                         className="
+                                                        relative
+                                                        group
+                                                        inline-block
+                                                        "
+                                                    >
+
+                                                        {/* ACTION BUTTON */}
+
+                                                        <button
+                                                            type="button"
+                                                            className="
                                                             p-1
                                                             rounded-full
                                                             bg-blue-500
                                                             text-white
                                                             hover:bg-blue-600
                                                             transition-colors
-                                                        "
-                                                    >
+                                                            "
+                                                        >
 
-                                                        <ChevronDown
-                                                            size={16}
-                                                        />
+                                                            <ChevronDown
+                                                                size={16}
+                                                            />
 
-                                                    </button>
+                                                        </button>
 
-                                                    {/* =========================
-                                                        ACTION MENU
-                                                    ========================= */}
+                                                        {/* =================================================
+                                                            ACTION MENU
+                                                        ================================================= */}
 
-                                                    <div
-                                                        className="
+                                                        <div
+                                                            className="
                                                             absolute
                                                             right-0
                                                             top-full
@@ -855,80 +1216,94 @@ export default function SubCategoryTable({
                                                             group-hover:visible
                                                             transition-all
                                                             duration-150
-                                                        "
-                                                    >
+                                                            "
+                                                        >
 
-                                                        <div
-                                                            className="
+                                                            <div
+                                                                className="
                                                                 w-36
                                                                 rounded-md
                                                                 bg-blue-500
                                                                 shadow-lg
                                                                 overflow-hidden
-                                                            "
-                                                        >
-
-                                                            {/* EDIT */}
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleEdit(
-                                                                        subCategory
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-blue-600
-                                                                    transition-colors
                                                                 "
                                                             >
 
-                                                                <Edit
-                                                                    size={16}
-                                                                />
+                                                                {/* =================================================
+                                                                    EDIT
+                                                                ================================================= */}
 
-                                                                Edit
+                                                                {canEditSubCategory && (
 
-                                                            </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            handleEdit(
+                                                                                subCategory
+                                                                            )
+                                                                        }
+                                                                        className="
+                                                                        flex
+                                                                        w-full
+                                                                        items-center
+                                                                        gap-2
+                                                                        px-4
+                                                                        py-2
+                                                                        text-sm
+                                                                        text-white
+                                                                        hover:bg-blue-600
+                                                                        transition-colors
+                                                                        "
+                                                                    >
 
-                                                            {/* DELETE */}
+                                                                        <Edit
+                                                                            size={16}
+                                                                        />
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleDelete(
-                                                                        subCategory.id
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-red-600
-                                                                    transition-colors
-                                                                "
-                                                            >
+                                                                        Edit
 
-                                                                <Trash2
-                                                                    size={16}
-                                                                />
+                                                                    </button>
 
-                                                                Delete
+                                                                )}
 
-                                                            </button>
+                                                                {/* =================================================
+                                                                    DELETE
+                                                                ================================================= */}
+
+                                                                {canDeleteSubCategory && (
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            handleDelete(
+                                                                                subCategory.id
+                                                                            )
+                                                                        }
+                                                                        className="
+                                                                        flex
+                                                                        w-full
+                                                                        items-center
+                                                                        gap-2
+                                                                        px-4
+                                                                        py-2
+                                                                        text-sm
+                                                                        text-white
+                                                                        hover:bg-red-600
+                                                                        transition-colors
+                                                                        "
+                                                                    >
+
+                                                                        <Trash2
+                                                                            size={16}
+                                                                        />
+
+                                                                        Delete
+
+                                                                    </button>
+
+                                                                )}
+
+                                                            </div>
 
                                                         </div>
 
@@ -936,7 +1311,7 @@ export default function SubCategoryTable({
 
                                                 </div>
 
-                                            </div>
+                                            )}
 
                                         </td>
 
@@ -955,29 +1330,33 @@ export default function SubCategoryTable({
 
                 <div
                     className="
-                        p-4
-                        border-t
-                        border-gray-100
-                        flex
-                        items-center
-                        justify-between
+                    p-4
+                    border-t
+                    border-gray-100
+                    flex
+                    items-center
+                    justify-between
                     "
                 >
 
                     <p
                         className="
-                            text-sm
-                            text-gray-500
+                        text-sm
+                        text-gray-500
                         "
                     >
 
                         Showing{" "}
 
-                        {currentSubCategories.length}
+                        {
+                            currentSubCategories.length
+                        }
 
                         {" "}of{" "}
 
-                        {totalElements || 0}
+                        {
+                            totalElements || 0
+                        }
 
                         {" "}sub categories
 
@@ -985,9 +1364,9 @@ export default function SubCategoryTable({
 
                     <div
                         className="
-                            flex
-                            items-center
-                            gap-3
+                        flex
+                        items-center
+                        gap-3
                         "
                     >
 
@@ -996,17 +1375,19 @@ export default function SubCategoryTable({
                         <button
                             type="button"
                             disabled={
-                                Number(pageNumber) <= 0
+                                Number(
+                                    pageNumber
+                                ) <= 0
                             }
                             onClick={() => {
                                 // Add server-side page support here
                             }}
                             className="
-                                text-sm
-                                text-gray-400
-                                hover:text-gray-600
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
+                            text-sm
+                            text-gray-400
+                            hover:text-gray-600
+                            disabled:opacity-50
+                            disabled:cursor-not-allowed
                             "
                         >
                             Previous
@@ -1016,20 +1397,24 @@ export default function SubCategoryTable({
 
                         <span
                             className="
-                                w-8
-                                h-8
-                                flex
-                                items-center
-                                justify-center
-                                rounded-lg
-                                bg-blue-500
-                                text-white
-                                text-sm
-                                font-medium
+                            w-8
+                            h-8
+                            flex
+                            items-center
+                            justify-center
+                            rounded-lg
+                            bg-blue-500
+                            text-white
+                            text-sm
+                            font-medium
                             "
                         >
 
-                            {(Number(pageNumber) || 0) + 1}
+                            {
+                                (Number(
+                                    pageNumber
+                                ) || 0) + 1
+                            }
 
                         </span>
 
@@ -1038,22 +1423,29 @@ export default function SubCategoryTable({
                         <button
                             type="button"
                             disabled={
-                                (Number(pageNumber) || 0) >=
-                                (Number(totalPages) || 1) - 1
+                                (
+                                    Number(
+                                        pageNumber
+                                    ) || 0
+                                ) >=
+                                (
+                                    Number(
+                                        totalPages
+                                    ) || 1
+                                ) - 1
                             }
                             onClick={() => {
                                 // Add server-side page support here
                             }}
                             className="
-                                text-sm
-                                text-gray-400
-                                hover:text-gray-600
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
+                            text-sm
+                            text-gray-400
+                            hover:text-gray-600
+                            disabled:opacity-50
+                            disabled:cursor-not-allowed
                             "
                         >
                             Next
-
                         </button>
 
                     </div>

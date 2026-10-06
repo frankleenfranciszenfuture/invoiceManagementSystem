@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { ChartColumnStackedIcon, X } from "lucide-react";
+import { ChartColumnStackedIcon } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { closeModal } from "../../ui/uiSlice";
@@ -45,6 +46,45 @@ export default function SubCategoryCreate() {
     );
 
     // =========================================================
+    // AUTH
+    // =========================================================
+
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
+
+    const isAuthenticated = useSelector(
+        (state) => state.auth?.isAuthenticated
+    );
+
+    const authChecking = useSelector(
+        (state) => state.auth?.authChecking
+    );
+
+    // =========================================================
+    // USER PERMISSIONS
+    // =========================================================
+
+    const permissions = useSelector(
+        (state) =>
+            Array.isArray(
+                state.menuPermission?.userPermissions
+            )
+                ? state.menuPermission.userPermissions
+                : []
+    );
+
+    const permissionLoading = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissionsLoading === true
+    );
+
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissionsLoaded === true
+    );
+
+    // =========================================================
     // ADD / EDIT MODE
     // =========================================================
 
@@ -59,48 +99,244 @@ export default function SubCategoryCreate() {
         );
 
     // =========================================================
-    // FORM
+    // ACTIVE TAB
+    // IMPORTANT:
+    // Keep hooks before any conditional return.
     // =========================================================
 
-    const form = subCategory || {
-        id: null,
-        categoryId: null,
-        name: "",
-        description: "",
-        displayOrder: 1,
-        status: "ACTIVE",
+    const [activeTab, setActiveTab] =
+        useState("subcategory");
+
+    // =========================================================
+    // ERRORS
+    // =========================================================
+
+    const [errors, setErrors] =
+        useState({});
+
+    // =========================================================
+    // ROLE
+    // =========================================================
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+    const normalizedRole =
+        String(roleName)
+            .trim()
+            .toUpperCase();
+
+    const isSuperAdmin =
+        normalizedRole === "SUPER_ADMIN";
+
+    const isAdmin =
+        normalizedRole === "ADMIN";
+
+    const hasFullAccess =
+        isSuperAdmin || isAdmin;
+
+    // =========================================================
+    // PERMISSION CHECKER
+    //
+    // Supports:
+    //
+    // 1. Flat permission
+    //
+    // {
+    //     moduleName: "Sub Categories",
+    //     actionName: "CREATE",
+    //     allowed: true
+    // }
+    //
+    // 2. Grouped permission
+    //
+    // {
+    //     moduleName: "Sub Categories",
+    //     actions: [
+    //         {
+    //             actionName: "CREATE",
+    //             allowed: true
+    //         }
+    //     ]
+    // }
+    // =========================================================
+
+    const hasPermission = (
+        moduleName,
+        actionName
+    ) => {
+
+        // ADMIN / SUPER_ADMIN
+        if (hasFullAccess) {
+            return true;
+        }
+
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+        const requestedModule =
+            String(moduleName)
+                .trim()
+                .toLowerCase();
+
+        const requestedAction =
+            String(actionName)
+                .trim()
+                .toUpperCase();
+
+        return permissions.some(
+            (permission) => {
+
+                const permissionModule =
+                    String(
+                        permission?.moduleName ||
+                        permission?.module?.moduleName ||
+                        permission?.module?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toLowerCase();
+
+                if (
+                    permissionModule !==
+                    requestedModule
+                ) {
+                    return false;
+                }
+
+                // Ignore inactive permission
+                if (
+                    permission?.active === false
+                ) {
+                    return false;
+                }
+
+                if (
+                    String(
+                        permission?.status || ""
+                    )
+                        .trim()
+                        .toUpperCase() ===
+                    "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                // =================================================
+                // GROUPED PERMISSION
+                // =================================================
+
+                if (
+                    Array.isArray(
+                        permission?.actions
+                    )
+                ) {
+
+                    return permission.actions.some(
+                        (action) => {
+
+                            const permissionAction =
+                                String(
+                                    action?.actionName ||
+                                    action?.action?.actionName ||
+                                    action?.action?.name ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toUpperCase();
+
+                            const allowed =
+                                action?.allowed === true ||
+                                action?.allowed === "true";
+
+                            return (
+                                permissionAction ===
+                                requestedAction &&
+                                allowed
+                            );
+                        }
+                    );
+                }
+
+                // =================================================
+                // FLAT PERMISSION
+                // =================================================
+
+                const permissionAction =
+                    String(
+                        permission?.actionName ||
+                        permission?.action?.actionName ||
+                        permission?.action?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase();
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction ===
+                    requestedAction &&
+                    allowed
+                );
+            }
+        );
     };
 
     // =========================================================
-    // CHANGE FIELD
+    // REQUIRED ACTION
+    //
+    // ADD  -> CREATE
+    // EDIT -> EDIT
     // =========================================================
 
-    const handleChange = (field, value) => {
+    const requiredAction =
+        isEdit
+            ? "EDIT"
+            : "CREATE";
 
-        dispatch(
-            setSubCategoryField({
-                field,
-                value,
-            })
+    const hasRequiredPermission =
+        hasPermission(
+            "SubCategories",
+            requiredAction
         );
-
-    };
 
     // =========================================================
-    // CLOSE MODAL
+    // LOAD CATEGORIES
     // =========================================================
 
-    const handleClose = () => {
+    useEffect(() => {
+
+        if (!isOpen) {
+            return;
+        }
+
+        if (authChecking) {
+            return;
+        }
+
+        if (!isAuthenticated) {
+            return;
+        }
 
         dispatch(
-            closeModal()
+            fetchAllCategories()
         );
 
-        dispatch(
-            resetSubCategoryForm()
-        );
-
-    };
+    }, [
+        isOpen,
+        authChecking,
+        isAuthenticated,
+        dispatch,
+    ]);
 
     // =========================================================
     // ESCAPE KEY
@@ -214,32 +450,95 @@ export default function SubCategoryCreate() {
         dispatch,
     ]);
 
+    // =========================================================
+    // FORM
+    // =========================================================
 
-    //category USEEFFCT
+    const form = subCategory || {
+        id: null,
+        categoryId: null,
+        name: "",
+        description: "",
+        displayOrder: 1,
+        status: "ACTIVE",
+    };
 
-    useEffect(() => {
+    // =========================================================
+    // CHANGE FIELD
+    // =========================================================
 
-        if (!isOpen) {
-            return;
+    const handleChange = (
+        field,
+        value
+    ) => {
+
+        dispatch(
+            setSubCategoryField({
+                field,
+                value,
+            })
+        );
+
+        // Clear field error
+        if (errors[field]) {
+
+            setErrors(
+                (previous) => {
+
+                    const updated = {
+                        ...previous,
+                    };
+
+                    delete updated[field];
+
+                    return updated;
+                }
+            );
         }
 
-        dispatch(fetchAllCategories());
+    };
 
-    }, [isOpen, dispatch]);
+    // =========================================================
+    // CLOSE MODAL
+    // =========================================================
 
-    const [errors, setErrors] =
-        useState({});
+    const handleClose = () => {
 
+        dispatch(
+            closeModal()
+        );
+
+        dispatch(
+            resetSubCategoryForm()
+        );
+
+        setErrors({});
+        setActiveTab("subcategory");
+
+    };
+
+    // =========================================================
+    // VALIDATION
+    // =========================================================
 
     const validateSubCategory = () => {
+
         const newErrors = {};
 
         if (!form.categoryId) {
-            newErrors.categoryId = "Category is required";
+
+            newErrors.categoryId =
+                "Category is required";
         }
 
-        if (!String(form.name ?? "").trim()) {
-            newErrors.name = "Sub Category Name is required";
+        if (
+            !String(
+                form.name ?? ""
+            ).trim()
+        ) {
+
+            newErrors.name =
+                "Sub Category Name is required";
         }
 
         if (
@@ -247,16 +546,31 @@ export default function SubCategoryCreate() {
             form.displayOrder === null ||
             form.displayOrder === undefined
         ) {
-            newErrors.displayOrder = "Display Order is required";
-        } else if (Number(form.displayOrder) < 1) {
+
+            newErrors.displayOrder =
+                "Display Order is required";
+
+        } else if (
+            Number(form.displayOrder) < 1
+        ) {
+
             newErrors.displayOrder =
                 "Display Order must be at least 1";
         }
 
-        setErrors(newErrors);
+        setErrors(
+            newErrors
+        );
 
-        if (Object.keys(newErrors).length > 0) {
-            setActiveTab("subcategory");
+        if (
+            Object.keys(
+                newErrors
+            ).length > 0
+        ) {
+
+            setActiveTab(
+                "subcategory"
+            );
 
             toast.error(
                 "Please complete Sub Category Information"
@@ -277,9 +591,56 @@ export default function SubCategoryCreate() {
 
         e.preventDefault();
 
+        // =====================================================
+        // AUTH / PERMISSION
+        // =====================================================
+
+        if (authChecking) {
+            return;
+        }
+
+        if (!isAuthenticated) {
+
+            toast.error(
+                "Please login to continue."
+            );
+
+            return;
+        }
+
+        if (
+            !hasFullAccess &&
+            !permissionsLoaded
+        ) {
+
+            toast.error(
+                "Permissions are still loading. Please try again."
+            );
+
+            return;
+        }
+
+        if (
+            !hasRequiredPermission
+        ) {
+
+            toast.error(
+                isEdit
+                    ? "You do not have permission to edit sub categories."
+                    : "You do not have permission to create sub categories."
+            );
+
+            return;
+        }
+
+        // =====================================================
+        // VALIDATION
+        // =====================================================
+
         if (!validateSubCategory()) {
             return;
         }
+
         // =====================================================
         // CATEGORY
         // =====================================================
@@ -297,7 +658,9 @@ export default function SubCategoryCreate() {
         // NAME
         // =====================================================
 
-        if (!form.name?.trim()) {
+        if (
+            !form.name?.trim()
+        ) {
 
             toast.error(
                 "Sub category name is required"
@@ -311,10 +674,14 @@ export default function SubCategoryCreate() {
         // =====================================================
 
         const displayOrder =
-            Number(form.displayOrder);
+            Number(
+                form.displayOrder
+            );
 
         if (
-            !Number.isInteger(displayOrder) ||
+            !Number.isInteger(
+                displayOrder
+            ) ||
             displayOrder < 1
         ) {
 
@@ -332,7 +699,9 @@ export default function SubCategoryCreate() {
         const payload = {
 
             categoryId:
-                Number(form.categoryId),
+                Number(
+                    form.categoryId
+                ),
 
             name:
                 form.name.trim(),
@@ -344,7 +713,9 @@ export default function SubCategoryCreate() {
             displayOrder:
                 displayOrder,
 
-            status: form.status || "ACTIVE",
+            status:
+                form.status ||
+                "ACTIVE",
 
         };
 
@@ -389,7 +760,9 @@ export default function SubCategoryCreate() {
             else {
 
                 await dispatch(
-                    createSubCategory(payload)
+                    createSubCategory(
+                        payload
+                    )
                 ).unwrap();
 
                 toast.success(
@@ -409,6 +782,9 @@ export default function SubCategoryCreate() {
             dispatch(
                 resetSubCategoryForm()
             );
+
+            setErrors({});
+            setActiveTab("subcategory");
 
         } catch (error) {
 
@@ -441,7 +817,181 @@ export default function SubCategoryCreate() {
         return null;
     }
 
-    const [activeTab, setActiveTab] = useState("subcategory");
+    // =========================================================
+    // PERMISSION LOADING
+    // =========================================================
+
+    if (
+        !hasFullAccess &&
+        (
+            authChecking ||
+            !isAuthenticated ||
+            permissionLoading ||
+            !permissionsLoaded
+        )
+    ) {
+
+        return (
+            <div
+                className="
+                w-[950px]
+                max-w-[95vw]
+                h-[300px]
+                max-h-[88vh]
+
+                bg-white
+                rounded-xl
+                shadow-2xl
+
+                flex
+                items-center
+                justify-center
+                "
+            >
+
+                <div className="text-center">
+
+                    <div
+                        className="
+                        w-8
+                        h-8
+                        border-2
+                        border-blue-600
+                        border-t-transparent
+                        rounded-full
+                        animate-spin
+                        mx-auto
+                        mb-3
+                        "
+                    />
+
+                    <p
+                        className="
+                        text-sm
+                        text-gray-600
+                        "
+                    >
+                        Loading permissions...
+                    </p>
+
+                </div>
+
+            </div>
+        );
+    }
+
+    // =========================================================
+    // PERMISSION DENIED
+    // =========================================================
+
+    if (
+        !hasFullAccess &&
+        !hasRequiredPermission
+    ) {
+
+        return (
+            <div
+                className="
+                w-[950px]
+                max-w-[95vw]
+                h-[300px]
+                max-h-[88vh]
+
+                bg-white
+                rounded-xl
+                shadow-2xl
+
+                flex
+                items-center
+                justify-center
+                "
+            >
+
+                <div
+                    className="
+                    text-center
+                    px-6
+                    "
+                >
+
+                    <div
+                        className="
+                        w-12
+                        h-12
+                        rounded-full
+                        bg-red-50
+                        flex
+                        items-center
+                        justify-center
+                        mx-auto
+                        mb-4
+                        "
+                    >
+
+                        <span
+                            className="
+                            text-red-500
+                            text-xl
+                            font-semibold
+                            "
+                        >
+                            !
+                        </span>
+
+                    </div>
+
+                    <h3
+                        className="
+                        text-base
+                        font-semibold
+                        text-gray-800
+                        "
+                    >
+                        Access Denied
+                    </h3>
+
+                    <p
+                        className="
+                        text-sm
+                        text-gray-500
+                        mt-1
+                        "
+                    >
+                        You do not have permission to{" "}
+                        {isEdit
+                            ? "edit"
+                            : "create"}{" "}
+                        sub categories.
+                    </p>
+
+                    <button
+                        type="button"
+                        onClick={handleClose}
+                        className="
+                        mt-5
+                        h-9
+                        px-5
+                        rounded-md
+                        bg-blue-600
+                        text-white
+                        text-sm
+                        font-medium
+                        hover:bg-blue-700
+                        transition
+                        "
+                    >
+                        Close
+                    </button>
+
+                </div>
+
+            </div>
+        );
+    }
+
+    // =========================================================
+    // TABS
+    // =========================================================
 
     const tabs = [
         {
@@ -454,33 +1004,42 @@ export default function SubCategoryCreate() {
         },
     ];
 
+    // =========================================================
+    // INPUT CLASS
+    // =========================================================
+
     const inputClass = `
-    w-full
-    h-11
-    px-3
-    border
-    border-gray-300
-    rounded-md
-    text-sm
-    text-gray-700
-    bg-white
-    outline-none
-    transition
-    focus:border-blue-500
-    focus:ring-1
-    focus:ring-blue-500
-    disabled:bg-gray-100
-    disabled:text-gray-500
-    disabled:cursor-not-allowed
-`;
+w - full
+h - 11
+px - 3
+border
+border - gray - 300
+rounded - md
+text - sm
+text - gray - 700
+bg - white
+outline - none
+transition
+focus: border - blue - 500
+focus: ring - 1
+focus: ring - blue - 500
+disabled: bg - gray - 100
+disabled: text - gray - 500
+disabled: cursor - not - allowed
+    `;
+
+    // =========================================================
+    // LABEL CLASS
+    // =========================================================
 
     const labelClass = `
-    block
-    text-xs
-    font-medium
-    text-gray-600
-    mb-1.5
-`;
+block
+text - xs
+font - medium
+text - gray - 600
+mb - 1.5
+    `;
+
     // =========================================================
     // UI
     // =========================================================
@@ -501,12 +1060,12 @@ export default function SubCategoryCreate() {
 
             flex
             flex-col
-        "
+            "
         >
 
             {/* =================================================
-            HEADER
-        ================================================= */}
+                HEADER
+            ================================================= */}
 
             <div
                 className="
@@ -523,7 +1082,7 @@ export default function SubCategoryCreate() {
                 border-gray-200
 
                 bg-white
-            "
+                "
             >
 
                 <div className="flex items-center gap-3">
@@ -539,12 +1098,14 @@ export default function SubCategoryCreate() {
                         flex
                         items-center
                         justify-center
-                    "
+                        "
                     >
+
                         <ChartColumnStackedIcon
                             size={20}
                             className="text-blue-600"
                         />
+
                     </div>
 
                     <div>
@@ -554,7 +1115,7 @@ export default function SubCategoryCreate() {
                             text-[17px]
                             font-semibold
                             text-gray-800
-                        "
+                            "
                         >
                             {isEdit
                                 ? "Edit Sub Category"
@@ -566,7 +1127,7 @@ export default function SubCategoryCreate() {
                             text-xs
                             text-gray-500
                             mt-0.5
-                        "
+                            "
                         >
                             {isEdit
                                 ? "Update sub category information"
@@ -579,10 +1140,9 @@ export default function SubCategoryCreate() {
 
             </div>
 
-
             {/* =================================================
-            TABS
-        ================================================= */}
+                TABS
+            ================================================= */}
 
             <div
                 className="
@@ -593,7 +1153,7 @@ export default function SubCategoryCreate() {
                 border-gray-200
 
                 bg-white
-            "
+                "
             >
 
                 <div
@@ -602,7 +1162,7 @@ export default function SubCategoryCreate() {
                     items-center
                     gap-8
                     h-[52px]
-                "
+                    "
                 >
 
                     {tabs.map((tab) => {
@@ -626,13 +1186,13 @@ export default function SubCategoryCreate() {
                                     setActiveTab(tab.id)
                                 }
                                 className={`
-                                relative
-                                h-full
+relative
+h - full
 
-                                text-sm
-                                font-medium
+text - sm
+font - medium
 
-                                transition
+transition
 
                                 ${active
                                         ? "text-blue-600"
@@ -640,7 +1200,7 @@ export default function SubCategoryCreate() {
                                             ? "text-red-500"
                                             : "text-gray-500 hover:text-gray-800"
                                     }
-                            `}
+`}
                             >
 
                                 <span
@@ -648,7 +1208,7 @@ export default function SubCategoryCreate() {
                                     flex
                                     items-center
                                     gap-1.5
-                                "
+                                    "
                                 >
 
                                     {tab.label}
@@ -660,7 +1220,7 @@ export default function SubCategoryCreate() {
                                             h-1.5
                                             rounded-full
                                             bg-red-500
-                                        "
+                                            "
                                         />
                                     )}
 
@@ -679,7 +1239,7 @@ export default function SubCategoryCreate() {
                                         bg-blue-600
 
                                         rounded-t
-                                    "
+                                        "
                                     />
                                 )}
 
@@ -691,10 +1251,9 @@ export default function SubCategoryCreate() {
 
             </div>
 
-
             {/* =================================================
-            FORM
-        ================================================= */}
+                FORM
+            ================================================= */}
 
             <form
                 onSubmit={handleSave}
@@ -704,12 +1263,12 @@ export default function SubCategoryCreate() {
                 flex-1
                 min-h-0
                 overflow-hidden
-            "
+                "
             >
 
                 {/* =================================================
-                SCROLL BODY
-            ================================================= */}
+                    SCROLL BODY
+                ================================================= */}
 
                 <div
                     className="
@@ -723,18 +1282,16 @@ export default function SubCategoryCreate() {
                     py-6
 
                     bg-gray-50/50
-                "
+                    "
                 >
 
                     {/* =================================================
-                    SUB CATEGORY INFORMATION
-                ================================================= */}
+                        SUB CATEGORY INFORMATION
+                    ================================================= */}
 
                     {activeTab === "subcategory" && (
 
                         <div>
-
-                            {/* SECTION HEADER */}
 
                             <div
                                 className="
@@ -745,7 +1302,7 @@ export default function SubCategoryCreate() {
                                 justify-between
 
                                 gap-6
-                            "
+                                "
                             >
 
                                 <div>
@@ -755,7 +1312,7 @@ export default function SubCategoryCreate() {
                                         text-base
                                         font-semibold
                                         text-gray-800
-                                    "
+                                        "
                                     >
                                         Sub Category Information
                                     </h3>
@@ -765,7 +1322,7 @@ export default function SubCategoryCreate() {
                                         text-xs
                                         text-gray-500
                                         mt-1
-                                    "
+                                        "
                                     >
                                         Configure the basic sub category
                                         information.
@@ -773,16 +1330,13 @@ export default function SubCategoryCreate() {
 
                                 </div>
 
-
-                                {/* STATUS */}
-
                                 <div
                                     className="
                                     flex
                                     items-center
                                     gap-3
                                     shrink-0
-                                "
+                                    "
                                 >
 
                                     <label
@@ -790,25 +1344,25 @@ export default function SubCategoryCreate() {
                                         text-md
                                         font-semibold
                                         text-gray-600
-                                    "
+                                        "
                                     >
                                         Status :
                                     </label>
 
                                     <span
                                         className={`
-                                        inline-flex
-                                        items-center
-                                        justify-center
+inline - flex
+items - center
+justify - center
 
-                                        min-w-[85px]
-                                        h-7
-                                        px-3
+min - w - [85px]
+h - 7
+px - 3
 
-                                        rounded-full
+rounded - full
 
-                                        text-sm
-                                        font-bold
+text - sm
+font - bold
 
                                         ${form.status === "ACTIVE"
                                                 ? "bg-green-50 text-green-700"
@@ -816,7 +1370,7 @@ export default function SubCategoryCreate() {
                                                     ? "bg-red-50 text-red-700"
                                                     : "bg-yellow-50 text-yellow-700"
                                             }
-                                    `}
+`}
                                     >
                                         {form.status || "ACTIVE"}
                                     </span>
@@ -825,23 +1379,16 @@ export default function SubCategoryCreate() {
 
                             </div>
 
-
-                            {/* =================================================
-                            SUB CATEGORY FIELDS
-                        ================================================= */}
-
                             <div
                                 className="
                                 grid
                                 grid-cols-2
                                 gap-x-6
                                 gap-y-5
-                            "
+                                "
                             >
 
-                                {/* =================================================
-                                CATEGORY
-                            ================================================= */}
+                                {/* CATEGORY */}
 
                                 <div>
 
@@ -854,7 +1401,7 @@ export default function SubCategoryCreate() {
                                             className="
                                             text-red-500
                                             ml-1
-                                        "
+                                            "
                                         >
                                             *
                                         </span>
@@ -862,12 +1409,16 @@ export default function SubCategoryCreate() {
                                     </label>
 
                                     <select
-                                        value={form.categoryId ?? ""}
+                                        value={
+                                            form.categoryId ?? ""
+                                        }
                                         onChange={(e) =>
                                             handleChange(
                                                 "categoryId",
                                                 e.target.value
-                                                    ? Number(e.target.value)
+                                                    ? Number(
+                                                        e.target.value
+                                                    )
                                                     : null
                                             )
                                         }
@@ -889,15 +1440,23 @@ export default function SubCategoryCreate() {
                                                     (a.displayOrder ?? 0) -
                                                     (b.displayOrder ?? 0)
                                             )
-                                            .map((category) => (
-                                                <option
-                                                    key={category.id}
-                                                    value={category.id}
-                                                >
-                                                    {category.categoryName ||
-                                                        category.name}
-                                                </option>
-                                            ))}
+                                            .map(
+                                                (category) => (
+                                                    <option
+                                                        key={
+                                                            category.id
+                                                        }
+                                                        value={
+                                                            category.id
+                                                        }
+                                                    >
+                                                        {
+                                                            category.categoryName ||
+                                                            category.name
+                                                        }
+                                                    </option>
+                                                )
+                                            )}
 
                                     </select>
 
@@ -907,18 +1466,17 @@ export default function SubCategoryCreate() {
                                             text-xs
                                             text-red-500
                                             mt-1
-                                        "
+                                            "
                                         >
-                                            {errors.categoryId}
+                                            {
+                                                errors.categoryId
+                                            }
                                         </p>
                                     )}
 
                                 </div>
 
-
-                                {/* =================================================
-                                SUB CATEGORY NAME
-                            ================================================= */}
+                                {/* SUB CATEGORY NAME */}
 
                                 <div>
 
@@ -931,7 +1489,7 @@ export default function SubCategoryCreate() {
                                             className="
                                             text-red-500
                                             ml-1
-                                        "
+                                            "
                                         >
                                             *
                                         </span>
@@ -940,7 +1498,9 @@ export default function SubCategoryCreate() {
 
                                     <input
                                         type="text"
-                                        value={form.name ?? ""}
+                                        value={
+                                            form.name ?? ""
+                                        }
                                         onChange={(e) =>
                                             handleChange(
                                                 "name",
@@ -957,7 +1517,7 @@ export default function SubCategoryCreate() {
                                             text-xs
                                             text-red-500
                                             mt-1
-                                        "
+                                            "
                                         >
                                             {errors.name}
                                         </p>
@@ -965,10 +1525,7 @@ export default function SubCategoryCreate() {
 
                                 </div>
 
-
-                                {/* =================================================
-                                DESCRIPTION
-                            ================================================= */}
+                                {/* DESCRIPTION */}
 
                                 <div className="col-span-2">
 
@@ -992,37 +1549,26 @@ export default function SubCategoryCreate() {
                                         placeholder="Enter sub category description"
                                         className="
                                         w-full
-
                                         px-3
                                         py-3
-
                                         border
                                         border-gray-300
-
                                         rounded-md
-
                                         text-sm
                                         text-gray-700
-
                                         bg-white
-
                                         outline-none
                                         resize-none
-
                                         transition
-
                                         focus:border-blue-500
                                         focus:ring-1
                                         focus:ring-blue-500
-                                    "
+                                        "
                                     />
 
                                 </div>
 
-
-                                {/* =================================================
-                                DISPLAY ORDER
-                            ================================================= */}
+                                {/* DISPLAY ORDER */}
 
                                 <div>
 
@@ -1035,7 +1581,7 @@ export default function SubCategoryCreate() {
                                             className="
                                             text-red-500
                                             ml-1
-                                        "
+                                            "
                                         >
                                             *
                                         </span>
@@ -1064,9 +1610,11 @@ export default function SubCategoryCreate() {
                                             text-xs
                                             text-red-500
                                             mt-1
-                                        "
+                                            "
                                         >
-                                            {errors.displayOrder}
+                                            {
+                                                errors.displayOrder
+                                            }
                                         </p>
                                     )}
 
@@ -1075,13 +1623,11 @@ export default function SubCategoryCreate() {
                             </div>
 
                         </div>
-
                     )}
 
-
                     {/* =================================================
-                    SETTINGS
-                ================================================= */}
+                        SETTINGS
+                    ================================================= */}
 
                     {activeTab === "settings" && (
 
@@ -1094,7 +1640,7 @@ export default function SubCategoryCreate() {
                                     text-base
                                     font-semibold
                                     text-gray-800
-                                "
+                                    "
                                 >
                                     Sub Category Settings
                                 </h3>
@@ -1104,16 +1650,13 @@ export default function SubCategoryCreate() {
                                     text-xs
                                     text-gray-500
                                     mt-1
-                                "
+                                    "
                                 >
                                     Configure the sub category availability
                                     and status.
                                 </p>
 
                             </div>
-
-
-                            {/* STATUS */}
 
                             <div className="max-w-[460px]">
 
@@ -1125,7 +1668,8 @@ export default function SubCategoryCreate() {
 
                                 <select
                                     value={
-                                        form.status ?? "ACTIVE"
+                                        form.status ??
+                                        "ACTIVE"
                                     }
                                     onChange={(e) =>
                                         handleChange(
@@ -1152,11 +1696,6 @@ export default function SubCategoryCreate() {
 
                             </div>
 
-
-                            {/* =================================================
-                            SUB CATEGORY STATE
-                        ================================================= */}
-
                             <div
                                 className="
                                 mt-7
@@ -1169,7 +1708,7 @@ export default function SubCategoryCreate() {
                                 bg-white
 
                                 p-5
-                            "
+                                "
                             >
 
                                 <div
@@ -1177,7 +1716,7 @@ export default function SubCategoryCreate() {
                                     flex
                                     items-center
                                     justify-between
-                                "
+                                    "
                                 >
 
                                     <div>
@@ -1187,7 +1726,7 @@ export default function SubCategoryCreate() {
                                             text-sm
                                             font-medium
                                             text-gray-800
-                                        "
+                                            "
                                         >
                                             Sub Category Status
                                         </p>
@@ -1197,7 +1736,7 @@ export default function SubCategoryCreate() {
                                             text-xs
                                             text-gray-500
                                             mt-1
-                                        "
+                                            "
                                         >
                                             This sub category is currently
                                             set to{" "}
@@ -1206,30 +1745,32 @@ export default function SubCategoryCreate() {
                                                 className="
                                                 font-medium
                                                 text-gray-700
-                                            "
+                                                "
                                             >
-                                                {form.status || "ACTIVE"}
+                                                {
+                                                    form.status ||
+                                                    "ACTIVE"
+                                                }
                                             </span>
 
                                         </p>
 
                                     </div>
 
-
                                     <span
                                         className={`
-                                        inline-flex
-                                        items-center
-                                        justify-center
+inline - flex
+items - center
+justify - center
 
-                                        min-w-[85px]
-                                        h-7
-                                        px-3
+min - w - [85px]
+h - 7
+px - 3
 
-                                        rounded-full
+rounded - full
 
-                                        text-xs
-                                        font-medium
+text - xs
+font - medium
 
                                         ${form.status === "ACTIVE"
                                                 ? "bg-green-50 text-green-700"
@@ -1237,9 +1778,12 @@ export default function SubCategoryCreate() {
                                                     ? "bg-red-50 text-red-700"
                                                     : "bg-yellow-50 text-yellow-700"
                                             }
-                                    `}
+`}
                                     >
-                                        {form.status || "ACTIVE"}
+                                        {
+                                            form.status ||
+                                            "ACTIVE"
+                                        }
                                     </span>
 
                                 </div>
@@ -1247,15 +1791,13 @@ export default function SubCategoryCreate() {
                             </div>
 
                         </div>
-
                     )}
 
                 </div>
 
-
                 {/* =================================================
-                FOOTER
-            ================================================= */}
+                    FOOTER
+                ================================================= */}
 
                 <div
                     className="
@@ -1272,14 +1814,14 @@ export default function SubCategoryCreate() {
                     border-gray-200
 
                     bg-white
-                "
+                    "
                 >
 
                     <div
                         className="
                         text-xs
                         text-gray-500
-                    "
+                        "
                     >
 
                         <span className="text-red-500">
@@ -1290,13 +1832,12 @@ export default function SubCategoryCreate() {
 
                     </div>
 
-
                     <div
                         className="
                         flex
                         items-center
                         gap-3
-                    "
+                        "
                     >
 
                         {/* CANCEL */}
@@ -1326,17 +1867,20 @@ export default function SubCategoryCreate() {
 
                             disabled:opacity-50
                             disabled:cursor-not-allowed
-                        "
+                            "
                         >
                             Cancel
                         </button>
-
 
                         {/* SAVE */}
 
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={
+                                loading ||
+                                permissionLoading ||
+                                !hasRequiredPermission
+                            }
                             className="
                             h-10
                             px-6
@@ -1356,8 +1900,9 @@ export default function SubCategoryCreate() {
 
                             disabled:opacity-50
                             disabled:cursor-not-allowed
-                        "
+                            "
                         >
+
                             {loading
                                 ? isEdit
                                     ? "Updating..."
@@ -1365,6 +1910,7 @@ export default function SubCategoryCreate() {
                                 : isEdit
                                     ? "Update Sub Category"
                                     : "Save Sub Category"}
+
                         </button>
 
                     </div>

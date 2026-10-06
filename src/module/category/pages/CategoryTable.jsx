@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -51,12 +50,259 @@ export default function CategoryTable({
         categories || [];
 
     /* =====================================================
+       AUTH STATE
+    ===================================================== */
+
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
+
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
+
+    const permissions = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissions || []
+    );
+
+    /* =====================================================
+       ROLE
+    ===================================================== */
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+    const normalizedRole =
+        String(roleName)
+            .trim()
+            .toUpperCase();
+
+    const isSuperAdmin =
+        normalizedRole === "SUPER_ADMIN";
+
+    const isAdmin =
+        normalizedRole === "ADMIN";
+
+    const hasFullAccess =
+        isSuperAdmin || isAdmin;
+
+    /* =====================================================
+       PERMISSION CHECK
+       
+       Supports both:
+       
+       FLAT:
+       {
+           moduleName: "Categories",
+           actionName: "EDIT",
+           allowed: true
+       }
+
+       GROUPED:
+       {
+           moduleName: "Categories",
+           actions: [
+               {
+                   actionName: "EDIT",
+                   allowed: true
+               }
+           ]
+       }
+    ===================================================== */
+
+    const hasPermission = (
+        moduleName,
+        actionName
+    ) => {
+
+        /* =================================================
+           SUPER ADMIN / ADMIN
+        ================================================= */
+
+        if (hasFullAccess) {
+            return true;
+        }
+
+        /* =================================================
+           INVALID PERMISSION STATE
+        ================================================= */
+
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+        const requestedModule =
+            String(moduleName)
+                .trim()
+                .toLowerCase();
+
+        const requestedAction =
+            String(actionName)
+                .trim()
+                .toUpperCase();
+
+        /* =================================================
+           SEARCH PERMISSIONS
+        ================================================= */
+
+        return permissions.some(
+            (permission) => {
+
+                /* =========================================
+                   MODULE
+                ========================================= */
+
+                const permissionModule =
+                    String(
+                        permission?.moduleName ||
+                        permission?.module?.moduleName ||
+                        permission?.module?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toLowerCase();
+
+                if (
+                    permissionModule !==
+                    requestedModule
+                ) {
+                    return false;
+                }
+
+                /* =========================================
+                   PERMISSION STATUS
+                ========================================= */
+
+                if (
+                    permission?.active === false
+                ) {
+                    return false;
+                }
+
+                if (
+                    String(
+                        permission?.status || ""
+                    )
+                        .trim()
+                        .toUpperCase() ===
+                    "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                /* =========================================
+                   GROUPED ACTIONS
+                ========================================= */
+
+                if (
+                    Array.isArray(
+                        permission?.actions
+                    )
+                ) {
+
+                    return permission.actions.some(
+                        (action) => {
+
+                            const permissionAction =
+                                String(
+                                    action?.actionName ||
+                                    action?.action?.actionName ||
+                                    action?.action?.name ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toUpperCase();
+
+                            const allowed =
+                                action?.allowed === true ||
+                                action?.allowed === "true";
+
+                            return (
+                                permissionAction ===
+                                requestedAction &&
+                                allowed
+                            );
+                        }
+                    );
+                }
+
+                /* =========================================
+                   FLAT ACTION
+                ========================================= */
+
+                const permissionAction =
+                    String(
+                        permission?.actionName ||
+                        permission?.action?.actionName ||
+                        permission?.action?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase();
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction ===
+                    requestedAction &&
+                    allowed
+                );
+            }
+        );
+    };
+
+    /* =====================================================
+       CATEGORY PERMISSIONS
+    ===================================================== */
+
+    const canEditCategory =
+        hasPermission(
+            "Categories",
+            "EDIT"
+        );
+
+    const canDeleteCategory =
+        hasPermission(
+            "Categories",
+            "DELETE"
+        );
+
+    /* =====================================================
        DELETE CATEGORY
     ===================================================== */
 
     const handleDelete = async (id) => {
 
-        if (!window.confirm("Delete this category?")) {
+        /* =================================================
+           PERMISSION SAFETY CHECK
+        ================================================= */
+
+        if (!canDeleteCategory) {
+
+            toast.error(
+                "You do not have permission to delete categories."
+            );
+
+            return;
+        }
+
+        /* =================================================
+           CONFIRMATION
+        ================================================= */
+
+        if (
+            !window.confirm(
+                "Delete this category?"
+            )
+        ) {
             return;
         }
 
@@ -70,6 +316,9 @@ export default function CategoryTable({
                 "Category deleted successfully"
             );
 
+            /*
+             * Refresh category list after successful delete.
+             */
             dispatch(
                 fetchAllCategories()
             );
@@ -87,7 +336,7 @@ export default function CategoryTable({
 
     /* =====================================================
        VIEW CATEGORY
-       ===================================================== */
+    ===================================================== */
 
     const handleView = (category) => {
 
@@ -99,8 +348,13 @@ export default function CategoryTable({
                 )
             );
 
-            // Add navigation here later if needed.
-            // navigate(`/categories/view/${category.id}`);
+            /*
+             * Navigation can be added later.
+             *
+             * navigate(
+             *     `/categories/view/${category.id}`
+             * );
+             */
 
         } catch (error) {
 
@@ -115,6 +369,19 @@ export default function CategoryTable({
     ===================================================== */
 
     const handleEdit = (category) => {
+
+        /* =================================================
+           PERMISSION SAFETY CHECK
+        ================================================= */
+
+        if (!canEditCategory) {
+
+            toast.error(
+                "You do not have permission to edit categories."
+            );
+
+            return;
+        }
 
         try {
 
@@ -203,14 +470,16 @@ export default function CategoryTable({
                 .toUpperCase();
 
         const lastPart =
-            value.split("-").pop();
+            value
+                .split("-")
+                .pop();
 
-        // Last part is only numbers
+        /* Last part contains only numbers */
         if (/^\d+$/.test(lastPart)) {
             return "bg-gray-100 text-orange-400";
         }
 
-        // Last part contains letters
+        /* Last part contains only letters */
         if (/^[A-Z]+$/.test(lastPart)) {
             return "bg-gray-100 text-pink-400";
         }
@@ -279,7 +548,6 @@ export default function CategoryTable({
             </div>
         );
     }
-
 
     /* =====================================================
        EMPTY STATE
@@ -738,9 +1006,9 @@ export default function CategoryTable({
 
                                                     </button>
 
-                                                    {/* =========================
+                                                    {/* =================================================
                                                         ACTION MENU
-                                                    ========================= */}
+                                                    ================================================= */}
 
                                                     <div
                                                         className="
@@ -768,67 +1036,79 @@ export default function CategoryTable({
                                                             "
                                                         >
 
-                                                            {/* EDIT */}
+                                                            {/* =================================
+                                                                EDIT
+                                                            ================================= */}
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleEdit(
-                                                                        category
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-blue-600
-                                                                    transition-colors
-                                                                "
-                                                            >
+                                                            {canEditCategory && (
 
-                                                                <Edit
-                                                                    size={16}
-                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        handleEdit(
+                                                                            category
+                                                                        )
+                                                                    }
+                                                                    className="
+                                                                        flex
+                                                                        w-full
+                                                                        items-center
+                                                                        gap-2
+                                                                        px-4
+                                                                        py-2
+                                                                        text-sm
+                                                                        text-white
+                                                                        hover:bg-blue-600
+                                                                        transition-colors
+                                                                    "
+                                                                >
 
-                                                                Edit
+                                                                    <Edit
+                                                                        size={16}
+                                                                    />
 
-                                                            </button>
+                                                                    Edit
 
-                                                            {/* DELETE */}
+                                                                </button>
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleDelete(
-                                                                        category.id
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-red-600
-                                                                    transition-colors
-                                                                "
-                                                            >
+                                                            )}
 
-                                                                <Trash2
-                                                                    size={16}
-                                                                />
+                                                            {/* =================================
+                                                                DELETE
+                                                            ================================= */}
 
-                                                                Delete
+                                                            {canDeleteCategory && (
 
-                                                            </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        handleDelete(
+                                                                            category.id
+                                                                        )
+                                                                    }
+                                                                    className="
+                                                                        flex
+                                                                        w-full
+                                                                        items-center
+                                                                        gap-2
+                                                                        px-4
+                                                                        py-2
+                                                                        text-sm
+                                                                        text-white
+                                                                        hover:bg-red-600
+                                                                        transition-colors
+                                                                    "
+                                                                >
+
+                                                                    <Trash2
+                                                                        size={16}
+                                                                    />
+
+                                                                    Delete
+
+                                                                </button>
+
+                                                            )}
 
                                                         </div>
 

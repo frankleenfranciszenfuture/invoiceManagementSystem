@@ -5,10 +5,10 @@ import {
   fetchAllUserPermissions,
   fetchUserPermissionById,
   fetchUserPermissionsByUserId,
+  fetchCurrentUserPermissions,
   updateUserPermission,
   deleteUserPermission,
 } from "../thunks/userPermissionThunks";
-
 /*
  * ============================================================
  * EMPTY USER PERMISSION
@@ -274,6 +274,24 @@ const initialState = {
   myPermissions: [],
 
   /*
+   * ==========================================================
+   * CURRENT LOGGED-IN USER PERMISSIONS
+   *
+   * IMPORTANT:
+   *
+   * These are NOT the permissions of the user selected
+   * in the User Permission Matrix.
+   *
+   * These belong only to the currently authenticated user.
+   * ==========================================================
+   */
+  currentUserPermissions: [],
+
+  currentUserPermissionsLoading: false,
+
+  currentUserPermissionsLoadedForUserId: null,
+
+  /*
    * Form/detail object.
    */
   userPermission: {
@@ -419,6 +437,13 @@ const userPermissionSlice = createSlice({
       state.message = "";
     },
 
+    clearCurrentUserPermissions: (state) => {
+      state.currentUserPermissions = [];
+
+      state.currentUserPermissionsLoading = false;
+
+      state.currentUserPermissionsLoadedForUserId = null;
+    },
     /*
      * --------------------------------------------------------
      * RESET USER PERMISSIONS
@@ -767,6 +792,62 @@ const userPermissionSlice = createSlice({
       });
 
     // ========================================================
+    // FETCH CURRENT LOGGED-IN USER PERMISSIONS
+    // ========================================================
+
+    builder
+
+      .addCase(fetchCurrentUserPermissions.pending, (state) => {
+        state.currentUserPermissionsLoading = true;
+
+        state.currentUserPermissions = [];
+
+        state.currentUserPermissionsLoadedForUserId = null;
+
+        state.error = null;
+      })
+
+      .addCase(fetchCurrentUserPermissions.fulfilled, (state, action) => {
+        state.currentUserPermissionsLoading = false;
+
+        state.error = null;
+
+        const response = action.payload;
+
+        const permissions = normalizePermissions(
+          extractPermissionList(response?.data),
+        );
+
+        state.currentUserPermissions = permissions;
+
+        const userId = Number(response?.userId);
+
+        state.currentUserPermissionsLoadedForUserId =
+          Number.isInteger(userId) && userId > 0 ? userId : null;
+
+        console.log("CURRENT USER PERMISSIONS LOADED", {
+          userId,
+          permissions,
+        });
+      })
+
+      .addCase(fetchCurrentUserPermissions.rejected, (state, action) => {
+        state.currentUserPermissionsLoading = false;
+
+        /*
+         * If current-user permission loading fails,
+         * do not leave old permissions active.
+         */
+        state.currentUserPermissions = [];
+
+        state.currentUserPermissionsLoadedForUserId = null;
+
+        state.error =
+          action.payload ||
+          action.error?.message ||
+          "Failed to fetch current user permissions.";
+      });
+    // ========================================================
     // UPDATE
     // ========================================================
 
@@ -923,6 +1004,7 @@ export const {
   setSelectedUser,
   clearSelectedUser,
   clearUserPermissionError,
+  clearCurrentUserPermissions,
   clearUserPermissionMessage,
   resetUserPermissions,
 } = userPermissionSlice.actions;

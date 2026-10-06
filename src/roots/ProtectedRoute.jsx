@@ -9,7 +9,17 @@ const ProtectedRoute = ({ children }) => {
         authChecking,
     } = useSelector((state) => state.auth);
 
-    // Wait for backend authentication check
+    /*
+     * ============================================================
+     * WAIT FOR AUTHENTICATION CHECK
+     * ============================================================
+     *
+     * When the application is opened directly on a protected
+     * route, checkAuthentication() runs from AppContent.
+     *
+     * Until that request finishes, do not redirect to login.
+     */
+
     if (authChecking) {
         return (
             <div className="flex h-screen items-center justify-center bg-white">
@@ -20,15 +30,29 @@ const ProtectedRoute = ({ children }) => {
         );
     }
 
+    /*
+     * ============================================================
+     * NOT AUTHENTICATED
+     * ============================================================
+     */
+
     if (!isAuthenticated) {
         return (
             <Navigate
                 to="/login"
                 replace
-                state={{ from: location }}
+                state={{
+                    from: location,
+                }}
             />
         );
     }
+
+    /*
+     * ============================================================
+     * AUTHENTICATED
+     * ============================================================
+     */
 
     return children;
 };

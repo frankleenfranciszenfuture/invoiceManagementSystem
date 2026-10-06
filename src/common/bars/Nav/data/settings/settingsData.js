@@ -63,6 +63,12 @@ export const settings = [
         icon: ShieldCheck,
         path: "/roles",
       },
+
+      {
+        label: "MenuPermission",
+        icon: ShieldCheck,
+        path: "/menupermission",
+      },
     ],
   },
 
@@ -199,9 +205,27 @@ export const settings = [
         path: "/items",
       },
       {
-        label: "Stock",
+        label: "Category",
         icon: Boxes,
-        path: "/stock",
+        path: "/categories",
+      },
+
+      {
+        label: "Sub Category",
+        icon: Boxes,
+        path: "/subCategoires",
+      },
+
+      {
+        label: "Sizes",
+        icon: Boxes,
+        path: "/sizes",
+      },
+
+      {
+        label: "Units",
+        icon: Boxes,
+        path: "/units",
       },
     ],
   },

@@ -1,6 +1,18 @@
-import React, { useEffect, useMemo } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { Plus, Download } from "lucide-react";
+
+import React, {
+    useEffect,
+    useMemo,
+} from "react";
+
+import {
+    useSelector,
+    useDispatch,
+} from "react-redux";
+
+import {
+    Plus,
+    Download,
+} from "lucide-react";
 
 import SubCategoryTable from "./SubCategoryTable";
 import NavbarSubCategory from "../components/bars/nav/NavbarSubCategory";
@@ -14,61 +26,340 @@ import {
     setSelectedSubCategoryView,
 } from "../slices/subCategorySlice";
 
-import { openModal } from "../../ui/uiSlice";
+import {
+    openModal,
+} from "../../ui/uiSlice";
 
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
-import SubCategoryCreate from "../pages/SubCategoryCreate";
 
 export default function SubCategoryDashboard() {
 
     const dispatch = useDispatch();
 
     // ============================================================
+    // AUTH
+    // ============================================================
+
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
+
+    const isAuthenticated = useSelector(
+        (state) =>
+            state.auth?.isAuthenticated
+    );
+
+    const authChecking = useSelector(
+        (state) =>
+            state.auth?.authChecking
+    );
+
+    // ============================================================
+    // USER PERMISSIONS
+    // ============================================================
+
+    const permissions = useSelector(
+        (state) =>
+            Array.isArray(
+                state.menuPermission?.userPermissions
+            )
+                ? state.menuPermission.userPermissions
+                : []
+    );
+
+    const permissionLoading = useSelector(
+        (state) =>
+            state.menuPermission
+                ?.userPermissionsLoading === true
+    );
+
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission
+                ?.userPermissionsLoaded === true
+    );
+
+    // ============================================================
+    // ROLE
+    // ============================================================
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+    const normalizedRole =
+        String(roleName)
+            .trim()
+            .toUpperCase();
+
+    const isSuperAdmin =
+        normalizedRole === "SUPER_ADMIN";
+
+    const isAdmin =
+        normalizedRole === "ADMIN";
+
+    const hasFullAccess =
+        isSuperAdmin || isAdmin;
+
+    // ============================================================
+    // PERMISSION CHECKER
+    //
+    // Supports:
+    //
+    // FLAT:
+    // {
+    //     moduleName: "Sub Categories",
+    //     actionName: "VIEW",
+    //     allowed: true
+    // }
+    //
+    // GROUPED:
+    // {
+    //     moduleName: "Sub Categories",
+    //     actions: [
+    //         {
+    //             actionName: "VIEW",
+    //             allowed: true
+    //         }
+    //     ]
+    // }
+    // ============================================================
+
+    const hasPermission = (
+        moduleName,
+        actionName
+    ) => {
+
+        // ADMIN / SUPER_ADMIN
+        if (hasFullAccess) {
+            return true;
+        }
+
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+        const requestedModule =
+            String(moduleName)
+                .trim()
+                .toLowerCase();
+
+        const requestedAction =
+            String(actionName)
+                .trim()
+                .toUpperCase();
+
+        return permissions.some(
+            (permission) => {
+
+                const permissionModule =
+                    String(
+                        permission?.moduleName ||
+                        permission?.module?.moduleName ||
+                        permission?.module?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toLowerCase();
+
+                if (
+                    permissionModule !==
+                    requestedModule
+                ) {
+                    return false;
+                }
+
+                // Ignore inactive module permission
+                if (
+                    permission?.active === false
+                ) {
+                    return false;
+                }
+
+                if (
+                    String(
+                        permission?.status || ""
+                    )
+                        .trim()
+                        .toUpperCase() ===
+                    "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                // =================================================
+                // GROUPED PERMISSIONS
+                // =================================================
+
+                if (
+                    Array.isArray(
+                        permission?.actions
+                    )
+                ) {
+
+                    return permission.actions.some(
+                        (action) => {
+
+                            const permissionAction =
+                                String(
+                                    action?.actionName ||
+                                    action?.action?.actionName ||
+                                    action?.action?.name ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toUpperCase();
+
+                            const allowed =
+                                action?.allowed === true ||
+                                action?.allowed === "true";
+
+                            return (
+                                permissionAction ===
+                                requestedAction &&
+                                allowed
+                            );
+                        }
+                    );
+                }
+
+                // =================================================
+                // FLAT PERMISSIONS
+                // =================================================
+
+                const permissionAction =
+                    String(
+                        permission?.actionName ||
+                        permission?.action?.actionName ||
+                        permission?.action?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase();
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction ===
+                    requestedAction &&
+                    allowed
+                );
+            }
+        );
+    };
+
+    // ============================================================
+    // SUB CATEGORY PERMISSIONS
+    // ============================================================
+
+    const canViewSubCategory =
+        hasPermission(
+            "SubCategories",
+            "VIEW"
+        );
+
+    const canCreateSubCategory =
+        hasPermission(
+            "SubCategories",
+            "CREATE"
+        );
+
+    // ============================================================
     // SUB CATEGORY STATE
     // ============================================================
 
-    const subCategoriesFromRedux = useSelector(
-        (state) => state.subCategory?.subCategories
-    );
+    const subCategoriesFromRedux =
+        useSelector(
+            (state) =>
+                state.subCategory
+                    ?.subCategories
+        );
 
     const subCategories =
         subCategoriesFromRedux ?? [];
 
-    const loading = useSelector(
-        (state) =>
-            state.subCategory?.loading || false
-    );
+    const loading =
+        useSelector(
+            (state) =>
+                state.subCategory
+                    ?.loading || false
+        );
 
-    const error = useSelector(
-        (state) =>
-            state.subCategory?.error
-    );
+    const error =
+        useSelector(
+            (state) =>
+                state.subCategory
+                    ?.error
+        );
 
     // ============================================================
     // SUB CATEGORY FILTER STATE
     // ============================================================
 
-    const subCategoryStatus = useSelector(
-        (state) =>
-            state.subCategoryView?.subCategoryStatus ||
-            "ALL"
-    );
+    const subCategoryStatus =
+        useSelector(
+            (state) =>
+                state.subCategoryView
+                    ?.subCategoryStatus ||
+                "ALL"
+        );
 
     // ============================================================
     // FETCH SUB CATEGORIES
+    //
+    // IMPORTANT:
+    // STAFF must have VIEW permission before API call.
     // ============================================================
 
     useEffect(() => {
 
-        console.log(
-            "Fetching sub categories..."
-        );
+        if (authChecking) {
+            return;
+        }
+
+        if (!isAuthenticated) {
+            return;
+        }
+
+        // ADMIN / SUPER_ADMIN
+        // can directly fetch.
+        if (!hasFullAccess) {
+
+            // Wait for permission request.
+            if (permissionLoading) {
+                return;
+            }
+
+            // Wait until permission state is initialized.
+            if (!permissionsLoaded) {
+                return;
+            }
+
+            // No VIEW permission.
+            if (!canViewSubCategory) {
+                return;
+            }
+        }
 
         dispatch(
             fetchAllSubCategories()
         );
 
-    }, [dispatch]);
+    }, [
+        dispatch,
+        authChecking,
+        isAuthenticated,
+        hasFullAccess,
+        permissionLoading,
+        permissionsLoaded,
+        canViewSubCategory,
+    ]);
 
     // ============================================================
     // SYNC URL STATUS → REDUX
@@ -76,19 +367,23 @@ export default function SubCategoryDashboard() {
 
     useEffect(() => {
 
-        const params = new URLSearchParams(
-            window.location.search
-        );
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
 
         const urlStatus =
-            params.get("subCategoryStatus");
+            params.get(
+                "subCategoryStatus"
+            );
 
         if (!urlStatus) {
             return;
         }
 
         const normalizedStatus =
-            String(urlStatus).toUpperCase();
+            String(urlStatus)
+                .toUpperCase();
 
         const validStatuses = [
             "ALL",
@@ -112,135 +407,270 @@ export default function SubCategoryDashboard() {
         );
 
         const statusLabels = {
-            ALL: "All Sub Categories",
-            ACTIVE: "Active Sub Categories",
-            INACTIVE: "Inactive Sub Categories",
-            DRAFT: "Draft Sub Categories",
+            ALL:
+                "All Sub Categories",
+
+            ACTIVE:
+                "Active Sub Categories",
+
+            INACTIVE:
+                "Inactive Sub Categories",
+
+            DRAFT:
+                "Draft Sub Categories",
         };
 
         dispatch(
             setSelectedSubCategoryView(
-                statusLabels[normalizedStatus]
+                statusLabels[
+                normalizedStatus
+                ]
             )
         );
 
     }, [dispatch]);
 
     // ============================================================
-    // DEBUG
-    // ============================================================
-
-    useEffect(() => {
-
-        console.log(
-            "================================"
-        );
-
-        console.log(
-            "SUB CATEGORIES FROM REDUX:",
-            subCategories
-        );
-
-        console.log(
-            "SUB CATEGORY LOADING:",
-            loading
-        );
-
-        console.log(
-            "SUB CATEGORY ERROR:",
-            error
-        );
-
-        console.log(
-            "SUB CATEGORY STATUS:",
-            subCategoryStatus
-        );
-
-        console.log(
-            "================================"
-        );
-
-    }, [
-        subCategories,
-        loading,
-        error,
-        subCategoryStatus,
-    ]);
-
-    // ============================================================
     // FILTER SUB CATEGORIES BY STATUS
     // ============================================================
 
-    const filteredSubCategories = useMemo(() => {
+    const filteredSubCategories =
+        useMemo(() => {
 
-        const selectedStatus =
-            String(
-                subCategoryStatus || "ALL"
-            ).toUpperCase();
+            const selectedStatus =
+                String(
+                    subCategoryStatus ||
+                    "ALL"
+                ).toUpperCase();
 
-        // ========================================================
-        // ALL
-        // ========================================================
+            // ====================================================
+            // ALL
+            // ====================================================
 
-        if (
-            selectedStatus === "ALL"
-        ) {
-            return subCategories;
-        }
-
-        // ========================================================
-        // FILTER
-        // ========================================================
-
-        return subCategories.filter(
-            (subCategory) => {
-
-                const backendStatus =
-                    String(
-                        subCategory?.status || ""
-                    ).toUpperCase();
-
-                console.log(
-                    "Sub Category:",
-                    subCategory?.name,
-                    "| Backend Status:",
-                    backendStatus,
-                    "| Selected Status:",
-                    selectedStatus
-                );
-
-                return (
-                    backendStatus ===
-                    selectedStatus
-                );
+            if (
+                selectedStatus === "ALL"
+            ) {
+                return subCategories;
             }
-        );
 
-    }, [
-        subCategories,
-        subCategoryStatus,
-    ]);
+            // ====================================================
+            // FILTER
+            // ====================================================
+
+            return subCategories.filter(
+                (subCategory) => {
+
+                    const backendStatus =
+                        String(
+                            subCategory?.status ||
+                            ""
+                        ).toUpperCase();
+
+                    return (
+                        backendStatus ===
+                        selectedStatus
+                    );
+                }
+            );
+
+        }, [
+            subCategories,
+            subCategoryStatus,
+        ]);
 
     // ============================================================
     // OPEN CREATE SUB CATEGORY MODAL
     // ============================================================
 
-    const handleCreateSubCategory = () => {
+    const handleCreateSubCategory =
+        () => {
 
-        console.log(
-            "Opening Add Sub Category modal"
-        );
+            if (
+                !hasFullAccess &&
+                !permissionsLoaded
+            ) {
 
-        dispatch(
-            openModal({
-                type: "addSubCategory",
-            })
-        );
+                toastPermissionLoading();
 
-    };
+                return;
+            }
+
+            if (
+                !canCreateSubCategory
+            ) {
+
+                toastPermissionDenied();
+
+                return;
+            }
+
+            dispatch(
+                openModal({
+                    type:
+                        "addSubCategory",
+                })
+            );
+        };
 
     // ============================================================
-    // LOADING
+    // PERMISSION TOAST HELPERS
+    // ============================================================
+
+    const toastPermissionLoading =
+        () => {
+
+            import("react-hot-toast")
+                .then(
+                    ({ default: toast }) => {
+
+                        toast.error(
+                            "Permissions are still loading. Please try again."
+                        );
+
+                    }
+                );
+        };
+
+    const toastPermissionDenied =
+        () => {
+
+            import("react-hot-toast")
+                .then(
+                    ({ default: toast }) => {
+
+                        toast.error(
+                            "You do not have permission to create sub categories."
+                        );
+
+                    }
+                );
+        };
+
+    // ============================================================
+    // AUTH CHECKING
+    // ============================================================
+
+    if (authChecking) {
+        return <InvoiceSkeleton />;
+    }
+
+    // ============================================================
+    // NOT AUTHENTICATED
+    // ============================================================
+
+    if (!isAuthenticated) {
+        return null;
+    }
+
+    // ============================================================
+    // PERMISSION LOADING
+    // ============================================================
+
+    if (
+        !hasFullAccess &&
+        (
+            permissionLoading ||
+            !permissionsLoaded
+        )
+    ) {
+
+        return <InvoiceSkeleton />;
+    }
+
+    // ============================================================
+    // VIEW PERMISSION DENIED
+    // ============================================================
+
+    if (
+        !hasFullAccess &&
+        !canViewSubCategory
+    ) {
+
+        return (
+            <div
+                className="
+                flex
+                h-screen
+                bg-gray-50
+                font-sans
+                text-[13px]
+                overflow-hidden
+                "
+            >
+
+                <div
+                    className="
+                    flex-1
+                    flex
+                    items-center
+                    justify-center
+                    "
+                >
+
+                    <div
+                        className="
+                        text-center
+                        px-6
+                        "
+                    >
+
+                        <div
+                            className="
+                            w-14
+                            h-14
+                            rounded-full
+                            bg-red-50
+                            flex
+                            items-center
+                            justify-center
+                            mx-auto
+                            mb-4
+                            "
+                        >
+
+                            <span
+                                className="
+                                text-red-500
+                                text-xl
+                                font-semibold
+                                "
+                            >
+                                !
+                            </span>
+
+                        </div>
+
+                        <h2
+                            className="
+                            text-lg
+                            font-semibold
+                            text-gray-800
+                            "
+                        >
+                            Access Denied
+                        </h2>
+
+                        <p
+                            className="
+                            mt-1
+                            text-sm
+                            text-gray-500
+                            "
+                        >
+                            You do not have permission
+                            to view sub categories.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+        );
+    }
+
+    // ============================================================
+    // SUB CATEGORY API LOADING
     // ============================================================
 
     if (loading) {
@@ -254,30 +684,30 @@ export default function SubCategoryDashboard() {
     return (
         <div
             className="
-                flex
-                h-screen
-                bg-gray-50
-                font-sans
-                text-[13px]
-                overflow-hidden
+            flex
+            h-screen
+            bg-gray-50
+            font-sans
+            text-[13px]
+            overflow-hidden
             "
         >
 
             <div
                 className="
-                    flex-1
-                    min-h-0
-                    bg-white
-                    overflow-y-auto
+                flex-1
+                min-h-0
+                bg-white
+                overflow-y-auto
                 "
             >
 
                 <div
                     className="
-                        px-2
-                        py-5
-                        max-w-30xl
-                        w-full
+                    px-2
+                    py-5
+                    max-w-30xl
+                    w-full
                     "
                 >
 
@@ -294,16 +724,16 @@ export default function SubCategoryDashboard() {
                     {error && (
                         <div
                             className="
-                                mx-2
-                                mt-4
-                                px-4
-                                py-3
-                                rounded-md
-                                border
-                                border-red-200
-                                bg-red-50
-                                text-sm
-                                text-red-600
+                            mx-2
+                            mt-4
+                            px-4
+                            py-3
+                            rounded-md
+                            border
+                            border-red-200
+                            bg-red-50
+                            text-sm
+                            text-red-600
                             "
                         >
                             {error}
@@ -326,40 +756,38 @@ export default function SubCategoryDashboard() {
 
                         <div
                             className="
-                                min-h-full
-                                flex
-                                flex-col
-                                items-center
-                                justify-center
-                                gap-3
-                                px-4
+                            min-h-full
+                            flex
+                            flex-col
+                            items-center
+                            justify-center
+                            gap-3
+                            px-4
                             "
                         >
 
-                            {/* =================================================
-                                EMPTY STATE ICON
-                            ================================================= */}
+                            {/* EMPTY STATE ICON */}
 
                             <div
                                 className="
-                                    relative
-                                    w-24
-                                    h-24
-                                    rounded-full
-                                    bg-gray-100
-                                    flex
-                                    items-center
-                                    justify-center
-                                    mb-1
-                                    flex-shrink-0
-                                    mt-30
+                                relative
+                                w-24
+                                h-24
+                                rounded-full
+                                bg-gray-100
+                                flex
+                                items-center
+                                justify-center
+                                mb-1
+                                flex-shrink-0
+                                mt-30
                                 "
                             >
 
                                 <div
                                     className="
-                                        text-gray-400
-                                        text-4xl
+                                    text-gray-400
+                                    text-4xl
                                     "
                                 >
                                     S
@@ -367,24 +795,24 @@ export default function SubCategoryDashboard() {
 
                                 <div
                                     className="
-                                        absolute
-                                        bottom-1
-                                        right-1
-                                        w-7
-                                        h-7
-                                        rounded-full
-                                        bg-blue-600
-                                        flex
-                                        items-center
-                                        justify-center
-                                        text-white
+                                    absolute
+                                    bottom-1
+                                    right-1
+                                    w-7
+                                    h-7
+                                    rounded-full
+                                    bg-blue-600
+                                    flex
+                                    items-center
+                                    justify-center
+                                    text-white
                                     "
                                 >
 
                                     <Plus
                                         className="
-                                            w-4
-                                            h-4
+                                        w-4
+                                        h-4
                                         "
                                     />
 
@@ -392,60 +820,56 @@ export default function SubCategoryDashboard() {
 
                             </div>
 
-                            {/* =================================================
-                                EMPTY STATE TITLE
-                            ================================================= */}
+                            {/* EMPTY STATE TITLE */}
 
                             <p
                                 className="
-                                    text-base
-                                    font-medium
-                                    text-gray-800
-                                    text-center
+                                text-base
+                                font-medium
+                                text-gray-800
+                                text-center
                                 "
                             >
                                 Every category starts with a sub category
                             </p>
 
-                            {/* =================================================
-                                EMPTY STATE DESCRIPTION
-                            ================================================= */}
+                            {/* EMPTY STATE DESCRIPTION */}
 
                             <p
                                 className="
-                                    text-sm
-                                    text-gray-500
-                                    text-center
-                                    max-w-sm
+                                text-sm
+                                text-gray-500
+                                text-center
+                                max-w-sm
                                 "
                             >
                                 Create and manage your sub categories
                                 in one place.
                             </p>
 
-                            {/* =================================================
-                                ACTION BUTTONS
-                            ================================================= */}
+                            {/* ACTION BUTTONS */}
 
                             <div
                                 className="
-                                    flex
-                                    items-center
-                                    gap-2.5
-                                    mt-1
-                                    flex-wrap
-                                    justify-center
+                                flex
+                                items-center
+                                gap-2.5
+                                mt-1
+                                flex-wrap
+                                justify-center
                                 "
                             >
 
                                 {/* CREATE SUB CATEGORY */}
 
-                                <button
-                                    type="button"
-                                    onClick={
-                                        handleCreateSubCategory
-                                    }
-                                    className="
+                                {canCreateSubCategory && (
+
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            handleCreateSubCategory
+                                        }
+                                        className="
                                         flex
                                         items-center
                                         gap-2
@@ -459,46 +883,48 @@ export default function SubCategoryDashboard() {
                                         hover:bg-blue-700
                                         transition-colors
                                         whitespace-nowrap
-                                    "
-                                >
+                                        "
+                                    >
 
-                                    <Plus
-                                        className="
+                                        <Plus
+                                            className="
                                             w-4
                                             h-4
-                                        "
-                                    />
+                                            "
+                                        />
 
-                                    Create New Sub Category
+                                        Create New Sub Category
 
-                                </button>
+                                    </button>
+
+                                )}
 
                                 {/* IMPORT */}
 
                                 <button
                                     type="button"
                                     className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        bg-white
-                                        text-gray-700
-                                        text-sm
-                                        border
-                                        border-gray-300
-                                        px-4
-                                        py-2
-                                        rounded-md
-                                        hover:bg-gray-50
-                                        transition-colors
-                                        whitespace-nowrap
+                                    flex
+                                    items-center
+                                    gap-2
+                                    bg-white
+                                    text-gray-700
+                                    text-sm
+                                    border
+                                    border-gray-300
+                                    px-4
+                                    py-2
+                                    rounded-md
+                                    hover:bg-gray-50
+                                    transition-colors
+                                    whitespace-nowrap
                                     "
                                 >
 
                                     <Download
                                         className="
-                                            w-4
-                                            h-4
+                                        w-4
+                                        h-4
                                         "
                                     />
 
@@ -514,12 +940,6 @@ export default function SubCategoryDashboard() {
                 </div>
 
             </div>
-
-            {/* =========================================================
-                SUB CATEGORY CREATE / EDIT MODAL
-            ========================================================= */}
-
-            {/* <SubCategoryCreate /> */}
 
         </div>
     );

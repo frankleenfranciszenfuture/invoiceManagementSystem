@@ -39,6 +39,8 @@ import rolePermissionReducer from "../module/rolePermission/slices/rolePermissio
 import permissionReducer from "../module/permission/slices/permissionSlice";
 import userPermissionReducer from "../module/permission/slices/permissionSlice";
 
+import menuPermissionReducer from "../module/menuPermission/slices/menuPermissionSlice";
+
 export const store = configureStore({
   reducer: {
     // Auth
@@ -98,6 +100,10 @@ export const store = configureStore({
 
     company: companyReducer,
     companyView: companyViewReducer,
+
+    //menuPermission
+
+    menuPermission: menuPermissionReducer,
 
     //Permission
 

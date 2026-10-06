@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { loginUser } from "../../auth/slice/authSlice";
+import { loginUser } from "../../auth/thunks/authThunks";
 import { Link, useNavigate } from "react-router-dom";
 
 import { assets } from "../../../assets/assets";
@@ -21,10 +21,8 @@ const LoginPage = () => {
     const [signingIn, setSigningIn] = useState(false);
 
     const {
-        user,
         loading,
         error,
-        isAuthenticated,
     } = useSelector((state) => state.auth);
 
     const [image, setImage] = useState(
@@ -51,51 +49,75 @@ const LoginPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        if (signingIn) {
+            return;
+        }
+
         setSigningIn(true);
 
         try {
-
-            await dispatch(
+            /*
+             * IMPORTANT:
+             *
+             * Wait until loginUser is completely fulfilled.
+             *
+             * This guarantees:
+             *
+             * login API
+             *     ↓
+             * authSlice fulfilled
+             *     ↓
+             * auth.user updated
+             *     ↓
+             * isAuthenticated = true
+             *     ↓
+             * navigate
+             */
+            const result = await dispatch(
                 loginUser({
-                    email: form.email,
+                    email: form.email.trim(),
                     password: form.password,
                 })
             ).unwrap();
 
+            console.log(
+                "LOGIN SUCCESS:",
+                result
+            );
+
+            /*
+             * At this point Redux authentication state has
+             * already been updated.
+             */
             toast.success("Login successful");
+
+            navigate("/home", {
+                replace: true,
+            });
 
         } catch (err) {
 
-            setSigningIn(false);
-
-            // ----------------------------------------------
-            // SAFE ERROR MESSAGE
-            // ----------------------------------------------
+            console.error(
+                "LOGIN ERROR:",
+                err
+            );
 
             const message =
                 typeof err === "string"
                     ? err
                     : err?.message ||
                     err?.error ||
+                    err?.data?.message ||
                     "Login failed";
 
             toast.error(message);
+
+            /*
+             * Only stop the loader when login fails.
+             */
+            setSigningIn(false);
         }
     };
-
-    // ============================================================
-    // AUTHENTICATED → DASHBOARD
-    // ============================================================
-
-    useEffect(() => {
-
-        if (isAuthenticated) {
-            navigate("/home", {
-                replace: true,
-            });
-        }
-
-    }, [isAuthenticated, navigate]);
 
     // ============================================================
     // ERROR MESSAGE

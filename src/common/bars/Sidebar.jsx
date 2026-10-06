@@ -1,3 +1,4 @@
+
 import React from "react";
 
 import {
@@ -39,7 +40,6 @@ import {
 // ============================================================
 
 const NAV = [
-
     {
         label: "Dashboard",
         moduleName: "Dashboard",
@@ -141,7 +141,6 @@ const EMPTY_PERMISSIONS = [];
 // ============================================================
 
 const normalizeAction = (action) => {
-
     if (action == null) {
         return "";
     }
@@ -157,7 +156,6 @@ const normalizeAction = (action) => {
 // ============================================================
 
 const normalizeModule = (moduleName) => {
-
     if (moduleName == null) {
         return "";
     }
@@ -173,7 +171,6 @@ const normalizeModule = (moduleName) => {
 // ============================================================
 
 const normalizePermissionArray = (value) => {
-
     if (Array.isArray(value)) {
         return value;
     }
@@ -191,10 +188,33 @@ const normalizePermissionArray = (value) => {
 
 
 // ============================================================
-// COMPONENT
+// GET ROLE NAME
 // ============================================================
 
-export default function Sidebar() {
+const getRoleName = (user) => {
+    if (!user) {
+        return "";
+    }
+
+    const role =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+    return String(role)
+        .trim()
+        .toUpperCase();
+};
+
+
+// ============================================================
+// SIDEBAR
+// ============================================================
+
+const Sidebar = () => {
 
     const dispatch = useDispatch();
 
@@ -219,632 +239,410 @@ export default function Sidebar() {
 
     const currentUser = useSelector(
         (state) =>
-            state.auth?.user
+            state.auth?.user || null
     );
 
     const isAuthenticated = useSelector(
         (state) =>
-            state.auth?.isAuthenticated
+            state.auth?.isAuthenticated === true
     );
 
     const authChecking = useSelector(
         (state) =>
-            state.auth?.authChecking
+            state.auth?.authChecking === true
     );
-
-
-    // ========================================================
-    // ADMIN CHECK
-    // ========================================================
-
-    /*
-     * Login response:
-     *
-     * {
-     *     id: 1,
-     *     name: "ADMIN",
-     *     email: "admin@ims.com",
-     *     roleId: 1,
-     *     roleName: "ADMIN"
-     * }
-     *
-     * Prefer roleName.
-     *
-     * Fallback to name because your current login
-     * response also contains name: "ADMIN".
-     */
-
-    const roleName =
-        currentUser?.roleName ||
-        currentUser?.name ||
-        "";
-
-    const isAdmin =
-        String(roleName)
-            .trim()
-            .toUpperCase() === "ADMIN";
-
-
-    // ========================================================
-    // DEBUG AUTH
-    // ========================================================
-
-    React.useEffect(() => {
-
-        console.log(
-            "========== SIDEBAR AUTH =========="
-        );
-
-        console.log(
-            "currentUser:",
-            currentUser
-        );
-
-        console.log(
-            "isAuthenticated:",
-            isAuthenticated
-        );
-
-        console.log(
-            "authChecking:",
-            authChecking
-        );
-
-        console.log(
-            "roleName:",
-            roleName
-        );
-
-        console.log(
-            "isAdmin:",
-            isAdmin
-        );
-
-        console.log(
-            "=================================="
-        );
-
-    }, [
-        currentUser,
-        isAuthenticated,
-        authChecking,
-        roleName,
-        isAdmin,
-    ]);
 
 
     // ========================================================
     // ROLE PERMISSIONS
     // ========================================================
 
-    const rolePermissionsState =
-        useSelector(
-            (state) =>
-                state.rolePermission
-                    ?.rolePermissions
-        );
-
-
-    const rolePermissions =
-        React.useMemo(
-            () =>
-                normalizePermissionArray(
-                    rolePermissionsState
-                ),
-            [
-                rolePermissionsState,
-            ]
-        );
+    const rolePermissionsState = useSelector(
+        (state) =>
+            state.menuPermission?.rolePermissions ||
+            EMPTY_PERMISSIONS
+    );
 
 
     // ========================================================
-    // USER RAW PERMISSIONS
+    // DIRECT USER PERMISSIONS
     // ========================================================
 
-    const userRawPermissionsState =
-        useSelector(
-            (state) =>
-                state.userPermission
-                    ?.userPermissions
-        );
-
-
-    const userRawPermissions =
-        React.useMemo(
-            () =>
-                normalizePermissionArray(
-                    userRawPermissionsState
-                ),
-            [
-                userRawPermissionsState,
-            ]
-        );
+    const userPermissionsState = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissions ||
+            EMPTY_PERMISSIONS
+    );
 
 
     // ========================================================
-    // USER NORMALIZED PERMISSIONS
+    // PERMISSION LOADING
     // ========================================================
 
-    const userMyPermissionsState =
-        useSelector(
-            (state) =>
-                state.userPermission
-                    ?.myPermissions
-        );
+    const permissionLoading = useSelector(
+        (state) =>
+            state.menuPermission?.loading === true
+    );
 
 
-    const userMyPermissions =
-        React.useMemo(
-            () =>
-                normalizePermissionArray(
-                    userMyPermissionsState
-                ),
-            [
-                userMyPermissionsState,
-            ]
-        );
+    // ========================================================
+    // NORMALIZED ROLE PERMISSIONS
+    // ========================================================
+
+    const rolePermissions = React.useMemo(
+        () =>
+            normalizePermissionArray(
+                rolePermissionsState
+            ),
+        [
+            rolePermissionsState,
+        ]
+    );
+
+
+    // ========================================================
+    // NORMALIZED USER PERMISSIONS
+    // ========================================================
+
+    const userPermissions = React.useMemo(
+        () =>
+            normalizePermissionArray(
+                userPermissionsState
+            ),
+        [
+            userPermissionsState,
+        ]
+    );
+
+
+    // ========================================================
+    // ROLE
+    // ========================================================
+
+    const normalizedRoleName = React.useMemo(
+        () =>
+            getRoleName(
+                currentUser
+            ),
+        [
+            currentUser,
+        ]
+    );
+
+
+    // ========================================================
+    // ADMIN ACCESS
+    // ========================================================
+
+    const isSuperAdmin =
+        normalizedRoleName === "SUPER_ADMIN";
+
+    const isAdmin =
+        normalizedRoleName === "ADMIN";
+
+    const hasFullAccess =
+        isSuperAdmin ||
+        isAdmin;
+
+
+    // ========================================================
+    // CURRENT USER IDENTIFIER
+    // ========================================================
+
+    const currentUserId =
+        currentUser?.id ??
+        currentUser?.userId ??
+        currentUser?.email ??
+        currentUser?.username ??
+        null;
 
 
     // ========================================================
     // EFFECTIVE PERMISSIONS
     // ========================================================
 
+    /*
+     * IMPORTANT
+     *
+     * Role permissions are loaded by authThunks.
+     *
+     * Direct user permissions are also loaded by authThunks.
+     *
+     * Sidebar DOES NOT fetch permissions anymore.
+     *
+     * Priority:
+     *
+     * ROLE
+     *   ↓
+     * USER OVERRIDES ROLE
+     *
+     * Example:
+     *
+     * Role:
+     * Products -> VIEW -> true
+     *
+     * User:
+     * Products -> VIEW -> false
+     *
+     * Result:
+     * Products -> VIEW -> false
+     */
+
     const effectivePermissions =
         React.useMemo(() => {
+
+            if (hasFullAccess) {
+                return [];
+            }
+
 
             const permissionMap =
                 new Map();
 
 
-            // ====================================================
+            // =================================================
             // ROLE PERMISSIONS
-            // ====================================================
+            // =================================================
 
             rolePermissions.forEach(
                 (permission) => {
 
-                    const moduleId =
-                        permission?.moduleId != null
-                            ? Number(
-                                permission.moduleId
-                            )
-                            : null;
-
-                    const actionId =
-                        permission?.actionId != null
-                            ? Number(
-                                permission.actionId
-                            )
-                            : null;
-
-                    const moduleName =
-                        permission?.moduleName;
-
-                    const actionName =
-                        normalizeAction(
-                            permission?.actionName
-                        );
-
+                    /*
+                     * FLAT FORMAT
+                     *
+                     * {
+                     *   roleId,
+                     *   moduleId,
+                     *   actionId,
+                     *   moduleName,
+                     *   actionName,
+                     *   allowed
+                     * }
+                     */
 
                     if (
-                        moduleId == null ||
-                        actionId == null ||
-                        !moduleName ||
-                        !actionName
+                        permission?.moduleId != null &&
+                        permission?.actionId != null
                     ) {
-                        return;
-                    }
-
-
-                    const key =
-                        `${moduleId}-${actionId}`;
-
-
-                    permissionMap.set(
-                        key,
-                        {
-                            moduleId,
-                            moduleName,
-                            actionId,
-                            actionName,
-
-                            allowed:
-                                permission?.active !== false &&
-                                normalizeAction(
-                                    permission?.status
-                                ) !== "INACTIVE" &&
-                                permission?.allowed === true,
-
-                            source: "ROLE",
-                        }
-                    );
-
-                }
-            );
-
-
-            // ====================================================
-            // USER PERMISSIONS
-            // ====================================================
-
-            if (
-                userRawPermissions.length > 0
-            ) {
-
-                userRawPermissions.forEach(
-                    (permission) => {
-
-                        const moduleId =
-                            permission?.moduleId != null
-                                ? Number(
-                                    permission.moduleId
-                                )
-                                : null;
-
-                        const actionId =
-                            permission?.actionId != null
-                                ? Number(
-                                    permission.actionId
-                                )
-                                : null;
-
-                        const moduleName =
-                            permission?.moduleName;
-
-                        const actionName =
-                            normalizeAction(
-                                permission?.actionName
-                            );
-
-
-                        if (
-                            moduleId == null ||
-                            actionId == null ||
-                            !moduleName ||
-                            !actionName
-                        ) {
-                            return;
-                        }
-
 
                         const key =
-                            `${moduleId}-${actionId}`;
-
-
-                        /*
-                         * User permission overrides role permission.
-                         *
-                         * This intentionally inserts allowed:false too.
-                         */
+                            `${permission.moduleId}-${permission.actionId}`;
 
                         permissionMap.set(
                             key,
                             {
-                                moduleId,
-                                moduleName,
-                                actionId,
-                                actionName,
-
-                                allowed:
-                                    permission?.active !== false &&
-                                    normalizeAction(
-                                        permission?.status
-                                    ) !== "INACTIVE" &&
-                                    permission?.allowed === true,
-
-                                source: "USER",
+                                ...permission,
+                                source: "ROLE",
                             }
                         );
 
-                    }
-                );
-
-            }
-
-
-            // ====================================================
-            // USER NORMALIZED FALLBACK
-            // ====================================================
-
-            if (
-                userRawPermissions.length === 0 &&
-                userMyPermissions.length > 0
-            ) {
-
-                userMyPermissions.forEach(
-                    (modulePermission) => {
-
-                        const moduleId =
-                            modulePermission?.moduleId != null
-                                ? Number(
-                                    modulePermission.moduleId
-                                )
-                                : null;
-
-                        const moduleName =
-                            modulePermission?.moduleName;
-
-
-                        if (
-                            moduleId == null ||
-                            !moduleName
-                        ) {
-                            return;
-                        }
-
-
-                        const actions =
-                            Array.isArray(
-                                modulePermission?.actions
-                            )
-                                ? modulePermission.actions
-                                : [];
-
-
-                        actions.forEach(
-                            (actionName) => {
-
-                                const normalizedAction =
-                                    normalizeAction(
-                                        actionName
-                                    );
-
-
-                                if (
-                                    !normalizedAction
-                                ) {
-                                    return;
-                                }
-
-
-                                const matchingRolePermission =
-                                    rolePermissions.find(
-                                        (permission) =>
-                                            Number(
-                                                permission?.moduleId
-                                            ) === moduleId &&
-
-                                            normalizeModule(
-                                                permission?.moduleName
-                                            ) ===
-                                            normalizeModule(
-                                                moduleName
-                                            ) &&
-
-                                            normalizeAction(
-                                                permission?.actionName
-                                            ) ===
-                                            normalizedAction
-                                    );
-
-
-                                if (
-                                    matchingRolePermission
-                                        ?.actionId != null
-                                ) {
-
-                                    const actionId =
-                                        Number(
-                                            matchingRolePermission
-                                                .actionId
-                                        );
-
-
-                                    const key =
-                                        `${moduleId}-${actionId}`;
-
-
-                                    permissionMap.set(
-                                        key,
-                                        {
-                                            moduleId,
-                                            moduleName,
-                                            actionId,
-                                            actionName:
-                                                normalizedAction,
-                                            allowed: true,
-                                            source: "USER",
-                                        }
-                                    );
-
-                                }
-
-                            }
-                        );
-
-                    }
-                );
-
-            }
-
-
-            // ====================================================
-            // GROUP PERMISSIONS BY MODULE
-            // ====================================================
-
-            const grouped = {};
-
-
-            permissionMap.forEach(
-                (permission) => {
-
-                    if (
-                        !permission?.moduleName ||
-                        permission?.allowed !== true
-                    ) {
                         return;
                     }
 
 
-                    const moduleKey =
-                        normalizeModule(
-                            permission.moduleName
-                        );
-
-
-                    if (!moduleKey) {
-                        return;
-                    }
-
-
-                    if (
-                        !grouped[moduleKey]
-                    ) {
-
-                        grouped[moduleKey] = {
-                            moduleId:
-                                permission.moduleId,
-
-                            moduleName:
-                                permission.moduleName,
-
-                            actions: [],
-                        };
-
-                    }
-
-
-                    const actionName =
-                        normalizeAction(
-                            permission.actionName
-                        );
-
+                    /*
+                     * GROUPED FORMAT
+                     *
+                     * {
+                     *   roleId,
+                     *   moduleId,
+                     *   moduleName,
+                     *   actions: [...]
+                     * }
+                     */
 
                     if (
-                        actionName &&
-                        !grouped[
-                            moduleKey
-                        ].actions.includes(
-                            actionName
+                        Array.isArray(
+                            permission?.actions
                         )
                     ) {
 
-                        grouped[
-                            moduleKey
-                        ].actions.push(
-                            actionName
-                        );
+                        permission.actions.forEach(
+                            (action) => {
 
+                                const key =
+                                    `${permission.moduleId}-${action?.actionId}`;
+
+                                permissionMap.set(
+                                    key,
+                                    {
+                                        ...action,
+
+                                        moduleId:
+                                            permission?.moduleId,
+
+                                        moduleName:
+                                            permission?.moduleName,
+
+                                        roleId:
+                                            permission?.roleId,
+
+                                        source:
+                                            "ROLE",
+                                    }
+                                );
+                            }
+                        );
                     }
 
                 }
             );
 
 
-            return Object.values(
-                grouped
+            // =================================================
+            // USER PERMISSIONS
+            // =================================================
+
+            /*
+             * User permissions are added AFTER role
+             * permissions.
+             *
+             * Therefore they override role permissions.
+             */
+
+            userPermissions.forEach(
+                (permission) => {
+
+                    /*
+                     * FLAT FORMAT
+                     */
+
+                    if (
+                        permission?.moduleId != null &&
+                        permission?.actionId != null
+                    ) {
+
+                        const key =
+                            `${permission.moduleId}-${permission.actionId}`;
+
+                        permissionMap.set(
+                            key,
+                            {
+                                ...permission,
+                                source: "USER",
+                            }
+                        );
+
+                        return;
+                    }
+
+
+                    /*
+                     * GROUPED FORMAT
+                     */
+
+                    if (
+                        Array.isArray(
+                            permission?.actions
+                        )
+                    ) {
+
+                        permission.actions.forEach(
+                            (action) => {
+
+                                const key =
+                                    `${permission.moduleId}-${action?.actionId}`;
+
+                                permissionMap.set(
+                                    key,
+                                    {
+                                        ...action,
+
+                                        moduleId:
+                                            permission?.moduleId,
+
+                                        moduleName:
+                                            permission?.moduleName,
+
+                                        userId:
+                                            permission?.userId,
+
+                                        source:
+                                            "USER",
+                                    }
+                                );
+                            }
+                        );
+                    }
+
+                }
+            );
+
+
+            return Array.from(
+                permissionMap.values()
             );
 
         }, [
             rolePermissions,
-            userRawPermissions,
-            userMyPermissions,
+            userPermissions,
+            hasFullAccess,
         ]);
 
 
     // ========================================================
-    // PERMISSION HELPER
+    // DEBUG PERMISSIONS
     // ========================================================
 
-    const hasPermission = (
-        moduleName,
-        action = "VIEW"
-    ) => {
+    React.useEffect(() => {
 
-        if (!moduleName) {
-            return false;
+        if (
+            authChecking ||
+            !isAuthenticated ||
+            !currentUser
+        ) {
+            return;
         }
 
-
-        const normalizedModuleName =
-            normalizeModule(
-                moduleName
-            );
-
-
-        const normalizedAction =
-            normalizeAction(
-                action
-            );
-
-
-        const modulePermission =
-            effectivePermissions.find(
-                (permission) =>
-                    normalizeModule(
-                        permission?.moduleName
-                    ) ===
-                    normalizedModuleName
-            );
-
-
-        if (!modulePermission) {
-            return false;
-        }
-
-
-        return (
-            Array.isArray(
-                modulePermission.actions
-            ) &&
-            modulePermission.actions.includes(
-                normalizedAction
-            )
+        console.log(
+            "SIDEBAR CURRENT USER:",
+            currentUser
         );
 
-    };
-
-
-    // ========================================================
-    // VIEW PERMISSION
-    // ========================================================
-
-    const canView = (
-        moduleName
-    ) => {
-
-        /*
-         * ADMIN BYPASS
-         *
-         * This must happen before checking permissions.
-         */
-
-        if (isAdmin) {
-            return true;
-        }
-
-
-        return hasPermission(
-            moduleName,
-            "VIEW"
+        console.log(
+            "SIDEBAR ROLE:",
+            normalizedRoleName
         );
 
-    };
-
-
-    // ========================================================
-    // CREATE PERMISSION
-    // ========================================================
-
-    const canCreate = (
-        moduleName
-    ) => {
-
-        /*
-         * ADMIN BYPASS
-         */
-
-        if (isAdmin) {
-            return true;
-        }
-
-
-        return hasPermission(
-            moduleName,
-            "CREATE"
+        console.log(
+            "SIDEBAR ROLE PERMISSIONS:",
+            rolePermissions
         );
 
-    };
+        console.log(
+            "SIDEBAR USER PERMISSIONS:",
+            userPermissions
+        );
+
+        console.log(
+            "SIDEBAR EFFECTIVE PERMISSIONS:",
+            effectivePermissions
+        );
+
+    }, [
+        authChecking,
+        isAuthenticated,
+        currentUser,
+        normalizedRoleName,
+        rolePermissions,
+        userPermissions,
+        effectivePermissions,
+    ]);
+
+
+    // ========================================================
+    // UNSAVED CHANGES
+    // ========================================================
+
+    const isDirty = useSelector(
+        (state) =>
+            state.customers?.isDirty
+    );
+
+    const leaveDialog = useSelector(
+        (state) =>
+            state.ui?.leaveDialog
+    );
 
 
     // ========================================================
@@ -858,18 +656,184 @@ export default function Sidebar() {
 
 
     // ========================================================
-    // UNSAVED CHANGES
+    // HAS PERMISSION
     // ========================================================
 
-    const isDirty = useSelector(
-        (state) =>
-            state.customers?.isDirty
+    const hasPermission = React.useCallback(
+        (
+            moduleName,
+            action = "VIEW"
+        ) => {
+
+            /*
+             * ================================================
+             * FULL ACCESS
+             * ================================================
+             */
+
+            if (hasFullAccess) {
+                return true;
+            }
+
+
+            if (!moduleName) {
+                return false;
+            }
+
+
+            const requestedModule =
+                normalizeModule(
+                    moduleName
+                );
+
+            const requestedAction =
+                normalizeAction(
+                    action
+                );
+
+
+            /*
+             * ================================================
+             * FIRST TRY FLAT PERMISSIONS
+             * ================================================
+             */
+
+            const flatPermission =
+                effectivePermissions.find(
+                    (permission) => {
+
+                        const permissionModule =
+                            normalizeModule(
+                                permission?.moduleName
+                            );
+
+                        const permissionAction =
+                            normalizeAction(
+                                permission?.actionName
+                            );
+
+
+                        return (
+                            permissionModule ===
+                            requestedModule &&
+
+                            permissionAction ===
+                            requestedAction
+                        );
+                    }
+                );
+
+
+            if (flatPermission) {
+
+                return (
+                    flatPermission?.allowed === true &&
+
+                    flatPermission?.active !== false &&
+
+                    normalizeAction(
+                        flatPermission?.status
+                    ) !== "INACTIVE"
+                );
+            }
+
+
+            /*
+             * ================================================
+             * GROUPED PERMISSION FALLBACK
+             * ================================================
+             */
+
+            const groupedPermission =
+                effectivePermissions.find(
+                    (permission) =>
+                        normalizeModule(
+                            permission?.moduleName
+                        ) ===
+                        requestedModule
+                );
+
+
+            if (
+                !groupedPermission ||
+                !Array.isArray(
+                    groupedPermission?.actions
+                )
+            ) {
+                return false;
+            }
+
+
+            return groupedPermission.actions.some(
+                (actionItem) => {
+
+                    if (
+                        typeof actionItem ===
+                        "string"
+                    ) {
+
+                        return (
+                            normalizeAction(
+                                actionItem
+                            ) ===
+                            requestedAction
+                        );
+                    }
+
+
+                    return (
+                        normalizeAction(
+                            actionItem?.actionName
+                        ) ===
+                        requestedAction &&
+
+                        actionItem?.allowed === true &&
+
+                        actionItem?.active !== false &&
+
+                        normalizeAction(
+                            actionItem?.status
+                        ) !== "INACTIVE"
+                    );
+                }
+            );
+
+        }, [
+        effectivePermissions,
+        hasFullAccess,
+    ]
     );
 
 
-    const leaveDialog = useSelector(
-        (state) =>
-            state.ui?.leaveDialog
+    // ========================================================
+    // VIEW PERMISSION
+    // ========================================================
+
+    const canView = React.useCallback(
+        (moduleName) =>
+            hasPermission(
+                moduleName,
+                "VIEW"
+            ),
+        [
+            hasPermission,
+        ]
+    );
+
+
+    // ========================================================
+    // CREATE PERMISSION
+    // ========================================================
+
+    const canCreate = React.useCallback(
+        (moduleName) =>
+            hasPermission(
+                moduleName,
+                "CREATE"
+            ),
+        [
+            hasPermission,
+        ]
     );
 
 
@@ -885,14 +849,12 @@ export default function Sidebar() {
             return false;
         }
 
-
         return (
             location.pathname === path ||
             location.pathname.startsWith(
                 `${path}/`
             )
         );
-
     };
 
 
@@ -924,116 +886,58 @@ export default function Sidebar() {
                         ? null
                         : item.label
             );
-
         }
-
     };
 
 
     // ========================================================
-    // DEBUG NAVIGATION
+    // AUTO OPEN ACTIVE MENU
     // ========================================================
 
     React.useEffect(() => {
 
-        console.log(
-            "========== SIDEBAR NAV DEBUG =========="
-        );
-
-        console.log(
-            "AUTH CHECKING:",
-            authChecking
-        );
-
-        console.log(
-            "AUTHENTICATED:",
-            isAuthenticated
-        );
-
-        console.log(
-            "USER:",
-            currentUser
-        );
-
-        console.log(
-            "ROLE:",
-            roleName
-        );
-
-        console.log(
-            "IS ADMIN:",
-            isAdmin
-        );
-
-        console.log(
-            "ROLE PERMISSIONS COUNT:",
-            rolePermissions.length
-        );
-
-        console.log(
-            "USER PERMISSIONS COUNT:",
-            userRawPermissions.length
-        );
-
-        console.log(
-            "EFFECTIVE PERMISSIONS:",
-            effectivePermissions
-        );
-
-        console.log(
-            "NAV:",
-            NAV
-        );
-
-        console.log(
-            "VISIBLE NAV:",
-            NAV.filter(
+        const activeItem =
+            NAV.find(
                 (item) =>
-                    canView(
-                        item.moduleName
+                    item.to &&
+                    isActiveRoute(
+                        item.to
                     )
-            ).map(
-                (item) =>
-                    item.moduleName
-            )
-        );
+            );
 
-        console.log(
-            "========================================"
-        );
+
+        if (
+            activeItem?.children
+        ) {
+
+            setOpenMenu(
+                activeItem.label
+            );
+        }
 
     }, [
-        authChecking,
-        isAuthenticated,
-        currentUser,
-        roleName,
-        isAdmin,
-        rolePermissions,
-        userRawPermissions,
-        effectivePermissions,
+        location.pathname,
     ]);
 
 
     // ========================================================
-    // AUTH INITIALIZATION
+    // AUTH CHECKING
     // ========================================================
 
     /*
-     * Do not make permission decisions while authentication
-     * restoration is still running.
+     * This is the critical part.
      *
-     * Once authChecking becomes false:
+     * Sidebar waits for authentication.
      *
-     * ADMIN -> all modules
-     *
-     * USER  -> permissions
+     * loginUser/checkAuthentication already load
+     * permissions before becoming fulfilled.
      */
 
     if (authChecking) {
 
         return (
             <aside
-                className={`
+                className="
                     fixed
                     top-0
                     left-0
@@ -1045,10 +949,71 @@ export default function Sidebar() {
                     border-r
                     border-white/10
                     bg-[#080c39]
-                `}
+                "
             />
         );
+    }
 
+
+    // ========================================================
+    // NOT AUTHENTICATED
+    // ========================================================
+
+    if (!isAuthenticated) {
+        return null;
+    }
+
+
+    // ========================================================
+    // PERMISSION LOADING
+    // ========================================================
+
+    /*
+     * Do NOT display the normal sidebar for a normal user
+     * while permissions are still loading.
+     *
+     * ADMIN/SUPER_ADMIN are not dependent on permission APIs.
+     */
+
+    if (
+        !hasFullAccess &&
+        permissionLoading &&
+        rolePermissions.length === 0 &&
+        userPermissions.length === 0
+    ) {
+
+        return (
+            <aside
+                className="
+                    fixed
+                    top-0
+                    left-0
+                    z-30
+                    flex
+                    h-full
+                    w-14
+                    items-center
+                    justify-center
+                    border-r
+                    border-white/10
+                    bg-[#080c39]
+                "
+            >
+
+                <div
+                    className="
+                        h-5
+                        w-5
+                        animate-spin
+                        rounded-full
+                        border-2
+                        border-gray-500
+                        border-t-blue-500
+                    "
+                />
+
+            </aside>
+        );
     }
 
 
@@ -1101,7 +1066,7 @@ export default function Sidebar() {
                     duration-300
 
                     ${open
-                        ? "w-50"
+                        ? "w-55"
                         : "w-14 overflow-visible"
                     }
                 `}
@@ -1474,7 +1439,6 @@ export default function Sidebar() {
                                                                 navigate(
                                                                     item.addTo
                                                                 );
-
                                                             }
 
                                                         }}
@@ -1748,4 +1712,7 @@ export default function Sidebar() {
 
         </>
     );
-}
+};
+
+
+export default Sidebar;
