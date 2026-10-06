@@ -17,5 +17,15 @@ public interface AccessService {
 
     List<RoleEntity> findAccessibleRoles();
 
+    ModuleActionEntity findModuleAction(Long id);
+
+    UserEntity findAccessibleUserAccess(Long id);
+
+    List<UserBasedPermission> findAccessibleUserPermissions();
+
+    UserBasedPermission findAccessibleUserPermissionById(
+            Long id);
+
+    List<UserEntity> findAccessibleUsersAccess();
 }
 

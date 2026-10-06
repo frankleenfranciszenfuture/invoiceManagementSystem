@@ -6,30 +6,23 @@ import com.ims.entity.ModuleEntity;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-public interface ModuleActionRepository
-        extends JpaRepository<ModuleActionEntity, Long> {
+@Repository
+public interface ModuleActionRepository extends JpaRepository<ModuleActionEntity, Long> {
 
-    boolean existsByModuleAndAction(
-            ModuleEntity module,
-            ActionEntity action
-    );
-
-    List<ModuleActionEntity>
-    findByModule(ModuleEntity module);
-
-    List<ModuleActionEntity>
-    findByAction(ActionEntity action);
-
+    boolean existsByModuleAndAction(ModuleEntity module, ActionEntity action);
 
     @Query("""
-        SELECT ma
-        FROM ModuleActionEntity ma
-        JOIN FETCH ma.module
-        JOIN FETCH ma.action
-        """)
-    List<ModuleActionEntity>
-    findAllWithModuleAndAction();
+            SELECT ma
+            FROM ModuleActionEntity ma
+            JOIN FETCH ma.module
+            JOIN FETCH ma.action
+            ORDER BY ma.moduleName, ma.actionName
+            """)
+    List<ModuleActionEntity> findAllWithModuleAndAction();
+
+    List<ModuleActionEntity> findAllByOrderByModuleIdAscActionIdAsc();
 }

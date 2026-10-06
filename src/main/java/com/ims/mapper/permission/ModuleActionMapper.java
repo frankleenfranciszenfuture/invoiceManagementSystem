@@ -7,27 +7,41 @@ import com.ims.entity.ModuleActionEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import java.util.List;
+
 @Mapper(componentModel = "spring")
 public interface ModuleActionMapper {
 
-    @Mapping(
-            target = "moduleId",
-            source = "module.id"
-    )
-    @Mapping(
-            target = "moduleName",
-            source = "module.moduleName"
-    )
-    @Mapping(
-            target = "actionId",
-            source = "action.id"
-    )
-    @Mapping(
-            target = "actionName",
-            source = "action.actionName"
-    )
-    @Mapping(target = "status", ignore = true)
-    ModuleActionResponse toResponse(
-            ModuleActionEntity entity
-    );
+    @Mapping(target = "moduleId", source = "module.id")
+    @Mapping(target = "moduleName", source = "moduleName")
+    @Mapping(target = "actionId", source = "action.id")
+    @Mapping(target = "actionName", source = "actionName")
+    ModuleActionResponse toDTO(ModuleActionEntity entity);
+
+    List<ModuleActionResponse> toDTO(List<ModuleActionEntity> entities);
 }
+
+//@Mapper(componentModel = "spring")
+//public interface ModuleActionMapper {
+//
+//    @Mapping(
+//            target = "moduleId",
+//            source = "module.id"
+//    )
+//    @Mapping(
+//            target = "moduleName",
+//            source = "module.moduleName"
+//    )
+//    @Mapping(
+//            target = "actionId",
+//            source = "action.id"
+//    )
+//    @Mapping(
+//            target = "actionName",
+//            source = "action.actionName"
+//    )
+//    @Mapping(target = "status", ignore = true)
+//    ModuleActionResponse toResponse(
+//            ModuleActionEntity entity
+//    );
+//}

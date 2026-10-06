@@ -3,10 +3,7 @@ package com.ims.config;
 import com.ims.entity.*;
 import com.ims.enums.Status;
 import com.ims.repository.*;
-import com.ims.repository.permission.ActionRepository;
-import com.ims.repository.permission.ModuleActionRepository;
-import com.ims.repository.permission.ModuleRepository;
-import com.ims.repository.permission.RoleBasedPermissionRepository;
+import com.ims.repository.permission.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -14,7 +11,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Map;
 
 @Component
 @Slf4j
@@ -24,104 +20,168 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    private final RoleRepository roleRepository;
-    private final ModuleRepository moduleRepository;
     private final ActionRepository actionRepository;
-    private final ModuleActionRepository moduleActionRepository;
+    private final ModuleRepository moduleRepository;
+    private final RoleRepository roleRepository;
+
     private final RoleBasedPermissionRepository roleBasedPermissionRepository;
+    private final ModuleActionRepository moduleActionRepository;
+    private final UserPermissionRepository userPermissionRepository;
+
+    // =========================================================
+    // APPLICATION STARTUP
+    // =========================================================
 
     @Override
     public void run(String... args) {
 
-        log.info("=================================================");
-        log.info("             IMS DATA INITIALIZATION");
-        log.info("=================================================");
+        createDefaultRoleAndAdmin();
+
+        createModules();
 
         createActions();
-        createModules();
+
         createModuleActions();
 
-        RoleEntity adminRole = createDefaultRole();
+        createSuperAdminPermissions();
 
-        createDefaultAdmin(adminRole);
-
-        createAdminRolePermissions(adminRole);
-
-        log.info("=================================================");
-        log.info("          IMS DATA INITIALIZATION COMPLETED");
-        log.info("=================================================");
+        createSuperAdminUserPermissions();
     }
 
-    // ============================================================
-    // DEFAULT ROLE
-    // ============================================================
+    // =========================================================
+    // CREATE MODULES
+    // =========================================================
 
-    private RoleEntity createDefaultRole() {
+    private void createModules() {
 
-        String roleName = "ADMIN";
+        List<String> modules = List.of(
 
-        RoleEntity role = roleRepository
-                .findByRoleName(roleName)
-                .orElseGet(() -> {
+                "Dashboard",
 
-                    RoleEntity newRole = new RoleEntity();
+                "Customers",
 
-                    newRole.setRoleName(roleName);
-                    newRole.setStatus(Status.ACTIVE);
+                "Staffs",
 
-                    RoleEntity savedRole =
-                            roleRepository.save(newRole);
+                "Loan",
 
-                    log.info("Role created : {}", roleName);
+                "Loan Payment",
 
-                    return savedRole;
-                });
+                "Staff Attendance",
 
-        return role;
+                "POS Users",
+
+                "Employee Finance",
+
+                "Staff Orders",
+
+                "Categories",
+
+                "SubCategories",
+
+                "Product Size",
+
+                "Unit",
+
+                "Products",
+
+                "Parties",
+
+                "Warehouse",
+
+                "Inventory",
+
+                "Purchase Order",
+
+                "Package Reception",
+
+                "Purchase Entry",
+
+                "Sales Order",
+
+                "Stock Transfer",
+
+                "Package Dispatch",
+
+                "Damaged Products",
+
+                "Invoices",
+
+                "Staff Incentive",
+
+                "Stock Transaction",
+
+                "Stock Adjustments",
+
+                "Cash Bank",
+
+                "Cheque",
+
+                "Discount Limit",
+
+                "Discount Request",
+
+                "Settings",
+
+                "Role",
+
+                "Floor Register",
+
+                "Company Detail",
+
+                "Register",
+
+                "Bank Details",
+
+                "Menu Permission",
+
+                "Tax",
+
+                "Points Rule",
+
+                "Incentive",
+
+                "Expenses Category",
+
+                "Report",
+
+                "Order Management",
+
+                "Audit Log",
+
+                "Sales Order Return"
+        );
+
+        log.info("========== Initializing Modules ==========");
+
+        for (String moduleName : modules) {
+
+            if (!moduleRepository.existsByModuleName(moduleName)) {
+
+                ModuleEntity module = new ModuleEntity();
+
+                module.setModuleName(moduleName);
+                module.setStatus(Status.ACTIVE);
+                module.setActive(true);
+
+                moduleRepository.save(module);
+
+                log.info(
+                        "Module created : {}",
+                        moduleName
+                );
+            }
+        }
+
+        log.info(
+                "========== Modules Initialization Completed =========="
+        );
     }
 
-    // ============================================================
-    // DEFAULT ADMIN USER
-    // ============================================================
-
-    private UserEntity createDefaultAdmin(RoleEntity role) {
-
-        String adminEmail = "admin@ims.com";
-        String adminPassword = "admin123";
-
-        return userRepository
-                .findByEmail(adminEmail)
-                .orElseGet(() -> {
-
-                    UserEntity admin = UserEntity.builder()
-                            .userId("USR001")
-                            .name("ADMIN")
-                            .email(adminEmail)
-                            .password(
-                                    passwordEncoder.encode(adminPassword)
-                            )
-                            .role(role)
-                            .isAccountVerified(true)
-                            .build();
-
-                    UserEntity savedAdmin =
-                            userRepository.save(admin);
-
-                    log.info("Default admin user created.");
-                    log.info("Admin Email    : {}", adminEmail);
-                    log.info("Admin Password : {}", adminPassword);
-
-                    return savedAdmin;
-                });
-    }
-
-    // ============================================================
-    // ACTIONS
-    // ============================================================
+    // =========================================================
+    // CREATE ACTIONS
+    // =========================================================
 
     private void createActions() {
-
-        log.info("========== Initializing Actions ==========");
 
         List<String> actions = List.of(
                 "CREATE",
@@ -133,6 +193,8 @@ public class DataInitializer implements CommandLineRunner {
                 "IMPORT"
         );
 
+        log.info("========== Initializing Actions ==========");
+
         for (String actionName : actions) {
 
             if (!actionRepository.existsByActionName(actionName)) {
@@ -140,11 +202,20 @@ public class DataInitializer implements CommandLineRunner {
                 ActionEntity action = new ActionEntity();
 
                 action.setActionName(actionName);
+
+                // =================================================
+                // DEFAULT ACTION STATUS
+                // =================================================
+
                 action.setStatus(Status.ACTIVE);
+                action.setActive(true);
 
                 actionRepository.save(action);
 
-                log.info("Action created : {}", actionName);
+                log.info(
+                        "Action created : {}",
+                        actionName
+                );
             }
         }
 
@@ -153,503 +224,114 @@ public class DataInitializer implements CommandLineRunner {
         );
     }
 
-    // ============================================================
-    // MODULES
-    // ============================================================
+    // =========================================================
+    // CREATE DEFAULT SUPER ADMIN
+    // =========================================================
 
-    private void createModules() {
-
-        log.info("========== Initializing Modules ==========");
-
-        List<String> modules = List.of(
-
-                // 1
-                "Dashboard",
-
-                // 2 - 10
-                "Company",
-                "Customers",
-                "Suppliers",
-                "Products",
-                "Categories",
-                "Subcategories",
-                "Units",
-                "Sizes",
-                "Tax",
-
-                // 11 - 14
-                "Inventory",
-                "Warehouse",
-                "Stock Transfer",
-                "Stock Adjustment",
-
-                // 15 - 16
-                "Purchase",
-                "Purchase Order",
-
-                // 17 - 18
-                "Sales",
-                "Sales Order",
-
-                // 19
-                "Invoices",
-
-                // 20
-                "Quotes",
-
-                // 21 - 23
-                "Payments",
-                "Expenses",
-                "Bank Accounts",
-
-                // 24 - 26
-                "Users",
-                "Roles",
-                "Menu Permission",
-
-                // 27
-                "Reports",
-
-                // 28
-                "Settings",
-
-                // 29
-                "Audit Log"
-        );
-
-        for (String moduleName : modules) {
-
-            if (!moduleRepository.existsByModuleName(moduleName)) {
-
-                ModuleEntity module = new ModuleEntity();
-
-                module.setModuleName(moduleName);
-                module.setStatus(Status.ACTIVE);
-
-                moduleRepository.save(module);
-
-                log.info("Module created : {}", moduleName);
-            }
-        }
+    private void createDefaultRoleAndAdmin() {
 
         log.info(
-                "========== Modules Initialization Completed =========="
-        );
-    }
-
-    // ============================================================
-    // MODULE ACTIONS
-    // ============================================================
-
-    private void createModuleActions() {
-
-        log.info("========== Initializing Module Actions ==========");
-
-        Map<String, List<String>> permissions = Map.ofEntries(
-
-                // Dashboard
-                Map.entry(
-                        "Dashboard",
-                        List.of("VIEW")
-                ),
-
-                // Master
-                Map.entry(
-                        "Company",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE"
-                        )
-                ),
-
-                Map.entry(
-                        "Customers",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE",
-                                "EXPORT",
-                                "IMPORT"
-                        )
-                ),
-
-                Map.entry(
-                        "Suppliers",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE",
-                                "EXPORT",
-                                "IMPORT"
-                        )
-                ),
-
-                Map.entry(
-                        "Products",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE",
-                                "EXPORT",
-                                "IMPORT"
-                        )
-                ),
-
-                Map.entry(
-                        "Categories",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE"
-                        )
-                ),
-
-                Map.entry(
-                        "Subcategories",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE"
-                        )
-                ),
-
-                Map.entry(
-                        "Units",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE"
-                        )
-                ),
-
-                Map.entry(
-                        "Sizes",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE"
-                        )
-                ),
-
-                Map.entry(
-                        "Tax",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE"
-                        )
-                ),
-
-                // Inventory
-                Map.entry(
-                        "Inventory",
-                        List.of(
-                                "VIEW",
-                                "EXPORT"
-                        )
-                ),
-
-                Map.entry(
-                        "Warehouse",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE"
-                        )
-                ),
-
-                Map.entry(
-                        "Stock Transfer",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE",
-                                "APPROVE"
-                        )
-                ),
-
-                Map.entry(
-                        "Stock Adjustment",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE",
-                                "APPROVE"
-                        )
-                ),
-
-                // Purchase
-                Map.entry(
-                        "Purchase",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE",
-                                "APPROVE",
-                                "EXPORT"
-                        )
-                ),
-
-                Map.entry(
-                        "Purchase Order",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE",
-                                "APPROVE",
-                                "EXPORT"
-                        )
-                ),
-
-                // Sales
-                Map.entry(
-                        "Sales",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE",
-                                "APPROVE",
-                                "EXPORT"
-                        )
-                ),
-
-                Map.entry(
-                        "Sales Order",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE",
-                                "APPROVE",
-                                "EXPORT"
-                        )
-                ),
-
-                // Invoice
-                Map.entry(
-                        "Invoices",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE",
-                                "APPROVE",
-                                "EXPORT"
-                        )
-                ),
-
-                // Quotes
-                Map.entry(
-                        "Quotes",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE",
-                                "APPROVE",
-                                "EXPORT"
-                        )
-                ),
-
-                // Finance
-                Map.entry(
-                        "Payments",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE",
-                                "APPROVE",
-                                "EXPORT"
-                        )
-                ),
-
-                Map.entry(
-                        "Expenses",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE",
-                                "APPROVE",
-                                "EXPORT"
-                        )
-                ),
-
-                Map.entry(
-                        "Bank Accounts",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE"
-                        )
-                ),
-
-                // Access Management
-                Map.entry(
-                        "Users",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE"
-                        )
-                ),
-
-                Map.entry(
-                        "Roles",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE"
-                        )
-                ),
-
-                Map.entry(
-                        "Menu Permission",
-                        List.of(
-                                "CREATE",
-                                "VIEW",
-                                "EDIT",
-                                "DELETE"
-                        )
-                ),
-
-                // Reports
-                Map.entry(
-                        "Reports",
-                        List.of(
-                                "VIEW",
-                                "EXPORT"
-                        )
-                ),
-
-                // Settings
-                Map.entry(
-                        "Settings",
-                        List.of(
-                                "VIEW",
-                                "EDIT"
-                        )
-                ),
-
-                // Audit
-                Map.entry(
-                        "Audit Log",
-                        List.of(
-                                "VIEW",
-                                "EXPORT"
-                        )
-                )
+                "========== Initializing Default Admin =========="
         );
 
-        permissions.forEach((moduleName, actions) -> {
+        String adminUserId = "USR001";
+        String adminEmail = "admin@ims.com";
+        String adminPassword = "admin123";
+        String roleName = "SUPER_ADMIN";
 
-            for (String actionName : actions) {
+        // =====================================================
+        // CREATE / GET SUPER ADMIN ROLE
+        // =====================================================
 
-                addModuleAction(
-                        moduleName,
-                        actionName
-                );
-            }
-        });
+        RoleEntity role = roleRepository
+                .findByRoleName(roleName)
+                .orElseGet(() -> {
 
-        log.info(
-                "========== Module Actions Initialization Completed =========="
-        );
-    }
+                    RoleEntity newRole = new RoleEntity();
 
-    // ============================================================
-    // ADD MODULE ACTION
-    // ============================================================
+                    newRole.setRoleName(roleName);
 
-    private void addModuleAction(
-            String moduleName,
-            String actionName
-    ) {
+                    return roleRepository.save(newRole);
+                });
 
-        ModuleEntity module =
-                moduleRepository
-                        .findByModuleName(moduleName)
-                        .orElseThrow(() ->
-                                new IllegalStateException(
-                                        "Module not found: " + moduleName
-                                )
-                        );
+        // =====================================================
+        // FIND EXISTING ADMIN WITH ROLE
+        // =====================================================
 
-        ActionEntity action =
-                actionRepository
-                        .findByActionName(actionName)
-                        .orElseThrow(() ->
-                                new IllegalStateException(
-                                        "Action not found: " + actionName
-                                )
-                        );
+        UserEntity admin = userRepository
+                .findByUserIdWithRole(adminUserId)
+                .orElse(null);
 
-        boolean exists =
-                moduleActionRepository
-                        .existsByModuleAndAction(
-                                module,
-                                action
-                        );
+        // =====================================================
+        // CREATE ADMIN
+        // =====================================================
 
-        if (!exists) {
+        if (admin == null) {
 
-            ModuleActionEntity moduleAction =
-                    new ModuleActionEntity();
+            admin = UserEntity.builder()
+                    .userId(adminUserId)
+                    .name("SUPER ADMIN")
+                    .email(adminEmail)
+                    .password(
+                            passwordEncoder.encode(adminPassword)
+                    )
+                    .role(role)
+                    .isAccountVerified(true)
+                    .build();
 
-            moduleAction.setModule(module);
-            moduleAction.setAction(action);
-
-            moduleAction.setModuleName(
-                    module.getModuleName()
-            );
-
-            moduleAction.setActionName(
-                    action.getActionName()
-            );
-
-            moduleAction.setStatus(Status.ACTIVE);
-
-            moduleActionRepository.save(moduleAction);
+            userRepository.save(admin);
 
             log.info(
-                    "Module Action created : {} -> {}",
-                    moduleName,
-                    actionName
+                    "Admin user created successfully. User ID: {}",
+                    adminUserId
             );
+
+        } else {
+
+            log.info(
+                    "Admin user already exists. User ID: {}",
+                    adminUserId
+            );
+
+            // =================================================
+            // ENSURE SUPER ADMIN ROLE
+            // =================================================
+
+            if (admin.getRole() == null
+                    || !roleName.equalsIgnoreCase(
+                    admin.getRole().getRoleName())) {
+
+                admin.setRole(role);
+
+                userRepository.save(admin);
+
+                log.info(
+                        "Existing admin assigned SUPER_ADMIN role."
+                );
+            }
         }
+
+        log.info("====================================");
+        log.info("Default Admin Credentials");
+        log.info("Email    : {}", adminEmail);
+        log.info("Password : {}", adminPassword);
+        log.info("User ID  : {}", adminUserId);
+        log.info("====================================");
     }
 
-    // ============================================================
-    // ADMIN ROLE PERMISSIONS
-    // ============================================================
+    // =========================================================
+    // CREATE SUPER ADMIN ROLE PERMISSIONS
+    // =========================================================
 
-    private void createAdminRolePermissions(
-            RoleEntity role
-    ) {
+    private void createSuperAdminPermissions() {
 
-        log.info(
-                "========== Initializing ADMIN Permissions =========="
-        );
+        RoleEntity role = roleRepository
+                .findByRoleName("SUPER_ADMIN")
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "SUPER_ADMIN role not found"
+                        )
+                );
 
         List<ModuleActionEntity> moduleActions =
                 moduleActionRepository
@@ -677,25 +359,485 @@ public class DataInitializer implements CommandLineRunner {
                         new RoleBasedPermission();
 
                 permission.setRole(role);
+
                 permission.setModule(module);
+
                 permission.setAction(action);
+
                 permission.setAllowed(true);
-                permission.setStatus(Status.ACTIVE);
 
                 roleBasedPermissionRepository.save(
                         permission
                 );
 
                 log.info(
-                        "ADMIN permission created -> {} | {}",
+                        "Role Permission created -> {} | {} | {}",
+                        role.getRoleName(),
                         module.getModuleName(),
                         action.getActionName()
                 );
             }
         }
+    }
 
-        log.info(
-                "========== ADMIN Permissions Initialization Completed =========="
-        );
+    // =========================================================
+    // ADD MODULE ACTION
+    // =========================================================
+
+    private void addModuleAction(
+            String moduleName,
+            String actionName) {
+
+        ModuleEntity module =
+                moduleRepository
+                        .findByModuleName(moduleName)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Module not found: "
+                                                + moduleName
+                                )
+                        );
+
+        ActionEntity action =
+                actionRepository
+                        .findByActionName(actionName)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Action not found: "
+                                                + actionName
+                                )
+                        );
+
+        if (!moduleActionRepository
+                .existsByModuleAndAction(
+                        module,
+                        action)) {
+
+            ModuleActionEntity entity =
+                    new ModuleActionEntity();
+
+            entity.setModule(module);
+
+            entity.setAction(action);
+
+            entity.setModuleName(
+                    module.getModuleName()
+            );
+
+            entity.setActionName(
+                    action.getActionName()
+            );
+
+            moduleActionRepository.save(entity);
+
+            log.info(
+                    "Module Action mapped : {} -> {}",
+                    moduleName,
+                    actionName
+            );
+        }
+    }
+
+    // =========================================================
+    // CREATE MODULE ACTIONS
+    // =========================================================
+
+    private void createModuleActions() {
+
+        // =====================================================
+        // DASHBOARD
+        // =====================================================
+
+        addModuleAction("Dashboard", "VIEW");
+
+        // =====================================================
+        // CUSTOMER
+        // =====================================================
+
+        addModuleAction("Customers", "CREATE");
+        addModuleAction("Customers", "VIEW");
+        addModuleAction("Customers", "EDIT");
+        addModuleAction("Customers", "DELETE");
+
+
+        // =====================================================
+        // CATEGORY
+        // =====================================================
+
+        addModuleAction("Categories", "CREATE");
+        addModuleAction("Categories", "VIEW");
+        addModuleAction("Categories", "EDIT");
+        addModuleAction("Categories", "DELETE");
+
+        // =====================================================
+        // SUBCATEGORY
+        // =====================================================
+
+        addModuleAction("SubCategories", "CREATE");
+        addModuleAction("SubCategories", "VIEW");
+        addModuleAction("SubCategories", "EDIT");
+        addModuleAction("SubCategories", "DELETE");
+
+
+        // =====================================================
+        // UNIT
+        // =====================================================
+
+        addModuleAction("Unit", "CREATE");
+        addModuleAction("Unit", "VIEW");
+        addModuleAction("Unit", "EDIT");
+        addModuleAction("Unit", "DELETE");
+
+        // =====================================================
+        // PRODUCT ITEMS
+        // =====================================================
+
+        addModuleAction("Products", "CREATE");
+        addModuleAction("Products", "VIEW");
+        addModuleAction("Products", "EDIT");
+        addModuleAction("Products", "DELETE");
+
+        // =====================================================
+        // PARTIES
+        // =====================================================
+
+        addModuleAction("Parties", "CREATE");
+        addModuleAction("Parties", "VIEW");
+        addModuleAction("Parties", "EDIT");
+        addModuleAction("Parties", "DELETE");
+
+        // =====================================================
+        // WAREHOUSE
+        // =====================================================
+
+        addModuleAction("Warehouse", "CREATE");
+        addModuleAction("Warehouse", "VIEW");
+        addModuleAction("Warehouse", "EDIT");
+        addModuleAction("Warehouse", "DELETE");
+
+        // =====================================================
+        // INVENTORY
+        // =====================================================
+
+        addModuleAction("Inventory", "VIEW");
+
+        // =====================================================
+        // PURCHASE ORDER
+        // =====================================================
+
+        addModuleAction("Purchase Order", "CREATE");
+        addModuleAction("Purchase Order", "VIEW");
+        addModuleAction("Purchase Order", "EDIT");
+        addModuleAction("Purchase Order", "DELETE");
+
+        // =====================================================
+        // PACKAGE RECEPTION
+        // =====================================================
+
+        addModuleAction("Package Reception", "CREATE");
+        addModuleAction("Package Reception", "VIEW");
+        addModuleAction("Package Reception", "EDIT");
+        addModuleAction("Package Reception", "DELETE");
+
+        // =====================================================
+        // PURCHASE ENTRY
+        // =====================================================
+
+        addModuleAction("Purchase Entry", "CREATE");
+        addModuleAction("Purchase Entry", "VIEW");
+        addModuleAction("Purchase Entry", "EDIT");
+        addModuleAction("Purchase Entry", "DELETE");
+
+        // =====================================================
+        // SALES ORDER
+        // =====================================================
+
+        addModuleAction("Sales Order", "CREATE");
+        addModuleAction("Sales Order", "VIEW");
+        addModuleAction("Sales Order", "EDIT");
+        addModuleAction("Sales Order", "DELETE");
+
+        // =====================================================
+        // STOCK TRANSFER
+        // =====================================================
+
+        addModuleAction("Stock Transfer", "CREATE");
+        addModuleAction("Stock Transfer", "VIEW");
+        addModuleAction("Stock Transfer", "EDIT");
+        addModuleAction("Stock Transfer", "DELETE");
+
+        // =====================================================
+        // PACKAGE DISPATCH
+        // =====================================================
+
+        addModuleAction("Package Dispatch", "CREATE");
+        addModuleAction("Package Dispatch", "VIEW");
+        addModuleAction("Package Dispatch", "EDIT");
+        addModuleAction("Package Dispatch", "DELETE");
+
+        // =====================================================
+        // DAMAGED PRODUCTS
+        // =====================================================
+
+        addModuleAction("Damaged Products", "CREATE");
+        addModuleAction("Damaged Products", "VIEW");
+        addModuleAction("Damaged Products", "EDIT");
+        addModuleAction("Damaged Products", "DELETE");
+
+        // =====================================================
+        // INVOICES
+        // =====================================================
+
+        addModuleAction("Invoices", "CREATE");
+        addModuleAction("Invoices", "VIEW");
+        addModuleAction("Invoices", "EDIT");
+        addModuleAction("Invoices", "DELETE");
+
+        // =====================================================
+        // STAFF INCENTIVE
+        // =====================================================
+
+        addModuleAction("Staff Incentive", "VIEW");
+        addModuleAction("Staff Incentive", "DELETE");
+
+        // =====================================================
+        // STOCK TRANSACTION
+        // =====================================================
+
+        addModuleAction("Stock Transaction", "CREATE");
+        addModuleAction("Stock Transaction", "VIEW");
+
+        // =====================================================
+        // STOCK ADJUSTMENTS
+        // =====================================================
+
+        addModuleAction("Stock Adjustments", "CREATE");
+        addModuleAction("Stock Adjustments", "VIEW");
+        addModuleAction("Stock Adjustments", "EDIT");
+        addModuleAction("Stock Adjustments", "DELETE");
+
+        // =====================================================
+        // CASH BANK
+        // =====================================================
+
+        addModuleAction("Cash Bank", "CREATE");
+        addModuleAction("Cash Bank", "VIEW");
+        addModuleAction("Cash Bank", "EDIT");
+
+        // =====================================================
+        // CHEQUE
+        // =====================================================
+
+        addModuleAction("Cheque", "CREATE");
+        addModuleAction("Cheque", "VIEW");
+        addModuleAction("Cheque", "EDIT");
+        addModuleAction("Cheque", "DELETE");
+
+        // =====================================================
+        // DISCOUNT LIMIT
+        // =====================================================
+
+        addModuleAction("Discount Limit", "CREATE");
+        addModuleAction("Discount Limit", "VIEW");
+        addModuleAction("Discount Limit", "EDIT");
+        addModuleAction("Discount Limit", "DELETE");
+
+        // =====================================================
+        // DISCOUNT REQUEST
+        // =====================================================
+
+        addModuleAction("Discount Request", "VIEW");
+        addModuleAction("Discount Request", "CREATE");
+
+        // =====================================================
+        // SETTINGS
+        // =====================================================
+
+        addModuleAction("Settings", "VIEW");
+
+        // =====================================================
+        // ROLE
+        // =====================================================
+
+        addModuleAction("Role", "CREATE");
+        addModuleAction("Role", "VIEW");
+        addModuleAction("Role", "EDIT");
+        addModuleAction("Role", "DELETE");
+
+        // =====================================================
+        // FLOOR REGISTER
+        // =====================================================
+
+        addModuleAction("Floor Register", "CREATE");
+        addModuleAction("Floor Register", "VIEW");
+        addModuleAction("Floor Register", "EDIT");
+        addModuleAction("Floor Register", "DELETE");
+
+        // =====================================================
+        // COMPANY DETAIL
+        // =====================================================
+
+        addModuleAction("Company Detail", "CREATE");
+        addModuleAction("Company Detail", "VIEW");
+        addModuleAction("Company Detail", "EDIT");
+        addModuleAction("Company Detail", "DELETE");
+
+        // =====================================================
+        // REGISTER
+        // =====================================================
+
+        addModuleAction("Register", "CREATE");
+        addModuleAction("Register", "VIEW");
+        addModuleAction("Register", "EDIT");
+        addModuleAction("Register", "DELETE");
+
+        // =====================================================
+        // BANK DETAILS
+        // =====================================================
+
+        addModuleAction("Bank Details", "CREATE");
+        addModuleAction("Bank Details", "VIEW");
+        addModuleAction("Bank Details", "EDIT");
+        addModuleAction("Bank Details", "DELETE");
+
+        // =====================================================
+        // MENU PERMISSION
+        // =====================================================
+
+        addModuleAction("Menu Permission", "CREATE");
+        addModuleAction("Menu Permission", "VIEW");
+        addModuleAction("Menu Permission", "EDIT");
+        addModuleAction("Menu Permission", "DELETE");
+
+        // =====================================================
+        // TAX
+        // =====================================================
+
+        addModuleAction("Tax", "CREATE");
+        addModuleAction("Tax", "VIEW");
+        addModuleAction("Tax", "EDIT");
+        addModuleAction("Tax", "DELETE");
+
+        // =====================================================
+        // POINTS RULE
+        // =====================================================
+
+        addModuleAction("Points Rule", "CREATE");
+        addModuleAction("Points Rule", "VIEW");
+        addModuleAction("Points Rule", "EDIT");
+        addModuleAction("Points Rule", "DELETE");
+
+        // =====================================================
+        // INCENTIVE
+        // =====================================================
+
+        addModuleAction("Incentive", "CREATE");
+        addModuleAction("Incentive", "VIEW");
+        addModuleAction("Incentive", "EDIT");
+        addModuleAction("Incentive", "DELETE");
+
+        // =====================================================
+        // EXPENSES CATEGORY
+        // =====================================================
+
+        addModuleAction("Expenses Category", "CREATE");
+        addModuleAction("Expenses Category", "VIEW");
+        addModuleAction("Expenses Category", "EDIT");
+        addModuleAction("Expenses Category", "DELETE");
+
+        // =====================================================
+        // REPORT
+        // =====================================================
+
+        addModuleAction("Report", "VIEW");
+
+        // =====================================================
+        // ORDER MANAGEMENT
+        // =====================================================
+
+        addModuleAction("Order Management", "VIEW");
+
+        // =====================================================
+        // AUDIT LOG
+        // =====================================================
+
+        addModuleAction("Audit Log", "VIEW");
+
+        // =====================================================
+        // SALES ORDER RETURN
+        // =====================================================
+
+        addModuleAction("Sales Order Return", "CREATE");
+        addModuleAction("Sales Order Return", "VIEW");
+        addModuleAction("Sales Order Return", "EDIT");
+        addModuleAction("Sales Order Return", "DELETE");
+    }
+
+    // =========================================================
+    // CREATE SUPER ADMIN USER PERMISSIONS
+    // =========================================================
+
+    private void createSuperAdminUserPermissions() {
+
+        UserEntity user = userRepository
+                .findByUserIdWithRole("USR001")
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Super Admin user not found."
+                        )
+                );
+
+        List<ModuleActionEntity> moduleActions =
+                moduleActionRepository
+                        .findAllWithModuleAndAction();
+
+        for (ModuleActionEntity moduleAction : moduleActions) {
+
+            ModuleEntity module =
+                    moduleAction.getModule();
+
+            ActionEntity action =
+                    moduleAction.getAction();
+
+            boolean exists =
+                    userPermissionRepository
+                            .existsByUserAndModuleAndAction(
+                                    user,
+                                    module,
+                                    action
+                            );
+
+            if (!exists) {
+
+                UserBasedPermission permission =
+                        new UserBasedPermission();
+
+                permission.setUser(user);
+
+                permission.setRole(
+                        user.getRole()
+                );
+
+                permission.setModule(module);
+
+                permission.setAction(action);
+
+                permission.setAllowed(true);
+
+                // NO BRANCH
+                // NO SHOP
+
+                userPermissionRepository.save(
+                        permission
+                );
+
+                log.info(
+                        "User Permission created -> {} | {} | {}",
+                        user.getEmail(),
+                        module.getModuleName(),
+                        action.getActionName()
+                );
+            }
+        }
     }
 }

@@ -6,15 +6,9 @@ import lombok.Data;
 @Data
 public class UserPermissionRequest {
 
-    @NotNull(message = "User ID is required.")
-    private Long userId;
+    @NotNull(message = "Module Action Id is required.")
+    private Long moduleActionId;
 
-    @NotNull(message = "Module ID is required.")
-    private Long moduleId;
-
-    @NotNull(message = "Action ID is required.")
-    private Long actionId;
-
-    @NotNull(message = "Allowed value is required.")
+    @NotNull(message = "Allowed is required.")
     private Boolean allowed;
 }

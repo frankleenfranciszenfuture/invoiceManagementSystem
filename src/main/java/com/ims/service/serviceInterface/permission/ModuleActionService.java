@@ -7,19 +7,5 @@ import java.util.List;
 
 public interface ModuleActionService {
 
-    ModuleActionResponse create(
-            ModuleActionRequest request
-    );
-
-    ModuleActionResponse getById(
-            Long id
-    );
-
     List<ModuleActionResponse> getAll();
-
-    List<ModuleActionResponse> getByModule(
-            Long moduleId
-    );
-
-    void delete(Long id);
 }

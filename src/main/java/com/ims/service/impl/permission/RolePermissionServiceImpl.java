@@ -1,253 +1,358 @@
 package com.ims.service.impl.permission;
 
-import com.ims.dtos.permission.rolePermission.RolePermissionRequest;
-import com.ims.dtos.permission.rolePermission.RolePermissionResponse;
-import com.ims.dtos.permission.rolePermission.RolePermissionUpdateRequest;
-import com.ims.entity.ActionEntity;
-import com.ims.entity.ModuleEntity;
+
+
+import com.ims.dtos.permission.rolePermission.*;
+import com.ims.entity.ModuleActionEntity;
 import com.ims.entity.RoleBasedPermission;
 import com.ims.entity.RoleEntity;
-import com.ims.enums.Status;
-import com.ims.exception.ResourceNotFoundException;
+import com.ims.exception.ValidationException;
 import com.ims.mapper.permission.RolePermissionMapper;
 import com.ims.repository.RoleRepository;
-import com.ims.repository.permission.ActionRepository;
-import com.ims.repository.permission.ModuleRepository;
 import com.ims.repository.permission.RoleBasedPermissionRepository;
+import com.ims.service.serviceInterface.access.AccessService;
 import com.ims.service.serviceInterface.permission.RolePermissionService;
 import com.ims.utils.validation.RolePermissionValidation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
-public class RolePermissionServiceImpl
-        implements RolePermissionService {
+public class RolePermissionServiceImpl implements RolePermissionService {
 
-    private final RoleBasedPermissionRepository repository;
-
-    private final RoleRepository roleRepository;
-    private final ModuleRepository moduleRepository;
-    private final ActionRepository actionRepository;
-
+    private final AccessService accessService;
     private final RolePermissionMapper mapper;
+
+    private final RoleBasedPermissionRepository rolePermissionRepository;
     private final RolePermissionValidation validation;
+    private final RoleRepository roleRepository;
 
 
-    // ============================================================
-    // CREATE
-    // ============================================================
-
-    @Override
-    public RolePermissionResponse create(
-            RolePermissionRequest request
-    ) {
-
-        RoleEntity role =
-                roleRepository.findById(
-                                request.getRoleId()
-                        )
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Role not found."
-                                )
-                        );
-        if ("ADMIN".equalsIgnoreCase(role.getRoleName())) {
-            throw new IllegalStateException(
-                    "ADMIN role permissions cannot be modified."
-            );
-        }
-
-        ModuleEntity module =
-                moduleRepository.findById(
-                                request.getModuleId()
-                        )
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Module not found."
-                                )
-                        );
-
-
-        ActionEntity action =
-                actionRepository.findById(
-                                request.getActionId()
-                        )
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Action not found."
-                                )
-                        );
-
-
-        validation.validateCreate(
-                role,
-                module,
-                action
-        );
-
-
-        RoleBasedPermission entity =
-                new RoleBasedPermission();
-
-        entity.setRole(role);
-        entity.setModule(module);
-        entity.setAction(action);
-
-        entity.setAllowed(
-                Boolean.TRUE.equals(request.getAllowed())
-        );
-
-        // ========================================================
-        // DEFAULT STATUS
-        // ========================================================
-
-        entity.setStatus(Status.ACTIVE);
-        entity.setActive(true);
-
-
-        return mapper.toResponse(
-                repository.save(entity)
-        );
-    }
-
-
-    // ============================================================
-    // UPDATE
-    // ============================================================
-
-    @Override
-    public RolePermissionResponse update(
-            Long id,
-            RolePermissionUpdateRequest request
-    ) {
-
-        RoleBasedPermission entity =
-                repository.findById(id)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Role permission not found."
-                                )
-                        );
-        if (entity.getRole() != null &&
-                "ADMIN".equalsIgnoreCase(
-                        entity.getRole().getRoleName()
-                )) {
-
-            throw new IllegalStateException(
-                    "ADMIN role permissions cannot be modified."
-            );
-        }
-        entity.setAllowed(
-                Boolean.TRUE.equals(request.getAllowed())
-        );
-
-        if (entity.getStatus() == null) {
-            entity.setStatus(Status.ACTIVE);
-        }
-
-        if (entity.getActive() == null) {
-            entity.setActive(true);
-        }
-
-        return mapper.toResponse(
-                repository.save(entity)
-        );
-    }
-
-
-    // ============================================================
-    // GET BY ID
-    // ============================================================
+    /* =========================================================
+       GET PERMISSIONS BY ROLE
+       ========================================================= */
 
     @Override
     @Transactional(readOnly = true)
-    public RolePermissionResponse getById(
-            Long id
-    ) {
+    public List<RolePermissionResponse> getPermissionsByRole(
+            Long roleId) {
 
-        return mapper.toResponse(
-                repository.findById(id)
+        RoleEntity role =
+                roleRepository.findById(roleId)
                         .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Role permission not found."
-                                )
-                        )
-        );
+                                new ValidationException(
+                                        "Role not found with id: " + roleId));
+
+        List<RoleBasedPermission> permissions =
+                rolePermissionRepository.findByRoleId(role.getId());
+
+        return mapper.toDTO(permissions);
     }
 
 
-    // ============================================================
-    // GET ALL
-    // ============================================================
+    /* =========================================================
+       ASSIGN PERMISSIONS
+       ========================================================= */
+
+    @Override
+    @Transactional
+    public List<RolePermissionResponse> assignPermissions(
+            Long roleId,
+            AssignRolePermissionRequest request) {
+
+        RoleEntity role =
+                roleRepository.findById(roleId)
+                        .orElseThrow(() ->
+                                new ValidationException(
+                                        "Role not found with id: " + roleId));
+
+//        validateRolePermissionAssignment(role);
+
+        List<RoleBasedPermission> permissions =
+                new ArrayList<>();
+
+        for (RolePermissionRequest dto :
+                request.getPermissions()) {
+
+            ModuleActionEntity moduleAction =
+                    accessService.findModuleAction(
+                            dto.getModuleActionId());
+
+            validation.validateDuplicatePermission(
+                    role,
+                    moduleAction);
+
+            RoleBasedPermission permission =
+                    RoleBasedPermission.builder()
+                            .role(role)
+                            .module(moduleAction.getModule())
+                            .action(moduleAction.getAction())
+                            .allowed(dto.getAllowed())
+                            .build();
+
+            permissions.add(permission);
+        }
+
+        permissions =
+                rolePermissionRepository.saveAll(permissions);
+
+        return mapper.toDTO(permissions);
+    }
+
+
+    /* =========================================================
+       BULK ASSIGN PERMISSIONS TO ROLES
+       ========================================================= */
+
+    @Override
+    @Transactional
+    public List<RolePermissionResponse> assignPermissionsToRoles(
+            BulkRolePermissionRequest request) {
+
+        List<RoleBasedPermission> permissions =
+                new ArrayList<>();
+
+        for (RolePermissionRoleRequest roleRequest :
+                request.getRoles()) {
+
+            Long roleId = roleRequest.getRoleId();
+
+            RoleEntity role =
+                    roleRepository.findById(roleId)
+                            .orElseThrow(() ->
+                                    new ValidationException(
+                                            "Role not found with id: "
+                                                    + roleId));
+
+//            validateRolePermissionAssignment(role);
+
+            for (RolePermissionRequest permissionRequest :
+                    roleRequest.getPermissions()) {
+
+                ModuleActionEntity moduleAction =
+                        accessService.findModuleAction(
+                                permissionRequest.getModuleActionId());
+
+                validation.validateDuplicatePermission(
+                        role,
+                        moduleAction);
+
+                RoleBasedPermission permission =
+                        RoleBasedPermission.builder()
+                                .role(role)
+                                .module(moduleAction.getModule())
+                                .action(moduleAction.getAction())
+                                .allowed(permissionRequest.getAllowed())
+                                .build();
+
+                permissions.add(permission);
+            }
+        }
+
+        permissions =
+                rolePermissionRepository.saveAll(permissions);
+
+        return mapper.toDTO(permissions);
+    }
+
+
+    /* =========================================================
+       UPDATE PERMISSIONS
+       ========================================================= */
+
+    @Override
+    @Transactional
+    public List<RolePermissionResponse> updatePermissions(
+            Long roleId,
+            AssignRolePermissionRequest request) {
+
+        RoleEntity role =
+                roleRepository.findById(roleId)
+                        .orElseThrow(() ->
+                                new ValidationException(
+                                        "Role not found with id: " + roleId));
+
+//        validateRolePermissionAssignment(role);
+
+        List<RoleBasedPermission> permissions =
+                new ArrayList<>();
+
+        for (RolePermissionRequest dto :
+                request.getPermissions()) {
+
+            ModuleActionEntity moduleAction =
+                    accessService.findModuleAction(
+                            dto.getModuleActionId());
+
+            RoleBasedPermission permission =
+                    rolePermissionRepository
+                            .findByRole_IdAndModule_IdAndAction_Id(
+                                    role.getId(),
+                                    moduleAction.getModule().getId(),
+                                    moduleAction.getAction().getId())
+                            .orElse(
+                                    RoleBasedPermission.builder()
+                                            .role(role)
+                                            .module(moduleAction.getModule())
+                                            .action(moduleAction.getAction())
+                                            .build()
+                            );
+
+            permission.setAllowed(dto.getAllowed());
+
+            permissions.add(permission);
+        }
+
+        permissions =
+                rolePermissionRepository.saveAll(permissions);
+
+        return mapper.toDTO(permissions);
+    }
+
+
+    /* =========================================================
+       BULK UPDATE PERMISSIONS
+       ========================================================= */
+
+    @Override
+    @Transactional
+    public List<RolePermissionResponse> updatePermissionsToRoles(
+            BulkRolePermissionRequest request) {
+
+        List<RoleBasedPermission> permissions =
+                new ArrayList<>();
+
+        for (RolePermissionRoleRequest roleRequest :
+                request.getRoles()) {
+
+            Long roleId = roleRequest.getRoleId();
+
+            RoleEntity role =
+                    roleRepository.findById(roleId)
+                            .orElseThrow(() ->
+                                    new ValidationException(
+                                            "Role not found with id: "
+                                                    + roleId));
+
+//            validateRolePermissionAssignment(role);
+
+            for (RolePermissionRequest dto :
+                    roleRequest.getPermissions()) {
+
+                ModuleActionEntity moduleAction =
+                        accessService.findModuleAction(
+                                dto.getModuleActionId());
+
+                RoleBasedPermission permission =
+                        rolePermissionRepository
+                                .findByRole_IdAndModule_IdAndAction_Id(
+                                        role.getId(),
+                                        moduleAction.getModule().getId(),
+                                        moduleAction.getAction().getId())
+                                .orElse(
+                                        RoleBasedPermission.builder()
+                                                .role(role)
+                                                .module(moduleAction.getModule())
+                                                .action(moduleAction.getAction())
+                                                .build()
+                                );
+
+                permission.setAllowed(dto.getAllowed());
+
+                permissions.add(permission);
+            }
+        }
+
+        permissions =
+                rolePermissionRepository.saveAll(permissions);
+
+        return mapper.toDTO(permissions);
+    }
+
+
+    /* =========================================================
+       GET ALL
+       ========================================================= */
 
     @Override
     @Transactional(readOnly = true)
     public List<RolePermissionResponse> getAll() {
 
-        return repository.findAll()
+        return rolePermissionRepository
+                .findAllWithRoleModuleAction()
                 .stream()
-                .map(mapper::toResponse)
+                .map(mapper::toDTO)
                 .toList();
     }
 
 
-    // ============================================================
-    // GET BY ROLE
-    // ============================================================
+    /* =========================================================
+       GET BY ID
+       ========================================================= */
 
     @Override
     @Transactional(readOnly = true)
-    public List<RolePermissionResponse> getByRole(
-            Long roleId
-    ) {
+    public RolePermissionResponse getById(
+            Long id) {
 
-        RoleEntity role =
-                roleRepository.findById(roleId)
+        RoleBasedPermission permission =
+                rolePermissionRepository
+                        .findByIdWithRelations(id)
                         .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Role not found."
-                                )
-                        );
+                                new ValidationException(
+                                        "Role permission not found with id: "
+                                                + id));
 
-        return repository.findByRole(role)
-                .stream()
-                .map(mapper::toResponse)
-                .toList();
+        return mapper.toDTO(permission);
     }
 
 
-    // ============================================================
-    // DELETE / SOFT DELETE
-    // ============================================================
+    /* =========================================================
+       DELETE
+       ========================================================= */
 
     @Override
-    public void delete(Long id) {
+    @Transactional
+    public void deleteById(Long id) {
 
-        RoleBasedPermission entity =
-                repository.findById(id)
+        RoleBasedPermission permission =
+                rolePermissionRepository
+                        .findByIdWithRelations(id)
                         .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Role permission not found."
-                                )
-                        );
-        if (entity.getRole() != null &&
-                "ADMIN".equalsIgnoreCase(
-                        entity.getRole().getRoleName()
-                )) {
+                                new ValidationException(
+                                        "Role permission not found with id: "
+                                                + id));
 
-            throw new IllegalStateException(
-                    "ADMIN role permissions cannot be modified."
-            );
+        if (permission.getRole().getId() == 1) {
+            throw new ValidationException(
+                    "Super admin access cannot be deleted");
         }
-        entity.setAllowed(false);
-        entity.setActive(false);
-        entity.setStatus(Status.INACTIVE);
 
-        repository.save(entity);
+        rolePermissionRepository.delete(permission);
+    }
+
+
+    /* =========================================================
+       ROLE VALIDATION
+       ========================================================= */
+
+    private void validateRolePermissionAssignment(
+            RoleEntity role) {
+
+        String roleName =
+                role.getRoleName();
+
+        if (!"SUPER_ADMIN".equalsIgnoreCase(roleName)
+                && !"BRANCH_ADMIN".equalsIgnoreCase(roleName)
+               ) {
+
+            throw new ValidationException(
+                    "POS login is disabled for role: "
+                            + roleName);
+        }
     }
 }

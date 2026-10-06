@@ -1,9 +1,11 @@
 package com.ims.utils.validation;
 
-import com.ims.entity.ActionEntity;
-import com.ims.entity.ModuleEntity;
+import com.ims.entity.ModuleActionEntity;
+import com.ims.entity.UserBasedPermission;
 import com.ims.entity.UserEntity;
 import com.ims.exception.ValidationException;
+
+import com.ims.repository.permission.UserPermissionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -11,47 +13,82 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class UserPermissionValidation {
 
-    /**
-     * Validate the basic user permission relationship.
-     *
-     * IMPORTANT:
-     *
-     * Duplicate checking is intentionally NOT done here.
-     *
-     * Duplicate handling belongs to UserPermissionServiceImpl
-     * because the service needs to distinguish:
-     *
-     * 1. New permission
-     * 2. Existing active permission
-     * 3. Existing inactive permission
-     *
-     * User permission uniqueness:
-     *
-     * USER + MODULE + ACTION
-     *
-     * Role is NOT part of user permission uniqueness.
-     */
-    public void validateCreate(
+    private final UserPermissionRepository userPermissionRepository;
+
+    // =========================================================
+    // VALIDATE USER PERMISSION ACCESS
+    // =========================================================
+
+    public void validate(Long userId) {
+
+        /*
+         * Super Admin permissions cannot be modified.
+         */
+        if (userId == 1) {
+
+            throw new ValidationException(
+                    "Super Admin permissions cannot be modified."
+            );
+        }
+    }
+
+    // =========================================================
+    // DUPLICATE USER PERMISSION
+    // =========================================================
+
+    public void validateDuplicatePermission(
             UserEntity user,
-            ModuleEntity module,
-            ActionEntity action
-    ) {
+            ModuleActionEntity moduleAction) {
 
-        if (user == null) {
+        boolean exists =
+                userPermissionRepository
+                        .existsByUserAndModuleAndAction(
+                                user,
+                                moduleAction.getModule(),
+                                moduleAction.getAction()
+                        );
+
+        if (exists) {
+
             throw new ValidationException(
-                    "User is required."
+                    "Permission already assigned."
+            );
+        }
+    }
+
+    // =========================================================
+    // VALIDATE UPDATE
+    // =========================================================
+
+    public void validateUpdate(
+            UserBasedPermission existing,
+            Boolean allowed) {
+
+        if (existing == null) {
+
+            throw new ValidationException(
+                    "User permission not found."
             );
         }
 
-        if (module == null) {
+        if (allowed == null) {
+
             throw new ValidationException(
-                    "Module is required."
+                    "Allowed is required."
             );
         }
+    }
 
-        if (action == null) {
+    // =========================================================
+    // VALIDATE REQUEST SIZE
+    // =========================================================
+
+    public void validateRequestSize(int size) {
+
+        if (size <= 0) {
+
             throw new ValidationException(
-                    "Action is required."
+                    "Permission list cannot be empty."
             );
         }
     }

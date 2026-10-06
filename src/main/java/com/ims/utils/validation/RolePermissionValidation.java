@@ -8,28 +8,47 @@ import com.ims.repository.permission.RoleBasedPermissionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+
+
 @Component
 @RequiredArgsConstructor
 public class RolePermissionValidation {
 
-    private final RoleBasedPermissionRepository repository;
+    private final RoleBasedPermissionRepository rolePermissionRepository;
 
+    // =====================================================
+    // ROLE PERMISSION VALIDATION
+    // =====================================================
 
-    public void validateCreate(
-            RoleEntity role,
-            ModuleEntity module,
-            ActionEntity action
-    ) {
+    public void validate(Long roleId) {
 
-        if (repository.existsByRoleAndModuleAndAction(
-                role,
-                module,
-                action
-        )) {
-
+        /*
+         * Super Admin permissions cannot be modified.
+         */
+        if (roleId == 1) {
             throw new ValidationException(
-                    "Permission already exists for this role."
-            );
+                    "Super Admin permissions cannot be modified.");
+        }
+    }
+
+    // =====================================================
+    // DUPLICATE PERMISSION VALIDATION
+    // =====================================================
+
+    public void validateDuplicatePermission(
+            RoleEntity role,
+            ModuleActionEntity moduleAction) {
+
+        boolean exists =
+                rolePermissionRepository
+                        .existsByRole_IdAndModule_IdAndAction_Id(
+                                role.getId(),
+                                moduleAction.getModule().getId(),
+                                moduleAction.getAction().getId());
+
+        if (exists) {
+            throw new ValidationException(
+                    "Permission already assigned.");
         }
     }
 }

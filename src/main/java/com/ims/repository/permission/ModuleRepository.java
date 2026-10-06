@@ -7,10 +7,8 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface ModuleRepository
-        extends JpaRepository<ModuleEntity, Long> {
+public interface ModuleRepository extends JpaRepository<ModuleEntity, Long> {
 
     boolean existsByModuleName(String moduleName);
-
-    Optional<ModuleEntity> findByModuleName(String moduleName);
+    Optional<ModuleEntity> findByModuleName(String name);
 }

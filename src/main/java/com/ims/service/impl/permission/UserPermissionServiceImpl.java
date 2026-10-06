@@ -1,418 +1,551 @@
 package com.ims.service.impl.permission;
 
-import com.ims.dtos.permission.userPermission.UserPermissionRequest;
-import com.ims.dtos.permission.userPermission.UserPermissionResponse;
-import com.ims.dtos.permission.userPermission.UserPermissionUpdateRequest;
-import com.ims.entity.ActionEntity;
-import com.ims.entity.ModuleEntity;
+import com.ims.dtos.permission.userPermission.*;
+import com.ims.entity.ModuleActionEntity;
+import com.ims.entity.RoleBasedPermission;
 import com.ims.entity.UserBasedPermission;
 import com.ims.entity.UserEntity;
-import com.ims.enums.Status;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.exception.ValidationException;
 import com.ims.mapper.permission.UserPermissionMapper;
-import com.ims.repository.UserRepository;
-import com.ims.repository.permission.ActionRepository;
-import com.ims.repository.permission.ModuleRepository;
+
+import com.ims.repository.permission.ModuleActionRepository;
+import com.ims.repository.permission.RoleBasedPermissionRepository;
 import com.ims.repository.permission.UserPermissionRepository;
+import com.ims.service.impl.common.CurrentUserService;
+import com.ims.service.serviceInterface.access.AccessService;
 import com.ims.service.serviceInterface.permission.UserPermissionService;
 import com.ims.utils.validation.UserPermissionValidation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class UserPermissionServiceImpl
         implements UserPermissionService {
 
-    private final UserPermissionRepository repository;
-    private final UserRepository userRepository;
-    private final ModuleRepository moduleRepository;
-    private final ActionRepository actionRepository;
+    private final UserPermissionRepository userPermissionRepository;
     private final UserPermissionMapper mapper;
+    private final AccessService accessService;
     private final UserPermissionValidation validation;
+    private final CurrentUserService currentUserService;
+    private final ModuleActionRepository moduleActionRepository;
+    private final RoleBasedPermissionRepository roleBasedPermissionRepository;
 
-
-    // ============================================================
-    // CREATE USER PERMISSION
-    // ============================================================
+    // =========================================================
+    // ASSIGN USER PERMISSIONS
+    // =========================================================
 
     @Override
-    public UserPermissionResponse create(
-            UserPermissionRequest request
-    ) {
+    @Transactional
+    public List<UserPermissionResponse> assignPermissions(
+            Long userId,
+            AssignUserPermissionRequest request) {
 
-        // --------------------------------------------------------
-        // REQUEST VALIDATION
-        // --------------------------------------------------------
+        validation.validate(userId);
 
-        if (request == null) {
-            throw new ValidationException(
-                    "User permission request is required."
-            );
-        }
-
-        if (request.getUserId() == null) {
-            throw new ValidationException(
-                    "User ID is required."
-            );
-        }
-
-        if (request.getModuleId() == null) {
-            throw new ValidationException(
-                    "Module ID is required."
-            );
-        }
-
-        if (request.getActionId() == null) {
-            throw new ValidationException(
-                    "Action ID is required."
-            );
-        }
-
-        if (request.getAllowed() == null) {
-            throw new ValidationException(
-                    "Allowed value is required."
-            );
-        }
-
-
-        // --------------------------------------------------------
-        // LOAD USER
-        // --------------------------------------------------------
+        validation.validateRequestSize(
+                request.getPermissions().size()
+        );
 
         UserEntity user =
-                userRepository.findById(request.getUserId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "User not found."
-                                )
-                        );
+                accessService.findAccessibleUserAccess(userId);
 
+        List<UserBasedPermission> permissions =
+                new ArrayList<>();
 
-        // --------------------------------------------------------
-        // LOAD MODULE
-        // --------------------------------------------------------
+        for (UserPermissionRequest dto
+                : request.getPermissions()) {
 
-        ModuleEntity module =
-                moduleRepository.findById(request.getModuleId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Module not found."
-                                )
-                        );
+            ModuleActionEntity moduleAction =
+                    accessService.findModuleAction(
+                            dto.getModuleActionId()
+                    );
 
+            UserBasedPermission permission =
+                    userPermissionRepository
+                            .findByUserAndModuleAndAction(
+                                    user,
+                                    moduleAction.getModule(),
+                                    moduleAction.getAction()
+                            )
+                            .orElseGet(() ->
+                                    UserBasedPermission.builder()
+                                            .user(user)
+                                            .role(user.getRole())
+                                            .module(moduleAction.getModule())
+                                            .action(moduleAction.getAction())
+                                            .build()
+                            );
 
-        // --------------------------------------------------------
-        // LOAD ACTION
-        // --------------------------------------------------------
+            permission.setAllowed(dto.getAllowed());
 
-        ActionEntity action =
-                actionRepository.findById(request.getActionId())
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Action not found."
-                                )
-                        );
+            permissions.add(permission);
+        }
 
+        permissions =
+                userPermissionRepository.saveAll(
+                        permissions
+                );
 
-        // --------------------------------------------------------
-        // GENERAL VALIDATION
-        // --------------------------------------------------------
+        return mapper.toDTO(permissions);
+    }
 
-        validation.validateCreate(
-                user,
-                module,
-                action
+    // =========================================================
+    // BULK ASSIGN USER PERMISSIONS
+    // =========================================================
+
+    @Override
+    @Transactional
+    public List<UserPermissionResponse> bulkAssignPermissions(
+            BulkAssignUserPermissionRequest request) {
+
+        validation.validateRequestSize(
+                request.getUsers().size()
         );
 
+        List<UserBasedPermission> permissions =
+                new ArrayList<>();
 
-        // --------------------------------------------------------
-        // CHECK EXISTING USER PERMISSION
-        //
-        // UNIQUE:
-        //
-        // USER + MODULE + ACTION
-        //
-        // ROLE IS NOT USED FOR DUPLICATE CHECK.
-        // --------------------------------------------------------
+        for (UserPermissionAssign userRequest
+                : request.getUsers()) {
 
-        UserBasedPermission existingPermission =
-                repository.findByUserAndModuleAndAction(
+            Long userId =
+                    userRequest.getUserId();
+
+            validation.validate(userId);
+
+            UserEntity user =
+                    accessService.findAccessibleUserAccess(
+                            userId
+                    );
+
+            validation.validateRequestSize(
+                    userRequest.getPermissions().size()
+            );
+
+            for (UserPermissionRequest dto
+                    : userRequest.getPermissions()) {
+
+                ModuleActionEntity moduleAction =
+                        accessService.findModuleAction(
+                                dto.getModuleActionId()
+                        );
+
+                validation.validateDuplicatePermission(
                         user,
-                        module,
-                        action
-                ).orElse(null);
-
-
-        // --------------------------------------------------------
-        // EXISTING RECORD
-        // --------------------------------------------------------
-
-        if (existingPermission != null) {
-
-            // ----------------------------------------------------
-            // SOFT DELETED / INACTIVE
-            // ----------------------------------------------------
-
-            if (Boolean.FALSE.equals(
-                    existingPermission.getActive()
-            )
-                    || existingPermission.getStatus()
-                    == Status.INACTIVE) {
-
-                existingPermission.setAllowed(
-                        Boolean.TRUE.equals(
-                                request.getAllowed()
-                        )
+                        moduleAction
                 );
 
-                existingPermission.setActive(true);
-                existingPermission.setStatus(Status.ACTIVE);
+                UserBasedPermission permission =
+                        UserBasedPermission.builder()
+                                .user(user)
+                                .role(user.getRole())
+                                .module(moduleAction.getModule())
+                                .action(moduleAction.getAction())
+                                .allowed(dto.getAllowed())
+                                .build();
 
-                existingPermission.setUser(user);
-                existingPermission.setRole(user.getRole());
-                existingPermission.setModule(module);
-                existingPermission.setAction(action);
-
-                return mapper.toResponse(
-                        repository.save(existingPermission)
-                );
+                permissions.add(permission);
             }
-
-
-            // ----------------------------------------------------
-            // ACTIVE DUPLICATE
-            // ----------------------------------------------------
-
-            throw new ValidationException(
-                    "Permission already exists for this user."
-            );
         }
 
+        permissions =
+                userPermissionRepository.saveAll(
+                        permissions
+                );
 
-        // --------------------------------------------------------
-        // CREATE NEW USER PERMISSION
-        // --------------------------------------------------------
-
-        UserBasedPermission entity =
-                new UserBasedPermission();
-
-        entity.setUser(user);
-
-        /*
-         * Role is only stored as reference information.
-         * It is NOT part of user permission uniqueness.
-         */
-        entity.setRole(user.getRole());
-
-        entity.setModule(module);
-        entity.setAction(action);
-
-        entity.setAllowed(
-                Boolean.TRUE.equals(
-                        request.getAllowed()
-                )
-        );
-
-        entity.setActive(true);
-        entity.setStatus(Status.ACTIVE);
-
-
-        return mapper.toResponse(
-                repository.save(entity)
-        );
+        return mapper.toDTO(permissions);
     }
 
-
-    // ============================================================
-    // UPDATE USER PERMISSION
-    // ============================================================
+    // =========================================================
+    // UPDATE USER PERMISSIONS
+    // =========================================================
 
     @Override
-    public UserPermissionResponse update(
-            Long id,
-            UserPermissionUpdateRequest request
-    ) {
+    @Transactional
+    public List<UserPermissionResponse> updatePermissions(
+            Long userId,
+            AssignUserPermissionRequest request) {
 
-        // --------------------------------------------------------
-        // REQUEST VALIDATION
-        // --------------------------------------------------------
+        validation.validate(userId);
 
-        if (id == null) {
-            throw new ValidationException(
-                    "User permission ID is required."
+        UserEntity user =
+                accessService.findAccessibleUserAccess(userId);
+
+        List<UserBasedPermission> permissions =
+                new ArrayList<>();
+
+        for (UserPermissionRequest dto
+                : request.getPermissions()) {
+
+            ModuleActionEntity moduleAction =
+                    accessService.findModuleAction(
+                            dto.getModuleActionId()
+                    );
+
+            UserBasedPermission permission =
+                    userPermissionRepository
+                            .findByUserAndModuleAndAction(
+                                    user,
+                                    moduleAction.getModule(),
+                                    moduleAction.getAction()
+                            )
+                            .orElseThrow(() ->
+                                    new ResourceNotFoundException(
+                                            "User permission not found."
+                                    )
+                            );
+
+            permission.setAllowed(
+                    dto.getAllowed()
             );
+
+            permissions.add(permission);
         }
 
-        if (request == null) {
-            throw new ValidationException(
-                    "User permission update request is required."
-            );
-        }
+        permissions =
+                userPermissionRepository.saveAll(
+                        permissions
+                );
 
-        if (request.getAllowed() == null) {
-            throw new ValidationException(
-                    "Allowed value is required."
-            );
-        }
+        return mapper.toDTO(permissions);
+    }
 
+    // =========================================================
+    // BULK UPDATE USER PERMISSIONS
+    // =========================================================
 
-        // --------------------------------------------------------
-        // FIND EXISTING PERMISSION
-        // --------------------------------------------------------
+    @Override
+    @Transactional
+    public List<UserPermissionResponse> bulkUpdatePermissions(
+            BulkAssignUserPermissionRequest request) {
 
-        UserBasedPermission entity =
-                repository.findById(id)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "User permission not found."
-                                )
+        List<UserBasedPermission> permissions =
+                new ArrayList<>();
+
+        for (UserPermissionAssign userRequest
+                : request.getUsers()) {
+
+            Long userId =
+                    userRequest.getUserId();
+
+            validation.validate(userId);
+
+            UserEntity user =
+                    accessService.findAccessibleUserAccess(
+                            userId
+                    );
+
+            for (UserPermissionRequest dto
+                    : userRequest.getPermissions()) {
+
+                ModuleActionEntity moduleAction =
+                        accessService.findModuleAction(
+                                dto.getModuleActionId()
                         );
 
+                UserBasedPermission permission =
+                        userPermissionRepository
+                                .findByUserAndModuleAndAction(
+                                        user,
+                                        moduleAction.getModule(),
+                                        moduleAction.getAction()
+                                )
+                                .orElseThrow(() ->
+                                        new ResourceNotFoundException(
+                                                "User permission not found."
+                                        )
+                                );
 
-        // --------------------------------------------------------
-        // ONLY ALLOWED CAN BE UPDATED
-        //
-        // DO NOT CHANGE:
-        //
-        // user
-        // role
-        // module
-        // action
-        // --------------------------------------------------------
+                permission.setAllowed(
+                        dto.getAllowed()
+                );
 
-        entity.setAllowed(
-                Boolean.TRUE.equals(
-                        request.getAllowed()
-                )
-        );
-
-
-        // --------------------------------------------------------
-        // RESTORE IF INACTIVE
-        // --------------------------------------------------------
-
-        entity.setActive(true);
-        entity.setStatus(Status.ACTIVE);
-
-
-        return mapper.toResponse(
-                repository.save(entity)
-        );
-    }
-
-
-    // ============================================================
-    // GET BY ID
-    // ============================================================
-
-    @Override
-    @Transactional(readOnly = true)
-    public UserPermissionResponse getById(
-            Long id
-    ) {
-
-        if (id == null) {
-            throw new ValidationException(
-                    "User permission ID is required."
-            );
+                permissions.add(permission);
+            }
         }
 
-        return mapper.toResponse(
-                repository.findById(id)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "User permission not found."
-                                )
-                        ));
+        permissions =
+                userPermissionRepository.saveAll(
+                        permissions
+                );
+
+        return mapper.toDTO(permissions);
     }
 
-
-    // ============================================================
-    // GET ALL
-    // ============================================================
+    // =========================================================
+    // GET ALL USER PERMISSIONS
+    // =========================================================
 
     @Override
     @Transactional(readOnly = true)
     public List<UserPermissionResponse> getAll() {
 
-        return repository.findAll()
-                .stream()
-                .map(mapper::toResponse)
-                .toList();
+        return mapper.toDTO(
+                accessService.findAccessibleUserPermissions()
+        );
     }
 
+    // =========================================================
+    // GET USER PERMISSION BY ID
+    // =========================================================
 
-    // ============================================================
-    // GET BY USER
-    // ============================================================
+    @Override
+    @Transactional(readOnly = true)
+    public UserPermissionResponse getById(
+            Long id) {
+
+        return mapper.toDTO(
+                accessService.findAccessibleUserPermissionById(
+                        id
+                )
+        );
+    }
+
+    // =========================================================
+    // DELETE USER PERMISSION
+    // =========================================================
+
+    @Override
+    @Transactional
+    public void deleteById(Long id) {
+
+        UserBasedPermission permission =
+                accessService.findAccessibleUserPermissionById(id);
+
+        if (permission.getUser() != null
+                && permission.getUser().getId() != null
+                && permission.getUser().getId().equals(1L)) {
+
+            throw new ValidationException(
+                    "Super admin access cannot be deleted"
+            );
+        }
+
+        userPermissionRepository.delete(permission);
+    }
+
+    // =========================================================
+    // GET PERMISSIONS BY USER
+    // =========================================================
 
     @Override
     @Transactional(readOnly = true)
     public List<UserPermissionResponse> getByUser(
-            Long userId
-    ) {
-
-        if (userId == null) {
-            throw new ValidationException(
-                    "User ID is required."
-            );
-        }
-
+            Long userId) {
 
         UserEntity user =
-                userRepository.findById(userId)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "User not found."
-                                )
-                        );
+                accessService.findAccessibleUserAccess(userId);
 
-
-        return repository.findByUser(user)
-                .stream()
-                .map(mapper::toResponse)
-                .toList();
+        return mapper.toDTO(
+                userPermissionRepository
+                        .findByUser_IdWithRelations(
+                                user.getId()
+                        )
+        );
     }
 
-
-    // ============================================================
-    // DELETE USER PERMISSION
-    // ============================================================
+    // =========================================================
+    // GET CURRENT USER PERMISSION MATRIX
+    //
+    // USER PERMISSION HAS PRIORITY
+    // ROLE PERMISSION IS FALLBACK
+    // NO PERMISSION = FALSE
+    // =========================================================
 
     @Override
-    public void delete(
-            Long id
-    ) {
+    @Transactional(readOnly = true)
+    public List<UserPermissionMatrixResponse> getUserPermission() {
 
-        if (id == null) {
-            throw new ValidationException(
-                    "User permission ID is required."
+        UserEntity user =
+                currentUserService.getCurrentUser();
+
+        validateUserForPermissionMatrix(user);
+
+        return buildPermissionMatrix(user);
+    }
+
+    // =========================================================
+    // GET USER PERMISSION MATRIX BY USER ID
+    //
+    // USER PERMISSION HAS PRIORITY
+    // ROLE PERMISSION IS FALLBACK
+    // NO PERMISSION = FALSE
+    // =========================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserPermissionMatrixResponse> getUserPermissionById(
+            Long id) {
+
+        UserEntity user =
+                accessService.findAccessibleUserAccess(id);
+
+        validateUserForPermissionMatrix(user);
+
+        return buildPermissionMatrix(user);
+    }
+
+    // =========================================================
+    // VALIDATE USER
+    // =========================================================
+
+    private void validateUserForPermissionMatrix(
+            UserEntity user) {
+
+        if (user == null) {
+
+            throw new ResourceNotFoundException(
+                    "User not found."
             );
         }
 
+        if (!Boolean.TRUE.equals(user.getActive())) {
 
-        UserBasedPermission entity =
-                repository.findById(id)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "User permission not found."
+            throw new ValidationException(
+                    "User is not active"
+            );
+        }
+
+        if (user.getRole() == null) {
+
+            throw new ValidationException(
+                    "User role not assigned"
+            );
+        }
+    }
+
+    // =========================================================
+    // BUILD USER PERMISSION MATRIX
+    // =========================================================
+
+    private List<UserPermissionMatrixResponse> buildPermissionMatrix(
+            UserEntity user) {
+        {
+
+            Long userId =
+                    user.getId();
+
+            Long roleId =
+                    user.getRole().getId();
+
+            // =====================================================
+            // GET ALL MODULE ACTIONS
+            // =====================================================
+
+            List<ModuleActionEntity> moduleActions =
+                    moduleActionRepository
+                            .findAllByOrderByModuleIdAscActionIdAsc();
+
+            // =====================================================
+            // GROUP BY MODULE
+            // =====================================================
+
+            Map<Long, UserPermissionMatrixResponse> moduleMap =
+                    new LinkedHashMap<>();
+
+            for (ModuleActionEntity moduleAction
+                    : moduleActions) {
+
+                if (moduleAction.getModule() == null
+                        || moduleAction.getAction() == null) {
+
+                    continue;
+                }
+
+                Long moduleId =
+                        moduleAction.getModule().getId();
+
+                Long actionId =
+                        moduleAction.getAction().getId();
+
+                // =================================================
+                // USER PERMISSION FIRST
+                // =================================================
+
+                Optional<UserBasedPermission> userPermission =
+                        userPermissionRepository
+                                .findByUserIdAndModuleIdAndActionId(
+                                        userId,
+                                        moduleId,
+                                        actionId
+                                );
+
+                boolean allowed;
+
+                if (userPermission.isPresent()) {
+
+                    allowed =
+                            userPermission
+                                    .get()
+                                    .isAllowed();
+
+                } else {
+
+                    // =============================================
+                    // ROLE PERMISSION FALLBACK
+                    // =============================================
+
+                    Optional<RoleBasedPermission> rolePermission =
+                            roleBasedPermissionRepository
+                                    .findByRoleIdAndModuleIdAndActionId(
+                                            roleId,
+                                            moduleId,
+                                            actionId
+                                    );
+
+                    allowed =
+                            rolePermission
+                                    .map(RoleBasedPermission::isAllowed)
+                                    .orElse(false);
+                }
+
+                // =================================================
+                // CREATE / GET MODULE DTO
+                // =================================================
+
+                UserPermissionMatrixResponse moduleDTO =
+                        moduleMap.computeIfAbsent(
+                                moduleId,
+                                key -> new UserPermissionMatrixResponse(
+                                        userId,
+                                        moduleId,
+                                        moduleAction
+                                                .getModule()
+                                                .getModuleName(),
+                                        new ArrayList<>()
                                 )
                         );
 
+                // =================================================
+                // ADD ACTION
+                // =================================================
 
-        // --------------------------------------------------------
-        // SOFT DELETE
-        // --------------------------------------------------------
+                ActionPermission actionDTO =
+                        new ActionPermission(
+                                actionId,
+                                moduleAction
+                                        .getAction()
+                                        .getActionName(),
+                                allowed
+                        );
 
-        entity.setActive(false);
-        entity.setStatus(Status.INACTIVE);
+                moduleDTO
+                        .getActions()
+                        .add(actionDTO);
+            }
 
-        repository.save(entity);
+            return new ArrayList<>(
+                    moduleMap.values()
+            );
+        }
     }
 }

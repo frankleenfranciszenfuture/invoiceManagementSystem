@@ -11,80 +11,40 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+
+
+import com.ims.common.ApiResponse;
+
+import com.ims.dtos.permission.moduleAction.ModuleActionResponse;
+import com.ims.service.serviceInterface.permission.ModuleActionService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
 @RestController
-@RequestMapping("/permissions/module-actions")
+@RequestMapping("/module-action")
 @RequiredArgsConstructor
 public class ModuleActionController {
 
-    private final ModuleActionService service;
+    private final ModuleActionService moduleActionService;
 
+    @GetMapping("/getAll")
+    public ResponseEntity<ApiResponse<?>> getAll() {
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<ModuleActionResponse>> create(
-            @Valid @RequestBody ModuleActionRequest request
-    ) {
+        List<ModuleActionResponse> list =
+                moduleActionService.getAll();
 
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        service.create(request),
-                        "Module action created successfully."
-                )
-        );
-    }
+        String message = list.isEmpty()
+                ? "Module actions not found."
+                : "Module actions fetched successfully.";
 
-
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<ModuleActionResponse>>> getAll() {
-
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        service.getAll(),
-                        "Module actions fetched successfully."
-                )
-        );
-    }
-
-
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<ModuleActionResponse>> getById(
-            @PathVariable Long id
-    ) {
-
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        service.getById(id),
-                        "Module action fetched successfully."
-                )
-        );
-    }
-
-
-    @GetMapping("/module/{moduleId}")
-    public ResponseEntity<ApiResponse<List<ModuleActionResponse>>> getByModule(
-            @PathVariable Long moduleId
-    ) {
-
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        service.getByModule(moduleId),
-                        "Module actions fetched successfully."
-                )
-        );
-    }
-
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(
-            @PathVariable Long id
-    ) {
-
-        service.delete(id);
-
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        null,
-                        "Module action deleted successfully."
-                )
-        );
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        list,
+                        message
+                ));
     }
 }
