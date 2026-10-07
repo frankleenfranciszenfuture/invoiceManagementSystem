@@ -8,7 +8,6 @@ import com.ims.entity.UserEntity;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.exception.ValidationException;
 import com.ims.mapper.permission.UserPermissionMapper;
-
 import com.ims.repository.permission.ModuleActionRepository;
 import com.ims.repository.permission.RoleBasedPermissionRepository;
 import com.ims.repository.permission.UserPermissionRepository;
@@ -38,6 +37,7 @@ public class UserPermissionServiceImpl
     private final CurrentUserService currentUserService;
     private final ModuleActionRepository moduleActionRepository;
     private final RoleBasedPermissionRepository roleBasedPermissionRepository;
+
 
     // =========================================================
     // ASSIGN USER PERMISSIONS
@@ -97,6 +97,7 @@ public class UserPermissionServiceImpl
 
         return mapper.toDTO(permissions);
     }
+
 
     // =========================================================
     // BULK ASSIGN USER PERMISSIONS
@@ -165,6 +166,7 @@ public class UserPermissionServiceImpl
         return mapper.toDTO(permissions);
     }
 
+
     // =========================================================
     // UPDATE USER PERMISSIONS
     // =========================================================
@@ -176,6 +178,10 @@ public class UserPermissionServiceImpl
             AssignUserPermissionRequest request) {
 
         validation.validate(userId);
+
+        validation.validateRequestSize(
+                request.getPermissions().size()
+        );
 
         UserEntity user =
                 accessService.findAccessibleUserAccess(userId);
@@ -191,6 +197,15 @@ public class UserPermissionServiceImpl
                             dto.getModuleActionId()
                     );
 
+            /*
+             * If the user permission already exists,
+             * update it.
+             *
+             * If it does not exist, create it.
+             *
+             * This prevents:
+             * "User permission not found."
+             */
             UserBasedPermission permission =
                     userPermissionRepository
                             .findByUserAndModuleAndAction(
@@ -198,10 +213,13 @@ public class UserPermissionServiceImpl
                                     moduleAction.getModule(),
                                     moduleAction.getAction()
                             )
-                            .orElseThrow(() ->
-                                    new ResourceNotFoundException(
-                                            "User permission not found."
-                                    )
+                            .orElseGet(() ->
+                                    UserBasedPermission.builder()
+                                            .user(user)
+                                            .role(user.getRole())
+                                            .module(moduleAction.getModule())
+                                            .action(moduleAction.getAction())
+                                            .build()
                             );
 
             permission.setAllowed(
@@ -219,6 +237,7 @@ public class UserPermissionServiceImpl
         return mapper.toDTO(permissions);
     }
 
+
     // =========================================================
     // BULK UPDATE USER PERMISSIONS
     // =========================================================
@@ -227,6 +246,10 @@ public class UserPermissionServiceImpl
     @Transactional
     public List<UserPermissionResponse> bulkUpdatePermissions(
             BulkAssignUserPermissionRequest request) {
+
+        validation.validateRequestSize(
+                request.getUsers().size()
+        );
 
         List<UserBasedPermission> permissions =
                 new ArrayList<>();
@@ -244,6 +267,10 @@ public class UserPermissionServiceImpl
                             userId
                     );
 
+            validation.validateRequestSize(
+                    userRequest.getPermissions().size()
+            );
+
             for (UserPermissionRequest dto
                     : userRequest.getPermissions()) {
 
@@ -252,6 +279,10 @@ public class UserPermissionServiceImpl
                                 dto.getModuleActionId()
                         );
 
+                /*
+                 * Existing permission -> update
+                 * Missing permission  -> create
+                 */
                 UserBasedPermission permission =
                         userPermissionRepository
                                 .findByUserAndModuleAndAction(
@@ -259,10 +290,13 @@ public class UserPermissionServiceImpl
                                         moduleAction.getModule(),
                                         moduleAction.getAction()
                                 )
-                                .orElseThrow(() ->
-                                        new ResourceNotFoundException(
-                                                "User permission not found."
-                                        )
+                                .orElseGet(() ->
+                                        UserBasedPermission.builder()
+                                                .user(user)
+                                                .role(user.getRole())
+                                                .module(moduleAction.getModule())
+                                                .action(moduleAction.getAction())
+                                                .build()
                                 );
 
                 permission.setAllowed(
@@ -281,6 +315,7 @@ public class UserPermissionServiceImpl
         return mapper.toDTO(permissions);
     }
 
+
     // =========================================================
     // GET ALL USER PERMISSIONS
     // =========================================================
@@ -293,6 +328,7 @@ public class UserPermissionServiceImpl
                 accessService.findAccessibleUserPermissions()
         );
     }
+
 
     // =========================================================
     // GET USER PERMISSION BY ID
@@ -309,6 +345,7 @@ public class UserPermissionServiceImpl
                 )
         );
     }
+
 
     // =========================================================
     // DELETE USER PERMISSION
@@ -333,6 +370,7 @@ public class UserPermissionServiceImpl
         userPermissionRepository.delete(permission);
     }
 
+
     // =========================================================
     // GET PERMISSIONS BY USER
     // =========================================================
@@ -352,6 +390,7 @@ public class UserPermissionServiceImpl
                         )
         );
     }
+
 
     // =========================================================
     // GET CURRENT USER PERMISSION MATRIX
@@ -373,6 +412,7 @@ public class UserPermissionServiceImpl
         return buildPermissionMatrix(user);
     }
 
+
     // =========================================================
     // GET USER PERMISSION MATRIX BY USER ID
     //
@@ -393,6 +433,7 @@ public class UserPermissionServiceImpl
 
         return buildPermissionMatrix(user);
     }
+
 
     // =========================================================
     // VALIDATE USER
@@ -423,129 +464,135 @@ public class UserPermissionServiceImpl
         }
     }
 
+
     // =========================================================
     // BUILD USER PERMISSION MATRIX
     // =========================================================
 
     private List<UserPermissionMatrixResponse> buildPermissionMatrix(
             UserEntity user) {
-        {
 
-            Long userId =
-                    user.getId();
+        Long userId =
+                user.getId();
 
-            Long roleId =
-                    user.getRole().getId();
+        Long roleId =
+                user.getRole().getId();
 
-            // =====================================================
-            // GET ALL MODULE ACTIONS
-            // =====================================================
+        // =====================================================
+        // GET ALL MODULE ACTIONS
+        // =====================================================
 
-            List<ModuleActionEntity> moduleActions =
-                    moduleActionRepository
-                            .findAllByOrderByModuleIdAscActionIdAsc();
+        List<ModuleActionEntity> moduleActions =
+                moduleActionRepository
+                        .findAllByOrderByModuleIdAscActionIdAsc();
 
-            // =====================================================
-            // GROUP BY MODULE
-            // =====================================================
+        // =====================================================
+        // GROUP BY MODULE
+        // =====================================================
 
-            Map<Long, UserPermissionMatrixResponse> moduleMap =
-                    new LinkedHashMap<>();
+        Map<Long, UserPermissionMatrixResponse> moduleMap =
+                new LinkedHashMap<>();
 
-            for (ModuleActionEntity moduleAction
-                    : moduleActions) {
+        for (ModuleActionEntity moduleAction
+                : moduleActions) {
 
-                if (moduleAction.getModule() == null
-                        || moduleAction.getAction() == null) {
+            if (moduleAction.getModule() == null
+                    || moduleAction.getAction() == null) {
 
-                    continue;
-                }
+                continue;
+            }
 
-                Long moduleId =
-                        moduleAction.getModule().getId();
+            Long moduleId =
+                    moduleAction.getModule().getId();
 
-                Long actionId =
-                        moduleAction.getAction().getId();
+            Long actionId =
+                    moduleAction.getAction().getId();
 
-                // =================================================
-                // USER PERMISSION FIRST
-                // =================================================
+            // =================================================
+            // USER PERMISSION FIRST
+            // =================================================
 
-                Optional<UserBasedPermission> userPermission =
-                        userPermissionRepository
-                                .findByUserIdAndModuleIdAndActionId(
-                                        userId,
+            Optional<UserBasedPermission> userPermission =
+                    userPermissionRepository
+                            .findByUserIdAndModuleIdAndActionId(
+                                    userId,
+                                    moduleId,
+                                    actionId
+                            );
+
+            boolean allowed;
+
+            if (userPermission.isPresent()) {
+
+                /*
+                 * User-specific permission has highest priority.
+                 */
+                allowed =
+                        userPermission
+                                .get()
+                                .isAllowed();
+
+            } else {
+
+                // =============================================
+                // ROLE PERMISSION FALLBACK
+                // =============================================
+
+                Optional<RoleBasedPermission> rolePermission =
+                        roleBasedPermissionRepository
+                                .findByRoleIdAndModuleIdAndActionId(
+                                        roleId,
                                         moduleId,
                                         actionId
                                 );
 
-                boolean allowed;
-
-                if (userPermission.isPresent()) {
-
-                    allowed =
-                            userPermission
-                                    .get()
-                                    .isAllowed();
-
-                } else {
-
-                    // =============================================
-                    // ROLE PERMISSION FALLBACK
-                    // =============================================
-
-                    Optional<RoleBasedPermission> rolePermission =
-                            roleBasedPermissionRepository
-                                    .findByRoleIdAndModuleIdAndActionId(
-                                            roleId,
-                                            moduleId,
-                                            actionId
-                                    );
-
-                    allowed =
-                            rolePermission
-                                    .map(RoleBasedPermission::isAllowed)
-                                    .orElse(false);
-                }
-
-                // =================================================
-                // CREATE / GET MODULE DTO
-                // =================================================
-
-                UserPermissionMatrixResponse moduleDTO =
-                        moduleMap.computeIfAbsent(
-                                moduleId,
-                                key -> new UserPermissionMatrixResponse(
-                                        userId,
-                                        moduleId,
-                                        moduleAction
-                                                .getModule()
-                                                .getModuleName(),
-                                        new ArrayList<>()
-                                )
-                        );
-
-                // =================================================
-                // ADD ACTION
-                // =================================================
-
-                ActionPermission actionDTO =
-                        new ActionPermission(
-                                actionId,
-                                moduleAction
-                                        .getAction()
-                                        .getActionName(),
-                                allowed
-                        );
-
-                moduleDTO
-                        .getActions()
-                        .add(actionDTO);
+                /*
+                 * If role permission does not exist,
+                 * permission defaults to false.
+                 */
+                allowed =
+                        rolePermission
+                                .map(RoleBasedPermission::isAllowed)
+                                .orElse(false);
             }
 
-            return new ArrayList<>(
-                    moduleMap.values()
-            );
+            // =================================================
+            // CREATE / GET MODULE DTO
+            // =================================================
+
+            UserPermissionMatrixResponse moduleDTO =
+                    moduleMap.computeIfAbsent(
+                            moduleId,
+                            key -> new UserPermissionMatrixResponse(
+                                    userId,
+                                    moduleId,
+                                    moduleAction
+                                            .getModule()
+                                            .getModuleName(),
+                                    new ArrayList<>()
+                            )
+                    );
+
+            // =================================================
+            // ADD ACTION
+            // =================================================
+
+            ActionPermission actionDTO =
+                    new ActionPermission(
+                            actionId,
+                            moduleAction
+                                    .getAction()
+                                    .getActionName(),
+                            allowed
+                    );
+
+            moduleDTO
+                    .getActions()
+                    .add(actionDTO);
         }
+
+        return new ArrayList<>(
+                moduleMap.values()
+        );
     }
 }

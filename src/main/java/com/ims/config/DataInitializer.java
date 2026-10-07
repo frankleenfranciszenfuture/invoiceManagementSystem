@@ -60,6 +60,8 @@ public class DataInitializer implements CommandLineRunner {
 
                 "Customers",
 
+                "BankAccounts",
+
                 "Staffs",
 
                 "Loan",
@@ -68,7 +70,9 @@ public class DataInitializer implements CommandLineRunner {
 
                 "Staff Attendance",
 
-                "POS Users",
+                "Users",
+
+                "Roles",
 
                 "Employee Finance",
 
@@ -78,9 +82,9 @@ public class DataInitializer implements CommandLineRunner {
 
                 "SubCategories",
 
-                "Product Size",
+                "Sizes",
 
-                "Unit",
+                "Units",
 
                 "Products",
 
@@ -134,7 +138,7 @@ public class DataInitializer implements CommandLineRunner {
 
                 "Menu Permission",
 
-                "Tax",
+                "TaxMasters",
 
                 "Points Rule",
 
@@ -461,6 +465,15 @@ public class DataInitializer implements CommandLineRunner {
 
 
         // =====================================================
+        // CUSTOMER
+        // =====================================================
+
+        addModuleAction("BankAccounts", "CREATE");
+        addModuleAction("BankAccounts", "VIEW");
+        addModuleAction("BankAccounts", "EDIT");
+        addModuleAction("BankAccounts", "DELETE");
+
+        // =====================================================
         // CATEGORY
         // =====================================================
 
@@ -483,10 +496,20 @@ public class DataInitializer implements CommandLineRunner {
         // UNIT
         // =====================================================
 
-        addModuleAction("Unit", "CREATE");
-        addModuleAction("Unit", "VIEW");
-        addModuleAction("Unit", "EDIT");
-        addModuleAction("Unit", "DELETE");
+        addModuleAction("Units", "CREATE");
+        addModuleAction("Units", "VIEW");
+        addModuleAction("Units", "EDIT");
+        addModuleAction("Units", "DELETE");
+
+
+        // =====================================================
+        // SIZE
+        // =====================================================
+
+        addModuleAction("Sizes", "CREATE");
+        addModuleAction("Sizes", "VIEW");
+        addModuleAction("Sizes", "EDIT");
+        addModuleAction("Sizes", "DELETE");
 
         // =====================================================
         // PRODUCT ITEMS
@@ -496,6 +519,26 @@ public class DataInitializer implements CommandLineRunner {
         addModuleAction("Products", "VIEW");
         addModuleAction("Products", "EDIT");
         addModuleAction("Products", "DELETE");
+
+
+        // =====================================================
+        // USERS
+        // =====================================================
+
+        addModuleAction("Users", "CREATE");
+        addModuleAction("Users", "VIEW");
+        addModuleAction("Users", "EDIT");
+        addModuleAction("Users", "DELETE");
+
+
+        // =====================================================
+        // ROLES
+        // =====================================================
+
+        addModuleAction("Roles", "CREATE");
+        addModuleAction("Roles", "VIEW");
+        addModuleAction("Roles", "EDIT");
+        addModuleAction("Roles", "DELETE");
 
         // =====================================================
         // PARTIES
@@ -713,10 +756,10 @@ public class DataInitializer implements CommandLineRunner {
         // TAX
         // =====================================================
 
-        addModuleAction("Tax", "CREATE");
-        addModuleAction("Tax", "VIEW");
-        addModuleAction("Tax", "EDIT");
-        addModuleAction("Tax", "DELETE");
+        addModuleAction("TaxMasters", "CREATE");
+        addModuleAction("TaxMasters", "VIEW");
+        addModuleAction("TaxMasters", "EDIT");
+        addModuleAction("TaxMasters", "DELETE");
 
         // =====================================================
         // POINTS RULE
