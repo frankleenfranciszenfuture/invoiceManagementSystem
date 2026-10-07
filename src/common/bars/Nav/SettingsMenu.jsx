@@ -61,7 +61,7 @@ export default function SettingsMenu() {
             {/* Panel */}
             <div
                 ref={menuRef}
-                className="absolute right-0 top-12 z-50 w-[390px] h-[780px] rounded-xl border border-blue-100 bg-gray-100 shadow-2xl overflow-hidden"
+                className="absolute right-0 top-12 z-50 w-[390px] h-[1080px] rounded-xl border border-blue-100 bg-gray-100 shadow-2xl overflow-y-auto"
             >
                 {/* Header */}
                 <div className="border-b p-5 ">

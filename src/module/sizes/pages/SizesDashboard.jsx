@@ -1,66 +1,363 @@
+import React, {
+    useEffect,
+    useMemo,
+} from "react";
 
-import React, { useEffect, useMemo } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { Plus, Download } from "lucide-react";
+import {
+    useSelector,
+    useDispatch,
+} from "react-redux";
+
+import {
+    Plus,
+    Download,
+} from "lucide-react";
+
+import toast from "react-hot-toast";
 
 import SizeTable from "./SizeTable";
 import NavbarSize from "../components/bars/nav/NavbarSize";
 
-import { fetchAllSizes } from "../thunks/sizeThunks";
+import {
+    fetchAllSizes,
+} from "../thunks/sizeThunks";
 
 import {
-    clearError,
     setSizeStatus,
     setSelectedSizeView,
 } from "../slices/sizeSlice";
 
-import { openModal } from "../../ui/uiSlice";
+import {
+    openModal,
+} from "../../ui/uiSlice";
 
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
-import SizeCreate from "../pages/SizeCreate";
 
 export default function SizeDashboard() {
 
     const dispatch = useDispatch();
 
     // ============================================================
+    // AUTH
+    // ============================================================
+
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
+
+    const isAuthenticated = useSelector(
+        (state) => state.auth?.isAuthenticated
+    );
+
+    const authChecking = useSelector(
+        (state) => state.auth?.authChecking
+    );
+
+    // ============================================================
+    // USER PERMISSIONS
+    // ============================================================
+
+    const permissions = useSelector(
+        (state) =>
+            Array.isArray(
+                state.menuPermission?.userPermissions
+            )
+                ? state.menuPermission.userPermissions
+                : []
+    );
+
+    const permissionLoading = useSelector(
+        (state) =>
+            state.menuPermission
+                ?.userPermissionsLoading === true
+    );
+
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission
+                ?.userPermissionsLoaded === true
+    );
+
+    // ============================================================
+    // ROLE
+    // ============================================================
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+    const normalizedRole =
+        String(roleName)
+            .trim()
+            .toUpperCase();
+
+    const isSuperAdmin =
+        normalizedRole === "SUPER_ADMIN";
+
+    const isAdmin =
+        normalizedRole === "ADMIN";
+
+    const hasFullAccess =
+        isSuperAdmin || isAdmin;
+
+    // ============================================================
+    // PERMISSION CHECKER
+    //
+    // Supports:
+    //
+    // FLAT:
+    // {
+    //     moduleName: "Sizes",
+    //     actionName: "VIEW",
+    //     allowed: true
+    // }
+    //
+    // GROUPED:
+    // {
+    //     moduleName: "Sizes",
+    //     actions: [
+    //         {
+    //             actionName: "VIEW",
+    //             allowed: true
+    //         }
+    //     ]
+    // }
+    // ============================================================
+
+    const hasPermission = (
+        moduleName,
+        actionName
+    ) => {
+
+        // ADMIN / SUPER_ADMIN
+        if (hasFullAccess) {
+            return true;
+        }
+
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+        const requestedModule =
+            String(moduleName)
+                .trim()
+                .toLowerCase();
+
+        const requestedAction =
+            String(actionName)
+                .trim()
+                .toUpperCase();
+
+        return permissions.some(
+            (permission) => {
+
+                const permissionModule =
+                    String(
+                        permission?.moduleName ||
+                        permission?.module?.moduleName ||
+                        permission?.module?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toLowerCase();
+
+                if (
+                    permissionModule !==
+                    requestedModule
+                ) {
+                    return false;
+                }
+
+                // =================================================
+                // INACTIVE MODULE PERMISSION
+                // =================================================
+
+                if (
+                    permission?.active === false
+                ) {
+                    return false;
+                }
+
+                if (
+                    String(
+                        permission?.status || ""
+                    )
+                        .trim()
+                        .toUpperCase() ===
+                    "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                // =================================================
+                // GROUPED PERMISSIONS
+                // =================================================
+
+                if (
+                    Array.isArray(
+                        permission?.actions
+                    )
+                ) {
+
+                    return permission.actions.some(
+                        (action) => {
+
+                            const permissionAction =
+                                String(
+                                    action?.actionName ||
+                                    action?.action?.actionName ||
+                                    action?.action?.name ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toUpperCase();
+
+                            const allowed =
+                                action?.allowed === true ||
+                                action?.allowed === "true";
+
+                            return (
+                                permissionAction ===
+                                requestedAction &&
+                                allowed
+                            );
+                        }
+                    );
+                }
+
+                // =================================================
+                // FLAT PERMISSIONS
+                // =================================================
+
+                const permissionAction =
+                    String(
+                        permission?.actionName ||
+                        permission?.action?.actionName ||
+                        permission?.action?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase();
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction ===
+                    requestedAction &&
+                    allowed
+                );
+            }
+        );
+    };
+
+    // ============================================================
+    // SIZE PERMISSIONS
+    // ============================================================
+
+    const canViewSize =
+        hasPermission(
+            "Sizes",
+            "VIEW"
+        );
+
+    const canCreateSize =
+        hasPermission(
+            "Sizes",
+            "CREATE"
+        );
+
+    // ============================================================
     // SIZE STATE
     // ============================================================
 
-    const sizesFromRedux = useSelector(
-        (state) => state.size?.sizes
-    );
+    const sizesFromRedux =
+        useSelector(
+            (state) =>
+                state.size?.sizes
+        );
 
-    const sizes = sizesFromRedux ?? [];
+    const sizes =
+        sizesFromRedux ?? [];
 
-    const loading = useSelector(
-        (state) => state.size?.loading || false
-    );
+    const loading =
+        useSelector(
+            (state) =>
+                state.size?.loading || false
+        );
 
-    const error = useSelector(
-        (state) => state.size?.error
-    );
+    const error =
+        useSelector(
+            (state) =>
+                state.size?.error
+        );
 
     // ============================================================
     // SIZE FILTER STATE
     // ============================================================
 
-    const sizeStatus = useSelector(
-        (state) =>
-            state.sizeView?.sizeStatus || "ALL"
-    );
+    const sizeStatus =
+        useSelector(
+            (state) =>
+                state.sizeView?.sizeStatus ||
+                "ALL"
+        );
 
     // ============================================================
     // FETCH SIZES
+    //
+    // IMPORTANT:
+    // STAFF must have VIEW permission before API call.
     // ============================================================
 
     useEffect(() => {
 
-        console.log("Fetching sizes...");
+        if (authChecking) {
+            return;
+        }
 
-        dispatch(fetchAllSizes());
+        if (!isAuthenticated) {
+            return;
+        }
 
-    }, [dispatch]);
+        // ADMIN / SUPER_ADMIN
+        // can directly fetch.
+        if (!hasFullAccess) {
+
+            // Wait for permission request.
+            if (permissionLoading) {
+                return;
+            }
+
+            // Wait until permission state is initialized.
+            if (!permissionsLoaded) {
+                return;
+            }
+
+            // No VIEW permission.
+            if (!canViewSize) {
+                return;
+            }
+        }
+
+        dispatch(
+            fetchAllSizes()
+        );
+
+    }, [
+        dispatch,
+        authChecking,
+        isAuthenticated,
+        hasFullAccess,
+        permissionLoading,
+        permissionsLoaded,
+        canViewSize,
+    ]);
 
     // ============================================================
     // SYNC URL STATUS → REDUX
@@ -68,19 +365,23 @@ export default function SizeDashboard() {
 
     useEffect(() => {
 
-        const params = new URLSearchParams(
-            window.location.search
-        );
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
 
         const urlStatus =
-            params.get("sizeStatus");
+            params.get(
+                "sizeStatus"
+            );
 
         if (!urlStatus) {
             return;
         }
 
         const normalizedStatus =
-            String(urlStatus).toUpperCase();
+            String(urlStatus)
+                .toUpperCase();
 
         const validStatuses = [
             "ALL",
@@ -89,119 +390,91 @@ export default function SizeDashboard() {
             "DRAFT",
         ];
 
-        if (!validStatuses.includes(normalizedStatus)) {
+        if (
+            !validStatuses.includes(
+                normalizedStatus
+            )
+        ) {
             return;
         }
 
         dispatch(
-            setSizeStatus(normalizedStatus)
+            setSizeStatus(
+                normalizedStatus
+            )
         );
 
         const statusLabels = {
-            ALL: "All Sizes",
-            ACTIVE: "Active Sizes",
-            INACTIVE: "Inactive Sizes",
-            DRAFT: "Draft Sizes",
+            ALL:
+                "All Sizes",
+
+            ACTIVE:
+                "Active Sizes",
+
+            INACTIVE:
+                "Inactive Sizes",
+
+            DRAFT:
+                "Draft Sizes",
         };
 
         dispatch(
             setSelectedSizeView(
-                statusLabels[normalizedStatus]
+                statusLabels[
+                normalizedStatus
+                ]
             )
         );
 
     }, [dispatch]);
 
-    useEffect(() => {
-        if (!error) return;
-
-        const timer = setTimeout(() => {
-            dispatch(clearError());
-        }, 2000);
-
-        return () => clearTimeout(timer);
-    }, [error, dispatch]);
-
-    // ============================================================
-    // DEBUG
-    // ============================================================
-
-    useEffect(() => {
-
-        console.log("================================");
-        console.log(
-            "SIZES FROM REDUX:",
-            sizes
-        );
-
-        console.log(
-            "SIZE LOADING:",
-            loading
-        );
-
-        console.log(
-            "SIZE ERROR:",
-            error
-        );
-
-        console.log(
-            "SIZE STATUS:",
-            sizeStatus
-        );
-
-        console.log("================================");
-
-    }, [
-        sizes,
-        loading,
-        error,
-        sizeStatus,
-    ]);
-
     // ============================================================
     // FILTER SIZES BY STATUS
     // ============================================================
 
-    const filteredSizes = useMemo(() => {
+    const filteredSizes =
+        useMemo(() => {
 
-        const selectedStatus =
-            String(sizeStatus || "ALL")
-                .toUpperCase();
+            const selectedStatus =
+                String(
+                    sizeStatus ||
+                    "ALL"
+                ).toUpperCase();
 
-        // ========================================================
-        // ALL
-        // ========================================================
+            // ====================================================
+            // ALL
+            // ====================================================
 
-        if (selectedStatus === "ALL") {
-            return sizes;
-        }
+            if (
+                selectedStatus === "ALL"
+            ) {
+                return sizes;
+            }
 
-        // ========================================================
-        // FILTER
-        // ========================================================
+            // ====================================================
+            // FILTER
+            // ====================================================
 
-        return sizes.filter((size) => {
+            return sizes.filter(
+                (size) => {
 
-            const backendStatus =
-                String(size?.status || "")
-                    .toUpperCase();
+                    const backendStatus =
+                        String(
+                            size?.status ||
+                            ""
+                        ).toUpperCase();
 
-            console.log(
-                "Size:",
-                size?.sizeName,
-                "| Backend Status:",
-                backendStatus,
-                "| Selected Status:",
-                selectedStatus
+                    return (
+                        backendStatus ===
+                        selectedStatus
+                    );
+                }
             );
 
-            return backendStatus === selectedStatus;
-        });
-
-    }, [
-        sizes,
-        sizeStatus,
-    ]);
+        }, [
+            sizes,
+            sizeStatus,
+        ]);
 
     // ============================================================
     // OPEN CREATE SIZE MODAL
@@ -209,18 +482,159 @@ export default function SizeDashboard() {
 
     const handleCreateSize = () => {
 
-        console.log("Opening Add Size modal");
+        if (
+            !hasFullAccess &&
+            !permissionsLoaded
+        ) {
+
+            toast.error(
+                "Permissions are still loading. Please try again."
+            );
+
+            return;
+        }
+
+        if (!canCreateSize) {
+
+            toast.error(
+                "You do not have permission to create sizes."
+            );
+
+            return;
+        }
 
         dispatch(
             openModal({
                 type: "addSize",
             })
         );
-
     };
 
     // ============================================================
-    // LOADING
+    // AUTH CHECKING
+    // ============================================================
+
+    if (authChecking) {
+        return <InvoiceSkeleton />;
+    }
+
+    // ============================================================
+    // NOT AUTHENTICATED
+    // ============================================================
+
+    if (!isAuthenticated) {
+        return null;
+    }
+
+    // ============================================================
+    // PERMISSION LOADING
+    // ============================================================
+
+    if (
+        !hasFullAccess &&
+        (
+            permissionLoading ||
+            !permissionsLoaded
+        )
+    ) {
+
+        return <InvoiceSkeleton />;
+    }
+
+    // ============================================================
+    // VIEW PERMISSION DENIED
+    // ============================================================
+
+    if (
+        !hasFullAccess &&
+        !canViewSize
+    ) {
+
+        return (
+            <div
+                className="
+                    flex
+                    h-screen
+                    bg-gray-50
+                    font-sans
+                    text-[13px]
+                    overflow-hidden
+                "
+            >
+
+                <div
+                    className="
+                        flex-1
+                        flex
+                        items-center
+                        justify-center
+                    "
+                >
+
+                    <div
+                        className="
+                            text-center
+                            px-6
+                        "
+                    >
+
+                        <div
+                            className="
+                                w-14
+                                h-14
+                                rounded-full
+                                bg-red-50
+                                flex
+                                items-center
+                                justify-center
+                                mx-auto
+                                mb-4
+                            "
+                        >
+
+                            <span
+                                className="
+                                    text-red-500
+                                    text-xl
+                                    font-semibold
+                                "
+                            >
+                                !
+                            </span>
+
+                        </div>
+
+                        <h2
+                            className="
+                                text-lg
+                                font-semibold
+                                text-gray-800
+                            "
+                        >
+                            Access Denied
+                        </h2>
+
+                        <p
+                            className="
+                                mt-1
+                                text-sm
+                                text-gray-500
+                            "
+                        >
+                            You do not have permission
+                            to view sizes.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+        );
+    }
+
+    // ============================================================
+    // SIZE API LOADING
     // ============================================================
 
     if (loading) {
@@ -232,20 +646,43 @@ export default function SizeDashboard() {
     // ============================================================
 
     return (
-        <div className="flex h-screen bg-gray-50 font-sans text-[13px] overflow-hidden">
+        <div
+            className="
+                flex
+                h-screen
+                bg-gray-50
+                font-sans
+                text-[13px]
+                overflow-hidden
+            "
+        >
 
-            <div className="flex-1 min-h-0 bg-white overflow-y-auto">
+            <div
+                className="
+                    flex-1
+                    min-h-0
+                    bg-white
+                    overflow-y-auto
+                "
+            >
 
-                <div className="px-2 py-5 max-w-30xl w-full">
+                <div
+                    className="
+                        px-2
+                        py-5
+                        max-w-30xl
+                        w-full
+                    "
+                >
 
                     {/* =================================================
-                    SIZE NAVBAR
+                        SIZE NAVBAR
                     ================================================= */}
 
                     <NavbarSize />
 
                     {/* =================================================
-                    ERROR
+                        ERROR
                     ================================================= */}
 
                     {error && (
@@ -268,13 +705,15 @@ export default function SizeDashboard() {
                     )}
 
                     {/* =================================================
-                    SIZE TABLE / EMPTY STATE
+                        SIZE TABLE / EMPTY STATE
                     ================================================= */}
 
                     {filteredSizes.length > 0 ? (
 
                         <SizeTable
-                            sizes={filteredSizes}
+                            sizes={
+                                filteredSizes
+                            }
                         />
 
                     ) : (
@@ -291,9 +730,7 @@ export default function SizeDashboard() {
                             "
                         >
 
-                            {/* =================================================
-                            EMPTY STATE ICON
-                            ================================================= */}
+                            {/* EMPTY STATE ICON */}
 
                             <div
                                 className="
@@ -311,8 +748,13 @@ export default function SizeDashboard() {
                                 "
                             >
 
-                                <div className="text-gray-400 text-4xl">
-                                    A
+                                <div
+                                    className="
+                                        text-gray-400
+                                        text-4xl
+                                    "
+                                >
+                                    S
                                 </div>
 
                                 <div
@@ -323,37 +765,53 @@ export default function SizeDashboard() {
                                         w-7
                                         h-7
                                         rounded-full
-                                        bg-blue-500
+                                        bg-blue-600
                                         flex
                                         items-center
                                         justify-center
                                         text-white
                                     "
                                 >
-                                    <Plus className="w-4 h-4" />
+
+                                    <Plus
+                                        className="
+                                            w-4
+                                            h-4
+                                        "
+                                    />
+
                                 </div>
 
                             </div>
 
-                            {/* =================================================
-                            EMPTY STATE TITLE
-                            ================================================= */}
+                            {/* EMPTY STATE TITLE */}
 
-                            <p className="text-base font-medium text-gray-800 text-center">
-                                Every setup starts with a size
+                            <p
+                                className="
+                                    text-base
+                                    font-medium
+                                    text-gray-800
+                                    text-center
+                                "
+                            >
+                                Every product needs a size
                             </p>
 
-                            {/* =================================================
-                            EMPTY STATE DESCRIPTION
-                            ================================================= */}
+                            {/* EMPTY STATE DESCRIPTION */}
 
-                            <p className="text-sm text-gray-500 text-center max-w-sm">
-                                Create and manage your sizes in one place.
+                            <p
+                                className="
+                                    text-sm
+                                    text-gray-500
+                                    text-center
+                                    max-w-sm
+                                "
+                            >
+                                Create and manage your sizes
+                                in one place.
                             </p>
 
-                            {/* =================================================
-                            ACTION BUTTONS
-                            ================================================= */}
+                            {/* ACTION BUTTONS */}
 
                             <div
                                 className="
@@ -368,29 +826,42 @@ export default function SizeDashboard() {
 
                                 {/* CREATE SIZE */}
 
-                                <button
-                                    type="button"
-                                    onClick={handleCreateSize}
-                                    className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        bg-blue-500
-                                        text-white
-                                        text-sm
-                                        font-medium
-                                        px-4
-                                        py-2
-                                        rounded-md
-                                        hover:bg-blue-600
-                                        transition-colors
-                                        whitespace-nowrap
-                                    "
-                                >
-                                    <Plus className="w-4 h-4" />
+                                {canCreateSize && (
 
-                                    Create New Size
-                                </button>
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            handleCreateSize
+                                        }
+                                        className="
+                                            flex
+                                            items-center
+                                            gap-2
+                                            bg-blue-600
+                                            text-white
+                                            text-sm
+                                            font-medium
+                                            px-4
+                                            py-2
+                                            rounded-md
+                                            hover:bg-blue-700
+                                            transition-colors
+                                            whitespace-nowrap
+                                        "
+                                    >
+
+                                        <Plus
+                                            className="
+                                                w-4
+                                                h-4
+                                            "
+                                        />
+
+                                        Create New Size
+
+                                    </button>
+
+                                )}
 
                                 {/* IMPORT */}
 
@@ -413,9 +884,16 @@ export default function SizeDashboard() {
                                         whitespace-nowrap
                                     "
                                 >
-                                    <Download className="w-4 h-4" />
+
+                                    <Download
+                                        className="
+                                            w-4
+                                            h-4
+                                        "
+                                    />
 
                                     Import File
+
                                 </button>
 
                             </div>
@@ -426,12 +904,6 @@ export default function SizeDashboard() {
                 </div>
 
             </div>
-
-            {/* =========================================================
-            SIZE CREATE / EDIT MODAL
-            ========================================================= */}
-
-            {/* <SizeCreate /> */}
 
         </div>
     );

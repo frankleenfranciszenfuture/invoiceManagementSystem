@@ -23,6 +23,212 @@ export default function UnitTable({
     const dispatch = useDispatch();
 
     /* =====================================================
+       AUTH STATE
+    ===================================================== */
+
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
+
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
+
+    const permissions = useSelector(
+        (state) =>
+            Array.isArray(
+                state.menuPermission?.userPermissions
+            )
+                ? state.menuPermission.userPermissions
+                : []
+    );
+
+    const permissionLoading = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissionsLoading === true
+    );
+
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissionsLoaded === true
+    );
+
+    /* =====================================================
+       ROLE
+    ===================================================== */
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+    const normalizedRole =
+        String(roleName)
+            .trim()
+            .toUpperCase();
+
+    const isSuperAdmin =
+        normalizedRole === "SUPER_ADMIN";
+
+    const isAdmin =
+        normalizedRole === "ADMIN";
+
+    const hasFullAccess =
+        isSuperAdmin || isAdmin;
+
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
+
+    const hasPermission = (
+        moduleName,
+        actionName
+    ) => {
+
+        // SUPER_ADMIN / ADMIN
+        if (hasFullAccess) {
+            return true;
+        }
+
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+        const requestedModule =
+            String(moduleName)
+                .trim()
+                .toLowerCase();
+
+        const requestedAction =
+            String(actionName)
+                .trim()
+                .toUpperCase();
+
+        return permissions.some(
+            (permission) => {
+
+                const permissionModule =
+                    String(
+                        permission?.moduleName ||
+                        permission?.module?.moduleName ||
+                        permission?.module?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toLowerCase();
+
+                if (
+                    permissionModule !==
+                    requestedModule
+                ) {
+                    return false;
+                }
+
+                // Ignore inactive permission
+                if (
+                    permission?.active === false
+                ) {
+                    return false;
+                }
+
+                if (
+                    String(
+                        permission?.status || ""
+                    )
+                        .trim()
+                        .toUpperCase() ===
+                    "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                /* =========================================
+                   GROUPED PERMISSION FORMAT
+                ========================================= */
+
+                if (
+                    Array.isArray(
+                        permission?.actions
+                    )
+                ) {
+
+                    return permission.actions.some(
+                        (action) => {
+
+                            const permissionAction =
+                                String(
+                                    action?.actionName ||
+                                    action?.action?.actionName ||
+                                    action?.action?.name ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toUpperCase();
+
+                            const allowed =
+                                action?.allowed === true ||
+                                action?.allowed === "true";
+
+                            return (
+                                permissionAction ===
+                                requestedAction &&
+                                allowed
+                            );
+                        }
+                    );
+                }
+
+                /* =========================================
+                   FLAT PERMISSION FORMAT
+                ========================================= */
+
+                const permissionAction =
+                    String(
+                        permission?.actionName ||
+                        permission?.action?.actionName ||
+                        permission?.action?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase();
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction ===
+                    requestedAction &&
+                    allowed
+                );
+            }
+        );
+    };
+
+    /* =====================================================
+       UNIT PERMISSIONS
+    ===================================================== */
+
+    const canEditUnit =
+        hasPermission(
+            "Units",
+            "EDIT"
+        );
+
+    const canDeleteUnit =
+        hasPermission(
+            "Units",
+            "DELETE"
+        );
+
+    const canPerformAction =
+        canEditUnit ||
+        canDeleteUnit;
+
+    /* =====================================================
        REDUX STATE
     ===================================================== */
 
@@ -41,18 +247,50 @@ export default function UnitTable({
         totalElements = 0,
     } = pagination || {};
 
-    const currentUnits = units || [];
+    const currentUnits =
+        units || [];
 
     /* =====================================================
        DELETE UNIT
     ===================================================== */
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Delete this unit?")) {
+
+        // =================================================
+        // PERMISSION LOADING
+        // =================================================
+
+        if (
+            !hasFullAccess &&
+            !permissionsLoaded
+        ) {
+            toast.error(
+                "Permissions are still loading. Please try again."
+            );
+            return;
+        }
+
+        // =================================================
+        // DELETE PERMISSION
+        // =================================================
+
+        if (!canDeleteUnit) {
+            toast.error(
+                "You do not have permission to delete units."
+            );
+            return;
+        }
+
+        if (
+            !window.confirm(
+                "Delete this unit?"
+            )
+        ) {
             return;
         }
 
         try {
+
             await dispatch(
                 deleteUnit(id)
             ).unwrap();
@@ -64,7 +302,9 @@ export default function UnitTable({
             dispatch(
                 fetchAllUnits()
             );
+
         } catch (error) {
+
             toast.error(
                 typeof error === "string"
                     ? error
@@ -79,14 +319,43 @@ export default function UnitTable({
     ===================================================== */
 
     const handleEdit = (unit) => {
+
+        // =================================================
+        // PERMISSION LOADING
+        // =================================================
+
+        if (
+            !hasFullAccess &&
+            !permissionsLoaded
+        ) {
+            toast.error(
+                "Permissions are still loading. Please try again."
+            );
+            return;
+        }
+
+        // =================================================
+        // EDIT PERMISSION
+        // =================================================
+
+        if (!canEditUnit) {
+            toast.error(
+                "You do not have permission to edit units."
+            );
+            return;
+        }
+
         try {
+
             dispatch(
                 openModal({
                     type: "editUnit",
                     data: unit,
                 })
             );
+
         } catch (error) {
+
             toast.error(
                 "Failed to open unit"
             );
@@ -101,7 +370,9 @@ export default function UnitTable({
         unitName
             .split(" ")
             .filter(Boolean)
-            .map((word) => word[0])
+            .map(
+                (word) => word[0]
+            )
             .join("")
             .slice(0, 2)
             .toUpperCase() || "UN";
@@ -125,14 +396,18 @@ export default function UnitTable({
        SHORT NAME COLORS
     ===================================================== */
 
-    const getShortNameColor = (unitShortName) => {
+    const getShortNameColor = (
+        unitShortName
+    ) => {
+
         if (!unitShortName) {
             return "bg-gray-100 text-gray-700";
         }
 
-        const value = unitShortName
-            .trim()
-            .toUpperCase();
+        const value =
+            unitShortName
+                .trim()
+                .toUpperCase();
 
         if (/\d/.test(value)) {
             return "bg-blue-100 text-blue-700";
@@ -141,23 +416,35 @@ export default function UnitTable({
         return "bg-purple-100 text-purple-700";
     };
 
+    /* =====================================================
+       UNIT CODE COLORS
+    ===================================================== */
 
-    const getUniCode = (unitCode) => {
+    const getUniCode = (
+        unitCode
+    ) => {
+
         if (!unitCode) {
             return "bg-gray-100 text-gray-700";
         }
 
-        const value = unitCode.trim().toUpperCase();
+        const value =
+            unitCode
+                .trim()
+                .toUpperCase();
 
         // Get the last part after "-"
-        const lastPart = value.split("-").pop();
+        const lastPart =
+            value
+                .split("-")
+                .pop();
 
-        // Last part is only numbers → number color
+        // Last part is only numbers
         if (/^\d+$/.test(lastPart)) {
             return "bg-gray-100 text-orange-400";
         }
 
-        // Last part contains letters → letter color
+        // Last part contains letters
         if (/^[A-Z]+$/.test(lastPart)) {
             return "bg-gray-100 text-pink-400";
         }
@@ -179,18 +466,51 @@ export default function UnitTable({
         "bg-indigo-500 text-white",
     ];
 
-    const getAvatarColor = (name = "") => {
+    const getAvatarColor = (
+        name = ""
+    ) => {
+
         const index =
             name
                 .split("")
                 .reduce(
-                    (acc, char) =>
-                        acc + char.charCodeAt(0),
+                    (
+                        acc,
+                        char
+                    ) =>
+                        acc +
+                        char.charCodeAt(0),
                     0
-                ) % avatarColors.length;
+                ) %
+            avatarColors.length;
 
         return avatarColors[index];
     };
+
+    /* =====================================================
+       PERMISSION LOADING
+    ===================================================== */
+
+    if (
+        !hasFullAccess &&
+        (permissionLoading ||
+            !permissionsLoaded)
+    ) {
+        return (
+            <div
+                className="
+                    flex
+                    items-center
+                    justify-center
+                    py-10
+                "
+            >
+                <p className="text-sm text-gray-500">
+                    Loading permissions...
+                </p>
+            </div>
+        );
+    }
 
     /* =====================================================
        LOADING
@@ -212,8 +532,6 @@ export default function UnitTable({
             </div>
         );
     }
-
-
 
     /* =====================================================
        EMPTY STATE
@@ -276,6 +594,7 @@ export default function UnitTable({
                         border-collapse
                     "
                 >
+
                     {/* =================================================
                         TABLE HEADER
                     ================================================= */}
@@ -288,6 +607,7 @@ export default function UnitTable({
                         "
                     >
                         <tr>
+
                             {/* UNIT NAME */}
 
                             <th
@@ -339,7 +659,6 @@ export default function UnitTable({
                                 Unit Code
                             </th>
 
-
                             {/* DESCRIPTION */}
 
                             <th
@@ -376,20 +695,23 @@ export default function UnitTable({
 
                             {/* ACTIONS */}
 
-                            <th
-                                className="
-                                    w-[10%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-right
-                                "
-                            >
-                                Actions
-                            </th>
+                            {canPerformAction && (
+                                <th
+                                    className="
+                                        w-[10%]
+                                        px-2
+                                        py-3
+                                        font-medium
+                                        text-sm
+                                        text-gray-600
+                                        uppercase
+                                        text-right
+                                    "
+                                >
+                                    Actions
+                                </th>
+                            )}
+
                         </tr>
                     </thead>
 
@@ -398,6 +720,7 @@ export default function UnitTable({
                     ================================================= */}
 
                     <tbody>
+
                         {[...currentUnits]
                             .sort(
                                 (a, b) =>
@@ -409,6 +732,7 @@ export default function UnitTable({
                                     unit,
                                     index
                                 ) => (
+
                                     <tr
                                         key={
                                             unit.id ||
@@ -423,6 +747,7 @@ export default function UnitTable({
                                             transition-colors
                                         "
                                     >
+
                                         {/* =================================
                                             UNIT NAME
                                         ================================= */}
@@ -442,6 +767,7 @@ export default function UnitTable({
                                                     min-w-0
                                                 "
                                             >
+
                                                 {/* AVATAR */}
 
                                                 <div
@@ -496,6 +822,7 @@ export default function UnitTable({
                                                         ID: #{unit.id}
                                                     </p>
                                                 </div>
+
                                             </div>
                                         </td>
 
@@ -534,8 +861,6 @@ export default function UnitTable({
                                             </p>
                                         </td>
 
-
-
                                         {/* =================================
                                             UNIT CODE
                                         ================================= */}
@@ -570,8 +895,6 @@ export default function UnitTable({
                                                     "—"}
                                             </p>
                                         </td>
-
-
 
                                         {/* =================================
                                             DESCRIPTION
@@ -624,7 +947,8 @@ export default function UnitTable({
                                                     }
                                                 `}
                                             >
-                                                {unit.status || "—"}
+                                                {unit.status ||
+                                                    "—"}
                                             </span>
                                         </td>
 
@@ -632,140 +956,152 @@ export default function UnitTable({
                                             ACTIONS
                                         ================================= */}
 
-                                        <td
-                                            className="
-                                                relative
-                                                overflow-visible
-                                                px-2
-                                                py-3
-                                            "
-                                            onClick={(e) =>
-                                                e.stopPropagation()
-                                            }
-                                        >
-                                            <div
+                                        {canPerformAction && (
+                                            <td
                                                 className="
-                                                    flex
-                                                    justify-end
+                                                    relative
+                                                    overflow-visible
+                                                    px-2
+                                                    py-3
                                                 "
+                                                onClick={(e) =>
+                                                    e.stopPropagation()
+                                                }
                                             >
                                                 <div
                                                     className="
-                                                        relative
-                                                        group
-                                                        inline-block
+                                                        flex
+                                                        justify-end
                                                     "
                                                 >
-                                                    {/* ACTION BUTTON */}
-
-                                                    <button
-                                                        type="button"
-                                                        className="
-                                                            p-1
-                                                            rounded-full
-                                                            bg-blue-500
-                                                            text-white
-                                                            hover:bg-blue-600
-                                                            transition-colors
-                                                        "
-                                                    >
-                                                        <ChevronDown
-                                                            size={16}
-                                                        />
-                                                    </button>
-
-                                                    {/* ACTION MENU */}
-
                                                     <div
                                                         className="
-                                                            absolute
-                                                            right-0
-                                                            top-full
-                                                            mt-1
-                                                            z-[9999]
-                                                            opacity-0
-                                                            invisible
-                                                            group-hover:opacity-100
-                                                            group-hover:visible
-                                                            transition-all
-                                                            duration-150
+                                                            relative
+                                                            group
+                                                            inline-block
                                                         "
                                                     >
-                                                        <div
+
+                                                        {/* ACTION BUTTON */}
+
+                                                        <button
+                                                            type="button"
                                                             className="
-                                                                w-36
-                                                                rounded-md
+                                                                p-1
+                                                                rounded-full
                                                                 bg-blue-500
-                                                                shadow-lg
-                                                                overflow-hidden
+                                                                text-white
+                                                                hover:bg-blue-600
+                                                                transition-colors
                                                             "
                                                         >
-                                                            {/* EDIT */}
+                                                            <ChevronDown
+                                                                size={16}
+                                                            />
+                                                        </button>
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleEdit(
-                                                                        unit
-                                                                    )
-                                                                }
+                                                        {/* ACTION MENU */}
+
+                                                        <div
+                                                            className="
+                                                                absolute
+                                                                right-0
+                                                                top-full
+                                                                mt-1
+                                                                z-[9999]
+                                                                opacity-0
+                                                                invisible
+                                                                group-hover:opacity-100
+                                                                group-hover:visible
+                                                                transition-all
+                                                                duration-150
+                                                            "
+                                                        >
+                                                            <div
                                                                 className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-blue-600
-                                                                    transition-colors
+                                                                    w-36
+                                                                    rounded-md
+                                                                    bg-blue-500
+                                                                    shadow-lg
+                                                                    overflow-hidden
                                                                 "
                                                             >
-                                                                <Edit
-                                                                    size={16}
-                                                                />
 
-                                                                Edit
-                                                            </button>
+                                                                {/* EDIT */}
 
-                                                            {/* DELETE */}
+                                                                {canEditUnit && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            handleEdit(
+                                                                                unit
+                                                                            )
+                                                                        }
+                                                                        className="
+                                                                            flex
+                                                                            w-full
+                                                                            items-center
+                                                                            gap-2
+                                                                            px-4
+                                                                            py-2
+                                                                            text-sm
+                                                                            text-white
+                                                                            hover:bg-blue-600
+                                                                            transition-colors
+                                                                        "
+                                                                    >
+                                                                        <Edit
+                                                                            size={16}
+                                                                        />
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleDelete(
-                                                                        unit.id
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-red-600
-                                                                    transition-colors
-                                                                "
-                                                            >
-                                                                <Trash2
-                                                                    size={16}
-                                                                />
+                                                                        Edit
+                                                                    </button>
+                                                                )}
 
-                                                                Delete
-                                                            </button>
+                                                                {/* DELETE */}
+
+                                                                {canDeleteUnit && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            handleDelete(
+                                                                                unit.id
+                                                                            )
+                                                                        }
+                                                                        className="
+                                                                            flex
+                                                                            w-full
+                                                                            items-center
+                                                                            gap-2
+                                                                            px-4
+                                                                            py-2
+                                                                            text-sm
+                                                                            text-white
+                                                                            hover:bg-red-600
+                                                                            transition-colors
+                                                                        "
+                                                                    >
+                                                                        <Trash2
+                                                                            size={16}
+                                                                        />
+
+                                                                        Delete
+                                                                    </button>
+                                                                )}
+
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </td>
+                                            </td>
+                                        )}
+
                                     </tr>
                                 )
                             )}
+
                     </tbody>
+
                 </table>
 
                 {/* =====================================================
@@ -802,6 +1138,7 @@ export default function UnitTable({
                             gap-3
                         "
                     >
+
                         {/* PREVIOUS */}
 
                         <button
@@ -863,8 +1200,10 @@ export default function UnitTable({
                         >
                             Next
                         </button>
+
                     </div>
                 </div>
+
             </div>
         </div>
     );

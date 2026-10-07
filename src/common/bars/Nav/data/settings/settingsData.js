@@ -39,19 +39,9 @@ export const settings = [
         path: "/companies",
       },
       {
-        label: "Branding",
-        icon: Palette,
-        path: "/settings/branding",
-      },
-      {
         label: "Bank Account",
         icon: Bot,
         path: "/bankAccount",
-      },
-      {
-        label: "Usage Stats",
-        icon: ChartPie,
-        path: "/settings/usage",
       },
       {
         label: "Users",
@@ -79,119 +69,6 @@ export const settings = [
         label: "Taxes",
         icon: Receipt,
         path: "/taxes",
-      },
-      {
-        label: "Direct Taxes",
-        icon: Landmark,
-        path: "/settings/direct-taxes",
-      },
-      {
-        label: "GST Settings",
-        icon: BadgePercent,
-        path: "/settings/gst",
-      },
-    ],
-  },
-
-  {
-    title: "Preferences",
-    items: [
-      {
-        label: "MSME Settings",
-        icon: MonitorSmartphone,
-        path: "/settings/msme",
-      },
-      {
-        label: "Customer Portal",
-        icon: Globe,
-        path: "/settings/customer-portal",
-      },
-      {
-        label: "General Preferences",
-        icon: SlidersHorizontal,
-        path: "/settings/preferences",
-      },
-      {
-        label: "Payment Terms",
-        icon: CreditCard,
-        path: "/settings/payment-terms",
-      },
-      {
-        label: "Notifications",
-        icon: Bell,
-        path: "/settings/notifications",
-      },
-      {
-        label: "Email Templates",
-        icon: Mail,
-        path: "/settings/email",
-      },
-      {
-        label: "Security",
-        icon: Lock,
-        path: "/settings/security",
-      },
-      {
-        label: "Backup & Restore",
-        icon: Database,
-        path: "/settings/backup",
-      },
-    ],
-  },
-
-  {
-    title: "Sales",
-    items: [
-      {
-        label: "Customers",
-        icon: UserRound,
-        path: "/customers",
-      },
-      {
-        label: "Quotes",
-        icon: FileText,
-        path: "/quotes",
-      },
-      {
-        label: "Invoices",
-        icon: FileCheck,
-        path: "/invoices",
-      },
-      {
-        label: "Payments Received",
-        icon: Wallet,
-        path: "/payments",
-      },
-      {
-        label: "Delivery Notes",
-        icon: Truck,
-        path: "/delivery-notes",
-      },
-      {
-        label: "Packing Slips",
-        icon: ClipboardList,
-        path: "/packing-slips",
-      },
-    ],
-  },
-
-  {
-    title: "Purchases",
-    items: [
-      {
-        label: "Expenses",
-        icon: CircleDollarSign,
-        path: "/expenses",
-      },
-      {
-        label: "Bills",
-        icon: ScrollText,
-        path: "/bills",
-      },
-      {
-        label: "Vendors",
-        icon: Users,
-        path: "/vendors",
       },
     ],
   },
@@ -230,14 +107,117 @@ export const settings = [
     ],
   },
 
-  {
-    title: "Accounting",
-    items: [
-      {
-        label: "Chart of Accounts",
-        icon: Calculator,
-        path: "/accounts",
-      },
-    ],
-  },
+  // {
+  //   title: "Preferences",
+  //   items: [
+  //     {
+  //       label: "MSME Settings",
+  //       icon: MonitorSmartphone,
+  //       path: "/settings/msme",
+  //     },
+  //     {
+  //       label: "Customer Portal",
+  //       icon: Globe,
+  //       path: "/settings/customer-portal",
+  //     },
+  //     {
+  //       label: "General Preferences",
+  //       icon: SlidersHorizontal,
+  //       path: "/settings/preferences",
+  //     },
+  //     {
+  //       label: "Payment Terms",
+  //       icon: CreditCard,
+  //       path: "/settings/payment-terms",
+  //     },
+  //     {
+  //       label: "Notifications",
+  //       icon: Bell,
+  //       path: "/settings/notifications",
+  //     },
+  //     {
+  //       label: "Email Templates",
+  //       icon: Mail,
+  //       path: "/settings/email",
+  //     },
+  //     {
+  //       label: "Security",
+  //       icon: Lock,
+  //       path: "/settings/security",
+  //     },
+  //     {
+  //       label: "Backup & Restore",
+  //       icon: Database,
+  //       path: "/settings/backup",
+  //     },
+  //   ],
+  // },
+
+  // {
+  //   title: "Sales",
+  //   items: [
+  //     {
+  //       label: "Customers",
+  //       icon: UserRound,
+  //       path: "/customers",
+  //     },
+  //     {
+  //       label: "Quotes",
+  //       icon: FileText,
+  //       path: "/quotes",
+  //     },
+  //     {
+  //       label: "Invoices",
+  //       icon: FileCheck,
+  //       path: "/invoices",
+  //     },
+  //     {
+  //       label: "Payments Received",
+  //       icon: Wallet,
+  //       path: "/payments",
+  //     },
+  //     {
+  //       label: "Delivery Notes",
+  //       icon: Truck,
+  //       path: "/delivery-notes",
+  //     },
+  //     {
+  //       label: "Packing Slips",
+  //       icon: ClipboardList,
+  //       path: "/packing-slips",
+  //     },
+  //   ],
+  // },
+
+  // {
+  //   title: "Purchases",
+  //   items: [
+  //     {
+  //       label: "Expenses",
+  //       icon: CircleDollarSign,
+  //       path: "/expenses",
+  //     },
+  //     {
+  //       label: "Bills",
+  //       icon: ScrollText,
+  //       path: "/bills",
+  //     },
+  //     {
+  //       label: "Vendors",
+  //       icon: Users,
+  //       path: "/vendors",
+  //     },
+  //   ],
+  // },
+
+  // {
+  //   title: "Accounting",
+  //   items: [
+  //     {
+  //       label: "Chart of Accounts",
+  //       icon: Calculator,
+  //       path: "/accounts",
+  //     },
+  //   ],
+  // },
 ];

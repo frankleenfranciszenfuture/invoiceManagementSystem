@@ -70,12 +70,287 @@ export default function CompanyTable({
 
 
     /* =====================================================
+       AUTH STATE
+    ===================================================== */
+
+    const user = useSelector(
+        (state) =>
+            state.auth?.user
+    );
+
+
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
+
+    const permissions = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissions || []
+    );
+
+
+    /* =====================================================
+       ROLE
+    ===================================================== */
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+
+    const normalizedRole =
+        String(roleName)
+            .trim()
+            .toUpperCase();
+
+
+    const isSuperAdmin =
+        normalizedRole === "SUPER_ADMIN";
+
+
+    const isAdmin =
+        normalizedRole === "ADMIN";
+
+
+    const hasFullAccess =
+        isSuperAdmin ||
+        isAdmin;
+
+
+    /* =====================================================
+       PERMISSION CHECK
+
+       Supports both:
+
+       FLAT:
+       {
+           moduleName: "Companies",
+           actionName: "EDIT",
+           allowed: true
+       }
+
+       GROUPED:
+       {
+           moduleName: "Companies",
+           actions: [
+               {
+                   actionName: "EDIT",
+                   allowed: true
+               }
+           ]
+       }
+    ===================================================== */
+
+    const hasPermission = (
+        moduleName,
+        actionName
+    ) => {
+
+        /* =================================================
+           SUPER ADMIN / ADMIN
+        ================================================= */
+
+        if (hasFullAccess) {
+            return true;
+        }
+
+
+        /* =================================================
+           INVALID PERMISSION STATE
+        ================================================= */
+
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+
+        const requestedModule =
+            String(moduleName)
+                .trim()
+                .toLowerCase();
+
+
+        const requestedAction =
+            String(actionName)
+                .trim()
+                .toUpperCase();
+
+
+        /* =================================================
+           SEARCH PERMISSIONS
+        ================================================= */
+
+        return permissions.some(
+            (permission) => {
+
+                /* =========================================
+                   MODULE
+                ========================================= */
+
+                const permissionModule =
+                    String(
+                        permission?.moduleName ||
+                        permission?.module?.moduleName ||
+                        permission?.module?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toLowerCase();
+
+
+                if (
+                    permissionModule !==
+                    requestedModule
+                ) {
+                    return false;
+                }
+
+
+                /* =========================================
+                   PERMISSION STATUS
+                ========================================= */
+
+                if (
+                    permission?.active === false
+                ) {
+                    return false;
+                }
+
+
+                if (
+                    String(
+                        permission?.status || ""
+                    )
+                        .trim()
+                        .toUpperCase() ===
+                    "INACTIVE"
+                ) {
+                    return false;
+                }
+
+
+                /* =========================================
+                   GROUPED ACTIONS
+                ========================================= */
+
+                if (
+                    Array.isArray(
+                        permission?.actions
+                    )
+                ) {
+
+                    return permission.actions.some(
+                        (action) => {
+
+                            const permissionAction =
+                                String(
+                                    action?.actionName ||
+                                    action?.action?.actionName ||
+                                    action?.action?.name ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toUpperCase();
+
+
+                            const allowed =
+                                action?.allowed === true ||
+                                action?.allowed === "true";
+
+
+                            return (
+                                permissionAction ===
+                                requestedAction &&
+                                allowed
+                            );
+
+                        }
+                    );
+
+                }
+
+
+                /* =========================================
+                   FLAT ACTION
+                ========================================= */
+
+                const permissionAction =
+                    String(
+                        permission?.actionName ||
+                        permission?.action?.actionName ||
+                        permission?.action?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase();
+
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+
+                return (
+                    permissionAction ===
+                    requestedAction &&
+                    allowed
+                );
+
+            }
+        );
+
+    };
+
+
+    /* =====================================================
+       COMPANY PERMISSIONS
+    ===================================================== */
+
+    const canEditCompany =
+        hasPermission(
+            "Company Detail",
+            "EDIT"
+        );
+
+
+    const canDeleteCompany =
+        hasPermission(
+            "Company Detail",
+            "DELETE"
+        );
+
+    const canViewCompany =
+        hasPermission(
+            "Company Detail",
+            "VIEW"
+        );
+
+
+    /* =====================================================
        DELETE COMPANY
     ===================================================== */
 
     const handleDelete = async (
         id
     ) => {
+
+        /* =================================================
+           PERMISSION SAFETY CHECK
+        ================================================= */
+
+        if (!canDeleteCompany) {
+
+            toast.error(
+                "You do not have permission to delete companies."
+            );
+
+            return;
+        }
+
 
         if (
             !window.confirm(
@@ -124,7 +399,17 @@ export default function CompanyTable({
         company
     ) => {
 
+
         try {
+
+            if (!canViewCompany) {
+
+                toast.error(
+                    "You do not have permission to View companies."
+                );
+
+                return;
+            }
 
             dispatch(
                 setExsistingCompany(
@@ -155,6 +440,20 @@ export default function CompanyTable({
     const handleEdit = (
         company
     ) => {
+
+        /* =================================================
+           PERMISSION SAFETY CHECK
+        ================================================= */
+
+        if (!canEditCompany) {
+
+            toast.error(
+                "You do not have permission to edit companies."
+            );
+
+            return;
+        }
+
 
         console.log(
             "EDIT COMPANY:",
@@ -838,68 +1137,76 @@ export default function CompanyTable({
                                                             EDIT
                                                         ================================= */}
 
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handleEdit(
-                                                                    company
-                                                                )
-                                                            }
-                                                            className="
-                                                                flex
-                                                                w-full
-                                                                items-center
-                                                                gap-2
-                                                                px-4
-                                                                py-2
-                                                                text-sm
-                                                                text-white
-                                                                hover:bg-blue-600
-                                                                transition-colors
-                                                            "
-                                                        >
+                                                        {canEditCompany && (
 
-                                                            <Edit
-                                                                size={16}
-                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    handleEdit(
+                                                                        company
+                                                                    )
+                                                                }
+                                                                className="
+                                                                    flex
+                                                                    w-full
+                                                                    items-center
+                                                                    gap-2
+                                                                    px-4
+                                                                    py-2
+                                                                    text-sm
+                                                                    text-white
+                                                                    hover:bg-blue-600
+                                                                    transition-colors
+                                                                "
+                                                            >
 
-                                                            Edit
+                                                                <Edit
+                                                                    size={16}
+                                                                />
 
-                                                        </button>
+                                                                Edit
+
+                                                            </button>
+
+                                                        )}
 
 
                                                         {/* =================================
                                                             DELETE
                                                         ================================= */}
 
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handleDelete(
-                                                                    company.id
-                                                                )
-                                                            }
-                                                            className="
-                                                                flex
-                                                                w-full
-                                                                items-center
-                                                                gap-2
-                                                                px-4
-                                                                py-2
-                                                                text-sm
-                                                                text-white
-                                                                hover:bg-red-600
-                                                                transition-colors
-                                                            "
-                                                        >
+                                                        {canDeleteCompany && (
 
-                                                            <Trash2
-                                                                size={16}
-                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    handleDelete(
+                                                                        company.id
+                                                                    )
+                                                                }
+                                                                className="
+                                                                    flex
+                                                                    w-full
+                                                                    items-center
+                                                                    gap-2
+                                                                    px-4
+                                                                    py-2
+                                                                    text-sm
+                                                                    text-white
+                                                                    hover:bg-red-600
+                                                                    transition-colors
+                                                                "
+                                                            >
 
-                                                            Delete
+                                                                <Trash2
+                                                                    size={16}
+                                                                />
 
-                                                        </button>
+                                                                Delete
+
+                                                            </button>
+
+                                                        )}
 
                                                     </div>
 

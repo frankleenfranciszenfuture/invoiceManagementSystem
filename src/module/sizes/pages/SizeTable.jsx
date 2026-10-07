@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +31,187 @@ export default function SizeTable({
     const navigate = useNavigate();
 
     /* =====================================================
+       AUTH USER
+    ===================================================== */
+
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
+
+    /* =====================================================
+       MENU PERMISSIONS
+    ===================================================== */
+
+    const permissions = useSelector(
+        (state) =>
+            Array.isArray(state.menuPermission?.userPermissions)
+                ? state.menuPermission.userPermissions
+                : []
+    );
+
+    const permissionLoading = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissionsLoading === true
+    );
+
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissionsLoaded === true
+    );
+
+    /* =====================================================
+       ROLE
+    ===================================================== */
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+    const normalizedRole =
+        String(roleName)
+            .trim()
+            .toUpperCase();
+
+    const isSuperAdmin =
+        normalizedRole === "SUPER_ADMIN";
+
+    const isAdmin =
+        normalizedRole === "ADMIN";
+
+    const hasFullAccess =
+        isSuperAdmin || isAdmin;
+
+    /* =====================================================
+       PERMISSION HELPER
+    ===================================================== */
+
+    const hasPermission = (
+        moduleName,
+        actionName
+    ) => {
+
+        if (hasFullAccess) {
+            return true;
+        }
+
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+        const requestedModule =
+            String(moduleName)
+                .trim()
+                .toLowerCase();
+
+        const requestedAction =
+            String(actionName)
+                .trim()
+                .toUpperCase();
+
+        return permissions.some((permission) => {
+
+            const permissionModule =
+                String(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                )
+                    .trim()
+                    .toLowerCase();
+
+            if (permissionModule !== requestedModule) {
+                return false;
+            }
+
+            /* =============================================
+               IGNORE INACTIVE PERMISSION
+            ============================================= */
+
+            if (permission?.active === false) {
+                return false;
+            }
+
+            if (
+                String(permission?.status || "")
+                    .trim()
+                    .toUpperCase() === "INACTIVE"
+            ) {
+                return false;
+            }
+
+            /* =============================================
+               GROUPED ACTIONS
+            ============================================= */
+
+            if (Array.isArray(permission?.actions)) {
+
+                return permission.actions.some((action) => {
+
+                    const permissionAction =
+                        String(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            ""
+                        )
+                            .trim()
+                            .toUpperCase();
+
+                    const allowed =
+                        action?.allowed === true ||
+                        action?.allowed === "true";
+
+                    return (
+                        permissionAction === requestedAction &&
+                        allowed
+                    );
+                });
+            }
+
+            /* =============================================
+               FLAT PERMISSION
+            ============================================= */
+
+            const permissionAction =
+                String(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+            const allowed =
+                permission?.allowed === true ||
+                permission?.allowed === "true";
+
+            return (
+                permissionAction === requestedAction &&
+                allowed
+            );
+        });
+    };
+
+    /* =====================================================
+       SIZE PERMISSIONS
+    ===================================================== */
+
+    const canEditSize =
+        hasPermission("Sizes", "EDIT");
+
+    const canDeleteSize =
+        hasPermission("Sizes", "DELETE");
+
+    const canPerformAction =
+        canEditSize || canDeleteSize;
+
+    /* =====================================================
        REDUX STATE
     ===================================================== */
 
@@ -58,6 +238,34 @@ export default function SizeTable({
     ===================================================== */
 
     const handleDelete = async (id) => {
+
+        /* =============================================
+           PERMISSION LOADING
+        ============================================= */
+
+        if (
+            !hasFullAccess &&
+            !permissionsLoaded
+        ) {
+            toast.error(
+                "Permissions are still loading. Please try again."
+            );
+
+            return;
+        }
+
+        /* =============================================
+           DELETE PERMISSION
+        ============================================= */
+
+        if (!canDeleteSize) {
+
+            toast.error(
+                "You do not have permission to delete sizes."
+            );
+
+            return;
+        }
 
         if (!window.confirm("Delete this size?")) {
             return;
@@ -120,6 +328,34 @@ export default function SizeTable({
 
     const handleEdit = (size) => {
 
+        /* =============================================
+           PERMISSION LOADING
+        ============================================= */
+
+        if (
+            !hasFullAccess &&
+            !permissionsLoaded
+        ) {
+            toast.error(
+                "Permissions are still loading. Please try again."
+            );
+
+            return;
+        }
+
+        /* =============================================
+           EDIT PERMISSION
+        ============================================= */
+
+        if (!canEditSize) {
+
+            toast.error(
+                "You do not have permission to edit sizes."
+            );
+
+            return;
+        }
+
         try {
 
             dispatch(
@@ -169,13 +405,18 @@ export default function SizeTable({
 
     };
 
+    /* =====================================================
+       SHORT NAME COLOR
+    ===================================================== */
 
     const getShortNameColor = (sizeName) => {
+
         if (!sizeName) {
             return "bg-gray-100 text-gray-700";
         }
 
-        const hasNumber = /\d/.test(sizeName);
+        const hasNumber =
+            /\d/.test(sizeName);
 
         if (hasNumber) {
             return "bg-blue-100 text-blue-700";
@@ -184,23 +425,30 @@ export default function SizeTable({
         return "bg-purple-100 text-purple-700";
     };
 
+    /* =====================================================
+       SIZE CODE COLOR
+    ===================================================== */
 
     const getSizeCode = (sizeCode) => {
+
         if (!sizeCode) {
             return "bg-gray-100 text-gray-700";
         }
 
-        const value = sizeCode.trim().toUpperCase();
+        const value =
+            sizeCode
+                .trim()
+                .toUpperCase();
 
-        // Get the last part after "-"
-        const lastPart = value.split("-").pop();
+        const lastPart =
+            value
+                .split("-")
+                .pop();
 
-        // Last part is only numbers → number color
         if (/^\d+$/.test(lastPart)) {
             return "bg-gray-100 text-orange-400";
         }
 
-        // Last part contains letters → letter color
         if (/^[A-Z]+$/.test(lastPart)) {
             return "bg-gray-100 text-pink-400";
         }
@@ -246,6 +494,34 @@ export default function SizeTable({
     };
 
     /* =====================================================
+       PERMISSION LOADING
+    ===================================================== */
+
+    if (
+        !hasFullAccess &&
+        (permissionLoading || !permissionsLoaded)
+    ) {
+
+        return (
+
+            <div
+                className="
+                    flex
+                    items-center
+                    justify-center
+                    py-10
+                "
+            >
+
+                <p className="text-sm text-gray-500">
+                    Loading permissions...
+                </p>
+
+            </div>
+        );
+    }
+
+    /* =====================================================
        LOADING
     ===================================================== */
 
@@ -269,7 +545,6 @@ export default function SizeTable({
             </div>
         );
     }
-
 
     /* =====================================================
        EMPTY STATE
@@ -409,7 +684,6 @@ export default function SizeTable({
                                 Size Code
                             </th>
 
-
                             {/* DESCRIPTION */}
 
                             <th
@@ -446,20 +720,22 @@ export default function SizeTable({
 
                             {/* ACTIONS */}
 
-                            <th
-                                className="
-                                    w-[20%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-right
-                                "
-                            >
-                                Actions
-                            </th>
+                            {canPerformAction && (
+                                <th
+                                    className="
+                                        w-[20%]
+                                        px-2
+                                        py-3
+                                        font-medium
+                                        text-sm
+                                        text-gray-600
+                                        uppercase
+                                        text-right
+                                    "
+                                >
+                                    Actions
+                                </th>
+                            )}
 
                         </tr>
 
@@ -589,8 +865,6 @@ export default function SizeTable({
 
                                         </td>
 
-
-
                                         {/* =================================
                                             SIZE SHORT NAME
                                         ================================= */}
@@ -602,68 +876,96 @@ export default function SizeTable({
                                                 overflow-hidden
                                             "
                                         >
+
                                             <p
                                                 className={`
-                                                        truncate
-                                                        inline-block
-                                                        px-2
-                                                        py-1
-                                                        rounded-md
-                                                        text-xs
-                                                        font-medium
-                                                        ${getShortNameColor(size.sizeShortName)}
-                                                    `}
-                                                title={size.sizeShortName || ""}
+                                                    truncate
+                                                    inline-block
+                                                    px-2
+                                                    py-1
+                                                    rounded-md
+                                                    text-xs
+                                                    font-medium
+                                                    ${getShortNameColor(
+                                                    size.sizeShortName
+                                                )}
+                                                `}
+                                                title={
+                                                    size.sizeShortName ||
+                                                    ""
+                                                }
                                             >
-                                                {size.sizeShortName || "—"}
+                                                {
+                                                    size.sizeShortName ||
+                                                    "—"
+                                                }
                                             </p>
+
                                         </td>
 
                                         {/* =================================
-                                            Size Code
+                                            SIZE CODE
                                         ================================= */}
+
                                         <td
                                             className="
                                                 px-2
                                                 py-3
                                                 overflow-hidden
-                                        "
+                                            "
                                         >
+
                                             <p
                                                 className={`
-                                                        inline-flex
-                                                        items-center
-                                                        w-fit
-                                                        px-2.5
-                                                        py-1
-                                                        rounded-md
-                                                        text-xs
-                                                        font-medium
-                                                        ${getSizeCode(size.sizeCode)}
-                                                    `}
-                                                title={size.sizeCode || ""}
+                                                    inline-flex
+                                                    items-center
+                                                    w-fit
+                                                    px-2.5
+                                                    py-1
+                                                    rounded-md
+                                                    text-xs
+                                                    font-medium
+                                                    ${getSizeCode(
+                                                    size.sizeCode
+                                                )}
+                                                `}
+                                                title={
+                                                    size.sizeCode ||
+                                                    ""
+                                                }
                                             >
-                                                {size.sizeCode || "—"}
+                                                {
+                                                    size.sizeCode ||
+                                                    "—"
+                                                }
                                             </p>
-                                        </td>
 
+                                        </td>
 
                                         {/* =================================
                                             DESCRIPTION
                                         ================================= */}
+
                                         <td
                                             className="
                                                 px-2
                                                 py-3
                                                 overflow-hidden
-                                        "
+                                            "
                                         >
-                                            <p
 
-                                                title={size.description || ""}
+                                            <p
+                                                title={
+                                                    size.description ||
+                                                    ""
+                                                }
                                             >
-                                                {size.description || "—"}
+                                                {
+                                                    size.description ||
+                                                    "—"
+                                                }
                                             </p>
+
                                         </td>
 
                                         {/* =================================
@@ -705,175 +1007,182 @@ export default function SizeTable({
                                             ACTIONS
                                         ================================= */}
 
-                                        <td
-                                            className="
-                                                relative
-                                                overflow-visible
-                                                px-2
-                                                py-3
-                                            "
-                                            onClick={(e) =>
-                                                e.stopPropagation()
-                                            }
-                                        >
-
-                                            <div
+                                        {canPerformAction && (
+                                            <td
                                                 className="
-                                                    flex
-                                                    justify-end
+                                                    relative
+                                                    overflow-visible
+                                                    px-2
+                                                    py-3
                                                 "
+                                                onClick={(e) =>
+                                                    e.stopPropagation()
+                                                }
                                             >
 
                                                 <div
                                                     className="
-                                                        relative
-                                                        group
-                                                        inline-block
+                                                        flex
+                                                        justify-end
                                                     "
                                                 >
 
-                                                    {/* ACTION BUTTON */}
-
-                                                    <button
-                                                        type="button"
-                                                        className="
-                                                            p-1
-                                                            rounded-full
-                                                            bg-blue-500
-                                                            text-white
-                                                            hover:bg-blue-600
-                                                            transition-colors
-                                                        "
-                                                    >
-
-                                                        <ChevronDown
-                                                            size={16}
-                                                        />
-
-                                                    </button>
-
-                                                    {/* =========================
-                                                        ACTION MENU
-                                                    ========================= */}
-
                                                     <div
                                                         className="
-                                                            absolute
-                                                            right-0
-                                                            top-full
-                                                            mt-1
-                                                            z-[9999]
-                                                            opacity-0
-                                                            invisible
-                                                            group-hover:opacity-100
-                                                            group-hover:visible
-                                                            transition-all
-                                                            duration-150
+                                                            relative
+                                                            group
+                                                            inline-block
                                                         "
                                                     >
 
-                                                        <div
+                                                        {/* ACTION BUTTON */}
+
+                                                        <button
+                                                            type="button"
                                                             className="
-                                                                w-36
-                                                                rounded-md
+                                                                p-1
+                                                                rounded-full
                                                                 bg-blue-500
-                                                                shadow-lg
-                                                                overflow-hidden
+                                                                text-white
+                                                                hover:bg-blue-600
+                                                                transition-colors
                                                             "
                                                         >
 
-                                                            {/* VIEW */}
+                                                            <ChevronDown
+                                                                size={16}
+                                                            />
 
-                                                            {/* <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleView(
-                                                                        size
-                                                                    )
-                                                                }
+                                                        </button>
+
+                                                        {/* =========================
+                                                            ACTION MENU
+                                                        ========================= */}
+
+                                                        <div
+                                                            className="
+                                                                absolute
+                                                                right-0
+                                                                top-full
+                                                                mt-1
+                                                                z-[9999]
+                                                                opacity-0
+                                                                invisible
+                                                                group-hover:opacity-100
+                                                                group-hover:visible
+                                                                transition-all
+                                                                duration-150
+                                                            "
+                                                        >
+
+                                                            <div
                                                                 className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-blue-600
-                                                                    transition-colors
+                                                                    w-36
+                                                                    rounded-md
+                                                                    bg-blue-500
+                                                                    shadow-lg
+                                                                    overflow-hidden
                                                                 "
                                                             >
 
-                                                                <Eye
-                                                                    size={16}
-                                                                />
+                                                                {/* VIEW */}
 
-                                                                View
+                                                                {/* <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        handleView(
+                                                                            size
+                                                                        )
+                                                                    }
+                                                                    className="
+                                                                        flex
+                                                                        w-full
+                                                                        items-center
+                                                                        gap-2
+                                                                        px-4
+                                                                        py-2
+                                                                        text-sm
+                                                                        text-white
+                                                                        hover:bg-blue-600
+                                                                        transition-colors
+                                                                    "
+                                                                >
 
-                                                            </button> */}
+                                                                    <Eye
+                                                                        size={16}
+                                                                    />
 
-                                                            {/* EDIT */}
+                                                                    View
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleEdit(
-                                                                        size
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-blue-600
-                                                                    transition-colors
-                                                                "
-                                                            >
+                                                                </button> */}
 
-                                                                <Edit
-                                                                    size={16}
-                                                                />
+                                                                {/* EDIT */}
 
-                                                                Edit
+                                                                {canEditSize && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            handleEdit(
+                                                                                size
+                                                                            )
+                                                                        }
+                                                                        className="
+                                                                            flex
+                                                                            w-full
+                                                                            items-center
+                                                                            gap-2
+                                                                            px-4
+                                                                            py-2
+                                                                            text-sm
+                                                                            text-white
+                                                                            hover:bg-blue-600
+                                                                            transition-colors
+                                                                        "
+                                                                    >
 
-                                                            </button>
+                                                                        <Edit
+                                                                            size={16}
+                                                                        />
 
-                                                            {/* DELETE */}
+                                                                        Edit
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleDelete(
-                                                                        size.id
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-red-600
-                                                                    transition-colors
-                                                                "
-                                                            >
+                                                                    </button>
+                                                                )}
 
-                                                                <Trash2
-                                                                    size={16}
-                                                                />
+                                                                {/* DELETE */}
 
-                                                                Delete
+                                                                {canDeleteSize && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            handleDelete(
+                                                                                size.id
+                                                                            )
+                                                                        }
+                                                                        className="
+                                                                            flex
+                                                                            w-full
+                                                                            items-center
+                                                                            gap-2
+                                                                            px-4
+                                                                            py-2
+                                                                            text-sm
+                                                                            text-white
+                                                                            hover:bg-red-600
+                                                                            transition-colors
+                                                                        "
+                                                                    >
 
-                                                            </button>
+                                                                        <Trash2
+                                                                            size={16}
+                                                                        />
+
+                                                                        Delete
+
+                                                                    </button>
+                                                                )}
+
+                                                            </div>
 
                                                         </div>
 
@@ -881,9 +1190,8 @@ export default function SizeTable({
 
                                                 </div>
 
-                                            </div>
-
-                                        </td>
+                                            </td>
+                                        )}
 
                                     </tr>
 

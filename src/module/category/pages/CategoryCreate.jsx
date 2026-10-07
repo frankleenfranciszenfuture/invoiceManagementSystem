@@ -64,6 +64,11 @@ export default function CategoryCreate() {
             state.menuPermission?.loading === true
     );
 
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissionsLoaded === true
+    );
+
     // =========================================================
     // ADD / EDIT MODE
     // =========================================================
@@ -184,7 +189,8 @@ export default function CategoryCreate() {
                     normalizeModule(
                         permission?.moduleName ||
                         permission?.module?.moduleName ||
-                        permission?.module?.name
+                        permission?.module?.name ||
+                        ""
                     );
 
                 // -------------------------------------------------
@@ -219,7 +225,8 @@ export default function CategoryCreate() {
                     normalizeAction(
                         permission?.actionName ||
                         permission?.action?.actionName ||
-                        permission?.action?.name
+                        permission?.action?.name ||
+                        ""
                     );
 
                 if (
@@ -262,7 +269,9 @@ export default function CategoryCreate() {
                             const actionName =
                                 normalizeAction(
                                     action?.actionName ||
-                                    action?.name
+                                    action?.action?.actionName ||
+                                    action?.name ||
+                                    ""
                                 );
 
                             return (
@@ -327,16 +336,13 @@ export default function CategoryCreate() {
         }
 
         // -----------------------------------------------------
-        // If permissions are not available, load them.
-        // Sidebar normally loads these already, but this
-        // protects direct modal access as well.
+        // Load user permissions when they are not loaded.
         // -----------------------------------------------------
 
         if (
-            !Array.isArray(permissions) ||
-            permissions.length === 0
+            !permissionsLoaded &&
+            !permissionLoading
         ) {
-
             dispatch(
                 getUserPermission()
             );
@@ -347,52 +353,8 @@ export default function CategoryCreate() {
         authChecking,
         isAuthenticated,
         hasFullAccess,
-        permissions.length,
-        dispatch,
-    ]);
-
-    // =========================================================
-    // BLOCK UNAUTHORIZED ACCESS
-    // =========================================================
-
-    useEffect(() => {
-
-        if (!isOpen) {
-            return;
-        }
-
-        if (authChecking) {
-            return;
-        }
-
-        if (permissionLoading) {
-            return;
-        }
-
-        if (!hasRequiredPermission) {
-
-            toast.error(
-                isEdit
-                    ? "You do not have permission to edit categories."
-                    : "You do not have permission to create categories."
-            );
-
-            dispatch(closeModal());
-
-            dispatch(
-                resetCategoryForm()
-            );
-
-            setErrors({});
-            setActiveTab("category");
-        }
-
-    }, [
-        isOpen,
-        authChecking,
+        permissionsLoaded,
         permissionLoading,
-        hasRequiredPermission,
-        isEdit,
         dispatch,
     ]);
 
@@ -464,7 +426,6 @@ export default function CategoryCreate() {
                 event.key === "Escape" &&
                 !loading
             ) {
-
                 handleClose();
             }
         };
@@ -555,7 +516,6 @@ export default function CategoryCreate() {
                         "ACTIVE",
                 })
             );
-
         }
 
     }, [
@@ -627,6 +587,22 @@ export default function CategoryCreate() {
     const handleSave = async (e) => {
 
         e.preventDefault();
+
+        // -----------------------------------------------------
+        // Prevent saving before permissions finish loading.
+        // -----------------------------------------------------
+
+        if (
+            !hasFullAccess &&
+            !permissionsLoaded
+        ) {
+
+            toast.error(
+                "Permissions are still loading. Please try again."
+            );
+
+            return;
+        }
 
         // -----------------------------------------------------
         // Permission check AGAIN before API call
@@ -780,9 +756,12 @@ export default function CategoryCreate() {
     // =========================================================
 
     if (
-        !authChecking &&
         !hasFullAccess &&
-        permissionLoading
+        (
+            authChecking ||
+            permissionLoading ||
+            !permissionsLoaded
+        )
     ) {
 
         return (
@@ -790,14 +769,14 @@ export default function CategoryCreate() {
                 className="
                     w-[950px]
                     max-w-[95vw]
-                    h-[300px]
-                    max-h-[88vh]
+                    min-h-[260px]
                     bg-white
                     rounded-xl
                     shadow-2xl
                     flex
                     items-center
                     justify-center
+                    p-8
                 "
             >
 
@@ -805,25 +784,26 @@ export default function CategoryCreate() {
 
                     <div
                         className="
-                            w-8
-                            h-8
+                            w-10
+                            h-10
+                            mx-auto
+                            mb-3
                             border-2
                             border-blue-200
                             border-t-blue-600
                             rounded-full
                             animate-spin
-                            mx-auto
                         "
                     />
 
                     <p
                         className="
-                            mt-3
                             text-sm
-                            text-gray-500
+                            font-medium
+                            text-gray-600
                         "
                     >
-                        Checking permissions...
+                        Loading permissions...
                     </p>
 
                 </div>
@@ -836,10 +816,196 @@ export default function CategoryCreate() {
     // UNAUTHORIZED
     // =========================================================
 
-    if (
-        !hasRequiredPermission
-    ) {
-        return null;
+    if (!hasRequiredPermission) {
+
+        return (
+            <div
+                className="
+                    w-[950px]
+                    max-w-[95vw]
+                    min-h-[300px]
+                    bg-white
+                    rounded-xl
+                    shadow-2xl
+                    overflow-hidden
+                    flex
+                    flex-col
+                "
+            >
+
+                {/* HEADER */}
+
+                <div
+                    className="
+                        shrink-0
+                        h-[68px]
+                        flex
+                        items-center
+                        justify-between
+                        px-6
+                        border-b
+                        border-gray-200
+                        bg-white
+                    "
+                >
+
+                    <div className="flex items-center gap-3">
+
+                        <div
+                            className="
+                                w-9
+                                h-9
+                                rounded-lg
+                                bg-red-50
+                                flex
+                                items-center
+                                justify-center
+                            "
+                        >
+
+                            <ChartColumnStackedIcon
+                                size={20}
+                                className="text-red-500"
+                            />
+
+                        </div>
+
+                        <div>
+
+                            <h2
+                                className="
+                                    text-[17px]
+                                    font-semibold
+                                    text-gray-800
+                                "
+                            >
+                                Access Denied
+                            </h2>
+
+                            <p
+                                className="
+                                    text-xs
+                                    text-gray-500
+                                    mt-0.5
+                                "
+                            >
+                                Category access restricted
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                {/* ACCESS DENIED BODY */}
+
+                <div
+                    className="
+                        flex-1
+                        flex
+                        items-center
+                        justify-center
+                        px-6
+                        py-10
+                    "
+                >
+
+                    <div className="text-center">
+
+                        <div
+                            className="
+                                w-12
+                                h-12
+                                mx-auto
+                                mb-3
+                                rounded-full
+                                bg-red-50
+                                flex
+                                items-center
+                                justify-center
+                            "
+                        >
+
+                            <span
+                                className="
+                                    text-red-500
+                                    text-lg
+                                    font-semibold
+                                "
+                            >
+                                !
+                            </span>
+
+                        </div>
+
+                        <h2
+                            className="
+                                text-lg
+                                font-semibold
+                                text-gray-800
+                            "
+                        >
+                            Access Denied
+                        </h2>
+
+                        <p
+                            className="
+                                mt-1
+                                text-sm
+                                text-gray-500
+                            "
+                        >
+                            {isEdit
+                                ? "You do not have permission to edit categories."
+                                : "You do not have permission to create categories."
+                            }
+                        </p>
+
+                    </div>
+
+                </div>
+
+                {/* FOOTER */}
+
+                <div
+                    className="
+                        shrink-0
+                        h-[68px]
+                        flex
+                        items-center
+                        justify-end
+                        px-6
+                        border-t
+                        border-gray-200
+                        bg-white
+                    "
+                >
+
+                    <button
+                        type="button"
+                        onClick={handleClose}
+                        className="
+                            h-10
+                            px-5
+                            rounded-md
+                            border
+                            border-gray-300
+                            text-sm
+                            font-medium
+                            text-gray-700
+                            bg-white
+                            hover:bg-gray-50
+                            transition
+                        "
+                    >
+                        Close
+                    </button>
+
+                </div>
+
+            </div>
+        );
     }
 
     // =========================================================

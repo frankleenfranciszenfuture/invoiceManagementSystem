@@ -1,3 +1,4 @@
+
 import React, {
     useEffect,
     useState,
@@ -11,7 +12,7 @@ import {
 import {
     Building2,
     Upload,
-    X,
+    UserRoundArrowLeft,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -29,13 +30,16 @@ import {
     updateCompany,
 } from "../thunks/companyThunks";
 
+import {
+    getUserPermission,
+} from "../../menuPermission/thunks/menuPermissionThunks";
+
 
 /* =========================================================
    COMPANY IMAGE URL
-   ========================================================= */
+========================================================= */
 
 const getCompanyImageUrl = (imageUrl) => {
-
     if (!imageUrl) {
         return "";
     }
@@ -56,92 +60,56 @@ const getCompanyImageUrl = (imageUrl) => {
 
 /* =========================================================
    INITIAL FORM
-   ========================================================= */
+========================================================= */
 
 const INITIAL_FORM = {
     id: null,
-
     companyName: "",
-
     displayName: "",
-
     legalName: "",
-
     companyCode: "",
-
     gstNumber: "",
-
     panNumber: "",
-
     tanNumber: "",
-
     email: "",
-
     phone: "",
-
     alternatePhone: "",
-
     website: "",
-
     addressLine1: "",
-
     addressLine2: "",
-
     city: "",
-
     state: "",
-
     country: "India",
-
     pincode: "",
-
     invoicePrefix: "NT",
-
     invoiceStartNumber: 1,
-
     currency: "INR",
-
     financialYearStart: "",
-
     status: "ACTIVE",
-
-    /* =====================================================
-       IMAGE FILES
-    ===================================================== */
-
     logo: null,
-
     signature: null,
-
-    /* =====================================================
-       EXISTING IMAGE URLS
-    ===================================================== */
-
     logoUrl: "",
-
     signatureUrl: "",
 };
 
 
 /* =========================================================
    COMPANY CREATE
-   ========================================================= */
+========================================================= */
 
 export default function CompanyCreate() {
 
-    const dispatch =
-        useDispatch();
+    const dispatch = useDispatch();
+
 
 
     /* =======================================================
        MODAL
     ======================================================= */
 
-    const modal =
-        useSelector(
-            (state) =>
-                state.ui?.modal
-        );
+    const modal = useSelector(
+        (state) => state.ui?.modal
+    );
 
 
     /* =======================================================
@@ -151,8 +119,52 @@ export default function CompanyCreate() {
     const {
         loading,
     } = useSelector(
+        (state) => state.company
+    );
+
+
+    /* =======================================================
+       AUTH
+    ======================================================= */
+
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
+
+    const isAuthenticated = useSelector(
         (state) =>
-            state.company
+            state.auth?.isAuthenticated === true
+    );
+
+    const authChecking = useSelector(
+        (state) =>
+            state.auth?.authChecking === true
+    );
+
+
+    /* =======================================================
+       PERMISSIONS
+    ======================================================= */
+
+    const permissions = useSelector(
+        (state) =>
+            Array.isArray(
+                state.menuPermission?.userPermissions
+            )
+                ? state.menuPermission.userPermissions
+                : []
+    );
+
+    const permissionLoading = useSelector(
+        (state) =>
+            state.menuPermission
+                ?.userPermissionsLoading === true
+    );
+
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission
+                ?.userPermissionsLoaded === true
     );
 
 
@@ -161,17 +173,202 @@ export default function CompanyCreate() {
     ======================================================= */
 
     const isEdit =
-        modal?.type ===
-        "editCompany";
+        modal?.type === "editCompany";
+
+    const isAdd =
+        modal?.type === "addCompany";
 
     const isOpen =
         modal?.open &&
         (
-            modal?.type ===
-            "addCompany" ||
+            isAdd ||
+            isEdit
+        );
 
-            modal?.type ===
-            "editCompany"
+
+    /* =======================================================
+       ROLE / ACCESS
+    ======================================================= */
+
+    const normalizeModule = (value) =>
+        String(value ?? "")
+            .trim()
+            .toLowerCase();
+
+    const normalizeAction = (value) =>
+        String(value ?? "")
+            .trim()
+            .toUpperCase();
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+    const normalizedRole =
+        normalizeAction(roleName);
+
+    const isSuperAdmin =
+        normalizedRole === "SUPER_ADMIN";
+
+    const isAdmin =
+        normalizedRole === "ADMIN";
+
+    const hasFullAccess =
+        isSuperAdmin ||
+        isAdmin;
+
+
+    /* =======================================================
+       HAS PERMISSION
+    ======================================================= */
+
+    const hasPermission = (
+        moduleName,
+        actionName
+    ) => {
+
+        if (hasFullAccess) {
+            return true;
+        }
+
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+        const requestedModule =
+            normalizeModule(moduleName);
+
+        const requestedAction =
+            normalizeAction(actionName);
+
+        return permissions.some(
+            (permission) => {
+
+                const permissionModule =
+                    normalizeModule(
+                        permission?.moduleName ||
+                        permission?.module?.moduleName ||
+                        permission?.module?.name ||
+                        ""
+                    );
+
+                if (
+                    permissionModule !==
+                    requestedModule
+                ) {
+                    return false;
+                }
+
+                if (
+                    permission?.active === false
+                ) {
+                    return false;
+                }
+
+                if (
+                    normalizeAction(
+                        permission?.status
+                    ) === "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                if (
+                    Array.isArray(
+                        permission?.actions
+                    )
+                ) {
+
+                    return permission.actions.some(
+                        (action) => {
+
+                            if (
+                                typeof action ===
+                                "string"
+                            ) {
+                                return (
+                                    normalizeAction(
+                                        action
+                                    ) ===
+                                    requestedAction
+                                );
+                            }
+
+                            const permissionAction =
+                                normalizeAction(
+                                    action?.actionName ||
+                                    action?.action?.actionName ||
+                                    action?.action?.name ||
+                                    action?.name ||
+                                    ""
+                                );
+
+                            const allowed =
+                                action?.allowed === true ||
+                                action?.allowed === "true";
+
+                            if (
+                                action?.active === false
+                            ) {
+                                return false;
+                            }
+
+                            if (
+                                normalizeAction(
+                                    action?.status
+                                ) === "INACTIVE"
+                            ) {
+                                return false;
+                            }
+
+                            return (
+                                permissionAction ===
+                                requestedAction &&
+                                allowed
+                            );
+                        }
+                    );
+                }
+
+                const permissionAction =
+                    normalizeAction(
+                        permission?.actionName ||
+                        permission?.action?.actionName ||
+                        permission?.action?.name ||
+                        ""
+                    );
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction ===
+                    requestedAction &&
+                    allowed
+                );
+            }
+        );
+    };
+
+
+    /* =======================================================
+       REQUIRED PERMISSION
+    ======================================================= */
+
+    const requiredAction =
+        isEdit
+            ? "EDIT"
+            : "CREATE";
+
+    const hasRequiredPermission =
+        hasPermission(
+            "Company Detail",
+            requiredAction
         );
 
 
@@ -184,11 +381,13 @@ export default function CompanyCreate() {
             INITIAL_FORM
         );
 
-
     const [errors, setErrors] =
         useState({});
 
-    const [activeTab, setActiveTab] = useState("basic");
+    const [activeTab, setActiveTab] =
+        useState("basic");
+
+
     /* =======================================================
        IMAGE PREVIEWS
     ======================================================= */
@@ -198,6 +397,48 @@ export default function CompanyCreate() {
 
     const [signaturePreview, setSignaturePreview] =
         useState("");
+
+
+    /* =======================================================
+       PERMISSION LOADING
+    ======================================================= */
+
+    useEffect(() => {
+
+        if (!isOpen) {
+            return;
+        }
+
+        if (authChecking) {
+            return;
+        }
+
+        if (!isAuthenticated) {
+            return;
+        }
+
+        if (hasFullAccess) {
+            return;
+        }
+
+        if (
+            !permissionsLoaded &&
+            !permissionLoading
+        ) {
+            dispatch(
+                getUserPermission()
+            );
+        }
+
+    }, [
+        isOpen,
+        authChecking,
+        isAuthenticated,
+        hasFullAccess,
+        permissionsLoaded,
+        permissionLoading,
+        dispatch,
+    ]);
 
 
     /* =======================================================
@@ -237,18 +478,15 @@ export default function CompanyCreate() {
             return;
         }
 
-
         const logoUrl =
             data.logoUrl ??
             data.logo ??
             "";
 
-
         const signatureUrl =
             data.signatureUrl ??
             data.signature ??
             "";
-
 
         setForm({
 
@@ -344,19 +582,9 @@ export default function CompanyCreate() {
                 data.status ??
                 "ACTIVE",
 
-            /*
-             * IMPORTANT
-             *
-             * Existing image is NOT a File.
-             * Only a newly selected File will be
-             * sent during update.
-             */
+            logo: null,
 
-            logo:
-                null,
-
-            signature:
-                null,
+            signature: null,
 
             logoUrl:
                 logoUrl,
@@ -364,7 +592,6 @@ export default function CompanyCreate() {
             signatureUrl:
                 signatureUrl,
         });
-
 
         setLogoPreview(
             logoUrl
@@ -374,7 +601,6 @@ export default function CompanyCreate() {
                 : ""
         );
 
-
         setSignaturePreview(
             signatureUrl
                 ? getCompanyImageUrl(
@@ -383,18 +609,7 @@ export default function CompanyCreate() {
                 : ""
         );
 
-
         setErrors({});
-
-
-        console.log(
-            "========== EDIT COMPANY =========="
-        );
-
-        console.log(
-            "EDIT COMPANY DATA:",
-            data
-        );
 
     }, [
         isOpen,
@@ -428,30 +643,25 @@ export default function CompanyCreate() {
        FIELD CHANGE
     ======================================================= */
 
-    const handleChange =
-        (
-            field,
-            value
-        ) => {
+    const handleChange = (
+        field,
+        value
+    ) => {
 
-            setForm(
-                (prev) => ({
-                    ...prev,
+        setForm(
+            (prev) => ({
+                ...prev,
+                [field]: value,
+            })
+        );
 
-                    [field]:
-                        value,
-                })
-            );
-
-            setErrors(
-                (prev) => ({
-                    ...prev,
-
-                    [field]:
-                        "",
-                })
-            );
-        };
+        setErrors(
+            (prev) => ({
+                ...prev,
+                [field]: "",
+            })
+        );
+    };
 
 
     /* =======================================================
@@ -469,7 +679,6 @@ export default function CompanyCreate() {
                 return;
             }
 
-
             if (
                 !file.type.startsWith(
                     "image/"
@@ -483,16 +692,12 @@ export default function CompanyCreate() {
                 return;
             }
 
-
             setForm(
                 (prev) => ({
                     ...prev,
-
-                    logo:
-                        file,
+                    logo: file,
                 })
             );
-
 
             const preview =
                 URL.createObjectURL(
@@ -503,13 +708,10 @@ export default function CompanyCreate() {
                 preview
             );
 
-
             setErrors(
                 (prev) => ({
                     ...prev,
-
-                    logo:
-                        "",
+                    logo: "",
                 })
             );
         };
@@ -530,7 +732,6 @@ export default function CompanyCreate() {
                 return;
             }
 
-
             if (
                 !file.type.startsWith(
                     "image/"
@@ -544,16 +745,12 @@ export default function CompanyCreate() {
                 return;
             }
 
-
             setForm(
                 (prev) => ({
                     ...prev,
-
-                    signature:
-                        file,
+                    signature: file,
                 })
             );
-
 
             const preview =
                 URL.createObjectURL(
@@ -564,13 +761,10 @@ export default function CompanyCreate() {
                 preview
             );
 
-
             setErrors(
                 (prev) => ({
                     ...prev,
-
-                    signature:
-                        "",
+                    signature: "",
                 })
             );
         };
@@ -589,10 +783,6 @@ export default function CompanyCreate() {
 
             dispatch(
                 closeModal()
-            );
-
-            dispatch(
-                resetCompanyForm()
             );
 
             resetLocalForm();
@@ -620,12 +810,10 @@ export default function CompanyCreate() {
                 }
             };
 
-
         document.addEventListener(
             "keydown",
             handleEscape
         );
-
 
         return () => {
 
@@ -647,11 +835,13 @@ export default function CompanyCreate() {
     ======================================================= */
 
     const validateCompanyTabs = () => {
+
         const newErrors = {};
 
-        // =========================================================
-        // BASIC DETAILS
-        // =========================================================
+
+        /* =====================================================
+           BASIC DETAILS
+        ===================================================== */
 
         if (!form.companyName?.trim()) {
             newErrors.companyName =
@@ -664,21 +854,31 @@ export default function CompanyCreate() {
         }
 
         if (form.email?.trim()) {
+
             const emailRegex =
                 /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-            if (!emailRegex.test(form.email.trim())) {
+            if (
+                !emailRegex.test(
+                    form.email.trim()
+                )
+            ) {
                 newErrors.email =
                     "Enter a valid email address";
             }
         }
 
         if (!form.phone?.trim()) {
+
             newErrors.phone =
                 "Phone number is required";
+
         } else if (
-            !/^\d{10}$/.test(form.phone.trim())
+            !/^\d{10}$/.test(
+                form.phone.trim()
+            )
         ) {
+
             newErrors.phone =
                 "Phone number must contain 10 digits";
         }
@@ -689,15 +889,18 @@ export default function CompanyCreate() {
                 form.alternatePhone.trim()
             )
         ) {
+
             newErrors.alternatePhone =
                 "Alternate phone must contain 10 digits";
         }
 
-        // =========================================================
-        // TAX & COMPLIANCE
-        // =========================================================
+
+        /* =====================================================
+           TAX & COMPLIANCE
+        ===================================================== */
 
         if (form.gstNumber?.trim()) {
+
             const gstRegex =
                 /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 
@@ -708,12 +911,14 @@ export default function CompanyCreate() {
                         .toUpperCase()
                 )
             ) {
+
                 newErrors.gstNumber =
                     "Enter a valid GST number";
             }
         }
 
         if (form.panNumber?.trim()) {
+
             const panRegex =
                 /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
@@ -724,12 +929,14 @@ export default function CompanyCreate() {
                         .toUpperCase()
                 )
             ) {
+
                 newErrors.panNumber =
                     "Enter a valid PAN number";
             }
         }
 
         if (form.tanNumber?.trim()) {
+
             const tanRegex =
                 /^[A-Z]{4}[0-9]{5}[A-Z]$/;
 
@@ -740,14 +947,16 @@ export default function CompanyCreate() {
                         .toUpperCase()
                 )
             ) {
+
                 newErrors.tanNumber =
                     "Enter a valid TAN number";
             }
         }
 
-        // =========================================================
-        // ADDRESS
-        // =========================================================
+
+        /* =====================================================
+           ADDRESS
+        ===================================================== */
 
         if (!form.addressLine1?.trim()) {
             newErrors.addressLine1 =
@@ -770,22 +979,27 @@ export default function CompanyCreate() {
         }
 
         if (!form.pincode?.trim()) {
+
             newErrors.pincode =
                 "Pincode is required";
+
         } else if (
             !/^\d{6}$/.test(
                 form.pincode.trim()
             )
         ) {
+
             newErrors.pincode =
                 "Pincode must contain 6 digits";
         }
 
-        // =========================================================
-        // INVOICE SETTINGS
-        // =========================================================
+
+        /* =====================================================
+           INVOICE SETTINGS
+        ===================================================== */
 
         if (!form.invoicePrefix?.trim()) {
+
             newErrors.invoicePrefix =
                 "Invoice prefix is required";
         }
@@ -795,29 +1009,36 @@ export default function CompanyCreate() {
             form.invoiceStartNumber === null ||
             Number(form.invoiceStartNumber) < 1
         ) {
+
             newErrors.invoiceStartNumber =
                 "Enter a valid invoice start number";
         }
 
         if (!form.currency?.trim()) {
+
             newErrors.currency =
                 "Currency is required";
         }
 
         if (!form.financialYearStart) {
+
             newErrors.financialYearStart =
                 "Financial year start is required";
         }
 
-        // =========================================================
-        // SET ERRORS
-        // =========================================================
 
-        setErrors(newErrors);
+        /* =====================================================
+           SET ERRORS
+        ===================================================== */
 
-        // =========================================================
-        // BASIC TAB
-        // =========================================================
+        setErrors(
+            newErrors
+        );
+
+
+        /* =====================================================
+           BASIC TAB
+        ===================================================== */
 
         if (
             newErrors.companyName ||
@@ -826,7 +1047,10 @@ export default function CompanyCreate() {
             newErrors.phone ||
             newErrors.alternatePhone
         ) {
-            setActiveTab("basic");
+
+            setActiveTab(
+                "basic"
+            );
 
             toast.error(
                 "Please complete Basic Details"
@@ -835,9 +1059,10 @@ export default function CompanyCreate() {
             return false;
         }
 
-        // =========================================================
-        // ADDRESS TAB
-        // =========================================================
+
+        /* =====================================================
+           ADDRESS TAB
+        ===================================================== */
 
         if (
             newErrors.addressLine1 ||
@@ -846,7 +1071,10 @@ export default function CompanyCreate() {
             newErrors.country ||
             newErrors.pincode
         ) {
-            setActiveTab("address");
+
+            setActiveTab(
+                "address"
+            );
 
             toast.error(
                 "Please complete Address Details"
@@ -855,16 +1083,20 @@ export default function CompanyCreate() {
             return false;
         }
 
-        // =========================================================
-        // TAX TAB
-        // =========================================================
+
+        /* =====================================================
+           TAX TAB
+        ===================================================== */
 
         if (
             newErrors.gstNumber ||
             newErrors.panNumber ||
             newErrors.tanNumber
         ) {
-            setActiveTab("tax");
+
+            setActiveTab(
+                "tax"
+            );
 
             toast.error(
                 "Please correct Tax & Compliance fields"
@@ -873,9 +1105,10 @@ export default function CompanyCreate() {
             return false;
         }
 
-        // =========================================================
-        // INVOICE TAB
-        // =========================================================
+
+        /* =====================================================
+           INVOICE TAB
+        ===================================================== */
 
         if (
             newErrors.invoicePrefix ||
@@ -883,7 +1116,10 @@ export default function CompanyCreate() {
             newErrors.currency ||
             newErrors.financialYearStart
         ) {
-            setActiveTab("invoice");
+
+            setActiveTab(
+                "invoice"
+            );
 
             toast.error(
                 "Please complete Invoice Settings"
@@ -906,10 +1142,66 @@ export default function CompanyCreate() {
             event.preventDefault();
 
 
-            if (!validateCompanyTabs()) {
+            /* =================================================
+               AUTH CHECK
+            ================================================= */
+
+            if (!isAuthenticated) {
+
+                toast.error(
+                    "You are not authenticated."
+                );
+
                 return;
             }
 
+
+            /* =================================================
+               PERMISSION CHECK
+            ================================================= */
+
+            if (
+                !hasFullAccess &&
+                (
+                    permissionLoading ||
+                    !permissionsLoaded
+                )
+            ) {
+
+                toast.error(
+                    "Permissions are still loading. Please try again."
+                );
+
+                return;
+            }
+
+
+            if (!hasRequiredPermission) {
+
+                toast.error(
+                    isEdit
+                        ? "You do not have permission to edit companies."
+                        : "You do not have permission to create companies."
+                );
+
+                return;
+            }
+
+
+            /* =================================================
+               VALIDATION
+            ================================================= */
+
+            if (
+                !validateCompanyTabs()
+            ) {
+                return;
+            }
+
+
+            /* =================================================
+               PAYLOAD
+            ================================================= */
 
             const payload = {
 
@@ -1022,14 +1314,9 @@ export default function CompanyCreate() {
                     form.financialYearStart ||
                     null,
 
-                status: form.status || "ACTIVE",
-
-                /* =============================================
-                   IMPORTANT
-                   These are File objects.
-                   companyThunks.js will append them to
-                   FormData as logo/signature.
-                ============================================= */
+                status:
+                    form.status ||
+                    "ACTIVE",
 
                 logo:
                     form.logo ||
@@ -1086,6 +1373,7 @@ export default function CompanyCreate() {
                     );
 
                 }
+
 
                 /* =================================================
                    CREATE
@@ -1150,8 +1438,326 @@ export default function CompanyCreate() {
 
 
     /* =======================================================
-     UI
-  ======================================================= */
+       AUTH CHECKING
+    ======================================================= */
+
+    if (authChecking) {
+
+        return (
+            <div
+                className="
+                    w-[950px]
+                    max-w-[95vw]
+                    min-h-[300px]
+                    bg-white
+                    rounded-xl
+                    shadow-2xl
+                    flex
+                    items-center
+                    justify-center
+                    p-8
+                "
+            >
+                <div className="text-center">
+
+                    <div
+                        className="
+                            w-10
+                            h-10
+                            mx-auto
+                            mb-3
+                            border-2
+                            border-blue-200
+                            border-t-blue-600
+                            rounded-full
+                            animate-spin
+                        "
+                    />
+
+                    <p
+                        className="
+                            text-sm
+                            font-medium
+                            text-gray-600
+                        "
+                    >
+                        Checking authentication...
+                    </p>
+
+                </div>
+            </div>
+        );
+    }
+
+
+    /* =======================================================
+       UNAUTHENTICATED
+    ======================================================= */
+
+    if (!isAuthenticated) {
+        return null;
+    }
+
+
+    /* =======================================================
+       PERMISSION LOADING
+    ======================================================= */
+
+    if (
+        !hasFullAccess &&
+        (
+            permissionLoading ||
+            !permissionsLoaded
+        )
+    ) {
+
+        return (
+            <div
+                className="
+                    w-[950px]
+                    max-w-[95vw]
+                    min-h-[300px]
+                    bg-white
+                    rounded-xl
+                    shadow-2xl
+                    flex
+                    items-center
+                    justify-center
+                    p-8
+                "
+            >
+                <div className="text-center">
+
+                    <div
+                        className="
+                            w-10
+                            h-10
+                            mx-auto
+                            mb-3
+                            border-2
+                            border-blue-200
+                            border-t-blue-600
+                            rounded-full
+                            animate-spin
+                        "
+                    />
+
+                    <p
+                        className="
+                            text-sm
+                            font-medium
+                            text-gray-600
+                        "
+                    >
+                        Loading permissions...
+                    </p>
+
+                </div>
+            </div>
+        );
+    }
+
+
+    /* =======================================================
+       ACCESS DENIED
+    ======================================================= */
+
+    if (!hasRequiredPermission) {
+
+        return (
+            <div
+                className="
+                    w-[950px]
+                    max-w-[95vw]
+                    min-h-[300px]
+                    bg-white
+                    rounded-xl
+                    shadow-2xl
+                    overflow-hidden
+                    flex
+                    flex-col
+                "
+            >
+
+                {/* HEADER */}
+
+                <div
+                    className="
+                        shrink-0
+                        h-[68px]
+                        flex
+                        items-center
+                        justify-between
+                        px-6
+                        border-b
+                        border-gray-200
+                        bg-white
+                    "
+                >
+
+                    <div className="flex items-center gap-3">
+
+                        <div
+                            className="
+                                w-9
+                                h-9
+                                rounded-lg
+                                bg-red-50
+                                flex
+                                items-center
+                                justify-center
+                            "
+                        >
+                            <UserRoundArrowLeft
+                                size={20}
+                                className="text-red-500"
+                            />
+                        </div>
+
+                        <div>
+
+                            <h2
+                                className="
+                                    text-[17px]
+                                    font-semibold
+                                    text-gray-800
+                                "
+                            >
+                                Access Denied
+                            </h2>
+
+                            <p
+                                className="
+                                    text-xs
+                                    text-gray-500
+                                    mt-0.5
+                                "
+                            >
+                                Company access restricted
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                {/* MESSAGE */}
+
+                <div
+                    className="
+                        flex-1
+                        flex
+                        items-center
+                        justify-center
+                        px-6
+                        py-10
+                    "
+                >
+
+                    <div className="text-center">
+
+                        <div
+                            className="
+                                w-12
+                                h-12
+                                mx-auto
+                                mb-3
+                                rounded-full
+                                bg-red-50
+                                flex
+                                items-center
+                                justify-center
+                            "
+                        >
+
+                            <span
+                                className="
+                                    text-red-500
+                                    text-lg
+                                    font-semibold
+                                "
+                            >
+                                !
+                            </span>
+
+                        </div>
+
+                        <h2
+                            className="
+                                text-lg
+                                font-semibold
+                                text-gray-800
+                            "
+                        >
+                            Access Denied
+                        </h2>
+
+                        <p
+                            className="
+                                mt-1
+                                text-sm
+                                text-gray-500
+                            "
+                        >
+                            {isEdit
+                                ? "You do not have permission to edit companies."
+                                : "You do not have permission to create companies."
+                            }
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                {/* FOOTER */}
+
+                <div
+                    className="
+                        shrink-0
+                        h-[68px]
+                        flex
+                        items-center
+                        justify-end
+                        px-6
+                        border-t
+                        border-gray-200
+                        bg-white
+                    "
+                >
+
+                    <button
+                        type="button"
+                        onClick={handleClose}
+                        className="
+                            h-10
+                            px-5
+                            rounded-md
+                            border
+                            border-gray-300
+                            text-sm
+                            font-medium
+                            text-gray-700
+                            bg-white
+                            hover:bg-gray-50
+                            transition
+                        "
+                    >
+                        Close
+                    </button>
+
+                </div>
+
+            </div>
+        );
+    }
+
+
+    /* =======================================================
+       TABS
+    ======================================================= */
 
     const tabs = [
 
@@ -1159,18 +1765,22 @@ export default function CompanyCreate() {
             id: "basic",
             label: "Basic Details",
         },
+
         {
             id: "address",
             label: "Address",
         },
+
         {
             id: "tax",
             label: "Tax & Compliance",
         },
+
         {
             id: "invoice",
             label: "Invoice Settings",
         },
+
         {
             id: "branding",
             label: "Branding",
@@ -1178,86 +1788,90 @@ export default function CompanyCreate() {
 
     ];
 
+
     const inputClass = (field) => `
-    w-full
-    h-11
-    px-3
-    border
-    rounded-md
-    text-sm
-    bg-white
-    outline-none
-    transition
-    focus:border-blue-500
-    focus:ring-1
-    focus:ring-blue-500
-    ${errors[field]
+        w-full
+        h-11
+        px-3
+        border
+        rounded-md
+        text-sm
+        bg-white
+        outline-none
+        transition
+        focus:border-blue-500
+        focus:ring-1
+        focus:ring-blue-500
+        ${errors[field]
             ? "border-red-400"
             : "border-gray-300"
         }
-`;
+    `;
+
 
     const labelClass = `
-    block
-    text-[13px]
-    font-medium
-    text-gray-700
-    mb-1.5
-`;
+        block
+        text-[13px]
+        font-medium
+        text-gray-700
+        mb-1.5
+    `;
+
 
     const sectionTitleClass = `
-    text-base
-    font-semibold
-    text-gray-800
-`;
+        text-base
+        font-semibold
+        text-gray-800
+    `;
+
 
     return (
 
         <div
             className="
-            w-[950px]
-            max-w-[95vw]
-            h-[960px]
-            max-h-[88vh]
-            bg-white
-            rounded-xl
-            shadow-2xl
-            overflow-hidden
-            flex
-            flex-col
-        "
+                w-[950px]
+                max-w-[95vw]
+                h-[960px]
+                max-h-[88vh]
+                bg-white
+                rounded-xl
+                shadow-2xl
+                overflow-hidden
+                flex
+                flex-col
+            "
         >
 
             {/* =====================================================
-            HEADER
-        ===================================================== */}
+                HEADER
+            ===================================================== */}
 
             <div
                 className="
-                shrink-0
-                h-[68px]
-                flex
-                items-center
-                justify-between
-                px-6
-                border-b
-                border-gray-200
-                bg-white
-            "
+                    shrink-0
+                    h-[68px]
+                    flex
+                    items-center
+                    justify-between
+                    px-6
+                    border-b
+                    border-gray-200
+                    bg-white
+                "
             >
 
                 <div className="flex items-center gap-3">
 
                     <div
                         className="
-                        w-9
-                        h-9
-                        rounded-lg
-                        bg-blue-50
-                        flex
-                        items-center
-                        justify-center
-                    "
+                            w-9
+                            h-9
+                            rounded-lg
+                            bg-blue-50
+                            flex
+                            items-center
+                            justify-center
+                        "
                     >
                         <Building2
                             size={20}
@@ -1269,10 +1883,10 @@ export default function CompanyCreate() {
 
                         <h2
                             className="
-                            text-[20px]
-                            font-semibold
-                            text-gray-800
-                        "
+                                text-[20px]
+                                font-semibold
+                                text-gray-800
+                            "
                         >
                             {isEdit
                                 ? "Edit Company"
@@ -1281,10 +1895,10 @@ export default function CompanyCreate() {
 
                         <p
                             className="
-                            text-xs
-                            text-gray-500
-                            mt-0.5
-                        "
+                                text-xs
+                                text-gray-500
+                                mt-0.5
+                            "
                         >
                             {isEdit
                                 ? "Update company information"
@@ -1295,52 +1909,30 @@ export default function CompanyCreate() {
 
                 </div>
 
-
-                {/* <button
-                    type="button"
-                    onClick={handleClose}
-                    disabled={loading}
-                    className="
-                    w-9
-                    h-9
-                    rounded-full
-                    flex
-                    items-center
-                    justify-center
-                    text-gray-400
-                    hover:bg-gray-100
-                    hover:text-gray-700
-                    transition
-                    disabled:opacity-50
-                "
-                >
-                    <X size={20} />
-                </button> */}
-
             </div>
 
 
             {/* =====================================================
-            TABS
-        ===================================================== */}
+                TABS
+            ===================================================== */}
 
             <div
                 className="
-                shrink-0
-                px-6
-                border-b
-                border-gray-200
-                bg-white
-            "
+                    shrink-0
+                    px-6
+                    border-b
+                    border-gray-200
+                    bg-white
+                "
             >
 
                 <div
                     className="
-                    flex
-                    items-center
-                    gap-7
-                    h-[52px]
-                "
+                        flex
+                        items-center
+                        gap-7
+                        h-[52px]
+                    "
                 >
 
                     {tabs.map((tab) => {
@@ -1357,16 +1949,16 @@ export default function CompanyCreate() {
                                     setActiveTab(tab.id)
                                 }
                                 className={`
-                                relative
-                                h-full
-                                text-sm
-                                font-medium
-                                transition
-                                ${active
+                                    relative
+                                    h-full
+                                    text-sm
+                                    font-medium
+                                    transition
+                                    ${active
                                         ? "text-blue-600"
                                         : "text-gray-500 hover:text-gray-800"
                                     }
-                            `}
+                                `}
                             >
 
                                 {tab.label}
@@ -1375,14 +1967,14 @@ export default function CompanyCreate() {
 
                                     <span
                                         className="
-                                        absolute
-                                        left-0
-                                        right-0
-                                        bottom-0
-                                        h-[2px]
-                                        bg-blue-600
-                                        rounded-t
-                                    "
+                                            absolute
+                                            left-0
+                                            right-0
+                                            bottom-0
+                                            h-[2px]
+                                            bg-blue-600
+                                            rounded-t
+                                        "
                                     />
 
                                 )}
@@ -1399,38 +1991,38 @@ export default function CompanyCreate() {
 
 
             {/* =====================================================
-            FORM
-        ===================================================== */}
+                FORM
+            ===================================================== */}
 
             <form
                 onSubmit={handleSave}
                 className="
-                flex
-                flex-col
-                flex-1
-                min-h-0
-            "
+                    flex
+                    flex-col
+                    flex-1
+                    min-h-0
+                "
             >
 
                 {/* =================================================
-                SCROLL BODY
-            ================================================= */}
+                    SCROLL BODY
+                ================================================= */}
 
                 <div
                     className="
-                    flex-1
-                    min-h-0
-                     overflow-y-scroll
-                    overflow-x-visible
-                    px-7
-                    py-6
-                    bg-gray-50/50
-                "
+                        flex-1
+                        min-h-0
+                        overflow-y-scroll
+                        overflow-x-visible
+                        px-7
+                        py-6
+                        bg-gray-50/50
+                    "
                 >
 
                     {/* =================================================
-                    BRANDING
-                ================================================= */}
+                        BRANDING
+                    ================================================= */}
 
                     {activeTab === "branding" && (
 
@@ -1444,10 +2036,10 @@ export default function CompanyCreate() {
 
                                 <p
                                     className="
-                                    text-xs
-                                    text-gray-500
-                                    mt-1
-                                "
+                                        text-xs
+                                        text-gray-500
+                                        mt-1
+                                    "
                                 >
                                     Upload the company logo and authorized
                                     signature used in invoice documents.
@@ -1455,18 +2047,15 @@ export default function CompanyCreate() {
 
                             </div>
 
-
                             <div
                                 className="
-                                grid
-                                grid-cols-2
-                                gap-6
-                            "
+                                    grid
+                                    grid-cols-2
+                                    gap-6
+                                "
                             >
 
-                                {/* =================================================
-                                LOGO
-                            ================================================= */}
+                                {/* LOGO */}
 
                                 <div>
 
@@ -1476,22 +2065,22 @@ export default function CompanyCreate() {
 
                                     <label
                                         className="
-                                        w-full
-                                        h-[230px]
-                                        border-2
-                                        border-dashed
-                                        border-gray-300
-                                        rounded-lg
-                                        flex
-                                        items-center
-                                        justify-center
-                                        overflow-hidden
-                                        cursor-pointer
-                                        hover:border-blue-500
-                                        hover:bg-blue-50/30
-                                        transition
-                                        bg-white
-                                    "
+                                            w-full
+                                            h-[230px]
+                                            border-2
+                                            border-dashed
+                                            border-gray-300
+                                            rounded-lg
+                                            flex
+                                            items-center
+                                            justify-center
+                                            overflow-hidden
+                                            cursor-pointer
+                                            hover:border-blue-500
+                                            hover:bg-blue-50/30
+                                            transition
+                                            bg-white
+                                        "
                                     >
 
                                         {logoPreview ? (
@@ -1500,45 +2089,45 @@ export default function CompanyCreate() {
                                                 src={logoPreview}
                                                 alt="Company Logo"
                                                 className="
-                                                w-full
-                                                h-full
-                                                object-contain
-                                                p-5
-                                            "
+                                                    w-full
+                                                    h-full
+                                                    object-contain
+                                                    p-5
+                                                "
                                             />
 
                                         ) : (
 
                                             <div
                                                 className="
-                                                text-center
-                                                text-gray-400
-                                            "
+                                                    text-center
+                                                    text-gray-400
+                                                "
                                             >
 
                                                 <Upload
                                                     size={30}
                                                     className="
-                                                    mx-auto
-                                                    mb-3
-                                                "
+                                                        mx-auto
+                                                        mb-3
+                                                    "
                                                 />
 
                                                 <p
                                                     className="
-                                                    text-sm
-                                                    font-medium
-                                                    text-gray-600
-                                                "
+                                                        text-sm
+                                                        font-medium
+                                                        text-gray-600
+                                                    "
                                                 >
                                                     Choose company logo
                                                 </p>
 
                                                 <p
                                                     className="
-                                                    text-xs
-                                                    mt-1
-                                                "
+                                                        text-xs
+                                                        mt-1
+                                                    "
                                                 >
                                                     JPG / PNG / WEBP
                                                 </p>
@@ -1550,26 +2139,25 @@ export default function CompanyCreate() {
                                         <input
                                             type="file"
                                             accept="
-                                            image/jpeg,
-                                            image/png,
-                                            image/webp
-                                        "
+                                                image/jpeg,
+                                                image/png,
+                                                image/webp
+                                            "
                                             className="hidden"
                                             onChange={handleLogoChange}
                                         />
 
                                     </label>
 
-
                                     {form.logo && (
 
                                         <p
                                             className="
-                                            text-xs
-                                            text-gray-500
-                                            mt-2
-                                            truncate
-                                        "
+                                                text-xs
+                                                text-gray-500
+                                                mt-2
+                                                truncate
+                                            "
                                             title={form.logo.name}
                                         >
                                             {form.logo.name}
@@ -1580,9 +2168,7 @@ export default function CompanyCreate() {
                                 </div>
 
 
-                                {/* =================================================
-                                SIGNATURE
-                            ================================================= */}
+                                {/* SIGNATURE */}
 
                                 <div>
 
@@ -1592,22 +2178,22 @@ export default function CompanyCreate() {
 
                                     <label
                                         className="
-                                        w-full
-                                        h-[230px]
-                                        border-2
-                                        border-dashed
-                                        border-gray-300
-                                        rounded-lg
-                                        flex
-                                        items-center
-                                        justify-center
-                                        overflow-hidden
-                                        cursor-pointer
-                                        hover:border-blue-500
-                                        hover:bg-blue-50/30
-                                        transition
-                                        bg-white
-                                    "
+                                            w-full
+                                            h-[230px]
+                                            border-2
+                                            border-dashed
+                                            border-gray-300
+                                            rounded-lg
+                                            flex
+                                            items-center
+                                            justify-center
+                                            overflow-hidden
+                                            cursor-pointer
+                                            hover:border-blue-500
+                                            hover:bg-blue-50/30
+                                            transition
+                                            bg-white
+                                        "
                                     >
 
                                         {signaturePreview ? (
@@ -1616,45 +2202,45 @@ export default function CompanyCreate() {
                                                 src={signaturePreview}
                                                 alt="Authorized Signature"
                                                 className="
-                                                w-full
-                                                h-full
-                                                object-contain
-                                                p-6
-                                            "
+                                                    w-full
+                                                    h-full
+                                                    object-contain
+                                                    p-6
+                                                "
                                             />
 
                                         ) : (
 
                                             <div
                                                 className="
-                                                text-center
-                                                text-gray-400
-                                            "
+                                                    text-center
+                                                    text-gray-400
+                                                "
                                             >
 
                                                 <Upload
                                                     size={30}
                                                     className="
-                                                    mx-auto
-                                                    mb-3
-                                                "
+                                                        mx-auto
+                                                        mb-3
+                                                    "
                                                 />
 
                                                 <p
                                                     className="
-                                                    text-sm
-                                                    font-medium
-                                                    text-gray-600
-                                                "
+                                                        text-sm
+                                                        font-medium
+                                                        text-gray-600
+                                                    "
                                                 >
                                                     Choose signature
                                                 </p>
 
                                                 <p
                                                     className="
-                                                    text-xs
-                                                    mt-1
-                                                "
+                                                        text-xs
+                                                        mt-1
+                                                    "
                                                 >
                                                     JPG / PNG / WEBP
                                                 </p>
@@ -1666,10 +2252,10 @@ export default function CompanyCreate() {
                                         <input
                                             type="file"
                                             accept="
-                                            image/jpeg,
-                                            image/png,
-                                            image/webp
-                                        "
+                                                image/jpeg,
+                                                image/png,
+                                                image/webp
+                                            "
                                             className="hidden"
                                             onChange={
                                                 handleSignatureChange
@@ -1678,16 +2264,15 @@ export default function CompanyCreate() {
 
                                     </label>
 
-
                                     {form.signature && (
 
                                         <p
                                             className="
-                                            text-xs
-                                            text-gray-500
-                                            mt-2
-                                            truncate
-                                        "
+                                                text-xs
+                                                text-gray-500
+                                                mt-2
+                                                truncate
+                                            "
                                             title={form.signature.name}
                                         >
                                             {form.signature.name}
@@ -1705,8 +2290,8 @@ export default function CompanyCreate() {
 
 
                     {/* =================================================
-                    BASIC DETAILS
-                ================================================= */}
+                        BASIC DETAILS
+                    ================================================= */}
 
                     {activeTab === "basic" && (
 
@@ -1720,10 +2305,10 @@ export default function CompanyCreate() {
 
                                 <p
                                     className="
-                                    text-xs
-                                    text-gray-500
-                                    mt-1
-                                "
+                                        text-xs
+                                        text-gray-500
+                                        mt-1
+                                    "
                                 >
                                     Enter the basic identity and contact
                                     information of your company.
@@ -1731,19 +2316,14 @@ export default function CompanyCreate() {
 
                             </div>
 
-
-                            {/* COMPANY NAME / DISPLAY NAME */}
-
                             <div
                                 className="
-                                grid
-                                grid-cols-2
-                                gap-x-6
-                                gap-y-5
-                            "
+                                    grid
+                                    grid-cols-2
+                                    gap-x-6
+                                    gap-y-5
+                                "
                             >
-
-                                {/* COMPANY NAME */}
 
                                 <div>
 
@@ -1776,8 +2356,6 @@ export default function CompanyCreate() {
                                 </div>
 
 
-                                {/* DISPLAY NAME */}
-
                                 <div>
 
                                     <label className={labelClass}>
@@ -1800,8 +2378,6 @@ export default function CompanyCreate() {
                                 </div>
 
 
-                                {/* LEGAL NAME */}
-
                                 <div>
 
                                     <label className={labelClass}>
@@ -1823,8 +2399,6 @@ export default function CompanyCreate() {
 
                                 </div>
 
-
-                                {/* COMPANY CODE */}
 
                                 <div>
 
@@ -1857,8 +2431,6 @@ export default function CompanyCreate() {
                                 </div>
 
 
-                                {/* EMAIL */}
-
                                 <div>
 
                                     <label className={labelClass}>
@@ -1886,8 +2458,6 @@ export default function CompanyCreate() {
 
                                 </div>
 
-
-                                {/* PHONE */}
 
                                 <div>
 
@@ -1925,8 +2495,6 @@ export default function CompanyCreate() {
                                 </div>
 
 
-                                {/* ALTERNATE PHONE */}
-
                                 <div>
 
                                     <label className={labelClass}>
@@ -1962,8 +2530,6 @@ export default function CompanyCreate() {
                                 </div>
 
 
-                                {/* WEBSITE */}
-
                                 <div>
 
                                     <label className={labelClass}>
@@ -1993,8 +2559,8 @@ export default function CompanyCreate() {
 
 
                     {/* =================================================
-                    ADDRESS
-                ================================================= */}
+                        ADDRESS
+                    ================================================= */}
 
                     {activeTab === "address" && (
 
@@ -2008,10 +2574,10 @@ export default function CompanyCreate() {
 
                                 <p
                                     className="
-                                    text-xs
-                                    text-gray-500
-                                    mt-1
-                                "
+                                        text-xs
+                                        text-gray-500
+                                        mt-1
+                                    "
                                 >
                                     Add the registered or business address
                                     of the company.
@@ -2019,17 +2585,14 @@ export default function CompanyCreate() {
 
                             </div>
 
-
                             <div
                                 className="
-                                grid
-                                grid-cols-2
-                                gap-x-6
-                                gap-y-5
-                            "
+                                    grid
+                                    grid-cols-2
+                                    gap-x-6
+                                    gap-y-5
+                                "
                             >
-
-                                {/* ADDRESS LINE 1 */}
 
                                 <div className="col-span-2">
 
@@ -2064,8 +2627,6 @@ export default function CompanyCreate() {
                                 </div>
 
 
-                                {/* ADDRESS LINE 2 */}
-
                                 <div className="col-span-2">
 
                                     <label className={labelClass}>
@@ -2089,8 +2650,6 @@ export default function CompanyCreate() {
 
                                 </div>
 
-
-                                {/* CITY */}
 
                                 <div>
 
@@ -2123,8 +2682,6 @@ export default function CompanyCreate() {
                                 </div>
 
 
-                                {/* STATE */}
-
                                 <div>
 
                                     <label className={labelClass}>
@@ -2156,8 +2713,6 @@ export default function CompanyCreate() {
                                 </div>
 
 
-                                {/* COUNTRY */}
-
                                 <div>
 
                                     <label className={labelClass}>
@@ -2188,8 +2743,6 @@ export default function CompanyCreate() {
 
                                 </div>
 
-
-                                {/* PINCODE */}
 
                                 <div>
 
@@ -2234,8 +2787,8 @@ export default function CompanyCreate() {
 
 
                     {/* =================================================
-                    TAX & COMPLIANCE
-                ================================================= */}
+                        TAX & COMPLIANCE
+                    ================================================= */}
 
                     {activeTab === "tax" && (
 
@@ -2249,10 +2802,10 @@ export default function CompanyCreate() {
 
                                 <p
                                     className="
-                                    text-xs
-                                    text-gray-500
-                                    mt-1
-                                "
+                                        text-xs
+                                        text-gray-500
+                                        mt-1
+                                    "
                                 >
                                     Maintain GST and statutory registration
                                     information used on invoices.
@@ -2263,14 +2816,12 @@ export default function CompanyCreate() {
 
                             <div
                                 className="
-                                grid
-                                grid-cols-2
-                                gap-x-6
-                                gap-y-5
-                            "
+                                    grid
+                                    grid-cols-2
+                                    gap-x-6
+                                    gap-y-5
+                                "
                             >
-
-                                {/* GST */}
 
                                 <div>
 
@@ -2303,8 +2854,6 @@ export default function CompanyCreate() {
                                 </div>
 
 
-                                {/* PAN */}
-
                                 <div>
 
                                     <label className={labelClass}>
@@ -2335,8 +2884,6 @@ export default function CompanyCreate() {
 
                                 </div>
 
-
-                                {/* TAN */}
 
                                 <div>
 
@@ -2371,37 +2918,35 @@ export default function CompanyCreate() {
                             </div>
 
 
-                            {/* TAX INFORMATION CARD */}
-
                             <div
                                 className="
-                                mt-8
-                                rounded-lg
-                                border
-                                border-blue-100
-                                bg-blue-50/60
-                                px-5
-                                py-4
-                            "
+                                    mt-8
+                                    rounded-lg
+                                    border
+                                    border-blue-100
+                                    bg-blue-50/60
+                                    px-5
+                                    py-4
+                                "
                             >
 
                                 <div
                                     className="
-                                    text-sm
-                                    font-medium
-                                    text-blue-800
-                                "
+                                        text-sm
+                                        font-medium
+                                        text-blue-800
+                                    "
                                 >
                                     Tax Information
                                 </div>
 
                                 <p
                                     className="
-                                    text-xs
-                                    text-blue-700
-                                    mt-1
-                                    leading-5
-                                "
+                                        text-xs
+                                        text-blue-700
+                                        mt-1
+                                        leading-5
+                                    "
                                 >
                                     GST, PAN and TAN details can be displayed
                                     on invoices and used for statutory
@@ -2416,8 +2961,8 @@ export default function CompanyCreate() {
 
 
                     {/* =================================================
-                    INVOICE SETTINGS
-                ================================================= */}
+                        INVOICE SETTINGS
+                    ================================================= */}
 
                     {activeTab === "invoice" && (
 
@@ -2431,10 +2976,10 @@ export default function CompanyCreate() {
 
                                 <p
                                     className="
-                                    text-xs
-                                    text-gray-500
-                                    mt-1
-                                "
+                                        text-xs
+                                        text-gray-500
+                                        mt-1
+                                    "
                                 >
                                     Configure invoice numbering, currency
                                     and financial year settings.
@@ -2445,14 +2990,12 @@ export default function CompanyCreate() {
 
                             <div
                                 className="
-                                grid
-                                grid-cols-2
-                                gap-x-6
-                                gap-y-5
-                            "
+                                    grid
+                                    grid-cols-2
+                                    gap-x-6
+                                    gap-y-5
+                                "
                             >
-
-                                {/* INVOICE PREFIX */}
 
                                 <div>
 
@@ -2486,8 +3029,6 @@ export default function CompanyCreate() {
 
                                 </div>
 
-
-                                {/* START NUMBER */}
 
                                 <div>
 
@@ -2523,8 +3064,6 @@ export default function CompanyCreate() {
                                 </div>
 
 
-                                {/* CURRENCY */}
-
                                 <div>
 
                                     <label className={labelClass}>
@@ -2557,8 +3096,6 @@ export default function CompanyCreate() {
                                 </div>
 
 
-                                {/* FINANCIAL YEAR */}
-
                                 <div>
 
                                     <label className={labelClass}>
@@ -2590,8 +3127,6 @@ export default function CompanyCreate() {
 
                                 </div>
 
-
-                                {/* STATUS */}
 
                                 <div>
 
@@ -2629,38 +3164,36 @@ export default function CompanyCreate() {
                             </div>
 
 
-                            {/* PREVIEW */}
-
                             <div
                                 className="
-                                mt-8
-                                border
-                                border-gray-200
-                                rounded-lg
-                                bg-white
-                                p-5
-                            "
+                                    mt-8
+                                    border
+                                    border-gray-200
+                                    rounded-lg
+                                    bg-white
+                                    p-5
+                                "
                             >
 
                                 <p
                                     className="
-                                    text-xs
-                                    font-medium
-                                    text-gray-500
-                                    uppercase
-                                    tracking-wide
-                                "
+                                        text-xs
+                                        font-medium
+                                        text-gray-500
+                                        uppercase
+                                        tracking-wide
+                                    "
                                 >
                                     Invoice Number Preview
                                 </p>
 
                                 <p
                                     className="
-                                    mt-2
-                                    text-xl
-                                    font-semibold
-                                    text-gray-800
-                                "
+                                        mt-2
+                                        text-xl
+                                        font-semibold
+                                        text-gray-800
+                                    "
                                 >
                                     {form.invoicePrefix || "NT"}
                                     {new Date().getFullYear()}
@@ -2676,49 +3209,44 @@ export default function CompanyCreate() {
 
                     )}
 
-
                 </div>
 
 
                 {/* =====================================================
-                FOOTER
-            ===================================================== */}
+                    FOOTER
+                ===================================================== */}
 
                 <div
                     className="
-                    shrink-0
-                    h-[68px]
-                    flex
-                    items-center
-                    justify-between
-                    px-6
-                    border-t
-                    border-gray-200
-                    bg-white
-                "
+                        shrink-0
+                        h-[68px]
+                        flex
+                        items-center
+                        justify-between
+                        px-6
+                        border-t
+                        border-gray-200
+                        bg-white
+                    "
                 >
-
-                    {/* LEFT */}
 
                     <div
                         className="
-                        text-xs
-                        text-gray-500
-                    "
+                            text-xs
+                            text-gray-500
+                        "
                     >
                         <span className="text-red-500">*</span>
                         {" "}Required fields
                     </div>
 
 
-                    {/* RIGHT */}
-
                     <div
                         className="
-                        flex
-                        items-center
-                        gap-3
-                    "
+                            flex
+                            items-center
+                            gap-3
+                        "
                     >
 
                         <button
@@ -2726,20 +3254,20 @@ export default function CompanyCreate() {
                             onClick={handleClose}
                             disabled={loading}
                             className="
-                            h-10
-                            px-5
-                            rounded-md
-                            border
-                            border-gray-300
-                            text-sm
-                            font-medium
-                            text-gray-700
-                            bg-white
-                            hover:bg-gray-50
-                            transition
-                            disabled:opacity-50
-                            disabled:cursor-not-allowed
-                        "
+                                h-10
+                                px-5
+                                rounded-md
+                                border
+                                border-gray-300
+                                text-sm
+                                font-medium
+                                text-gray-700
+                                bg-white
+                                hover:bg-gray-50
+                                transition
+                                disabled:opacity-50
+                                disabled:cursor-not-allowed
+                            "
                         >
                             Cancel
                         </button>
@@ -2749,18 +3277,18 @@ export default function CompanyCreate() {
                             type="submit"
                             disabled={loading}
                             className="
-                            h-10
-                            px-6
-                            rounded-md
-                            bg-blue-600
-                            text-white
-                            text-sm
-                            font-medium
-                            hover:bg-blue-700
-                            transition
-                            disabled:opacity-50
-                            disabled:cursor-not-allowed
-                        "
+                                h-10
+                                px-6
+                                rounded-md
+                                bg-blue-600
+                                text-white
+                                text-sm
+                                font-medium
+                                hover:bg-blue-700
+                                transition
+                                disabled:opacity-50
+                                disabled:cursor-not-allowed
+                            "
                         >
 
                             {loading

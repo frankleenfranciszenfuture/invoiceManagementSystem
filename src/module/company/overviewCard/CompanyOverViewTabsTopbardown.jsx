@@ -30,7 +30,7 @@ export default function CompanyOverViewTabsTopbardown() {
     ========================================================= */
 
     const selectedCompany =
-        existingCompany || company;
+        company || existingCompany;
 
     /* =========================================================
        ACTIVE TAB
@@ -90,7 +90,9 @@ export default function CompanyOverViewTabsTopbardown() {
 
             case "Dashboard":
                 return (
-                    <CompanyDashboardTabView />
+                    <CompanyDashboardTabView
+                        company={selectedCompany}
+                    />
                 );
 
             /*

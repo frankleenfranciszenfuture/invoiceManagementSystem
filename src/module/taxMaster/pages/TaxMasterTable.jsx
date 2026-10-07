@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +10,7 @@ import {
 
 import {
     setExsistingTaxMaster,
-} from "../slices/taxMasterSlice";
+} from "../slices/taxMasterSlice"
 
 import { openModal } from "../../ui/uiSlice";
 
@@ -53,12 +54,291 @@ export default function TaxMasterTable({
         taxMasters || [];
 
     /* =====================================================
+       AUTH
+    ===================================================== */
+
+    const user = useSelector(
+        (state) =>
+            state.auth?.user
+    );
+
+    /* =====================================================
+       USER PERMISSIONS
+    ===================================================== */
+
+    const permissions = useSelector(
+        (state) =>
+            Array.isArray(
+                state.menuPermission?.userPermissions
+            )
+                ? state.menuPermission.userPermissions
+                : []
+    );
+
+    const permissionLoading = useSelector(
+        (state) =>
+            state.menuPermission
+                ?.userPermissionsLoading === true
+    );
+
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission
+                ?.userPermissionsLoaded === true
+    );
+
+    /* =====================================================
+       ROLE
+    ===================================================== */
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+    const normalizedRole =
+        String(roleName)
+            .trim()
+            .toUpperCase();
+
+    const isSuperAdmin =
+        normalizedRole === "SUPER_ADMIN";
+
+    const isAdmin =
+        normalizedRole === "ADMIN";
+
+    const hasFullAccess =
+        isSuperAdmin ||
+        isAdmin;
+
+    /* =====================================================
+       PERMISSION CHECKER
+
+       Supports:
+
+       FLAT
+
+       {
+           moduleName: "TaxMasters",
+           actionName: "EDIT",
+           allowed: true
+       }
+
+       GROUPED
+
+       {
+           moduleName: "TaxMasters",
+           actions: [
+               {
+                   actionName: "EDIT",
+                   allowed: true
+               }
+           ]
+       }
+    ===================================================== */
+
+    const hasPermission = (
+        moduleName,
+        actionName
+    ) => {
+
+        /* =================================================
+           ADMIN / SUPER_ADMIN
+        ================================================= */
+
+        if (hasFullAccess) {
+            return true;
+        }
+
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+        const requestedModule =
+            String(moduleName)
+                .trim()
+                .toLowerCase();
+
+        const requestedAction =
+            String(actionName)
+                .trim()
+                .toUpperCase();
+
+        return permissions.some(
+            (permission) => {
+
+                const permissionModule =
+                    String(
+                        permission?.moduleName ||
+                        permission?.module?.moduleName ||
+                        permission?.module?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toLowerCase();
+
+                if (
+                    permissionModule !==
+                    requestedModule
+                ) {
+                    return false;
+                }
+
+                /* =========================================
+                   IGNORE INACTIVE PERMISSION
+                ========================================= */
+
+                if (
+                    permission?.active === false
+                ) {
+                    return false;
+                }
+
+                if (
+                    String(
+                        permission?.status || ""
+                    )
+                        .trim()
+                        .toUpperCase() ===
+                    "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                /* =========================================
+                   GROUPED PERMISSION
+                ========================================= */
+
+                if (
+                    Array.isArray(
+                        permission?.actions
+                    )
+                ) {
+
+                    return permission.actions.some(
+                        (action) => {
+
+                            const permissionAction =
+                                String(
+                                    action?.actionName ||
+                                    action?.action?.actionName ||
+                                    action?.action?.name ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toUpperCase();
+
+                            const allowed =
+                                action?.allowed === true ||
+                                action?.allowed === "true";
+
+                            return (
+                                permissionAction ===
+                                requestedAction &&
+                                allowed
+                            );
+                        }
+                    );
+                }
+
+                /* =========================================
+                   FLAT PERMISSION
+                ========================================= */
+
+                const permissionAction =
+                    String(
+                        permission?.actionName ||
+                        permission?.action?.actionName ||
+                        permission?.action?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase();
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction ===
+                    requestedAction &&
+                    allowed
+                );
+            }
+        );
+    };
+
+    /* =====================================================
+       TAX MASTER PERMISSIONS
+    ===================================================== */
+
+    const canEditTaxMaster =
+        hasPermission(
+            "TaxMasters",
+            "EDIT"
+        );
+
+    const canDeleteTaxMaster =
+        hasPermission(
+            "TaxMasters",
+            "DELETE"
+        );
+
+    /* =====================================================
+       ANY ACTION AVAILABLE
+    ===================================================== */
+
+    const canPerformAction =
+        canEditTaxMaster ||
+        canDeleteTaxMaster;
+
+    /* =====================================================
        DELETE TAX MASTER
     ===================================================== */
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (
+        id
+    ) => {
 
-        if (!window.confirm("Delete this tax master?")) {
+        /* =================================================
+           PERMISSION CHECK
+        ================================================= */
+
+        if (
+            !hasFullAccess &&
+            !permissionsLoaded
+        ) {
+
+            toast.error(
+                "Permissions are still loading. Please try again."
+            );
+
+            return;
+        }
+
+        if (
+            !canDeleteTaxMaster
+        ) {
+
+            toast.error(
+                "You do not have permission to delete tax masters."
+            );
+
+            return;
+        }
+
+        /* =================================================
+           CONFIRM
+        ================================================= */
+
+        if (
+            !window.confirm(
+                "Delete this tax master?"
+            )
+        ) {
             return;
         }
 
@@ -91,7 +371,9 @@ export default function TaxMasterTable({
        VIEW TAX MASTER
     ===================================================== */
 
-    const handleView = (taxMaster) => {
+    const handleView = (
+        taxMaster
+    ) => {
 
         try {
 
@@ -117,15 +399,48 @@ export default function TaxMasterTable({
        EDIT TAX MASTER
     ===================================================== */
 
-    const handleEdit = (taxMaster) => {
+    const handleEdit = (
+        taxMaster
+    ) => {
+
+        /* =================================================
+           PERMISSION CHECK
+        ================================================= */
+
+        if (
+            !hasFullAccess &&
+            !permissionsLoaded
+        ) {
+
+            toast.error(
+                "Permissions are still loading. Please try again."
+            );
+
+            return;
+        }
+
+        if (
+            !canEditTaxMaster
+        ) {
+
+            toast.error(
+                "You do not have permission to edit tax masters."
+            );
+
+            return;
+        }
+
         try {
+
             dispatch(
                 openModal({
                     type: "editTaxMaster",
                     data: taxMaster,
                 })
             );
+
         } catch (error) {
+
             toast.error(
                 "Failed to open tax master"
             );
@@ -136,7 +451,9 @@ export default function TaxMasterTable({
        TAX MASTER INITIALS
     ===================================================== */
 
-    const initials = (taxName) =>
+    const initials = (
+        taxName
+    ) =>
         taxName
             ?.split(" ")
             .map(
@@ -145,7 +462,8 @@ export default function TaxMasterTable({
             )
             .join("")
             .slice(0, 2)
-            .toUpperCase() || "TX";
+            .toUpperCase() ||
+        "TX";
 
     /* =====================================================
        STATUS COLORS
@@ -236,6 +554,42 @@ export default function TaxMasterTable({
     };
 
     /* =====================================================
+       PERMISSION LOADING
+    ===================================================== */
+
+    if (
+        !hasFullAccess &&
+        (
+            permissionLoading ||
+            !permissionsLoaded
+        )
+    ) {
+
+        return (
+
+            <div
+                className="
+                flex
+                items-center
+                justify-center
+                py-10
+                "
+            >
+
+                <p
+                    className="
+                    text-sm
+                    text-gray-500
+                    "
+                >
+                    Loading permissions...
+                </p>
+
+            </div>
+        );
+    }
+
+    /* =====================================================
        LOADING
     ===================================================== */
 
@@ -243,14 +597,20 @@ export default function TaxMasterTable({
 
         return (
 
-            <div className="
+            <div
+                className="
                 flex
                 items-center
                 justify-center
                 py-10
-            ">
+                "
+            >
 
-                <p className="text-gray-500">
+                <p
+                    className="
+                    text-gray-500
+                    "
+                >
                     Loading tax masters...
                 </p>
 
@@ -266,16 +626,22 @@ export default function TaxMasterTable({
 
         return (
 
-            <div className="
+            <div
+                className="
                 bg-white
                 rounded-xl
                 border
                 border-red-200
                 p-8
                 text-center
-            ">
+                "
+            >
 
-                <p className="text-red-500">
+                <p
+                    className="
+                    text-red-500
+                    "
+                >
                     {error}
                 </p>
 
@@ -287,30 +653,38 @@ export default function TaxMasterTable({
        EMPTY STATE
     ===================================================== */
 
-    if (!currentTaxMasters.length) {
+    if (
+        !currentTaxMasters.length
+    ) {
 
         return (
 
-            <div className="
+            <div
+                className="
                 bg-white
                 rounded-2xl
                 border
                 border-gray-200
                 p-8
                 text-center
-            ">
+                "
+            >
 
                 <Receipt
                     className="
-                        mx-auto
-                        mb-3
-                        h-10
-                        w-10
-                        text-gray-300
+                    mx-auto
+                    mb-3
+                    h-10
+                    w-10
+                    text-gray-300
                     "
                 />
 
-                <p className="text-gray-500">
+                <p
+                    className="
+                    text-gray-500
+                    "
+                >
                     No tax masters found.
                 </p>
 
@@ -324,52 +698,60 @@ export default function TaxMasterTable({
 
     return (
 
-        <div className="
+        <div
+            className="
             bg-white
             rounded-xl
             border
             border-gray-200
             overflow-visible
             w-full
-        ">
+            "
+        >
 
             {/* =================================================
                 TABLE CONTAINER
             ================================================= */}
 
-            <div className="
+            <div
+                className="
                 w-full
                 overflow-visible
-            ">
+                "
+            >
 
-                <table className="
+                <table
+                    className="
                     w-full
                     table-fixed
                     border-collapse
-                ">
+                    "
+                >
 
                     {/* =================================================
                         TABLE HEADER
                     ================================================= */}
 
-                    <thead className="
+                    <thead
+                        className="
                         bg-gray-100
                         border-b
                         border-gray-300
-                    ">
+                        "
+                    >
 
                         <tr>
 
                             <th
                                 className="
-                                    w-[16%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
+                                w-[16%]
+                                px-2
+                                py-3
+                                font-medium
+                                text-sm
+                                text-gray-600
+                                uppercase
+                                text-left
                                 "
                             >
                                 Tax Name
@@ -377,14 +759,14 @@ export default function TaxMasterTable({
 
                             <th
                                 className="
-                                    w-[10%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
+                                w-[10%]
+                                px-2
+                                py-3
+                                font-medium
+                                text-sm
+                                text-gray-600
+                                uppercase
+                                text-left
                                 "
                             >
                                 Tax Type
@@ -392,14 +774,14 @@ export default function TaxMasterTable({
 
                             <th
                                 className="
-                                    w-[8%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
+                                w-[8%]
+                                px-2
+                                py-3
+                                font-medium
+                                text-sm
+                                text-gray-600
+                                uppercase
+                                text-left
                                 "
                             >
                                 Tax Rate
@@ -407,14 +789,14 @@ export default function TaxMasterTable({
 
                             <th
                                 className="
-                                    w-[7%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
+                                w-[7%]
+                                px-2
+                                py-3
+                                font-medium
+                                text-sm
+                                text-gray-600
+                                uppercase
+                                text-left
                                 "
                             >
                                 CGST
@@ -422,14 +804,14 @@ export default function TaxMasterTable({
 
                             <th
                                 className="
-                                    w-[7%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
+                                w-[7%]
+                                px-2
+                                py-3
+                                font-medium
+                                text-sm
+                                text-gray-600
+                                uppercase
+                                text-left
                                 "
                             >
                                 SGST
@@ -437,14 +819,14 @@ export default function TaxMasterTable({
 
                             <th
                                 className="
-                                    w-[7%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
+                                w-[7%]
+                                px-2
+                                py-3
+                                font-medium
+                                text-sm
+                                text-gray-600
+                                uppercase
+                                text-left
                                 "
                             >
                                 IGST
@@ -452,14 +834,14 @@ export default function TaxMasterTable({
 
                             <th
                                 className="
-                                    w-[20%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
+                                w-[20%]
+                                px-2
+                                py-3
+                                font-medium
+                                text-sm
+                                text-gray-600
+                                uppercase
+                                text-left
                                 "
                             >
                                 Description
@@ -467,14 +849,14 @@ export default function TaxMasterTable({
 
                             <th
                                 className="
-                                    w-[10%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
+                                w-[10%]
+                                px-2
+                                py-3
+                                font-medium
+                                text-sm
+                                text-gray-600
+                                uppercase
+                                text-left
                                 "
                             >
                                 Status
@@ -482,14 +864,14 @@ export default function TaxMasterTable({
 
                             <th
                                 className="
-                                    w-[15%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-right
+                                w-[15%]
+                                px-2
+                                py-3
+                                font-medium
+                                text-sm
+                                text-gray-600
+                                uppercase
+                                text-right
                                 "
                             >
                                 Actions
@@ -521,18 +903,13 @@ export default function TaxMasterTable({
                                             taxMaster.id ||
                                             index
                                         }
-                                        // onClick={() =>
-                                        //     handleView(
-                                        //         taxMaster
-                                        //     )
-                                        // }
                                         className="
-                                            border-b
-                                            border-gray-100
-                                            hover:bg-gray-50
-                                            text-sm
-                                            cursor-pointer
-                                            transition-colors
+                                        border-b
+                                        border-gray-100
+                                        hover:bg-gray-50
+                                        text-sm
+                                        cursor-pointer
+                                        transition-colors
                                         "
                                     >
 
@@ -540,31 +917,35 @@ export default function TaxMasterTable({
                                             TAX NAME
                                         ================================= */}
 
-                                        <td className="
+                                        <td
+                                            className="
                                             px-2
                                             py-3
                                             overflow-hidden
-                                        ">
+                                            "
+                                        >
 
-                                            <div className="
+                                            <div
+                                                className="
                                                 flex
                                                 items-center
                                                 gap-2
                                                 min-w-0
-                                            ">
+                                                "
+                                            >
 
                                                 <div
                                                     className={`
-                                                        w-9
-                                                        h-9
-                                                        min-w-[36px]
-                                                        rounded-full
-                                                        flex
-                                                        items-center
-                                                        justify-center
-                                                        text-sm
-                                                        font-bold
-                                                        ${getAvatarColor(
+                                                    w-9
+                                                    h-9
+                                                    min-w-[36px]
+                                                    rounded-full
+                                                    flex
+                                                    items-center
+                                                    justify-center
+                                                    text-sm
+                                                    font-bold
+                                                    ${getAvatarColor(
                                                         taxMaster.taxName
                                                     )}
                                                     `}
@@ -576,15 +957,18 @@ export default function TaxMasterTable({
                                                     }
                                                 </div>
 
-                                                <div className="
+                                                <div
+                                                    className="
                                                     min-w-0
-                                                ">
+                                                    "
+                                                >
 
-                                                    <p className="
+                                                    <p
+                                                        className="
                                                         font-medium
                                                         text-gray-800
                                                         truncate
-                                                    "
+                                                        "
                                                         title={
                                                             taxMaster.taxName ||
                                                             ""
@@ -596,10 +980,12 @@ export default function TaxMasterTable({
                                                         }
                                                     </p>
 
-                                                    <p className="
+                                                    <p
+                                                        className="
                                                         text-xs
                                                         text-gray-500
-                                                    ">
+                                                        "
+                                                    >
                                                         ID: #
                                                         {
                                                             taxMaster.id
@@ -616,23 +1002,25 @@ export default function TaxMasterTable({
                                             TAX TYPE
                                         ================================= */}
 
-                                        <td className="
+                                        <td
+                                            className="
                                             px-2
                                             py-3
                                             overflow-hidden
-                                        ">
+                                            "
+                                        >
 
                                             <span
                                                 className={`
-                                                    inline-block
-                                                    max-w-full
-                                                    px-2
-                                                    py-1
-                                                    rounded-full
-                                                    text-xs
-                                                    font-medium
-                                                    truncate
-                                                    ${taxTypeColor[
+                                                inline-block
+                                                max-w-full
+                                                px-2
+                                                py-1
+                                                rounded-full
+                                                text-xs
+                                                font-medium
+                                                truncate
+                                                ${taxTypeColor[
                                                     taxMaster.taxType
                                                     ] ||
                                                     "bg-gray-100 text-gray-700"
@@ -655,12 +1043,14 @@ export default function TaxMasterTable({
                                             TAX RATE
                                         ================================= */}
 
-                                        <td className="
+                                        <td
+                                            className="
                                             px-2
                                             py-3
                                             font-medium
                                             whitespace-nowrap
-                                        ">
+                                            "
+                                        >
                                             {formatRate(
                                                 taxMaster.taxRate
                                             )}
@@ -671,11 +1061,13 @@ export default function TaxMasterTable({
                                             CGST
                                         ================================= */}
 
-                                        <td className="
+                                        <td
+                                            className="
                                             px-2
                                             py-3
                                             whitespace-nowrap
-                                        ">
+                                            "
+                                        >
                                             {formatRate(
                                                 taxMaster.cgstRate
                                             )}
@@ -686,11 +1078,13 @@ export default function TaxMasterTable({
                                             SGST
                                         ================================= */}
 
-                                        <td className="
+                                        <td
+                                            className="
                                             px-2
                                             py-3
                                             whitespace-nowrap
-                                        ">
+                                            "
+                                        >
                                             {formatRate(
                                                 taxMaster.sgstRate
                                             )}
@@ -701,11 +1095,13 @@ export default function TaxMasterTable({
                                             IGST
                                         ================================= */}
 
-                                        <td className="
+                                        <td
+                                            className="
                                             px-2
                                             py-3
                                             whitespace-nowrap
-                                        ">
+                                            "
+                                        >
                                             {formatRate(
                                                 taxMaster.igstRate
                                             )}
@@ -716,16 +1112,18 @@ export default function TaxMasterTable({
                                             DESCRIPTION
                                         ================================= */}
 
-                                        <td className="
+                                        <td
+                                            className="
                                             px-2
                                             py-3
                                             overflow-hidden
-                                        ">
+                                            "
+                                        >
 
                                             <p
                                                 className="
-                                                    truncate
-                                                    text-gray-600
+                                                truncate
+                                                text-gray-600
                                                 "
                                                 title={
                                                     taxMaster.description ||
@@ -744,21 +1142,23 @@ export default function TaxMasterTable({
                                             STATUS
                                         ================================= */}
 
-                                        <td className="
+                                        <td
+                                            className="
                                             px-2
                                             py-3
                                             overflow-hidden
-                                        ">
+                                            "
+                                        >
 
                                             <span
                                                 className={`
-                                                    inline-block
-                                                    px-2
-                                                    py-1
-                                                    rounded-full
-                                                    text-xs
-                                                    font-medium
-                                                    ${statusColor[
+                                                inline-block
+                                                px-2
+                                                py-1
+                                                rounded-full
+                                                text-xs
+                                                font-medium
+                                                ${statusColor[
                                                     taxMaster.status
                                                     ] ||
                                                     "bg-gray-100 text-gray-700"
@@ -779,51 +1179,64 @@ export default function TaxMasterTable({
 
                                         <td
                                             className="
-                                                relative
-                                                overflow-visible
-                                                px-2
-                                                py-3
+                                            relative
+                                            overflow-visible
+                                            px-2
+                                            py-3
                                             "
                                             onClick={(e) =>
                                                 e.stopPropagation()
                                             }
                                         >
 
-                                            <div className="
-                                                flex
-                                                justify-end
-                                            ">
+                                            {/* =================================================
+                                                HIDE ACTION BUTTON COMPLETELY
+                                                IF USER HAS NO EDIT/DELETE ACCESS
+                                            ================================================= */}
 
-                                                <div className="
-                                                    relative
-                                                    group
-                                                    inline-block
-                                                ">
+                                            {canPerformAction && (
 
-                                                    {/* ACTION BUTTON */}
+                                                <div
+                                                    className="
+                                                    flex
+                                                    justify-end
+                                                    "
+                                                >
 
-                                                    <button
-                                                        type="button"
+                                                    <div
                                                         className="
+                                                        relative
+                                                        group
+                                                        inline-block
+                                                        "
+                                                    >
+
+                                                        {/* ACTION BUTTON */}
+
+                                                        <button
+                                                            type="button"
+                                                            className="
                                                             p-1
                                                             rounded-full
                                                             bg-blue-500
                                                             text-white
                                                             hover:bg-blue-600
                                                             transition-colors
-                                                        "
-                                                    >
-                                                        <ChevronDown
-                                                            size={16}
-                                                        />
-                                                    </button>
+                                                            "
+                                                        >
 
-                                                    {/* =========================
-                                                        ACTION MENU
-                                                    ========================= */}
+                                                            <ChevronDown
+                                                                size={16}
+                                                            />
 
-                                                    <div
-                                                        className="
+                                                        </button>
+
+                                                        {/* =================================================
+                                                            ACTION MENU
+                                                        ================================================= */}
+
+                                                        <div
+                                                            className="
                                                             absolute
                                                             right-0
                                                             top-full
@@ -835,109 +1248,94 @@ export default function TaxMasterTable({
                                                             group-hover:visible
                                                             transition-all
                                                             duration-150
-                                                        "
-                                                    >
+                                                            "
+                                                        >
 
-                                                        <div className="
-                                                            w-36
-                                                            rounded-md
-                                                            bg-blue-500
-                                                            shadow-lg
-                                                            overflow-hidden
-                                                        ">
-
-                                                            {/* VIEW */}
-
-                                                            {/* <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleView(
-                                                                        taxMaster
-                                                                    )
-                                                                }
+                                                            <div
                                                                 className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-blue-600
-                                                                    transition-colors
+                                                                w-36
+                                                                rounded-md
+                                                                bg-blue-500
+                                                                shadow-lg
+                                                                overflow-hidden
                                                                 "
                                                             >
 
-                                                                <Eye
-                                                                    size={16}
-                                                                />
+                                                                {/* =================================================
+                                                                    EDIT
+                                                                ================================================= */}
 
-                                                                View
+                                                                {canEditTaxMaster && (
 
-                                                            </button> */}
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            handleEdit(
+                                                                                taxMaster
+                                                                            )
+                                                                        }
+                                                                        className="
+                                                                        flex
+                                                                        w-full
+                                                                        items-center
+                                                                        gap-2
+                                                                        px-4
+                                                                        py-2
+                                                                        text-sm
+                                                                        text-white
+                                                                        hover:bg-blue-600
+                                                                        transition-colors
+                                                                        "
+                                                                    >
 
-                                                            {/* EDIT */}
+                                                                        <Edit
+                                                                            size={16}
+                                                                        />
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleEdit(
-                                                                        taxMaster
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-blue-600
-                                                                    transition-colors
-                                                                "
-                                                            >
+                                                                        Edit
 
-                                                                <Edit
-                                                                    size={16}
-                                                                />
+                                                                    </button>
 
-                                                                Edit
+                                                                )}
 
-                                                            </button>
+                                                                {/* =================================================
+                                                                    DELETE
+                                                                ================================================= */}
 
-                                                            {/* DELETE */}
+                                                                {canDeleteTaxMaster && (
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleDelete(
-                                                                        taxMaster.id
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-red-600
-                                                                    transition-colors
-                                                                "
-                                                            >
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            handleDelete(
+                                                                                taxMaster.id
+                                                                            )
+                                                                        }
+                                                                        className="
+                                                                        flex
+                                                                        w-full
+                                                                        items-center
+                                                                        gap-2
+                                                                        px-4
+                                                                        py-2
+                                                                        text-sm
+                                                                        text-white
+                                                                        hover:bg-red-600
+                                                                        transition-colors
+                                                                        "
+                                                                    >
 
-                                                                <Trash2
-                                                                    size={16}
-                                                                />
+                                                                        <Trash2
+                                                                            size={16}
+                                                                        />
 
-                                                                Delete
+                                                                        Delete
 
-                                                            </button>
+                                                                    </button>
+
+                                                                )}
+
+                                                            </div>
 
                                                         </div>
 
@@ -945,7 +1343,7 @@ export default function TaxMasterTable({
 
                                                 </div>
 
-                                            </div>
+                                            )}
 
                                         </td>
 
@@ -962,54 +1360,66 @@ export default function TaxMasterTable({
                     PAGINATION
                 ===================================================== */}
 
-                <div className="
+                <div
+                    className="
                     p-4
                     border-t
                     border-gray-100
                     flex
                     items-center
                     justify-between
-                ">
+                    "
+                >
 
-                    <p className="
+                    <p
+                        className="
                         text-sm
                         text-gray-500
-                    ">
+                        "
+                    >
 
                         Showing{" "}
 
-                        {currentTaxMasters.length}
+                        {
+                            currentTaxMasters.length
+                        }
 
                         {" "}of{" "}
 
-                        {totalElements || 0}
+                        {
+                            totalElements || 0
+                        }
 
                         {" "}tax masters
 
                     </p>
 
-                    <div className="
+                    <div
+                        className="
                         flex
                         items-center
                         gap-3
-                    ">
+                        "
+                    >
 
                         {/* PREVIOUS */}
 
                         <button
                             type="button"
                             disabled={
-                                Number(pageNumber) <= 0
+                                Number(
+                                    pageNumber
+                                ) <= 0
                             }
                             onClick={() => {
                                 // Add server-side page support here
                             }}
                             className="
-                                text-sm
-                                text-gray-400
-                                hover:text-gray-600
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
+                            text-sm
+                            text-gray-400
+                            hover:text-gray-600
+                            disabled:opacity-50
+                            disabled:cursor-not-allowed
                             "
                         >
                             Previous
@@ -1017,7 +1427,8 @@ export default function TaxMasterTable({
 
                         {/* CURRENT PAGE */}
 
-                        <span className="
+                        <span
+                            className="
                             w-8
                             h-8
                             flex
@@ -1028,9 +1439,14 @@ export default function TaxMasterTable({
                             text-white
                             text-sm
                             font-medium
-                        ">
+                            "
+                        >
 
-                            {(Number(pageNumber) || 0) + 1}
+                            {
+                                (Number(
+                                    pageNumber
+                                ) || 0) + 1
+                            }
 
                         </span>
 
@@ -1039,18 +1455,26 @@ export default function TaxMasterTable({
                         <button
                             type="button"
                             disabled={
-                                (Number(pageNumber) || 0) >=
-                                (Number(totalPages) || 1) - 1
+                                (
+                                    Number(
+                                        pageNumber
+                                    ) || 0
+                                ) >=
+                                (
+                                    Number(
+                                        totalPages
+                                    ) || 1
+                                ) - 1
                             }
                             onClick={() => {
                                 // Add server-side page support here
                             }}
                             className="
-                                text-sm
-                                text-gray-400
-                                hover:text-gray-600
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
+                            text-sm
+                            text-gray-400
+                            hover:text-gray-600
+                            disabled:opacity-50
+                            disabled:cursor-not-allowed
                             "
                         >
                             Next

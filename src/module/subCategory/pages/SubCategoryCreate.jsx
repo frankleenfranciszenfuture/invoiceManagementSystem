@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { ChartColumnStackedIcon } from "lucide-react";
@@ -19,6 +18,10 @@ import {
     createSubCategory,
     updateSubCategory,
 } from "../thunks/subCategoryThunks";
+
+import {
+    getUserPermission,
+} from "../../menuPermission/thunks/menuPermissionThunks";
 
 export default function SubCategoryCreate() {
 
@@ -54,11 +57,13 @@ export default function SubCategoryCreate() {
     );
 
     const isAuthenticated = useSelector(
-        (state) => state.auth?.isAuthenticated
+        (state) =>
+            state.auth?.isAuthenticated === true
     );
 
     const authChecking = useSelector(
-        (state) => state.auth?.authChecking
+        (state) =>
+            state.auth?.authChecking === true
     );
 
     // =========================================================
@@ -67,16 +72,12 @@ export default function SubCategoryCreate() {
 
     const permissions = useSelector(
         (state) =>
-            Array.isArray(
-                state.menuPermission?.userPermissions
-            )
-                ? state.menuPermission.userPermissions
-                : []
+            state.menuPermission?.userPermissions || []
     );
 
     const permissionLoading = useSelector(
         (state) =>
-            state.menuPermission?.userPermissionsLoading === true
+            state.menuPermission?.loading === true
     );
 
     const permissionsLoaded = useSelector(
@@ -99,20 +100,41 @@ export default function SubCategoryCreate() {
         );
 
     // =========================================================
-    // ACTIVE TAB
-    // IMPORTANT:
-    // Keep hooks before any conditional return.
+    // LOCAL STATE
     // =========================================================
+
+    const [errors, setErrors] =
+        useState({});
 
     const [activeTab, setActiveTab] =
         useState("subcategory");
 
     // =========================================================
-    // ERRORS
+    // FORM
     // =========================================================
 
-    const [errors, setErrors] =
-        useState({});
+    const form = subCategory || {
+        id: null,
+        categoryId: null,
+        name: "",
+        description: "",
+        displayOrder: 1,
+        status: "ACTIVE",
+    };
+
+    // =========================================================
+    // NORMALIZE
+    // =========================================================
+
+    const normalizeModule = (value) =>
+        String(value ?? "")
+            .trim()
+            .toLowerCase();
+
+    const normalizeAction = (value) =>
+        String(value ?? "")
+            .trim()
+            .toUpperCase();
 
     // =========================================================
     // ROLE
@@ -127,9 +149,7 @@ export default function SubCategoryCreate() {
         "";
 
     const normalizedRole =
-        String(roleName)
-            .trim()
-            .toUpperCase();
+        normalizeAction(roleName);
 
     const isSuperAdmin =
         normalizedRole === "SUPER_ADMIN";
@@ -141,29 +161,7 @@ export default function SubCategoryCreate() {
         isSuperAdmin || isAdmin;
 
     // =========================================================
-    // PERMISSION CHECKER
-    //
-    // Supports:
-    //
-    // 1. Flat permission
-    //
-    // {
-    //     moduleName: "Sub Categories",
-    //     actionName: "CREATE",
-    //     allowed: true
-    // }
-    //
-    // 2. Grouped permission
-    //
-    // {
-    //     moduleName: "Sub Categories",
-    //     actions: [
-    //         {
-    //             actionName: "CREATE",
-    //             allowed: true
-    //         }
-    //     ]
-    // }
+    // PERMISSION CHECK
     // =========================================================
 
     const hasPermission = (
@@ -171,37 +169,50 @@ export default function SubCategoryCreate() {
         actionName
     ) => {
 
-        // ADMIN / SUPER_ADMIN
+        // -----------------------------------------------------
+        // ADMIN / SUPER ADMIN
+        // -----------------------------------------------------
+
         if (hasFullAccess) {
             return true;
         }
+
+        // -----------------------------------------------------
+        // NORMALIZE REQUEST
+        // -----------------------------------------------------
+
+        const requestedModule =
+            normalizeModule(moduleName);
+
+        const requestedAction =
+            normalizeAction(actionName);
+
+        // -----------------------------------------------------
+        // PERMISSION LIST
+        // -----------------------------------------------------
 
         if (!Array.isArray(permissions)) {
             return false;
         }
 
-        const requestedModule =
-            String(moduleName)
-                .trim()
-                .toLowerCase();
-
-        const requestedAction =
-            String(actionName)
-                .trim()
-                .toUpperCase();
+        // -----------------------------------------------------
+        // FIND PERMISSION
+        // -----------------------------------------------------
 
         return permissions.some(
             (permission) => {
 
                 const permissionModule =
-                    String(
+                    normalizeModule(
                         permission?.moduleName ||
                         permission?.module?.moduleName ||
                         permission?.module?.name ||
                         ""
-                    )
-                        .trim()
-                        .toLowerCase();
+                    );
+
+                // -------------------------------------------------
+                // MODULE MUST MATCH
+                // -------------------------------------------------
 
                 if (
                     permissionModule !==
@@ -210,27 +221,45 @@ export default function SubCategoryCreate() {
                     return false;
                 }
 
-                // Ignore inactive permission
+                // -------------------------------------------------
+                // INACTIVE PERMISSION
+                // -------------------------------------------------
+
                 if (
-                    permission?.active === false
+                    permission?.active === false ||
+                    normalizeAction(
+                        permission?.status
+                    ) === "INACTIVE"
                 ) {
                     return false;
                 }
 
+                // -------------------------------------------------
+                // DIRECT ACTION
+                // -------------------------------------------------
+
+                const permissionAction =
+                    normalizeAction(
+                        permission?.actionName ||
+                        permission?.action?.actionName ||
+                        permission?.action?.name ||
+                        ""
+                    );
+
                 if (
-                    String(
-                        permission?.status || ""
-                    )
-                        .trim()
-                        .toUpperCase() ===
-                    "INACTIVE"
+                    permissionAction ===
+                    requestedAction
                 ) {
-                    return false;
+
+                    return (
+                        permission?.allowed === true ||
+                        permission?.allowed === "true"
+                    );
                 }
 
-                // =================================================
-                // GROUPED PERMISSION
-                // =================================================
+                // -------------------------------------------------
+                // GROUPED ACTIONS
+                // -------------------------------------------------
 
                 if (
                     Array.isArray(
@@ -241,61 +270,61 @@ export default function SubCategoryCreate() {
                     return permission.actions.some(
                         (action) => {
 
-                            const permissionAction =
-                                String(
+                            // -------------------------------------
+                            // STRING ACTION
+                            // -------------------------------------
+
+                            if (
+                                typeof action ===
+                                "string"
+                            ) {
+
+                                return (
+                                    normalizeAction(
+                                        action
+                                    ) ===
+                                    requestedAction
+                                );
+                            }
+
+                            // -------------------------------------
+                            // OBJECT ACTION
+                            // -------------------------------------
+
+                            const actionName =
+                                normalizeAction(
                                     action?.actionName ||
                                     action?.action?.actionName ||
-                                    action?.action?.name ||
+                                    action?.name ||
                                     ""
-                                )
-                                    .trim()
-                                    .toUpperCase();
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
+                                );
 
                             return (
-                                permissionAction ===
+                                actionName ===
                                 requestedAction &&
-                                allowed
+                                (
+                                    action?.allowed ===
+                                    true ||
+                                    action?.allowed ===
+                                    "true"
+                                ) &&
+                                action?.active !== false &&
+                                normalizeAction(
+                                    action?.status
+                                ) !==
+                                "INACTIVE"
                             );
                         }
                     );
                 }
 
-                // =================================================
-                // FLAT PERMISSION
-                // =================================================
-
-                const permissionAction =
-                    String(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toUpperCase();
-
-                const allowed =
-                    permission?.allowed === true ||
-                    permission?.allowed === "true";
-
-                return (
-                    permissionAction ===
-                    requestedAction &&
-                    allowed
-                );
+                return false;
             }
         );
     };
 
     // =========================================================
-    // REQUIRED ACTION
-    //
-    // ADD  -> CREATE
-    // EDIT -> EDIT
+    // CREATE / EDIT PERMISSION
     // =========================================================
 
     const requiredAction =
@@ -308,6 +337,52 @@ export default function SubCategoryCreate() {
             "SubCategories",
             requiredAction
         );
+
+    // =========================================================
+    // LOAD PERMISSIONS IF NECESSARY
+    // =========================================================
+
+    useEffect(() => {
+
+        if (!isOpen) {
+            return;
+        }
+
+        if (authChecking) {
+            return;
+        }
+
+        if (!isAuthenticated) {
+            return;
+        }
+
+        if (hasFullAccess) {
+            return;
+        }
+
+        // -----------------------------------------------------
+        // Load permissions when they are not loaded.
+        // -----------------------------------------------------
+
+        if (
+            !permissionsLoaded &&
+            !permissionLoading
+        ) {
+
+            dispatch(
+                getUserPermission()
+            );
+        }
+
+    }, [
+        isOpen,
+        authChecking,
+        isAuthenticated,
+        hasFullAccess,
+        permissionsLoaded,
+        permissionLoading,
+        dispatch,
+    ]);
 
     // =========================================================
     // LOAD CATEGORIES
@@ -350,10 +425,13 @@ export default function SubCategoryCreate() {
 
         const handleEscape = (event) => {
 
-            if (event.key === "Escape") {
+            if (
+                event.key === "Escape" &&
+                !loading
+            ) {
+
                 handleClose();
             }
-
         };
 
         document.addEventListener(
@@ -367,10 +445,12 @@ export default function SubCategoryCreate() {
                 "keydown",
                 handleEscape
             );
-
         };
 
-    }, [isOpen]);
+    }, [
+        isOpen,
+        loading,
+    ]);
 
     // =========================================================
     // LOAD EXISTING DATA FOR EDIT
@@ -440,7 +520,6 @@ export default function SubCategoryCreate() {
                         "ACTIVE",
                 })
             );
-
         }
 
     }, [
@@ -449,19 +528,6 @@ export default function SubCategoryCreate() {
         modal.data,
         dispatch,
     ]);
-
-    // =========================================================
-    // FORM
-    // =========================================================
-
-    const form = subCategory || {
-        id: null,
-        categoryId: null,
-        name: "",
-        description: "",
-        displayOrder: 1,
-        status: "ACTIVE",
-    };
 
     // =========================================================
     // CHANGE FIELD
@@ -479,23 +545,22 @@ export default function SubCategoryCreate() {
             })
         );
 
-        // Clear field error
-        if (errors[field]) {
+        setErrors(
+            (previous) => {
 
-            setErrors(
-                (previous) => {
-
-                    const updated = {
-                        ...previous,
-                    };
-
-                    delete updated[field];
-
-                    return updated;
+                if (!previous[field]) {
+                    return previous;
                 }
-            );
-        }
 
+                const updated = {
+                    ...previous,
+                };
+
+                delete updated[field];
+
+                return updated;
+            }
+        );
     };
 
     // =========================================================
@@ -514,7 +579,6 @@ export default function SubCategoryCreate() {
 
         setErrors({});
         setActiveTab("subcategory");
-
     };
 
     // =========================================================
@@ -558,14 +622,12 @@ export default function SubCategoryCreate() {
                 "Display Order must be at least 1";
         }
 
-        setErrors(
-            newErrors
-        );
+        setErrors(newErrors);
 
         if (
-            Object.keys(
-                newErrors
-            ).length > 0
+            newErrors.categoryId ||
+            newErrors.name ||
+            newErrors.displayOrder
         ) {
 
             setActiveTab(
@@ -591,22 +653,9 @@ export default function SubCategoryCreate() {
 
         e.preventDefault();
 
-        // =====================================================
-        // AUTH / PERMISSION
-        // =====================================================
-
-        if (authChecking) {
-            return;
-        }
-
-        if (!isAuthenticated) {
-
-            toast.error(
-                "Please login to continue."
-            );
-
-            return;
-        }
+        // -----------------------------------------------------
+        // Prevent saving before permissions finish loading.
+        // -----------------------------------------------------
 
         if (
             !hasFullAccess &&
@@ -620,9 +669,11 @@ export default function SubCategoryCreate() {
             return;
         }
 
-        if (
-            !hasRequiredPermission
-        ) {
+        // -----------------------------------------------------
+        // Permission check AGAIN before API call
+        // -----------------------------------------------------
+
+        if (!hasRequiredPermission) {
 
             toast.error(
                 isEdit
@@ -633,45 +684,17 @@ export default function SubCategoryCreate() {
             return;
         }
 
-        // =====================================================
+        // -----------------------------------------------------
         // VALIDATION
-        // =====================================================
+        // -----------------------------------------------------
 
         if (!validateSubCategory()) {
             return;
         }
 
-        // =====================================================
-        // CATEGORY
-        // =====================================================
-
-        if (!form.categoryId) {
-
-            toast.error(
-                "Category is required"
-            );
-
-            return;
-        }
-
-        // =====================================================
-        // NAME
-        // =====================================================
-
-        if (
-            !form.name?.trim()
-        ) {
-
-            toast.error(
-                "Sub category name is required"
-            );
-
-            return;
-        }
-
-        // =====================================================
+        // -----------------------------------------------------
         // DISPLAY ORDER
-        // =====================================================
+        // -----------------------------------------------------
 
         const displayOrder =
             Number(
@@ -692,9 +715,9 @@ export default function SubCategoryCreate() {
             return;
         }
 
-        // =====================================================
+        // -----------------------------------------------------
         // PAYLOAD
-        // =====================================================
+        // -----------------------------------------------------
 
         const payload = {
 
@@ -710,13 +733,11 @@ export default function SubCategoryCreate() {
                 form.description?.trim() ||
                 "",
 
-            displayOrder:
-                displayOrder,
+            displayOrder,
 
             status:
                 form.status ||
                 "ACTIVE",
-
         };
 
         try {
@@ -768,7 +789,6 @@ export default function SubCategoryCreate() {
                 toast.success(
                     "Sub category created successfully"
                 );
-
             }
 
             // =================================================
@@ -804,9 +824,7 @@ export default function SubCategoryCreate() {
                             : "Failed to create sub category"
                     )
             );
-
         }
-
     };
 
     // =========================================================
@@ -819,13 +837,13 @@ export default function SubCategoryCreate() {
 
     // =========================================================
     // PERMISSION LOADING
+    // Same structure as CategoryCreate
     // =========================================================
 
     if (
         !hasFullAccess &&
         (
             authChecking ||
-            !isAuthenticated ||
             permissionLoading ||
             !permissionsLoaded
         )
@@ -834,18 +852,19 @@ export default function SubCategoryCreate() {
         return (
             <div
                 className="
-                w-[950px]
-                max-w-[95vw]
-                h-[300px]
-                max-h-[88vh]
+                    w-[950px]
+                    max-w-[95vw]
+                    min-h-[300px]
 
-                bg-white
-                rounded-xl
-                shadow-2xl
+                    bg-white
+                    rounded-xl
+                    shadow-2xl
 
-                flex
-                items-center
-                justify-center
+                    flex
+                    items-center
+                    justify-center
+
+                    p-8
                 "
             >
 
@@ -853,22 +872,26 @@ export default function SubCategoryCreate() {
 
                     <div
                         className="
-                        w-8
-                        h-8
-                        border-2
-                        border-blue-600
-                        border-t-transparent
-                        rounded-full
-                        animate-spin
-                        mx-auto
-                        mb-3
+                            w-10
+                            h-10
+
+                            mx-auto
+                            mb-3
+
+                            border-2
+                            border-blue-200
+                            border-t-blue-600
+
+                            rounded-full
+                            animate-spin
                         "
                     />
 
                     <p
                         className="
-                        text-sm
-                        text-gray-600
+                            text-sm
+                            font-medium
+                            text-gray-600
                         "
                     >
                         Loading permissions...
@@ -881,103 +904,216 @@ export default function SubCategoryCreate() {
     }
 
     // =========================================================
-    // PERMISSION DENIED
+    // UNAUTHORIZED
+    // Same structure as CategoryCreate
     // =========================================================
 
-    if (
-        !hasFullAccess &&
-        !hasRequiredPermission
-    ) {
+    if (!hasRequiredPermission) {
 
         return (
             <div
                 className="
-                w-[950px]
-                max-w-[95vw]
-                h-[300px]
-                max-h-[88vh]
+                    w-[950px]
+                    max-w-[95vw]
+                    min-h-[300px]
 
-                bg-white
-                rounded-xl
-                shadow-2xl
+                    bg-white
+                    rounded-xl
+                    shadow-2xl
 
-                flex
-                items-center
-                justify-center
+                    overflow-hidden
+
+                    flex
+                    flex-col
                 "
             >
 
+                {/* HEADER */}
+
                 <div
                     className="
-                    text-center
-                    px-6
+                        shrink-0
+                        h-[68px]
+
+                        flex
+                        items-center
+                        justify-between
+
+                        px-6
+
+                        border-b
+                        border-gray-200
+
+                        bg-white
                     "
                 >
 
-                    <div
-                        className="
-                        w-12
-                        h-12
-                        rounded-full
-                        bg-red-50
-                        flex
-                        items-center
-                        justify-center
-                        mx-auto
-                        mb-4
-                        "
-                    >
+                    <div className="flex items-center gap-3">
 
-                        <span
+                        <div
                             className="
-                            text-red-500
-                            text-xl
-                            font-semibold
+                                w-9
+                                h-9
+                                rounded-lg
+
+                                bg-red-50
+
+                                flex
+                                items-center
+                                justify-center
                             "
                         >
-                            !
-                        </span>
+
+                            <ChartColumnStackedIcon
+                                size={20}
+                                className="text-red-500"
+                            />
+
+                        </div>
+
+                        <div>
+
+                            <h2
+                                className="
+                                    text-[17px]
+                                    font-semibold
+                                    text-gray-800
+                                "
+                            >
+                                Access Denied
+                            </h2>
+
+                            <p
+                                className="
+                                    text-xs
+                                    text-gray-500
+                                    mt-0.5
+                                "
+                            >
+                                Sub category access restricted
+                            </p>
+
+                        </div>
 
                     </div>
 
-                    <h3
-                        className="
-                        text-base
-                        font-semibold
-                        text-gray-800
-                        "
-                    >
-                        Access Denied
-                    </h3>
+                </div>
 
-                    <p
-                        className="
-                        text-sm
-                        text-gray-500
-                        mt-1
-                        "
-                    >
-                        You do not have permission to{" "}
-                        {isEdit
-                            ? "edit"
-                            : "create"}{" "}
-                        sub categories.
-                    </p>
+                {/* ACCESS DENIED BODY */}
+
+                <div
+                    className="
+                        flex-1
+
+                        flex
+                        items-center
+                        justify-center
+
+                        px-6
+                        py-10
+                    "
+                >
+
+                    <div className="text-center">
+
+                        <div
+                            className="
+                                w-12
+                                h-12
+
+                                mx-auto
+                                mb-3
+
+                                rounded-full
+
+                                bg-red-50
+
+                                flex
+                                items-center
+                                justify-center
+                            "
+                        >
+
+                            <span
+                                className="
+                                    text-red-500
+                                    text-lg
+                                    font-semibold
+                                "
+                            >
+                                !
+                            </span>
+
+                        </div>
+
+                        <h2
+                            className="
+                                text-lg
+                                font-semibold
+                                text-gray-800
+                            "
+                        >
+                            Access Denied
+                        </h2>
+
+                        <p
+                            className="
+                                mt-1
+                                text-sm
+                                text-gray-500
+                            "
+                        >
+                            {isEdit
+                                ? "You do not have permission to edit sub categories."
+                                : "You do not have permission to create sub categories."
+                            }
+                        </p>
+
+                    </div>
+
+                </div>
+
+                {/* FOOTER */}
+
+                <div
+                    className="
+                        shrink-0
+                        h-[68px]
+
+                        flex
+                        items-center
+                        justify-end
+
+                        px-6
+
+                        border-t
+                        border-gray-200
+
+                        bg-white
+                    "
+                >
 
                     <button
                         type="button"
                         onClick={handleClose}
                         className="
-                        mt-5
-                        h-9
-                        px-5
-                        rounded-md
-                        bg-blue-600
-                        text-white
-                        text-sm
-                        font-medium
-                        hover:bg-blue-700
-                        transition
+                            h-10
+                            px-5
+
+                            rounded-md
+
+                            border
+                            border-gray-300
+
+                            text-sm
+                            font-medium
+                            text-gray-700
+
+                            bg-white
+
+                            hover:bg-gray-50
+
+                            transition
                         "
                     >
                         Close
@@ -1005,39 +1141,41 @@ export default function SubCategoryCreate() {
     ];
 
     // =========================================================
-    // INPUT CLASS
+    // CLASSES
     // =========================================================
 
     const inputClass = `
-w - full
-h - 11
-px - 3
-border
-border - gray - 300
-rounded - md
-text - sm
-text - gray - 700
-bg - white
-outline - none
-transition
-focus: border - blue - 500
-focus: ring - 1
-focus: ring - blue - 500
-disabled: bg - gray - 100
-disabled: text - gray - 500
-disabled: cursor - not - allowed
+        w-full
+        h-11
+        px-3
+
+        border
+        border-gray-300
+        rounded-md
+
+        text-sm
+        text-gray-700
+
+        bg-white
+
+        outline-none
+        transition
+
+        focus:border-blue-500
+        focus:ring-1
+        focus:ring-blue-500
+
+        disabled:bg-gray-100
+        disabled:text-gray-500
+        disabled:cursor-not-allowed
     `;
 
-    // =========================================================
-    // LABEL CLASS
-    // =========================================================
-
     const labelClass = `
-block
-text - xs
-font - medium
-text - gray - 600
-mb - 1.5
+        block
+        text-xs
+        font-medium
+        text-gray-600
+        mb-1.5
     `;
 
     // =========================================================
@@ -1047,19 +1185,20 @@ mb - 1.5
     return (
         <div
             className="
-            w-[950px]
-            max-w-[95vw]
-            h-[700px]
-            max-h-[88vh]
+                w-[950px]
+                max-w-[95vw]
 
-            bg-white
-            rounded-xl
-            shadow-2xl
+                h-[700px]
+                max-h-[88vh]
 
-            overflow-hidden
+                bg-white
+                rounded-xl
+                shadow-2xl
 
-            flex
-            flex-col
+                overflow-hidden
+
+                flex
+                flex-col
             "
         >
 
@@ -1069,19 +1208,19 @@ mb - 1.5
 
             <div
                 className="
-                shrink-0
-                h-[68px]
+                    shrink-0
+                    h-[68px]
 
-                flex
-                items-center
-                justify-between
+                    flex
+                    items-center
+                    justify-between
 
-                px-6
+                    px-6
 
-                border-b
-                border-gray-200
+                    border-b
+                    border-gray-200
 
-                bg-white
+                    bg-white
                 "
             >
 
@@ -1089,15 +1228,15 @@ mb - 1.5
 
                     <div
                         className="
-                        w-9
-                        h-9
-                        rounded-lg
+                            w-9
+                            h-9
+                            rounded-lg
 
-                        bg-blue-50
+                            bg-blue-50
 
-                        flex
-                        items-center
-                        justify-center
+                            flex
+                            items-center
+                            justify-center
                         "
                     >
 
@@ -1112,9 +1251,9 @@ mb - 1.5
 
                         <h2
                             className="
-                            text-[17px]
-                            font-semibold
-                            text-gray-800
+                                text-[17px]
+                                font-semibold
+                                text-gray-800
                             "
                         >
                             {isEdit
@@ -1124,9 +1263,9 @@ mb - 1.5
 
                         <p
                             className="
-                            text-xs
-                            text-gray-500
-                            mt-0.5
+                                text-xs
+                                text-gray-500
+                                mt-0.5
                             "
                         >
                             {isEdit
@@ -1146,22 +1285,22 @@ mb - 1.5
 
             <div
                 className="
-                shrink-0
-                px-6
+                    shrink-0
+                    px-6
 
-                border-b
-                border-gray-200
+                    border-b
+                    border-gray-200
 
-                bg-white
+                    bg-white
                 "
             >
 
                 <div
                     className="
-                    flex
-                    items-center
-                    gap-8
-                    h-[52px]
+                        flex
+                        items-center
+                        gap-8
+                        h-[52px]
                     "
                 >
 
@@ -1186,28 +1325,28 @@ mb - 1.5
                                     setActiveTab(tab.id)
                                 }
                                 className={`
-relative
-h - full
+                                    relative
+                                    h-full
 
-text - sm
-font - medium
+                                    text-sm
+                                    font-medium
 
-transition
+                                    transition
 
-                                ${active
+                                    ${active
                                         ? "text-blue-600"
                                         : hasError
                                             ? "text-red-500"
                                             : "text-gray-500 hover:text-gray-800"
                                     }
-`}
+                                `}
                             >
 
                                 <span
                                     className="
-                                    flex
-                                    items-center
-                                    gap-1.5
+                                        flex
+                                        items-center
+                                        gap-1.5
                                     "
                                 >
 
@@ -1216,10 +1355,12 @@ transition
                                     {hasError && (
                                         <span
                                             className="
-                                            w-1.5
-                                            h-1.5
-                                            rounded-full
-                                            bg-red-500
+                                                w-1.5
+                                                h-1.5
+
+                                                rounded-full
+
+                                                bg-red-500
                                             "
                                         />
                                     )}
@@ -1229,16 +1370,16 @@ transition
                                 {active && (
                                     <span
                                         className="
-                                        absolute
-                                        left-0
-                                        right-0
-                                        bottom-0
+                                            absolute
+                                            left-0
+                                            right-0
+                                            bottom-0
 
-                                        h-[2px]
+                                            h-[2px]
 
-                                        bg-blue-600
+                                            bg-blue-600
 
-                                        rounded-t
+                                            rounded-t
                                         "
                                     />
                                 )}
@@ -1258,11 +1399,11 @@ transition
             <form
                 onSubmit={handleSave}
                 className="
-                flex
-                flex-col
-                flex-1
-                min-h-0
-                overflow-hidden
+                    flex
+                    flex-col
+                    flex-1
+                    min-h-0
+                    overflow-hidden
                 "
             >
 
@@ -1272,16 +1413,16 @@ transition
 
                 <div
                     className="
-                    flex-1
-                    min-h-0
+                        flex-1
+                        min-h-0
 
-                    overflow-y-auto
-                    overflow-x-hidden
+                        overflow-y-auto
+                        overflow-x-hidden
 
-                    px-7
-                    py-6
+                        px-7
+                        py-6
 
-                    bg-gray-50/50
+                        bg-gray-50/50
                     "
                 >
 
@@ -1295,13 +1436,13 @@ transition
 
                             <div
                                 className="
-                                mb-6
+                                    mb-6
 
-                                flex
-                                items-start
-                                justify-between
+                                    flex
+                                    items-start
+                                    justify-between
 
-                                gap-6
+                                    gap-6
                                 "
                             >
 
@@ -1309,9 +1450,9 @@ transition
 
                                     <h3
                                         className="
-                                        text-base
-                                        font-semibold
-                                        text-gray-800
+                                            text-base
+                                            font-semibold
+                                            text-gray-800
                                         "
                                     >
                                         Sub Category Information
@@ -1319,9 +1460,9 @@ transition
 
                                     <p
                                         className="
-                                        text-xs
-                                        text-gray-500
-                                        mt-1
+                                            text-xs
+                                            text-gray-500
+                                            mt-1
                                         "
                                     >
                                         Configure the basic sub category
@@ -1332,18 +1473,18 @@ transition
 
                                 <div
                                     className="
-                                    flex
-                                    items-center
-                                    gap-3
-                                    shrink-0
+                                        flex
+                                        items-center
+                                        gap-3
+                                        shrink-0
                                     "
                                 >
 
                                     <label
                                         className="
-                                        text-md
-                                        font-semibold
-                                        text-gray-600
+                                            text-md
+                                            font-semibold
+                                            text-gray-600
                                         "
                                     >
                                         Status :
@@ -1351,26 +1492,26 @@ transition
 
                                     <span
                                         className={`
-inline - flex
-items - center
-justify - center
+                                            inline-flex
+                                            items-center
+                                            justify-center
 
-min - w - [85px]
-h - 7
-px - 3
+                                            min-w-[85px]
+                                            h-7
+                                            px-3
 
-rounded - full
+                                            rounded-full
 
-text - sm
-font - bold
+                                            text-sm
+                                            font-bold
 
-                                        ${form.status === "ACTIVE"
+                                            ${form.status === "ACTIVE"
                                                 ? "bg-green-50 text-green-700"
                                                 : form.status === "INACTIVE"
                                                     ? "bg-red-50 text-red-700"
                                                     : "bg-yellow-50 text-yellow-700"
                                             }
-`}
+                                        `}
                                     >
                                         {form.status || "ACTIVE"}
                                     </span>
@@ -1381,10 +1522,10 @@ font - bold
 
                             <div
                                 className="
-                                grid
-                                grid-cols-2
-                                gap-x-6
-                                gap-y-5
+                                    grid
+                                    grid-cols-2
+                                    gap-x-6
+                                    gap-y-5
                                 "
                             >
 
@@ -1399,8 +1540,8 @@ font - bold
 
                                         <span
                                             className="
-                                            text-red-500
-                                            ml-1
+                                                text-red-500
+                                                ml-1
                                             "
                                         >
                                             *
@@ -1423,6 +1564,7 @@ font - bold
                                             )
                                         }
                                         className={inputClass}
+                                        disabled={loading}
                                     >
 
                                         <option value="">
@@ -1463,9 +1605,9 @@ font - bold
                                     {errors.categoryId && (
                                         <p
                                             className="
-                                            text-xs
-                                            text-red-500
-                                            mt-1
+                                                text-xs
+                                                text-red-500
+                                                mt-1
                                             "
                                         >
                                             {
@@ -1487,8 +1629,8 @@ font - bold
 
                                         <span
                                             className="
-                                            text-red-500
-                                            ml-1
+                                                text-red-500
+                                                ml-1
                                             "
                                         >
                                             *
@@ -1509,14 +1651,15 @@ font - bold
                                         }
                                         placeholder="Enter sub category name"
                                         className={inputClass}
+                                        disabled={loading}
                                     />
 
                                     {errors.name && (
                                         <p
                                             className="
-                                            text-xs
-                                            text-red-500
-                                            mt-1
+                                                text-xs
+                                                text-red-500
+                                                mt-1
                                             "
                                         >
                                             {errors.name}
@@ -1548,22 +1691,31 @@ font - bold
                                         }
                                         placeholder="Enter sub category description"
                                         className="
-                                        w-full
-                                        px-3
-                                        py-3
-                                        border
-                                        border-gray-300
-                                        rounded-md
-                                        text-sm
-                                        text-gray-700
-                                        bg-white
-                                        outline-none
-                                        resize-none
-                                        transition
-                                        focus:border-blue-500
-                                        focus:ring-1
-                                        focus:ring-blue-500
+                                            w-full
+                                            px-3
+                                            py-3
+
+                                            border
+                                            border-gray-300
+                                            rounded-md
+
+                                            text-sm
+                                            text-gray-700
+
+                                            bg-white
+
+                                            outline-none
+                                            resize-none
+                                            transition
+
+                                            focus:border-blue-500
+                                            focus:ring-1
+                                            focus:ring-blue-500
+
+                                            disabled:bg-gray-100
+                                            disabled:text-gray-500
                                         "
+                                        disabled={loading}
                                     />
 
                                 </div>
@@ -1579,8 +1731,8 @@ font - bold
 
                                         <span
                                             className="
-                                            text-red-500
-                                            ml-1
+                                                text-red-500
+                                                ml-1
                                             "
                                         >
                                             *
@@ -1602,14 +1754,15 @@ font - bold
                                         }
                                         placeholder="Enter display order"
                                         className={inputClass}
+                                        disabled={loading}
                                     />
 
                                     {errors.displayOrder && (
                                         <p
                                             className="
-                                            text-xs
-                                            text-red-500
-                                            mt-1
+                                                text-xs
+                                                text-red-500
+                                                mt-1
                                             "
                                         >
                                             {
@@ -1637,9 +1790,9 @@ font - bold
 
                                 <h3
                                     className="
-                                    text-base
-                                    font-semibold
-                                    text-gray-800
+                                        text-base
+                                        font-semibold
+                                        text-gray-800
                                     "
                                 >
                                     Sub Category Settings
@@ -1647,9 +1800,9 @@ font - bold
 
                                 <p
                                     className="
-                                    text-xs
-                                    text-gray-500
-                                    mt-1
+                                        text-xs
+                                        text-gray-500
+                                        mt-1
                                     "
                                 >
                                     Configure the sub category availability
@@ -1678,6 +1831,7 @@ font - bold
                                         )
                                     }
                                     className={inputClass}
+                                    disabled={loading}
                                 >
 
                                     <option value="ACTIVE">
@@ -1698,24 +1852,24 @@ font - bold
 
                             <div
                                 className="
-                                mt-7
+                                    mt-7
 
-                                border
-                                border-gray-200
+                                    border
+                                    border-gray-200
 
-                                rounded-lg
+                                    rounded-lg
 
-                                bg-white
+                                    bg-white
 
-                                p-5
+                                    p-5
                                 "
                             >
 
                                 <div
                                     className="
-                                    flex
-                                    items-center
-                                    justify-between
+                                        flex
+                                        items-center
+                                        justify-between
                                     "
                                 >
 
@@ -1723,9 +1877,9 @@ font - bold
 
                                         <p
                                             className="
-                                            text-sm
-                                            font-medium
-                                            text-gray-800
+                                                text-sm
+                                                font-medium
+                                                text-gray-800
                                             "
                                         >
                                             Sub Category Status
@@ -1733,9 +1887,9 @@ font - bold
 
                                         <p
                                             className="
-                                            text-xs
-                                            text-gray-500
-                                            mt-1
+                                                text-xs
+                                                text-gray-500
+                                                mt-1
                                             "
                                         >
                                             This sub category is currently
@@ -1743,8 +1897,8 @@ font - bold
 
                                             <span
                                                 className="
-                                                font-medium
-                                                text-gray-700
+                                                    font-medium
+                                                    text-gray-700
                                                 "
                                             >
                                                 {
@@ -1759,26 +1913,26 @@ font - bold
 
                                     <span
                                         className={`
-inline - flex
-items - center
-justify - center
+                                            inline-flex
+                                            items-center
+                                            justify-center
 
-min - w - [85px]
-h - 7
-px - 3
+                                            min-w-[85px]
+                                            h-7
+                                            px-3
 
-rounded - full
+                                            rounded-full
 
-text - xs
-font - medium
+                                            text-xs
+                                            font-medium
 
-                                        ${form.status === "ACTIVE"
+                                            ${form.status === "ACTIVE"
                                                 ? "bg-green-50 text-green-700"
                                                 : form.status === "INACTIVE"
                                                     ? "bg-red-50 text-red-700"
                                                     : "bg-yellow-50 text-yellow-700"
                                             }
-`}
+                                        `}
                                     >
                                         {
                                             form.status ||
@@ -1801,26 +1955,26 @@ font - medium
 
                 <div
                     className="
-                    shrink-0
-                    h-[68px]
+                        shrink-0
+                        h-[68px]
 
-                    flex
-                    items-center
-                    justify-between
+                        flex
+                        items-center
+                        justify-between
 
-                    px-6
+                        px-6
 
-                    border-t
-                    border-gray-200
+                        border-t
+                        border-gray-200
 
-                    bg-white
+                        bg-white
                     "
                 >
 
                     <div
                         className="
-                        text-xs
-                        text-gray-500
+                            text-xs
+                            text-gray-500
                         "
                     >
 
@@ -1834,9 +1988,9 @@ font - medium
 
                     <div
                         className="
-                        flex
-                        items-center
-                        gap-3
+                            flex
+                            items-center
+                            gap-3
                         "
                     >
 
@@ -1847,26 +2001,26 @@ font - medium
                             onClick={handleClose}
                             disabled={loading}
                             className="
-                            h-10
-                            px-5
+                                h-10
+                                px-5
 
-                            rounded-md
+                                rounded-md
 
-                            border
-                            border-gray-300
+                                border
+                                border-gray-300
 
-                            text-sm
-                            font-medium
-                            text-gray-700
+                                text-sm
+                                font-medium
+                                text-gray-700
 
-                            bg-white
+                                bg-white
 
-                            hover:bg-gray-50
+                                hover:bg-gray-50
 
-                            transition
+                                transition
 
-                            disabled:opacity-50
-                            disabled:cursor-not-allowed
+                                disabled:opacity-50
+                                disabled:cursor-not-allowed
                             "
                         >
                             Cancel
@@ -1878,28 +2032,27 @@ font - medium
                             type="submit"
                             disabled={
                                 loading ||
-                                permissionLoading ||
                                 !hasRequiredPermission
                             }
                             className="
-                            h-10
-                            px-6
+                                h-10
+                                px-6
 
-                            rounded-md
+                                rounded-md
 
-                            bg-blue-600
+                                bg-blue-600
 
-                            text-white
+                                text-white
 
-                            text-sm
-                            font-medium
+                                text-sm
+                                font-medium
 
-                            hover:bg-blue-700
+                                hover:bg-blue-700
 
-                            transition
+                                transition
 
-                            disabled:opacity-50
-                            disabled:cursor-not-allowed
+                                disabled:opacity-50
+                                disabled:cursor-not-allowed
                             "
                         >
 

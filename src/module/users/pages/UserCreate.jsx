@@ -1,6 +1,8 @@
 
 import React, { useEffect, useState } from "react";
+
 import { useDispatch, useSelector } from "react-redux";
+
 import toast from "react-hot-toast";
 
 import { closeModal } from "../../ui/uiSlice";
@@ -15,7 +17,13 @@ import {
     updateUser,
 } from "../thunks/userThunks";
 
-import { UserKeyIcon } from "lucide-react";
+import {
+    UserKeyIcon,
+} from "lucide-react";
+
+import {
+    getUserPermission,
+} from "../../menuPermission/thunks/menuPermissionThunks";
 
 export default function UserCreate() {
 
@@ -45,6 +53,45 @@ export default function UserCreate() {
     );
 
     // =========================================================
+    // AUTH / PERMISSIONS
+    // =========================================================
+
+    const userAuth = useSelector(
+        (state) => state.auth?.user
+    );
+
+    const isAuthenticated = useSelector(
+        (state) =>
+            state.auth?.isAuthenticated === true
+    );
+
+    const authChecking = useSelector(
+        (state) =>
+            state.auth?.authChecking === true
+    );
+
+    const permissions = useSelector(
+        (state) =>
+            Array.isArray(
+                state.menuPermission?.userPermissions
+            )
+                ? state.menuPermission.userPermissions
+                : []
+    );
+
+    const permissionLoading = useSelector(
+        (state) =>
+            state.menuPermission
+                ?.userPermissionsLoading === true
+    );
+
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission
+                ?.userPermissionsLoaded === true
+    );
+
+    // =========================================================
     // ADD / EDIT MODE
     // =========================================================
 
@@ -59,18 +106,242 @@ export default function UserCreate() {
         );
 
     // =========================================================
+    // PERMISSION HELPERS
+    // =========================================================
+
+    const normalizeModule = (value) =>
+        String(value ?? "")
+            .trim()
+            .toLowerCase();
+
+    const normalizeAction = (value) =>
+        String(value ?? "")
+            .trim()
+            .toUpperCase();
+
+    const roleName =
+        userAuth?.roleName ||
+        userAuth?.role?.roleName ||
+        userAuth?.role?.name ||
+        userAuth?.role ||
+        userAuth?.authority ||
+        "";
+
+    const normalizedRole =
+        normalizeAction(roleName);
+
+    const isSuperAdmin =
+        normalizedRole === "SUPER_ADMIN";
+
+    const isAdmin =
+        normalizedRole === "ADMIN";
+
+    const hasFullAccess =
+        isSuperAdmin || isAdmin;
+
+    const hasPermission = (
+        moduleName,
+        actionName
+    ) => {
+
+        if (hasFullAccess) {
+            return true;
+        }
+
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+        const requestedModule =
+            normalizeModule(moduleName);
+
+        const requestedAction =
+            normalizeAction(actionName);
+
+        return permissions.some(
+            (permission) => {
+
+                const permissionModule =
+                    normalizeModule(
+                        permission?.moduleName ||
+                        permission?.module?.moduleName ||
+                        permission?.module?.name ||
+                        ""
+                    );
+
+                if (
+                    permissionModule !==
+                    requestedModule
+                ) {
+                    return false;
+                }
+
+                if (
+                    permission?.active === false
+                ) {
+                    return false;
+                }
+
+                if (
+                    normalizeAction(
+                        permission?.status
+                    ) === "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                if (
+                    Array.isArray(
+                        permission?.actions
+                    )
+                ) {
+
+                    return permission.actions.some(
+                        (action) => {
+
+                            if (
+                                typeof action ===
+                                "string"
+                            ) {
+                                return (
+                                    normalizeAction(
+                                        action
+                                    ) ===
+                                    requestedAction
+                                );
+                            }
+
+                            const permissionAction =
+                                normalizeAction(
+                                    action?.actionName ||
+                                    action?.action?.actionName ||
+                                    action?.action?.name ||
+                                    action?.name ||
+                                    ""
+                                );
+
+                            const allowed =
+                                action?.allowed === true ||
+                                action?.allowed === "true";
+
+                            if (
+                                action?.active === false
+                            ) {
+                                return false;
+                            }
+
+                            if (
+                                normalizeAction(
+                                    action?.status
+                                ) === "INACTIVE"
+                            ) {
+                                return false;
+                            }
+
+                            return (
+                                permissionAction ===
+                                requestedAction &&
+                                allowed
+                            );
+                        }
+                    );
+                }
+
+                const permissionAction =
+                    normalizeAction(
+                        permission?.actionName ||
+                        permission?.action?.actionName ||
+                        permission?.action?.name ||
+                        ""
+                    );
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction ===
+                    requestedAction &&
+                    allowed
+                );
+            }
+        );
+    };
+
+    const requiredAction =
+        isEdit
+            ? "EDIT"
+            : "CREATE";
+
+    const hasRequiredPermission =
+        hasPermission(
+            "Users",
+            requiredAction
+        );
+
+    // =========================================================
+    // LOAD USER PERMISSIONS
+    // =========================================================
+
+    useEffect(() => {
+
+        if (!isOpen) {
+            return;
+        }
+
+        if (authChecking) {
+            return;
+        }
+
+        if (!isAuthenticated) {
+            return;
+        }
+
+        if (hasFullAccess) {
+            return;
+        }
+
+        if (
+            !permissionsLoaded &&
+            !permissionLoading
+        ) {
+            dispatch(
+                getUserPermission()
+            );
+        }
+
+    }, [
+        isOpen,
+        authChecking,
+        isAuthenticated,
+        hasFullAccess,
+        permissionsLoaded,
+        permissionLoading,
+        dispatch,
+    ]);
+
+    // =========================================================
     // FORM
     // =========================================================
 
     const form = user || {
+
         id: null,
+
         userId: "",
+
         name: "",
+
         email: "",
+
         password: "",
+
         roleId: null,
+
         role: "",
+
         accountVerified: false,
+
         status: "ACTIVE",
     };
 
@@ -88,10 +359,12 @@ export default function UserCreate() {
     // =========================================================
 
     const tabs = [
+
         {
             id: "user",
             label: "User Information",
         },
+
         {
             id: "settings",
             label: "Settings",
@@ -138,7 +411,10 @@ export default function UserCreate() {
     // CHANGE FIELD
     // =========================================================
 
-    const handleChange = (field, value) => {
+    const handleChange = (
+        field,
+        value
+    ) => {
 
         dispatch(
             setUserField({
@@ -150,14 +426,12 @@ export default function UserCreate() {
         /*
          * Clear field error when user starts typing.
          */
-
         if (errors[field]) {
 
             setErrors((prev) => ({
                 ...prev,
                 [field]: "",
             }));
-
         }
     };
 
@@ -193,7 +467,6 @@ export default function UserCreate() {
             if (event.key === "Escape") {
                 handleClose();
             }
-
         };
 
         document.addEventListener(
@@ -207,7 +480,6 @@ export default function UserCreate() {
                 "keydown",
                 handleEscape
             );
-
         };
 
     }, [isOpen]);
@@ -331,7 +603,6 @@ export default function UserCreate() {
                         "ACTIVE",
                 })
             );
-
         }
 
     }, [
@@ -357,7 +628,6 @@ export default function UserCreate() {
 
             newErrors.name =
                 "Name is required.";
-
         }
 
         // -----------------------------------------------------
@@ -374,13 +644,15 @@ export default function UserCreate() {
             const emailRegex =
                 /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-            if (!emailRegex.test(form.email.trim())) {
+            if (
+                !emailRegex.test(
+                    form.email.trim()
+                )
+            ) {
 
                 newErrors.email =
                     "Enter a valid email address.";
-
             }
-
         }
 
         // -----------------------------------------------------
@@ -394,11 +666,13 @@ export default function UserCreate() {
          * "keep existing password".
          */
 
-        if (!isEdit && !form.password?.trim()) {
+        if (
+            !isEdit &&
+            !form.password?.trim()
+        ) {
 
             newErrors.password =
                 "Password is required.";
-
         }
 
         // -----------------------------------------------------
@@ -409,7 +683,6 @@ export default function UserCreate() {
 
             newErrors.roleId =
                 "Role is required.";
-
         }
 
         setErrors(newErrors);
@@ -426,11 +699,62 @@ export default function UserCreate() {
 
         e.preventDefault();
 
+        // =====================================================
+        // AUTH CHECK
+        // =====================================================
+
+        if (authChecking) {
+            return;
+        }
+
+        if (!isAuthenticated) {
+
+            toast.error(
+                "You are not authenticated."
+            );
+
+            return;
+        }
+
+        // =====================================================
+        // PERMISSION CHECK
+        // =====================================================
+
+        if (
+            !hasFullAccess &&
+            !permissionsLoaded
+        ) {
+
+            toast.error(
+                "Permissions are still loading."
+            );
+
+            return;
+        }
+
+        if (
+            !hasFullAccess &&
+            !hasRequiredPermission
+        ) {
+
+            toast.error(
+                `You do not have permission to ${requiredAction.toLowerCase()} users.`
+            );
+
+            return;
+        }
+
+        // =====================================================
+        // VALIDATION
+        // =====================================================
+
         const validationErrors =
             validateForm();
 
         if (
-            Object.keys(validationErrors).length > 0
+            Object.keys(
+                validationErrors
+            ).length > 0
         ) {
 
             /*
@@ -445,7 +769,6 @@ export default function UserCreate() {
             ) {
 
                 setActiveTab("user");
-
             }
 
             /*
@@ -482,7 +805,6 @@ export default function UserCreate() {
 
             payload.password =
                 form.password.trim();
-
         }
 
         /*
@@ -499,7 +821,6 @@ export default function UserCreate() {
 
             payload.password =
                 form.password.trim();
-
         }
 
         try {
@@ -533,7 +854,6 @@ export default function UserCreate() {
                 toast.success(
                     "User updated successfully."
                 );
-
             }
 
             // =================================================
@@ -549,7 +869,6 @@ export default function UserCreate() {
                 toast.success(
                     "User created successfully."
                 );
-
             }
 
             // =================================================
@@ -586,9 +905,7 @@ export default function UserCreate() {
                             : "Failed to create user."
                     )
             );
-
         }
-
     };
 
     // =========================================================
@@ -597,6 +914,255 @@ export default function UserCreate() {
 
     if (!isOpen) {
         return null;
+    }
+
+    // =========================================================
+    // PERMISSION LOADING
+    // =========================================================
+
+    if (
+        authChecking ||
+        (
+            isAuthenticated &&
+            !hasFullAccess &&
+            (
+                permissionLoading ||
+                !permissionsLoaded
+            )
+        )
+    ) {
+
+        return (
+            <div
+                className="
+                    w-[950px]
+                    max-w-[95vw]
+                    min-h-[300px]
+                    bg-white
+                    rounded-xl
+                    shadow-2xl
+                    flex
+                    items-center
+                    justify-center
+                    p-8
+                "
+            >
+
+                <div className="text-center">
+
+                    <div
+                        className="
+                            w-10
+                            h-10
+                            mx-auto
+                            mb-3
+                            border-2
+                            border-blue-200
+                            border-t-blue-600
+                            rounded-full
+                            animate-spin
+                        "
+                    />
+
+                    <p
+                        className="
+                            text-sm
+                            font-medium
+                            text-gray-600
+                        "
+                    >
+                        Loading permissions...
+                    </p>
+
+                </div>
+
+            </div>
+        );
+    }
+
+    // =========================================================
+    // ACCESS DENIED
+    // =========================================================
+
+    if (
+        !hasFullAccess &&
+        permissionsLoaded &&
+        !hasRequiredPermission
+    ) {
+
+        return (
+            <div
+                className="
+                    w-[950px]
+                    max-w-[95vw]
+                    min-h-[300px]
+                    bg-white
+                    rounded-xl
+                    shadow-2xl
+                    overflow-hidden
+                    flex
+                    flex-col
+                "
+            >
+
+                {/* HEADER */}
+
+                <div
+                    className="
+                        shrink-0
+                        h-[68px]
+                        flex
+                        items-center
+                        justify-between
+                        px-6
+                        border-b
+                        border-gray-200
+                        bg-white
+                    "
+                >
+
+                    <div className="flex items-center gap-3">
+
+                        <div
+                            className="
+                                w-10
+                                h-10
+                                rounded-lg
+                                bg-blue-50
+                                text-blue-600
+                                flex
+                                items-center
+                                justify-center
+                            "
+                        >
+
+                            <UserKeyIcon
+                                size={22}
+                                strokeWidth={2}
+                            />
+
+                        </div>
+
+                        <div>
+
+                            <h2
+                                className="
+                                    text-lg
+                                    font-semibold
+                                    text-gray-800
+                                "
+                            >
+                                {isEdit
+                                    ? "Edit User"
+                                    : "Add New User"}
+                            </h2>
+
+                            <p
+                                className="
+                                    text-xs
+                                    text-gray-500
+                                    mt-0.5
+                                "
+                            >
+                                {isEdit
+                                    ? "Update user details"
+                                    : "Create a new user"}
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                {/* ACCESS DENIED BODY */}
+
+                <div
+                    className="
+                        flex-1
+                        min-h-[230px]
+                        flex
+                        items-center
+                        justify-center
+                        px-6
+                        py-8
+                        bg-gray-50/50
+                    "
+                >
+
+                    <div className="text-center">
+
+                        <div
+                            className="
+                                w-14
+                                h-14
+                                mx-auto
+                                mb-4
+                                rounded-full
+                                bg-red-50
+                                text-red-500
+                                flex
+                                items-center
+                                justify-center
+                            "
+                        >
+
+                            <UserKeyIcon
+                                size={26}
+                                strokeWidth={2}
+                            />
+
+                        </div>
+
+                        <h3
+                            className="
+                                text-base
+                                font-semibold
+                                text-gray-800
+                            "
+                        >
+                            Access Denied
+                        </h3>
+
+                        <p
+                            className="
+                                mt-2
+                                text-sm
+                                text-gray-500
+                                max-w-md
+                                mx-auto
+                            "
+                        >
+                            You do not have permission to{" "}
+                            {requiredAction.toLowerCase()}{" "}
+                            users.
+                        </p>
+
+                        <button
+                            type="button"
+                            onClick={handleClose}
+                            className="
+                                mt-6
+                                h-10
+                                px-5
+                                rounded-md
+                                bg-blue-500
+                                text-white
+                                text-sm
+                                font-medium
+                                hover:bg-blue-600
+                                transition
+                            "
+                        >
+                            Close
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+        );
     }
 
     // =========================================================
@@ -736,7 +1302,6 @@ export default function UserCreate() {
                                 text-sm
                                 font-medium
                                 transition
-
                                 ${activeTab === tab.id
                                     ? hasError
                                         ? "text-red-600"
@@ -759,6 +1324,7 @@ export default function UserCreate() {
                                 {tab.label}
 
                                 {hasError && (
+
                                     <span
                                         className="
                                             w-1.5
@@ -786,13 +1352,10 @@ export default function UserCreate() {
                                         }
                                     `}
                                 />
-
                             )}
 
                         </button>
-
                     );
-
                 })}
 
             </div>
@@ -907,7 +1470,6 @@ export default function UserCreate() {
                                                 rounded-full
                                                 text-xs
                                                 font-bold
-
                                                 ${form.accountVerified
                                                     ? "bg-green-50 text-green-700"
                                                     : "bg-yellow-50 text-yellow-700"
@@ -922,25 +1484,22 @@ export default function UserCreate() {
                                         </span>
 
                                     </div>
-
                                 )}
 
                             </div>
 
-                            {/* =================================================
-                                NAME
-                            ================================================= */}
+                            {/* NAME */}
 
                             <div>
 
-                                <label className={labelClass}>
-
+                                <label
+                                    className={labelClass}
+                                >
                                     Name
 
                                     <span className="text-red-500 ml-1">
                                         *
                                     </span>
-
                                 </label>
 
                                 <input
@@ -969,25 +1528,22 @@ export default function UserCreate() {
                                     >
                                         {errors.name}
                                     </p>
-
                                 )}
 
                             </div>
 
-                            {/* =================================================
-                                EMAIL
-                            ================================================= */}
+                            {/* EMAIL */}
 
                             <div>
 
-                                <label className={labelClass}>
-
+                                <label
+                                    className={labelClass}
+                                >
                                     Email
 
                                     <span className="text-red-500 ml-1">
                                         *
                                     </span>
-
                                 </label>
 
                                 <input
@@ -1016,22 +1572,21 @@ export default function UserCreate() {
                                     >
                                         {errors.email}
                                     </p>
-
                                 )}
 
                             </div>
 
-                            {/* =================================================
-                                PASSWORD
-                            ================================================= */}
+                            {/* PASSWORD */}
 
                             <div>
 
-                                <label className={labelClass}>
-
+                                <label
+                                    className={labelClass}
+                                >
                                     Password
 
                                     {!isEdit && (
+
                                         <span className="text-red-500 ml-1">
                                             *
                                         </span>
@@ -1069,25 +1624,22 @@ export default function UserCreate() {
                                     >
                                         {errors.password}
                                     </p>
-
                                 )}
 
                             </div>
 
-                            {/* =================================================
-                                ROLE
-                            ================================================= */}
+                            {/* ROLE */}
 
                             <div>
 
-                                <label className={labelClass}>
-
+                                <label
+                                    className={labelClass}
+                                >
                                     Role
 
                                     <span className="text-red-500 ml-1">
                                         *
                                     </span>
-
                                 </label>
 
                                 <select
@@ -1115,7 +1667,6 @@ export default function UserCreate() {
                                         >
                                             {role.roleName}
                                         </option>
-
                                     ))}
 
                                 </select>
@@ -1131,13 +1682,11 @@ export default function UserCreate() {
                                     >
                                         {errors.roleId}
                                     </p>
-
                                 )}
 
                             </div>
 
                         </div>
-
                     )}
 
                     {/* =================================================
@@ -1180,13 +1729,13 @@ export default function UserCreate() {
 
                             </div>
 
-                            {/* =================================================
-                                STATUS
-                            ================================================= */}
+                            {/* STATUS */}
 
                             <div className="max-w-md">
 
-                                <label className={labelClass}>
+                                <label
+                                    className={labelClass}
+                                >
                                     Status
                                 </label>
 
@@ -1220,13 +1769,13 @@ export default function UserCreate() {
 
                             </div>
 
-                            {/* =================================================
-                                ACCOUNT VERIFIED
-                            ================================================= */}
+                            {/* ACCOUNT VERIFIED */}
 
                             <div className="max-w-md">
 
-                                <label className={labelClass}>
+                                <label
+                                    className={labelClass}
+                                >
                                     Account Verification
                                 </label>
 
@@ -1257,9 +1806,7 @@ export default function UserCreate() {
 
                             </div>
 
-                            {/* =================================================
-                                STATUS SUMMARY
-                            ================================================= */}
+                            {/* STATUS SUMMARY */}
 
                             <div
                                 className="
@@ -1315,7 +1862,6 @@ export default function UserCreate() {
                                             rounded-full
                                             text-sm
                                             font-bold
-
                                             ${form.status === "ACTIVE"
                                                 ? "bg-green-50 text-green-700"
                                                 : form.status === "INACTIVE"
@@ -1335,7 +1881,6 @@ export default function UserCreate() {
                             </div>
 
                         </div>
-
                     )}
 
                 </div>

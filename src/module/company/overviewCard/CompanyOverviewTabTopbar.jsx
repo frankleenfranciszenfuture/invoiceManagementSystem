@@ -30,74 +30,51 @@ export default function CompanyOverviewTabTopbar() {
     // =========================================================
 
     const company = useSelector(
-        (state) =>
-            state.company?.company
+        (state) => state.company?.company
     );
 
     const existingCompany = useSelector(
-        (state) =>
-            state.company?.existingCompany
+        (state) => state.company?.existingCompany
     );
 
-    // API-fetched company is the main source.
-    // Existing company is used as fallback.
     const currentCompany =
-        company || existingCompany;
+        existingCompany?.companyName
+            ? existingCompany
+            : company?.companyName
+                ? company
+                : null;
 
     // =========================================================
     // LOADING
     // =========================================================
 
     if (!currentCompany) {
-
         return (
-
-            <div
-                className="
-                    flex
-                    items-center
-                    justify-between
-                    border
-                    border-gray-100
-                    bg-white
-                    px-5
-                    py-5
-                "
-            >
-
-                <h1
-                    className="
-                        text-2xl
-                        font-medium
-                        text-gray-400
-                    "
-                >
+            <div className="flex items-center justify-between border border-gray-100 bg-white px-5 py-5">
+                <h1 className="text-2xl font-medium text-gray-400">
                     Loading...
                 </h1>
-
             </div>
-
         );
     }
+
+
 
     // =========================================================
     // EDIT COMPANY
     // =========================================================
 
     const handleEdit = () => {
-
-        if (!currentCompany) {
+        if (!currentCompany?.id) {
             return;
         }
 
-        // Keep company available in Redux
         dispatch(
-            setExsistingCompany(
-                currentCompany
-            )
+            setExsistingCompany({
+                ...currentCompany,
+            })
         );
 
-        // Open edit modal with complete company
         dispatch(
             openModal({
                 type: "editCompany",
@@ -106,7 +83,6 @@ export default function CompanyOverviewTabTopbar() {
                 },
             })
         );
-
     };
 
     // =========================================================
@@ -144,17 +120,18 @@ export default function CompanyOverviewTabTopbar() {
                 <div>
 
                     <h1
+                        onClick={() => navigate("/companies")}
                         className="
-                            text-4xl
-                            font-medium
-                            leading-none
-                            text-gray-900
-                        "
+        cursor-pointer
+        text-4xl
+        font-medium
+        leading-none
+        text-gray-900
+        transition-colors
+        hover:text-blue-600
+    "
                     >
-                        {
-                            currentCompany.companyName ||
-                            "Company"
-                        }
+                        {currentCompany.companyName}
                     </h1>
 
                 </div>

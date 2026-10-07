@@ -1,5 +1,14 @@
+
 import React from "react";
-import { useDispatch, useSelector } from "react-redux";
+
+import {
+    useDispatch,
+    useSelector,
+} from "react-redux";
+
+import {
+    openModal,
+} from "../../ui/uiSlice";
 
 import {
     fetchAllBankAccounts,
@@ -10,23 +19,24 @@ import {
     setExsistingBankAccount,
 } from "../slices/bankAccountSlice";
 
-import { openModal } from "../../ui/uiSlice";
-
 import {
     ChevronDown,
     Edit,
     Trash2,
     Landmark,
     Star,
+    Eye,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
+
 
 export default function BankAccountTable({
     bankAccounts = [],
 }) {
 
     const dispatch = useDispatch();
+
 
     /* =====================================================
        REDUX STATE
@@ -36,17 +46,298 @@ export default function BankAccountTable({
         loading,
         error,
     } = useSelector(
-        (state) => state.bankAccount || {}
+        (state) =>
+            state.bankAccount || {}
     );
+
 
     const currentBankAccounts =
         bankAccounts || [];
+
+
+    /* =====================================================
+       AUTH STATE
+    ===================================================== */
+
+    const user = useSelector(
+        (state) =>
+            state.auth?.user
+    );
+
+
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
+
+    const permissions = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissions || []
+    );
+
+
+    /* =====================================================
+       ROLE
+    ===================================================== */
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+
+    const normalizedRole =
+        String(roleName)
+            .trim()
+            .toUpperCase();
+
+
+    const isSuperAdmin =
+        normalizedRole === "SUPER_ADMIN";
+
+
+    const isAdmin =
+        normalizedRole === "ADMIN";
+
+
+    const hasFullAccess =
+        isSuperAdmin ||
+        isAdmin;
+
+
+    /* =====================================================
+       PERMISSION CHECK
+
+       Supports both:
+
+       FLAT:
+       {
+           moduleName: "Bank Accounts",
+           actionName: "EDIT",
+           allowed: true
+       }
+
+       GROUPED:
+       {
+           moduleName: "Bank Accounts",
+           actions: [
+               {
+                   actionName: "EDIT",
+                   allowed: true
+               }
+           ]
+       }
+    ===================================================== */
+
+    const hasPermission = (
+        moduleName,
+        actionName
+    ) => {
+
+        /* =================================================
+           SUPER ADMIN / ADMIN
+        ================================================= */
+
+        if (hasFullAccess) {
+            return true;
+        }
+
+
+        /* =================================================
+           INVALID PERMISSION STATE
+        ================================================= */
+
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+
+        const requestedModule =
+            String(moduleName)
+                .trim()
+                .toLowerCase();
+
+
+        const requestedAction =
+            String(actionName)
+                .trim()
+                .toUpperCase();
+
+
+        /* =================================================
+           SEARCH PERMISSIONS
+        ================================================= */
+
+        return permissions.some(
+            (permission) => {
+
+                /* =========================================
+                   MODULE
+                ========================================= */
+
+                const permissionModule =
+                    String(
+                        permission?.moduleName ||
+                        permission?.module?.moduleName ||
+                        permission?.module?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toLowerCase();
+
+
+                if (
+                    permissionModule !==
+                    requestedModule
+                ) {
+                    return false;
+                }
+
+
+                /* =========================================
+                   PERMISSION STATUS
+                ========================================= */
+
+                if (
+                    permission?.active === false
+                ) {
+                    return false;
+                }
+
+
+                if (
+                    String(
+                        permission?.status || ""
+                    )
+                        .trim()
+                        .toUpperCase() ===
+                    "INACTIVE"
+                ) {
+                    return false;
+                }
+
+
+                /* =========================================
+                   GROUPED ACTIONS
+                ========================================= */
+
+                if (
+                    Array.isArray(
+                        permission?.actions
+                    )
+                ) {
+
+                    return permission.actions.some(
+                        (action) => {
+
+                            const permissionAction =
+                                String(
+                                    action?.actionName ||
+                                    action?.action?.actionName ||
+                                    action?.action?.name ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toUpperCase();
+
+
+                            const allowed =
+                                action?.allowed === true ||
+                                action?.allowed === "true";
+
+
+                            return (
+                                permissionAction ===
+                                requestedAction &&
+                                allowed
+                            );
+
+                        }
+                    );
+
+                }
+
+
+                /* =========================================
+                   FLAT ACTION
+                ========================================= */
+
+                const permissionAction =
+                    String(
+                        permission?.actionName ||
+                        permission?.action?.actionName ||
+                        permission?.action?.name ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase();
+
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+
+                return (
+                    permissionAction ===
+                    requestedAction &&
+                    allowed
+                );
+
+            }
+        );
+
+    };
+
+
+    /* =====================================================
+       BANK ACCOUNT PERMISSIONS
+    ===================================================== */
+
+    const canViewBankAccount =
+        hasPermission(
+            "Bank Accounts",
+            "VIEW"
+        );
+
+
+    const canEditBankAccount =
+        hasPermission(
+            "Bank Accounts",
+            "EDIT"
+        );
+
+
+    const canDeleteBankAccount =
+        hasPermission(
+            "Bank Accounts",
+            "DELETE"
+        );
+
 
     /* =====================================================
        DELETE BANK ACCOUNT
     ===================================================== */
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (
+        id
+    ) => {
+
+        /* =================================================
+           PERMISSION SAFETY CHECK
+        ================================================= */
+
+        if (!canDeleteBankAccount) {
+
+            toast.error(
+                "You do not have permission to delete bank accounts."
+            );
+
+            return;
+        }
+
 
         if (
             !window.confirm(
@@ -56,15 +347,18 @@ export default function BankAccountTable({
             return;
         }
 
+
         try {
 
             await dispatch(
                 deleteBankAccount(id)
             ).unwrap();
 
+
             toast.success(
                 "Bank account deleted successfully"
             );
+
 
             dispatch(
                 fetchAllBankAccounts()
@@ -83,11 +377,82 @@ export default function BankAccountTable({
 
     };
 
+
+    /* =====================================================
+       VIEW BANK ACCOUNT
+    ===================================================== */
+
+    const handleView = (
+        bankAccount
+    ) => {
+
+        /* =================================================
+           PERMISSION SAFETY CHECK
+        ================================================= */
+
+        if (!canViewBankAccount) {
+
+            toast.error(
+                "You do not have permission to view bank accounts."
+            );
+
+            return;
+        }
+
+
+        try {
+
+            /*
+             * Keep the existing bank account
+             * in Redux for the overview/details page.
+             */
+            dispatch(
+                setExsistingBankAccount(
+                    bankAccount
+                )
+            );
+
+
+            /*
+             * If you already have a bank-account
+             * overview route, navigate here.
+             *
+             * Otherwise this can be removed.
+             */
+            // navigate(`/bank-accounts/view/${bankAccount.id}`);
+
+        } catch (error) {
+
+            toast.error(
+                "Failed to open bank account"
+            );
+
+        }
+
+    };
+
+
     /* =====================================================
        EDIT BANK ACCOUNT
     ===================================================== */
 
-    const handleEdit = (bankAccount) => {
+    const handleEdit = (
+        bankAccount
+    ) => {
+
+        /* =================================================
+           PERMISSION SAFETY CHECK
+        ================================================= */
+
+        if (!canEditBankAccount) {
+
+            toast.error(
+                "You do not have permission to edit bank accounts."
+            );
+
+            return;
+        }
+
 
         try {
 
@@ -96,6 +461,7 @@ export default function BankAccountTable({
                     bankAccount
                 )
             );
+
 
             dispatch(
                 openModal({
@@ -114,6 +480,7 @@ export default function BankAccountTable({
 
     };
 
+
     /* =====================================================
        ACCOUNT INITIALS
     ===================================================== */
@@ -122,8 +489,14 @@ export default function BankAccountTable({
         accountName
     ) => {
 
+        if (!accountName) {
+            return "BA";
+        }
+
+
         return accountName
             ?.split(" ")
+            .filter(Boolean)
             .map(
                 (word) =>
                     word[0]
@@ -133,6 +506,7 @@ export default function BankAccountTable({
             .toUpperCase() || "BA";
 
     };
+
 
     /* =====================================================
        STATUS COLORS
@@ -151,6 +525,7 @@ export default function BankAccountTable({
 
     };
 
+
     /* =====================================================
        AVATAR COLORS
     ===================================================== */
@@ -166,6 +541,7 @@ export default function BankAccountTable({
         "bg-indigo-500 text-white",
 
     ];
+
 
     const getAvatarColor = (
         name = ""
@@ -185,9 +561,11 @@ export default function BankAccountTable({
                 ) %
             avatarColors.length;
 
+
         return avatarColors[index];
 
     };
+
 
     /* =====================================================
        MASK ACCOUNT NUMBER
@@ -201,12 +579,15 @@ export default function BankAccountTable({
             return "—";
         }
 
+
         const value =
             String(accountNumber);
+
 
         if (value.length <= 4) {
             return value;
         }
+
 
         return (
             "•••• " +
@@ -214,6 +595,7 @@ export default function BankAccountTable({
         );
 
     };
+
 
     /* =====================================================
        LOADING
@@ -242,6 +624,35 @@ export default function BankAccountTable({
 
     }
 
+
+    /* =====================================================
+       ERROR
+    ===================================================== */
+
+    if (error) {
+
+        return (
+
+            <div
+                className="
+                    bg-white
+                    rounded-xl
+                    border
+                    border-red-200
+                    p-8
+                    text-center
+                "
+            >
+
+                <p className="text-red-500">
+                    {error}
+                </p>
+
+            </div>
+
+        );
+
+    }
 
 
     /* =====================================================
@@ -283,6 +694,7 @@ export default function BankAccountTable({
 
     }
 
+
     /* =====================================================
        TABLE
     ===================================================== */
@@ -299,10 +711,6 @@ export default function BankAccountTable({
                 w-full
             "
         >
-
-            {/* =================================================
-                TABLE CONTAINER
-            ================================================= */}
 
             <div
                 className="
@@ -325,6 +733,9 @@ export default function BankAccountTable({
 
                     <thead
                         className="
+                            sticky
+                            top-0
+                            z-20
                             bg-gray-100
                             border-b
                             border-gray-300
@@ -350,6 +761,7 @@ export default function BankAccountTable({
                                 Account
                             </th>
 
+
                             {/* BANK */}
 
                             <th
@@ -366,6 +778,7 @@ export default function BankAccountTable({
                             >
                                 Bank
                             </th>
+
 
                             {/* ACCOUNT NUMBER */}
 
@@ -384,6 +797,7 @@ export default function BankAccountTable({
                                 Account Number
                             </th>
 
+
                             {/* TYPE */}
 
                             <th
@@ -401,6 +815,7 @@ export default function BankAccountTable({
                                 Type
                             </th>
 
+
                             {/* STATUS */}
 
                             <th
@@ -417,6 +832,7 @@ export default function BankAccountTable({
                             >
                                 Status
                             </th>
+
 
                             {/* ACTIONS */}
 
@@ -439,6 +855,7 @@ export default function BankAccountTable({
 
                     </thead>
 
+
                     {/* =================================================
                         TABLE BODY
                     ================================================= */}
@@ -447,9 +864,16 @@ export default function BankAccountTable({
 
                         {[...currentBankAccounts]
                             .sort(
-                                (a, b) =>
-                                    (a.id || 0) -
-                                    (b.id || 0)
+                                (
+                                    a,
+                                    b
+                                ) =>
+                                    (
+                                        a.id || 0
+                                    ) -
+                                    (
+                                        b.id || 0
+                                    )
                             )
                             .map(
                                 (
@@ -493,8 +917,6 @@ export default function BankAccountTable({
                                                 "
                                             >
 
-                                                {/* AVATAR */}
-
                                                 <div
                                                     className={`
                                                         w-9
@@ -520,7 +942,6 @@ export default function BankAccountTable({
 
                                                 </div>
 
-                                                {/* NAME */}
 
                                                 <div
                                                     className="
@@ -553,7 +974,6 @@ export default function BankAccountTable({
                                                             }
                                                         </p>
 
-                                                        {/* PRIMARY */}
 
                                                         {bankAccount.primaryAccount && (
 
@@ -586,6 +1006,7 @@ export default function BankAccountTable({
 
                                                     </div>
 
+
                                                     <p
                                                         className="
                                                             text-xs
@@ -605,6 +1026,7 @@ export default function BankAccountTable({
                                             </div>
 
                                         </td>
+
 
                                         {/* =================================
                                             BANK
@@ -641,6 +1063,7 @@ export default function BankAccountTable({
                                                     }
                                                 </p>
 
+
                                                 <p
                                                     className="
                                                         text-xs
@@ -656,6 +1079,7 @@ export default function BankAccountTable({
                                             </div>
 
                                         </td>
+
 
                                         {/* =================================
                                             ACCOUNT NUMBER
@@ -689,6 +1113,7 @@ export default function BankAccountTable({
 
                                         </td>
 
+
                                         {/* =================================
                                             ACCOUNT TYPE
                                         ================================= */}
@@ -721,6 +1146,7 @@ export default function BankAccountTable({
 
                                         </td>
 
+
                                         {/* =================================
                                             STATUS
                                         ================================= */}
@@ -730,7 +1156,7 @@ export default function BankAccountTable({
                                                 px-2
                                                 py-3
                                                 overflow-hidden
-                                            "
+                                        "
                                         >
 
                                             <span
@@ -758,6 +1184,7 @@ export default function BankAccountTable({
                                             </span>
 
                                         </td>
+
 
                                         {/* =================================
                                             ACTIONS
@@ -810,9 +1237,8 @@ export default function BankAccountTable({
 
                                                     </button>
 
-                                                    {/* =========================
-                                                        ACTION MENU
-                                                    ========================= */}
+
+                                                    {/* ACTION MENU */}
 
                                                     <div
                                                         className="
@@ -840,67 +1266,118 @@ export default function BankAccountTable({
                                                             "
                                                         >
 
-                                                            {/* EDIT */}
+                                                            {/* =================================
+                                                                VIEW
+                                                            ================================= */}
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleEdit(
-                                                                        bankAccount
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-blue-600
-                                                                    transition-colors
-                                                                "
-                                                            >
+                                                            {canViewBankAccount && (
 
-                                                                <Edit
-                                                                    size={16}
-                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        handleView(
+                                                                            bankAccount
+                                                                        )
+                                                                    }
+                                                                    className="
+                                                                        flex
+                                                                        w-full
+                                                                        items-center
+                                                                        gap-2
+                                                                        px-4
+                                                                        py-2
+                                                                        text-sm
+                                                                        text-white
+                                                                        hover:bg-blue-600
+                                                                        transition-colors
+                                                                    "
+                                                                >
 
-                                                                Edit
+                                                                    <Eye
+                                                                        size={16}
+                                                                    />
 
-                                                            </button>
+                                                                    View
 
-                                                            {/* DELETE */}
+                                                                </button>
 
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleDelete(
-                                                                        bankAccount.id
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-red-600
-                                                                    transition-colors
-                                                                "
-                                                            >
+                                                            )}
 
-                                                                <Trash2
-                                                                    size={16}
-                                                                />
 
-                                                                Delete
+                                                            {/* =================================
+                                                                EDIT
+                                                            ================================= */}
 
-                                                            </button>
+                                                            {canEditBankAccount && (
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        handleEdit(
+                                                                            bankAccount
+                                                                        )
+                                                                    }
+                                                                    className="
+                                                                        flex
+                                                                        w-full
+                                                                        items-center
+                                                                        gap-2
+                                                                        px-4
+                                                                        py-2
+                                                                        text-sm
+                                                                        text-white
+                                                                        hover:bg-blue-600
+                                                                        transition-colors
+                                                                    "
+                                                                >
+
+                                                                    <Edit
+                                                                        size={16}
+                                                                    />
+
+                                                                    Edit
+
+                                                                </button>
+
+                                                            )}
+
+
+                                                            {/* =================================
+                                                                DELETE
+                                                            ================================= */}
+
+                                                            {canDeleteBankAccount && (
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        handleDelete(
+                                                                            bankAccount.id
+                                                                        )
+                                                                    }
+                                                                    className="
+                                                                        flex
+                                                                        w-full
+                                                                        items-center
+                                                                        gap-2
+                                                                        px-4
+                                                                        py-2
+                                                                        text-sm
+                                                                        text-white
+                                                                        hover:bg-red-600
+                                                                        transition-colors
+                                                                    "
+                                                                >
+
+                                                                    <Trash2
+                                                                        size={16}
+                                                                    />
+
+                                                                    Delete
+
+                                                                </button>
+
+                                                            )}
 
                                                         </div>
 
@@ -920,6 +1397,7 @@ export default function BankAccountTable({
                     </tbody>
 
                 </table>
+
 
                 {/* =====================================================
                     PAGINATION
@@ -945,15 +1423,20 @@ export default function BankAccountTable({
 
                         Showing{" "}
 
-                        {currentBankAccounts.length}
+                        {
+                            currentBankAccounts.length
+                        }
 
                         {" "}of{" "}
 
-                        {currentBankAccounts.length}
+                        {
+                            currentBankAccounts.length
+                        }
 
                         {" "}bank accounts
 
                     </p>
+
 
                     <div
                         className="
@@ -979,6 +1462,7 @@ export default function BankAccountTable({
                             Previous
                         </button>
 
+
                         {/* CURRENT PAGE */}
 
                         <span
@@ -997,6 +1481,7 @@ export default function BankAccountTable({
                         >
                             1
                         </span>
+
 
                         {/* NEXT */}
 
@@ -1023,4 +1508,5 @@ export default function BankAccountTable({
         </div>
 
     );
+
 }

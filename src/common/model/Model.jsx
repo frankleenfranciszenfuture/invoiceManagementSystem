@@ -190,16 +190,32 @@ export default function Modal() {
         addProduct: "w-[950px] max-w-[92vw] max-h-[90vh]",
         editProduct: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
+        // Category
+        addCategory: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        editCategory: "w-[950px] max-w-[92vw] max-h-[90vh]",
+
+        // subCategory
+        addSubCategory: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        editSubCategory: "w-[950px] max-w-[92vw] max-h-[90vh]",
+
+        addSize: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        editSize: "w-[950px] max-w-[92vw] max-h-[90vh]",
+
+        addUnit: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        editUnit: "w-[950px] max-w-[92vw] max-h-[90vh]",
+
         addCompany: "w-[950px] max-w-[92vw] max-h-[90vh]",
         editCompany: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
         addRole: "w-[950px] max-w-[92vw] max-h-[90vh]",
         editRole: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
+
         // USER
         addUser: "w-[950px] max-w-[92vw] max-h-[90vh]",
         editUser: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
+        //TaxMaster
         addTaxMaster: "w-[950px] max-w-[92vw] max-h-[90vh]",
         editTaxMaster: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
