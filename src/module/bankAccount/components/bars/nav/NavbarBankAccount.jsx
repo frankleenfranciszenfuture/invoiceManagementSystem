@@ -145,7 +145,7 @@ export default function NavbarBankAccount() {
         );
 
         navigate(
-            `/bank-accounts?bankAccountStatus=${view.value}`
+            `/bankAccounts?bankAccountStatus=${view.value}`
         );
 
         setDropdownOpen(false);
@@ -355,9 +355,11 @@ export default function NavbarBankAccount() {
 
                     <button
                         type="button"
-                        onClick={
-                            handleNewBankAccount
-                        }
+                        // onClick={
+                        //     handleNewBankAccount
+                        // }
+
+                        onClick={() => navigate("/bankAccount/newSimple")}
                         className="
                             flex
                             items-center

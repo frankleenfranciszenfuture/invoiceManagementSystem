@@ -56,12 +56,12 @@ const NAV = [
         queryKey: "status",
         dropdown: true,
 
-        children: [
-            {
-                label: "Customers",
-                to: "/customers",
-            },
-        ],
+        // children: [
+        //     {
+        //         label: "Customers",
+        //         to: "/customers",
+        //     },
+        // ],
     },
 
     {
@@ -73,12 +73,12 @@ const NAV = [
         basePath: "/items",
         dropdown: true,
 
-        children: [
-            {
-                label: "Items",
-                to: "/items",
-            },
-        ],
+        // children: [
+        //     {
+        //         label: "Items",
+        //         to: "/items",
+        //     },
+        // ],
     },
 
     {
@@ -90,12 +90,12 @@ const NAV = [
         basePath: "/invoices",
         dropdown: true,
 
-        children: [
-            {
-                label: "Invoices",
-                to: "/invoices",
-            },
-        ],
+        // children: [
+        //     {
+        //         label: "Invoices",
+        //         to: "/invoices",
+        //     },
+        // ],
     },
 
     {
@@ -1066,7 +1066,7 @@ const Sidebar = () => {
                     duration-300
 
                     ${open
-                        ? "w-55"
+                        ? "w-53"
                         : "w-14 overflow-visible"
                     }
                 `}
@@ -1213,7 +1213,7 @@ const Sidebar = () => {
                                 <div
                                     className="
                                         h-full
-                                        w-[15%]
+                                        w-[95%]
                                         rounded-full
                                         bg-blue-500
                                     "
@@ -1237,7 +1237,7 @@ const Sidebar = () => {
                         flex-1
                         space-y-1
                         overflow-y-auto
-                        px-2
+                        px-3
                         py-3
                     "
                 >
@@ -1298,64 +1298,77 @@ const Sidebar = () => {
 
                                                 <button
                                                     type="button"
-                                                    onClick={() =>
-                                                        handleMenuClick(
-                                                            item
-                                                        )
-                                                    }
+                                                    onClick={() => handleMenuClick(item)}
                                                     className={`
-                                                        relative
-                                                        flex
-                                                        flex-1
-                                                        items-center
-                                                        gap-3
-                                                        px-3
-                                                        py-2
-                                                        text-gray-300
-                                                        hover:bg-white/10
-                                                        hover:text-white
+    relative
+    flex
+    flex-1
+    items-center
+    gap-3
+    rounded-xl
+    border
+    px-3
+    py-2
 
-                                                        ${active
-                                                            ? "bg-white/10 text-white"
+    text-gray-300
+
+    border-transparent
+    bg-transparent
+
+    transition-all
+    duration-200
+    ease-out
+
+    hover:border-white/[0.08]
+    hover:bg-white/[0.07]
+    hover:text-white
+    hover:backdrop-blur-xl
+    hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_4px_16px_rgba(0,0,0,0.12)]
+
+    ${active
+                                                            ? `
+            border-white/[0.10]
+            bg-white/[0.10]
+            text-white
+            backdrop-blur-xl
+            shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_4px_16px_rgba(0,0,0,0.15)]
+        `
                                                             : ""
                                                         }
-                                                    `}
+`}
                                                 >
-
                                                     {open && (
                                                         <ChevronDown
                                                             size={16}
                                                             className={`
-                                                                transition-transform
-                                                                duration-200
+                shrink-0
+                transition-transform
+                duration-200
 
-                                                                ${openMenu ===
-                                                                    item.label
+                ${openMenu === item.label
                                                                     ? "rotate-180"
                                                                     : ""
                                                                 }
-                                                            `}
+            `}
                                                         />
                                                     )}
 
-
                                                     <Icon
                                                         size={18}
+                                                        className="
+        shrink-0
+        transition-all
+        duration-200
+        group-hover:scale-105
+        group-hover:text-white
+    "
                                                     />
 
-
                                                     {open && (
-                                                        <span
-                                                            className="
-                                                                whitespace-nowrap
-                                                            "
-                                                        >
-                                                            {
-                                                                item.label
-                                                            }
+                                                        <span className="whitespace-nowrap">
+                                                            {item.label}
                                                         </span>
                                                     )}
-
                                                 </button>
 
                                             ) : (
@@ -1444,13 +1457,13 @@ const Sidebar = () => {
                                                         }}
                                                         className="
                                                             flex
-                                                            w-8
+                                                            w-12
                                                             items-center
                                                             justify-center
                                                             border-l
                                                             border-white/10
                                                             opacity-0
-                                                            hover:bg-white/10
+                                                            hover:bg-white/20
                                                             group-hover:opacity-100
                                                         "
                                                     >

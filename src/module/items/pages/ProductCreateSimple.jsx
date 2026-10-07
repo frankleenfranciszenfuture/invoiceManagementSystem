@@ -21,6 +21,7 @@ import {
     X,
     Package,
     Image as ImageIcon,
+    UserRoundArrowLeft,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -57,6 +58,10 @@ import {
 import {
     fetchAllTaxMasters,
 } from "../../taxMaster/thunks/taxMasterThunks";
+
+import {
+    getUserPermission,
+} from "../../menuPermission/thunks/menuPermissionThunks";
 
 
 const EMPTY_ARRAY = [];
@@ -1217,6 +1222,210 @@ export default function ProductCreateSimple() {
         );
 
 
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
+
+    /* =====================================================
+      Auth
+   ===================================================== */
+
+    const isAuthenticated = useSelector(
+        (state) =>
+            state.auth?.isAuthenticated === true
+    );
+
+    const authChecking = useSelector(
+        (state) =>
+            state.auth?.authChecking === true
+    );
+
+
+    /* =====================================================
+      PermissionState
+   ===================================================== */
+
+    const permissions = useSelector(
+        (state) =>
+            Array.isArray(
+                state.menuPermission?.userPermissions
+            )
+                ? state.menuPermission.userPermissions
+                : []
+    );
+
+    const permissionLoading = useSelector(
+        (state) =>
+            state.menuPermission
+                ?.userPermissionsLoading === true
+    );
+
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission
+                ?.userPermissionsLoaded === true
+    );
+
+    const normalizeModule = (value) =>
+        String(value ?? "")
+            .trim()
+            .toLowerCase();
+
+    const normalizeAction = (value) =>
+        String(value ?? "")
+            .trim()
+            .toUpperCase();
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+    const normalizedRole =
+        normalizeAction(roleName);
+
+    const isSuperAdmin =
+        normalizedRole === "SUPER_ADMIN";
+
+    const isAdmin =
+        normalizedRole === "ADMIN";
+
+    const hasFullAccess =
+        isSuperAdmin ||
+        isAdmin;
+
+
+    const hasPermission = (
+        moduleName,
+        actionName
+    ) => {
+
+        if (hasFullAccess) {
+            return true;
+        }
+
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+        const requestedModule =
+            normalizeModule(moduleName);
+
+        const requestedAction =
+            normalizeAction(actionName);
+
+        return permissions.some(
+            (permission) => {
+
+                const permissionModule =
+                    normalizeModule(
+                        permission?.moduleName ||
+                        permission?.module?.moduleName ||
+                        permission?.module?.name ||
+                        ""
+                    );
+
+                if (
+                    permissionModule !==
+                    requestedModule
+                ) {
+                    return false;
+                }
+
+                if (
+                    permission?.active === false
+                ) {
+                    return false;
+                }
+
+                if (
+                    normalizeAction(
+                        permission?.status
+                    ) === "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                if (
+                    Array.isArray(
+                        permission?.actions
+                    )
+                ) {
+
+                    return permission.actions.some(
+                        (action) => {
+
+                            if (
+                                typeof action ===
+                                "string"
+                            ) {
+                                return (
+                                    normalizeAction(
+                                        action
+                                    ) ===
+                                    requestedAction
+                                );
+                            }
+
+                            const permissionAction =
+                                normalizeAction(
+                                    action?.actionName ||
+                                    action?.action?.actionName ||
+                                    action?.action?.name ||
+                                    action?.name ||
+                                    ""
+                                );
+
+                            const allowed =
+                                action?.allowed === true ||
+                                action?.allowed === "true";
+
+                            if (
+                                action?.active === false
+                            ) {
+                                return false;
+                            }
+
+                            if (
+                                normalizeAction(
+                                    action?.status
+                                ) === "INACTIVE"
+                            ) {
+                                return false;
+                            }
+
+                            return (
+                                permissionAction ===
+                                requestedAction &&
+                                allowed
+                            );
+                        }
+                    );
+                }
+
+                const permissionAction =
+                    normalizeAction(
+                        permission?.actionName ||
+                        permission?.action?.actionName ||
+                        permission?.action?.name ||
+                        ""
+                    );
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction ===
+                    requestedAction &&
+                    allowed
+                );
+            }
+        );
+    };
     /* =====================================================
        EDIT MODE
     ===================================================== */
@@ -1226,7 +1435,49 @@ export default function ProductCreateSimple() {
             existingProduct?.id
         );
 
+    const requiredAction =
+        isEdit
+            ? "EDIT"
+            : "CREATE";
 
+    const hasRequiredPermission =
+        hasPermission(
+            "Products",
+            requiredAction
+        );
+
+
+    useEffect(() => {
+
+        if (authChecking) {
+            return;
+        }
+
+        if (!isAuthenticated) {
+            return;
+        }
+
+        if (hasFullAccess) {
+            return;
+        }
+
+        if (
+            !permissionsLoaded &&
+            !permissionLoading
+        ) {
+            dispatch(
+                getUserPermission()
+            );
+        }
+
+    }, [
+        authChecking,
+        isAuthenticated,
+        hasFullAccess,
+        permissionsLoaded,
+        permissionLoading,
+        dispatch,
+    ]);
     /* =====================================================
        FORM
     ===================================================== */
@@ -2420,6 +2671,40 @@ export default function ProductCreateSimple() {
                 return;
             }
 
+            if (!isAuthenticated) {
+
+                toast.error(
+                    "You are not authenticated."
+                );
+
+                return;
+            }
+
+            if (
+                !hasFullAccess &&
+                (
+                    permissionLoading ||
+                    !permissionsLoaded
+                )
+            ) {
+
+                toast.error(
+                    "Permissions are still loading. Please try again."
+                );
+
+                return;
+            }
+
+            if (!hasRequiredPermission) {
+
+                toast.error(
+                    isEdit
+                        ? "You do not have permission to edit products."
+                        : "You do not have permission to create products."
+                );
+
+                return;
+            }
 
             const valid =
                 validate();
@@ -2588,6 +2873,94 @@ export default function ProductCreateSimple() {
 
         };
 
+    if (
+        !hasFullAccess &&
+        (
+            permissionLoading ||
+            !permissionsLoaded
+        )
+    ) {
+        return (
+            <div>
+                <div className="text-center">
+                    <div
+                        className="
+                        w-10
+                        h-10
+                        mx-auto
+                        mb-3
+                        border-2
+                        border-blue-200
+                        border-t-blue-600
+                        rounded-full
+                        animate-spin
+                    "
+                    />
+
+                    <p className="text-sm font-medium text-gray-600">
+                        Loading permissions...
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+
+
+    if (!hasRequiredPermission) {
+        return (
+            <div className="flex items-center justify-center py-8">
+                <div className="w-full max-w-md text-center">
+
+                    <div className="flex flex-col items-center">
+
+                        <div
+                            className="
+                            w-11
+                            h-11
+                            rounded-lg
+                            bg-red-50
+                            flex
+                            items-center
+                            justify-center
+                            mb-3
+                        "
+                        >
+                            <UserRoundArrowLeft
+                                size={21}
+                                className="text-red-500"
+                            />
+                        </div>
+
+                        <h2
+                            className="
+                            text-[17px]
+                            font-semibold
+                            text-gray-800
+                        "
+                        >
+                            Access Denied
+                        </h2>
+
+                        <p
+                            className="
+                            mt-1.5
+                            text-sm
+                            text-gray-500
+                            leading-5
+                        "
+                        >
+                            {isEdit
+                                ? "You do not have permission to edit products."
+                                : "You do not have permission to create products."
+                            }
+                        </p>
+
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     /* =====================================================
        PRODUCT INFORMATION

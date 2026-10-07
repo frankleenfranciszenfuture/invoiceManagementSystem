@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -26,7 +25,6 @@ import toast from "react-hot-toast";
 export default function UserTable({
     users = [],
 }) {
-
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
@@ -63,13 +61,11 @@ export default function UserTable({
     ===================================================== */
 
     const handleDelete = async (id) => {
-
         if (!window.confirm("Delete this user?")) {
             return;
         }
 
         try {
-
             await dispatch(
                 deleteUser(id)
             ).unwrap();
@@ -85,9 +81,7 @@ export default function UserTable({
                     search,
                 })
             );
-
         } catch (error) {
-
             toast.error(
                 typeof error === "string"
                     ? error
@@ -102,13 +96,9 @@ export default function UserTable({
     ===================================================== */
 
     const handleEdit = (user) => {
-
         try {
-
             dispatch(
-                setExsistingUser(
-                    user
-                )
+                setExsistingUser(user)
             );
 
             dispatch(
@@ -117,9 +107,7 @@ export default function UserTable({
                     data: user,
                 })
             );
-
         } catch (error) {
-
             toast.error(
                 "Failed to open user"
             );
@@ -127,25 +115,19 @@ export default function UserTable({
     };
 
     /* =====================================================
-          VIEW USER
-       ===================================================== */
+       VIEW USER
+    ===================================================== */
 
     const handleView = (user) => {
-
         try {
-
             dispatch(
-                setExsistingUser(
-                    user
-                )
+                setExsistingUser(user)
             );
 
             navigate(
                 `/users/view/${user.id}`
             );
-
         } catch (error) {
-
             toast.error(
                 "Failed to open user"
             );
@@ -157,7 +139,6 @@ export default function UserTable({
     ===================================================== */
 
     const initials = (name) => {
-
         if (!name) {
             return "US";
         }
@@ -166,8 +147,7 @@ export default function UserTable({
             .trim()
             .split(/\s+/)
             .map(
-                (word) =>
-                    word[0]
+                (word) => word[0]
             )
             .join("")
             .slice(0, 2)
@@ -179,7 +159,6 @@ export default function UserTable({
     ===================================================== */
 
     const statusColor = {
-
         ACTIVE:
             "bg-green-100 text-green-700",
 
@@ -188,7 +167,6 @@ export default function UserTable({
 
         DRAFT:
             "bg-yellow-100 text-yellow-700",
-
     };
 
     /* =====================================================
@@ -196,7 +174,6 @@ export default function UserTable({
     ===================================================== */
 
     const avatarColors = [
-
         "bg-pink-500 text-white",
         "bg-green-500 text-white",
         "bg-blue-500 text-white",
@@ -204,13 +181,11 @@ export default function UserTable({
         "bg-orange-500 text-white",
         "bg-cyan-500 text-white",
         "bg-indigo-500 text-white",
-
     ];
 
     const getAvatarColor = (
         name = ""
     ) => {
-
         const index =
             name
                 .split("")
@@ -235,7 +210,6 @@ export default function UserTable({
     const getVerificationColor = (
         verified
     ) => {
-
         return verified
             ? "bg-green-100 text-green-700"
             : "bg-yellow-100 text-yellow-700";
@@ -246,7 +220,6 @@ export default function UserTable({
     ===================================================== */
 
     const handlePrevious = () => {
-
         if (pageNumber <= 0) {
             return;
         }
@@ -261,8 +234,10 @@ export default function UserTable({
     };
 
     const handleNext = () => {
-
-        if (last || pageNumber >= totalPages - 1) {
+        if (
+            last ||
+            pageNumber >= totalPages - 1
+        ) {
             return;
         }
 
@@ -295,22 +270,11 @@ export default function UserTable({
     ===================================================== */
 
     if (loading) {
-
         return (
-
-            <div
-                className="
-                    flex
-                    items-center
-                    justify-center
-                    py-10
-                "
-            >
-
-                <p className="text-gray-500">
+            <div className="flex items-center justify-center py-10">
+                <p className="text-sm text-gray-500">
                     Loading users...
                 </p>
-
             </div>
         );
     }
@@ -320,24 +284,11 @@ export default function UserTable({
     ===================================================== */
 
     if (error) {
-
         return (
-
-            <div
-                className="
-                    bg-white
-                    rounded-xl
-                    border
-                    border-red-200
-                    p-8
-                    text-center
-                "
-            >
-
-                <p className="text-red-500">
+            <div className="rounded-xl border border-red-200 bg-white p-8 text-center">
+                <p className="text-sm text-red-500">
                     {error}
                 </p>
-
             </div>
         );
     }
@@ -347,34 +298,13 @@ export default function UserTable({
     ===================================================== */
 
     if (!currentUsers.length) {
-
         return (
+            <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
+                <UserRound className="mx-auto mb-3 h-10 w-10 text-gray-300" />
 
-            <div
-                className="
-                    bg-white
-                    rounded-2xl
-                    border
-                    border-gray-200
-                    p-8
-                    text-center
-                "
-            >
-
-                <UserRound
-                    className="
-                        mx-auto
-                        mb-3
-                        h-10
-                        w-10
-                        text-gray-300
-                    "
-                />
-
-                <p className="text-gray-500">
+                <p className="text-sm text-gray-500">
                     No users found.
                 </p>
-
             </div>
         );
     }
@@ -384,49 +314,21 @@ export default function UserTable({
     ===================================================== */
 
     return (
-
-        <div
-            className="
-                bg-white
-                rounded-xl
-                border
-                border-gray-200
-                overflow-visible
-                w-full
-            "
-        >
+        <div className="w-full overflow-visible rounded-xl border border-gray-200 bg-white">
 
             {/* =================================================
-                TABLE CONTAINER
+                TABLE
             ================================================= */}
 
-            <div
-                className="
-                    w-full
-                    overflow-visible
-                "
-            >
+            <div className="w-full overflow-visible">
 
-                <table
-                    className="
-                        w-full
-                        table-fixed
-                        border-collapse
-                    "
-                >
+                <table className="w-full table-fixed border-collapse">
 
                     {/* =================================================
                         TABLE HEADER
                     ================================================= */}
 
-                    <thead
-                        className="
-                            bg-gray-100
-                            border-b
-                            border-gray-300
-                        "
-                    >
-
+                    <thead className="border-b border-gray-300 bg-gray-100">
                         <tr>
 
                             {/* USER */}
@@ -436,11 +338,11 @@ export default function UserTable({
                                     w-[28%]
                                     px-2
                                     py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
                                     text-left
+                                    text-sm
+                                    font-medium
+                                    uppercase
+                                    text-gray-600
                                 "
                             >
                                 User
@@ -453,11 +355,11 @@ export default function UserTable({
                                     w-[25%]
                                     px-2
                                     py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
                                     text-left
+                                    text-sm
+                                    font-medium
+                                    uppercase
+                                    text-gray-600
                                 "
                             >
                                 Email
@@ -470,11 +372,11 @@ export default function UserTable({
                                     w-[15%]
                                     px-2
                                     py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
                                     text-left
+                                    text-sm
+                                    font-medium
+                                    uppercase
+                                    text-gray-600
                                 "
                             >
                                 Role
@@ -487,11 +389,11 @@ export default function UserTable({
                                     w-[12%]
                                     px-2
                                     py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
                                     text-left
+                                    text-sm
+                                    font-medium
+                                    uppercase
+                                    text-gray-600
                                 "
                             >
                                 Status
@@ -504,11 +406,11 @@ export default function UserTable({
                                     w-[10%]
                                     px-2
                                     py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
                                     text-left
+                                    text-sm
+                                    font-medium
+                                    uppercase
+                                    text-gray-600
                                 "
                             >
                                 Verified
@@ -521,18 +423,17 @@ export default function UserTable({
                                     w-[10%]
                                     px-2
                                     py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
                                     text-right
+                                    text-sm
+                                    font-medium
+                                    uppercase
+                                    text-gray-600
                                 "
                             >
                                 Actions
                             </th>
 
                         </tr>
-
                     </thead>
 
                     {/* =================================================
@@ -540,30 +441,26 @@ export default function UserTable({
                     ================================================= */}
 
                     <tbody>
-
                         {currentUsers.map(
                             (
                                 user,
                                 index
                             ) => (
-
                                 <tr
                                     key={
                                         user.id ||
                                         index
                                     }
                                     onClick={() =>
-                                        handleView(
-                                            user
-                                        )
+                                        handleView(user)
                                     }
                                     className="
+                                        cursor-pointer
                                         border-b
                                         border-gray-100
-                                        hover:bg-gray-50
                                         text-sm
-                                        cursor-pointer
                                         transition-colors
+                                        hover:bg-gray-50
                                     "
                                 >
 
@@ -571,81 +468,55 @@ export default function UserTable({
                                         USER
                                     ================================= */}
 
-                                    <td
-                                        className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                        "
-                                    >
-
-                                        <div
-                                            className="
-                                                flex
-                                                items-center
-                                                gap-2
-                                                min-w-0
-                                            "
-                                        >
+                                    <td className="overflow-hidden px-2 py-3">
+                                        <div className="flex min-w-0 items-center gap-2">
 
                                             {/* AVATAR */}
 
                                             <div
                                                 className={`
-w - 9
-h - 9
-min - w - [36px]
-rounded - full
-flex
-items - center
-justify - center
-text - sm
-font - bold
+                                                    flex
+                                                    h-9
+                                                    w-9
+                                                    min-w-[36px]
+                                                    items-center
+                                                    justify-center
+                                                    rounded-full
+                                                    text-sm
+                                                    font-bold
                                                     ${getAvatarColor(
                                                     user.name
-                                                )
-                                                    }
-`}
+                                                )}
+                                                `}
                                             >
-
-                                                {
-                                                    initials(
-                                                        user.name
-                                                    )
-                                                }
-
+                                                {initials(
+                                                    user.name
+                                                )}
                                             </div>
 
                                             {/* NAME */}
 
-                                            <div
-                                                className="
-                                                    min-w-0
-                                                "
-                                            >
-
+                                            <div className="min-w-0">
                                                 <p
                                                     className="
+                                                        truncate
                                                         font-medium
                                                         text-gray-800
-                                                        truncate
                                                     "
                                                     title={
                                                         user.name ||
                                                         ""
                                                     }
                                                 >
-                                                    {
-                                                        user.name ||
-                                                        "—"
-                                                    }
+                                                    {user.name ||
+                                                        "—"}
                                                 </p>
 
                                                 <p
                                                     className="
+                                                        truncate
                                                         text-xs
                                                         text-gray-500
-                                                        truncate
                                                     "
                                                     title={
                                                         user.userId ||
@@ -653,71 +524,47 @@ font - bold
                                                     }
                                                 >
                                                     ID: #
-                                                    {
-                                                        user.id ??
-                                                        "—"
-                                                    }
+                                                    {user.id ??
+                                                        "—"}
                                                 </p>
-
                                             </div>
 
                                         </div>
-
                                     </td>
 
                                     {/* =================================
                                         EMAIL
                                     ================================= */}
 
-                                    <td
-                                        className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                        "
-                                    >
-
+                                    <td className="overflow-hidden px-2 py-3">
                                         <p
-                                            className="
-                                                truncate
-                                                text-gray-700
-                                            "
+                                            className="truncate text-gray-700"
                                             title={
                                                 user.email ||
                                                 ""
                                             }
                                         >
-                                            {
-                                                user.email ||
-                                                "—"
-                                            }
+                                            {user.email ||
+                                                "—"}
                                         </p>
-
                                     </td>
 
                                     {/* =================================
                                         ROLE
                                     ================================= */}
 
-                                    <td
-                                        className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                        "
-                                    >
-
+                                    <td className="overflow-hidden px-2 py-3">
                                         <span
                                             className="
                                                 inline-block
                                                 max-w-full
                                                 truncate
+                                                rounded-full
+                                                bg-purple-100
                                                 px-2
                                                 py-1
-                                                rounded-full
                                                 text-xs
                                                 font-medium
-                                                bg-purple-100
                                                 text-purple-700
                                             "
                                             title={
@@ -725,34 +572,24 @@ font - bold
                                                 ""
                                             }
                                         >
-                                            {
-                                                user.role ||
-                                                "—"
-                                            }
+                                            {user.role ||
+                                                "—"}
                                         </span>
-
                                     </td>
 
                                     {/* =================================
                                         STATUS
                                     ================================= */}
 
-                                    <td
-                                        className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                        "
-                                    >
-
+                                    <td className="overflow-hidden px-2 py-3">
                                         <span
                                             className={`
-inline - block
-px - 2
-py - 1
-rounded - full
-text - xs
-font - medium
+                                                inline-block
+                                                rounded-full
+                                                px-2
+                                                py-1
+                                                text-xs
+                                                font-medium
                                                 ${statusColor[
                                                 String(
                                                     user.status ||
@@ -761,51 +598,35 @@ font - medium
                                                 ] ||
                                                 "bg-gray-100 text-gray-700"
                                                 }
-`}
+                                            `}
                                         >
-                                            {
-                                                user.status ||
-                                                "—"
-                                            }
+                                            {user.status ||
+                                                "—"}
                                         </span>
-
                                     </td>
 
                                     {/* =================================
                                         VERIFIED
                                     ================================= */}
 
-                                    <td
-                                        className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                        "
-                                    >
-
+                                    <td className="overflow-hidden px-2 py-3">
                                         <span
                                             className={`
-inline - block
-px - 2
-py - 1
-rounded - full
-text - xs
-font - medium
+                                                inline-block
+                                                rounded-full
+                                                px-2
+                                                py-1
+                                                text-xs
+                                                font-medium
                                                 ${getVerificationColor(
                                                 user.accountVerified
-                                            )
-                                                }
-`}
+                                            )}
+                                            `}
                                         >
-
-                                            {
-                                                user.accountVerified
-                                                    ? "Yes"
-                                                    : "No"
-                                            }
-
+                                            {user.accountVerified
+                                                ? "Yes"
+                                                : "No"}
                                         </span>
-
                                     </td>
 
                                     {/* =================================
@@ -823,69 +644,52 @@ font - medium
                                             e.stopPropagation()
                                         }
                                     >
+                                        <div className="flex justify-end">
 
-                                        <div
-                                            className="
-                                                flex
-                                                justify-end
-                                            "
-                                        >
-
-                                            <div
-                                                className="
-                                                    relative
-                                                    group
-                                                    inline-block
-                                                "
-                                            >
+                                            <div className="group relative inline-block">
 
                                                 {/* ACTION BUTTON */}
 
                                                 <button
                                                     type="button"
                                                     className="
-                                                        p-1
                                                         rounded-full
                                                         bg-blue-500
+                                                        p-1
                                                         text-white
-                                                        hover:bg-blue-600
                                                         transition-colors
+                                                        hover:bg-blue-600
                                                     "
                                                 >
-
                                                     <ChevronDown
                                                         size={16}
                                                     />
-
                                                 </button>
 
-                                                {/* =========================
-                                                    ACTION MENU
-                                                ========================= */}
+                                                {/* ACTION MENU */}
 
                                                 <div
                                                     className="
+                                                        invisible
                                                         absolute
                                                         right-0
                                                         top-full
-                                                        mt-1
                                                         z-[9999]
+                                                        mt-1
                                                         opacity-0
-                                                        invisible
-                                                        group-hover:opacity-100
-                                                        group-hover:visible
                                                         transition-all
                                                         duration-150
+                                                        group-hover:visible
+                                                        group-hover:opacity-100
                                                     "
                                                 >
-
                                                     <div
                                                         className="
                                                             w-36
+                                                            overflow-hidden
                                                             rounded-md
                                                             bg-blue-500
                                                             shadow-lg
-                                                            overflow-hidden
                                                         "
                                                     >
 
@@ -907,17 +711,15 @@ font - medium
                                                                 py-2
                                                                 text-sm
                                                                 text-white
-                                                                hover:bg-blue-600
                                                                 transition-colors
+                                                                hover:bg-blue-600
                                                             "
                                                         >
-
                                                             <Edit
                                                                 size={16}
                                                             />
 
                                                             Edit
-
                                                         </button>
 
                                                         {/* DELETE */}
@@ -938,34 +740,27 @@ font - medium
                                                                 py-2
                                                                 text-sm
                                                                 text-white
-                                                                hover:bg-red-600
                                                                 transition-colors
+                                                                hover:bg-red-600
                                                             "
                                                         >
-
                                                             <Trash2
                                                                 size={16}
                                                             />
 
                                                             Delete
-
                                                         </button>
 
                                                     </div>
-
                                                 </div>
 
                                             </div>
-
                                         </div>
-
                                     </td>
 
                                 </tr>
-
                             )
                         )}
-
                     </tbody>
 
                 </table>
@@ -976,55 +771,36 @@ font - medium
 
                 <div
                     className="
-                        p-4
-                        border-t
-                        border-gray-100
                         flex
                         items-center
                         justify-between
+                        border-t
+                        border-gray-100
+                        p-4
                     "
                 >
 
                     {/* SHOWING */}
 
-                    <p
-                        className="
-                            text-sm
-                            text-gray-500
-                        "
-                    >
-
+                    <p className="text-sm text-gray-500">
                         Showing{" "}
-
                         <span className="font-medium text-gray-700">
                             {showingFrom}
-                        </span>
-
-                        {" "}to{" "}
-
+                        </span>{" "}
+                        to{" "}
                         <span className="font-medium text-gray-700">
                             {showingTo}
-                        </span>
-
-                        {" "}of{" "}
-
+                        </span>{" "}
+                        of{" "}
                         <span className="font-medium text-gray-700">
                             {totalElements}
-                        </span>
-
-                        {" "}users
-
+                        </span>{" "}
+                        users
                     </p>
 
                     {/* PAGINATION BUTTONS */}
 
-                    <div
-                        className="
-                            flex
-                            items-center
-                            gap-3
-                        "
-                    >
+                    <div className="flex items-center gap-3">
 
                         {/* PREVIOUS */}
 
@@ -1040,9 +816,10 @@ font - medium
                             className="
                                 text-sm
                                 text-gray-500
+                                transition-colors
                                 hover:text-gray-700
-                                disabled:opacity-50
                                 disabled:cursor-not-allowed
+                                disabled:opacity-50
                             "
                         >
                             Previous
@@ -1052,16 +829,16 @@ font - medium
 
                         <span
                             className="
-                                w-8
-                                h-8
                                 flex
+                                h-8
+                                w-8
                                 items-center
                                 justify-center
                                 rounded-lg
                                 bg-blue-500
-                                text-white
                                 text-sm
                                 font-medium
+                                text-white
                             "
                         >
                             {pageNumber + 1}
@@ -1082,9 +859,10 @@ font - medium
                             className="
                                 text-sm
                                 text-gray-500
+                                transition-colors
                                 hover:text-gray-700
-                                disabled:opacity-50
                                 disabled:cursor-not-allowed
+                                disabled:opacity-50
                             "
                         >
                             Next
@@ -1095,7 +873,6 @@ font - medium
                 </div>
 
             </div>
-
         </div>
     );
 }

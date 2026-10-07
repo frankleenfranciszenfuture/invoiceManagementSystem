@@ -101,6 +101,11 @@ import MenuPermissions from "./module/menuPermission/pages/MenuPermission";
 // =====================================================
 
 import GlobalModalToast from "./common/toast/GlobalModalToast";
+import CompanyCreateSimple from "./module/company/pages/CompanyCreateSimple";
+import BankAccountCreateSimple from "./module/bankAccount/pages/BankAccountCreateSimple";
+import SettingsDashboard from "./common/bars/Nav/data/settings/SettingsDashboard";
+import CompanyProfileOverview from "./module/company/pages/CompanyProfileOverview";
+import UserProfileOverview from "./module/users/pages/UserProfileOverview";
 
 
 // =====================================================
@@ -414,7 +419,7 @@ function AppContent() {
 
         <Route
           path="/users/view/:id"
-          element={<UserOverViewCardDashboard />}
+          element={<UserProfileOverview />}
         />
 
 
@@ -427,6 +432,10 @@ function AppContent() {
           element={<BankAccountDashboard />}
         />
 
+        <Route
+          path="/bankAccount/newSimple"
+          element={<BankAccountCreateSimple />}
+        />
 
         {/* =================================================
                     COMPANY
@@ -439,7 +448,17 @@ function AppContent() {
 
         <Route
           path="/companies/view/:id"
-          element={<CompanyOverViewDashboard />}
+          element={<CompanyProfileOverview />}
+        />
+
+        <Route
+          path="/companies/view/"
+          element={<CompanyProfileOverview />}
+        />
+
+        <Route
+          path="/companies/newSimple"
+          element={<CompanyCreateSimple />}
         />
 
 
@@ -475,6 +494,16 @@ function AppContent() {
         <Route
           path="/menuPermission"
           element={<MenuPermissions />}
+        />
+
+
+        {/* =================================================
+                    Settings
+            ================================================= */}
+
+        <Route
+          path="/settings"
+          element={<SettingsDashboard />}
         />
 
       </Route>

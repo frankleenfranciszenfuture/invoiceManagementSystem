@@ -87,7 +87,8 @@ export default function ProductOverviewTabTopbar() {
 
             <div className="flex cursor-pointer items-center gap-1">
                 <div>
-                    <h1 className="text-4xl font-medium leading-none text-gray-900">
+                    <h1 className="text-4xl font-medium leading-none text-gray-900"
+                        onClick={() => navigate("/items")}>
                         {currentProduct.productName ||
                             "Product"}
                     </h1>

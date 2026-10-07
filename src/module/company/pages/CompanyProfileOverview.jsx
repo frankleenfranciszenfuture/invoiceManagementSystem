@@ -1,0 +1,1672 @@
+
+import React, {
+    useEffect,
+    useRef,
+    useState,
+} from "react";
+
+import {
+    useDispatch,
+    useSelector,
+} from "react-redux";
+
+import {
+    useNavigate,
+    useParams,
+} from "react-router-dom";
+
+import {
+    SquarePen,
+    Check,
+    X,
+    Upload,
+    Undo2,
+    MapPin,
+    Loader2,
+    AlertCircle,
+    RotateCcw,
+    Coins,
+    ReceiptText,
+    CalendarDays,
+} from "lucide-react";
+
+import {
+    fetchAllCompanies,
+    fetchCompanyById,
+    updateCompany,
+    reactivateCompany,
+} from "../thunks/companyThunks";
+
+
+/* =========================================================
+   FIELD CONFIG
+========================================================= */
+
+const BASIC_FIELDS = [
+    {
+        key: "companyName",
+        label: "Company Name",
+        required: true,
+    },
+    {
+        key: "displayName",
+        label: "Display Name",
+        required: true,
+    },
+    {
+        key: "legalName",
+        label: "Legal Name",
+    },
+    {
+        key: "companyCode",
+        label: "Company Code",
+        required: true,
+    },
+    {
+        key: "email",
+        label: "Email",
+        type: "email",
+    },
+    {
+        key: "phone",
+        label: "Phone",
+        type: "phone",
+    },
+    {
+        key: "alternatePhone",
+        label: "Alternate Phone",
+        type: "phone",
+    },
+    {
+        key: "website",
+        label: "Website",
+        link: true,
+    },
+];
+
+const ADDRESS_FIELDS = [
+    {
+        key: "addressLine1",
+        label: "Address Line 1",
+    },
+    {
+        key: "addressLine2",
+        label: "Address Line 2",
+    },
+    {
+        key: "city",
+        label: "City",
+    },
+    {
+        key: "state",
+        label: "State",
+    },
+    {
+        key: "country",
+        label: "Country",
+    },
+    {
+        key: "pincode",
+        label: "Pin Code",
+        type: "pincode",
+    },
+];
+
+const TAX_FIELDS = [
+    {
+        key: "gstNumber",
+        label: "GST Number",
+        type: "gst",
+        upper: true,
+    },
+    {
+        key: "panNumber",
+        label: "PAN Number",
+        type: "pan",
+        upper: true,
+    },
+    {
+        key: "tanNumber",
+        label: "TAN Number",
+        type: "tan",
+        upper: true,
+    },
+];
+
+const INVOICE_FIELDS = [
+    {
+        key: "invoicePrefix",
+        label: "Invoice Prefix",
+    },
+    {
+        key: "invoiceStartNumber",
+        label: "Invoice Start Number",
+        type: "number",
+    },
+    {
+        key: "currency",
+        label: "Currency",
+    },
+    {
+        key: "financialYearStart",
+        label: "Financial Year Start",
+        type: "date",
+    },
+];
+
+const STRING_KEYS = [
+    "companyName",
+    "displayName",
+    "legalName",
+    "companyCode",
+    "gstNumber",
+    "panNumber",
+    "tanNumber",
+    "email",
+    "phone",
+    "alternatePhone",
+    "website",
+    "addressLine1",
+    "addressLine2",
+    "city",
+    "state",
+    "country",
+    "pincode",
+    "invoicePrefix",
+    "currency",
+];
+
+const TABS = [
+    "Dashboard",
+    "Transaction",
+    "Recent Updates",
+    "Top Quotation",
+];
+
+const MAX_IMAGE_SIZE = 1024 * 1024;
+
+const IMAGE_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/bmp",
+];
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const toText = (value) =>
+    value === null || value === undefined
+        ? ""
+        : String(value);
+
+
+function buildPayload(company, patch) {
+    const base = {
+        ...company,
+    };
+
+    STRING_KEYS.forEach((key) => {
+        base[key] = toText(company[key]);
+    });
+
+    base.invoiceStartNumber = toText(
+        company.invoiceStartNumber
+    );
+
+    base.financialYearStart =
+        company.financialYearStart || "";
+
+    return {
+        ...base,
+        ...patch,
+    };
+}
+
+
+function imageUrl(company, kind) {
+    const value =
+        company?.[kind] ||
+        company?.[`${kind}Url`] ||
+        company?.[`${kind}Path`] ||
+        null;
+
+    return typeof value === "string"
+        ? value
+        : null;
+}
+
+
+function formatDate(value) {
+    if (!value) return "";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return toText(value);
+    }
+
+    return date.toLocaleDateString(
+        undefined,
+        {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+        }
+    );
+}
+
+
+function timeAgo(milliseconds) {
+    const seconds = Math.floor(
+        (Date.now() - milliseconds) / 1000
+    );
+
+    if (seconds < 60) {
+        return "Just now";
+    }
+
+    const minutes = Math.floor(seconds / 60);
+
+    if (minutes < 60) {
+        return `${minutes} min ago`;
+    }
+
+    const hours = Math.floor(minutes / 60);
+
+    if (hours < 24) {
+        return `${hours} hr ago`;
+    }
+
+    return `${Math.floor(hours / 24)} days ago`;
+}
+
+
+function validateImage(file) {
+    if (!IMAGE_TYPES.includes(file.type)) {
+        return "Supported files: jpg, jpeg, png, gif, bmp";
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+        return "Maximum file size is 1MB";
+    }
+
+    return "";
+}
+
+
+function validate(fields, values) {
+    const errors = {};
+
+    fields.forEach((field) => {
+        const value = toText(
+            values[field.key]
+        ).trim();
+
+        if (field.required && !value) {
+            errors[field.key] =
+                `${field.label} is required`;
+        }
+
+        else if (
+            value &&
+            field.type === "email" &&
+            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+        ) {
+            errors[field.key] =
+                "Enter a valid email";
+        }
+
+        else if (
+            value &&
+            field.type === "phone" &&
+            !/^\+?\d{7,15}$/.test(value)
+        ) {
+            errors[field.key] =
+                "Enter a valid phone number";
+        }
+
+        else if (
+            value &&
+            field.type === "pincode" &&
+            !/^\d{4,10}$/.test(value)
+        ) {
+            errors[field.key] =
+                "Enter a valid pin code";
+        }
+
+        else if (
+            value &&
+            field.type === "gst" &&
+            !/^[0-9A-Z]{15}$/i.test(value)
+        ) {
+            errors[field.key] =
+                "GST number must be 15 characters";
+        }
+
+        else if (
+            value &&
+            field.type === "pan" &&
+            !/^[A-Z]{5}[0-9]{4}[A-Z]$/i.test(value)
+        ) {
+            errors[field.key] =
+                "Enter a valid PAN (e.g. ABCDE1234F)";
+        }
+
+        else if (
+            value &&
+            field.type === "tan" &&
+            !/^[A-Z]{4}[0-9]{5}[A-Z]$/i.test(value)
+        ) {
+            errors[field.key] =
+                "Enter a valid TAN (e.g. ABCD12345E)";
+        }
+
+        else if (
+            value &&
+            field.type === "number" &&
+            !/^\d+$/.test(value)
+        ) {
+            errors[field.key] =
+                "Enter a whole number";
+        }
+    });
+
+    return errors;
+}
+
+
+/* =========================================================
+   SAVED FLASH
+========================================================= */
+
+function useSavedFlash() {
+    const [saved, setSaved] = useState(false);
+
+    const timer = useRef(null);
+
+    useEffect(() => {
+        return () => {
+            clearTimeout(timer.current);
+        };
+    }, []);
+
+    const flash = () => {
+        setSaved(true);
+
+        clearTimeout(timer.current);
+
+        timer.current = setTimeout(() => {
+            setSaved(false);
+        }, 2000);
+    };
+
+    return [
+        saved,
+        flash,
+    ];
+}
+
+
+/* =========================================================
+   SECTION CARD
+========================================================= */
+
+function SectionCard({
+    title,
+    editing,
+    saving,
+    saved,
+    error,
+    canSave = true,
+    onEdit,
+    onSave,
+    onCancel,
+    children,
+}) {
+    return (
+        <div className="flex h-full min-h-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
+
+            {/* Header */}
+            <div className="flex items-center justify-between gap-3 px-4 pt-4">
+
+                <h3 className="text-[14px] font-semibold text-slate-900">
+                    {title}
+                </h3>
+
+                <div className="flex items-center gap-2">
+
+                    {saved && !editing && (
+                        <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10.5px] font-medium text-emerald-600">
+                            <Check size={11} />
+                            Saved
+                        </span>
+                    )}
+
+                    {editing ? (
+                        <>
+                            <button
+                                type="button"
+                                onClick={onCancel}
+                                disabled={saving}
+                                className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-[11.5px] font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                            >
+                                <X size={12} />
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={onSave}
+                                disabled={
+                                    saving ||
+                                    !canSave
+                                }
+                                className="flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1.5 text-[11.5px] font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {saving ? (
+                                    <Loader2
+                                        size={12}
+                                        className="animate-spin"
+                                    />
+                                ) : (
+                                    <Check size={12} />
+                                )}
+
+                                {saving
+                                    ? "Saving..."
+                                    : "Save"}
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={onEdit}
+                            aria-label={`Edit ${title}`}
+                            title="Edit"
+                            className="flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                        >
+                            <SquarePen size={15} />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="px-4 pb-4 pt-2.5">
+
+                {error && (
+                    <div className="mb-2.5 flex items-start gap-2 rounded-md bg-red-50 px-2.5 py-2 text-[11.5px] text-red-600">
+
+                        <AlertCircle
+                            size={13}
+                            className="mt-0.5 shrink-0"
+                        />
+
+                        {error}
+                    </div>
+                )}
+
+                {children}
+            </div>
+        </div>
+    );
+}
+
+
+/* =========================================================
+   FIELDS SECTION
+========================================================= */
+
+function FieldsSection({
+    title,
+    fields,
+    values,
+    onSave,
+}) {
+    const [editing, setEditing] =
+        useState(false);
+
+    const [saving, setSaving] =
+        useState(false);
+
+    const [draft, setDraft] =
+        useState({});
+
+    const [errors, setErrors] =
+        useState({});
+
+    const [serverError, setServerError] =
+        useState("");
+
+    const [saved, flash] =
+        useSavedFlash();
+
+
+    const startEdit = () => {
+        const draftValues = {};
+
+        fields.forEach((field) => {
+            draftValues[field.key] =
+                toText(values[field.key]);
+        });
+
+        setDraft(draftValues);
+        setErrors({});
+        setServerError("");
+        setEditing(true);
+    };
+
+
+    const cancel = () => {
+        setEditing(false);
+        setErrors({});
+        setServerError("");
+    };
+
+
+    const save = async () => {
+        const validationErrors =
+            validate(fields, draft);
+
+        setErrors(validationErrors);
+
+        if (
+            Object.keys(validationErrors).length > 0
+        ) {
+            return;
+        }
+
+        const patch = {};
+
+        fields.forEach((field) => {
+            const value = toText(
+                draft[field.key]
+            ).trim();
+
+            patch[field.key] =
+                field.upper
+                    ? value.toUpperCase()
+                    : value;
+        });
+
+        setSaving(true);
+        setServerError("");
+
+        const result = await onSave(patch);
+
+        setSaving(false);
+
+        if (result.ok) {
+            setEditing(false);
+            flash();
+        } else {
+            setServerError(
+                result.message ||
+                "Failed to save changes."
+            );
+        }
+    };
+
+
+    return (
+        <SectionCard
+            title={title}
+            editing={editing}
+            saving={saving}
+            saved={saved}
+            error={serverError}
+            onEdit={startEdit}
+            onSave={save}
+            onCancel={cancel}
+        >
+
+            {fields.map((field, index) => {
+                const value = toText(
+                    values[field.key]
+                );
+
+                const display =
+                    field.type === "date"
+                        ? formatDate(value)
+                        : value;
+
+                return (
+                    <div
+                        key={field.key}
+                        className={`py-2.5 ${index > 0
+                            ? "border-t border-slate-100"
+                            : ""
+                            }`}
+                    >
+
+                        <p className="text-[12px] font-medium text-slate-700">
+
+                            {field.label}:
+
+                            {editing &&
+                                field.required && (
+                                    <span className="text-red-500">
+                                        {" "}*
+                                    </span>
+                                )}
+                        </p>
+
+                        {editing ? (
+                            <div className="mt-1.5">
+
+                                <input
+                                    type={
+                                        field.type ===
+                                            "date"
+                                            ? "date"
+                                            : "text"
+                                    }
+                                    value={
+                                        draft[field.key] ??
+                                        ""
+                                    }
+                                    onChange={(event) =>
+                                        setDraft({
+                                            ...draft,
+                                            [field.key]:
+                                                event.target
+                                                    .value,
+                                        })
+                                    }
+                                    placeholder={
+                                        field.label
+                                    }
+                                    disabled={saving}
+                                    className={`h-[34px] w-full rounded-lg border bg-white px-3 text-[13px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:ring-2 disabled:bg-slate-50 ${errors[field.key]
+                                        ? "border-red-400 focus:border-red-500 focus:ring-red-100"
+                                        : "border-slate-300 focus:border-blue-500 focus:ring-blue-100"
+                                        }`}
+                                />
+
+                                {errors[field.key] && (
+                                    <p className="mt-1 text-[11.5px] text-red-500">
+                                        {
+                                            errors[
+                                            field.key
+                                            ]
+                                        }
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="mt-0.5 break-words text-[12.5px] leading-5 text-gray-900">
+
+                                {!display ? (
+                                    <span className="text-slate-300">
+                                        -
+                                    </span>
+                                ) : field.link ? (
+                                    <a
+                                        href={
+                                            /^https?:\/\//i.test(
+                                                display
+                                            )
+                                                ? display
+                                                : `https://${display}`
+                                        }
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="underline decoration-slate-300 underline-offset-2 transition hover:text-blue-600"
+                                    >
+                                        {display}
+                                    </a>
+                                ) : (
+                                    display
+                                )}
+                            </p>
+                        )}
+                    </div>
+                );
+            })}
+        </SectionCard>
+    );
+}
+
+
+/* =========================================================
+   IMAGE SECTION
+========================================================= */
+
+function ImageSection({
+    title,
+    savedUrl,
+    initials,
+    onSave,
+}) {
+    const fileRef = useRef(null);
+
+    const [editing, setEditing] =
+        useState(false);
+
+    const [saving, setSaving] =
+        useState(false);
+
+    const [file, setFile] =
+        useState(null);
+
+    const [preview, setPreview] =
+        useState(null);
+
+    const [error, setError] =
+        useState("");
+
+    const [serverError, setServerError] =
+        useState("");
+
+    const [saved, flash] =
+        useSavedFlash();
+
+
+    useEffect(() => {
+        return () => {
+            if (preview) {
+                URL.revokeObjectURL(preview);
+            }
+        };
+    }, [preview]);
+
+
+    const reset = () => {
+        if (preview) {
+            URL.revokeObjectURL(preview);
+        }
+
+        setFile(null);
+        setPreview(null);
+        setError("");
+        setServerError("");
+    };
+
+
+    const startEdit = () => {
+        reset();
+        setEditing(true);
+    };
+
+
+    const cancel = () => {
+        reset();
+        setEditing(false);
+    };
+
+
+    const pick = (event) => {
+        const selectedFile =
+            event.target.files?.[0];
+
+        event.target.value = "";
+
+        if (!selectedFile) {
+            return;
+        }
+
+        const message =
+            validateImage(selectedFile);
+
+        if (message) {
+            setError(message);
+            return;
+        }
+
+        setError("");
+
+        if (preview) {
+            URL.revokeObjectURL(preview);
+        }
+
+        setFile(selectedFile);
+
+        setPreview(
+            URL.createObjectURL(
+                selectedFile
+            )
+        );
+    };
+
+
+    const save = async () => {
+        if (!file) {
+            cancel();
+            return;
+        }
+
+        setSaving(true);
+        setServerError("");
+
+        const result =
+            await onSave(file);
+
+        setSaving(false);
+
+        if (result.ok) {
+            reset();
+            setEditing(false);
+            flash();
+        } else {
+            setServerError(
+                result.message ||
+                "Failed to upload image."
+            );
+        }
+    };
+
+
+    const shown =
+        preview || savedUrl;
+
+
+    return (
+        <SectionCard
+            title={title}
+            editing={editing}
+            saving={saving}
+            saved={saved}
+            error={serverError}
+            canSave={!!file}
+            onEdit={startEdit}
+            onSave={save}
+            onCancel={cancel}
+        >
+
+            <div className="flex flex-1 items-center justify-center rounded-lg bg-slate-50 px-3 py-4">
+
+                <div className="flex h-[110px] w-[110px] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-sm">
+
+                    {shown ? (
+                        <img
+                            src={shown}
+                            alt={title}
+                            className="h-full w-full bg-white object-contain p-2"
+                        />
+                    ) : (
+                        <span className="text-[30px] font-bold tracking-tight text-white">
+                            {initials}
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            {editing && (
+                <div className="mt-3 flex flex-col items-center gap-1.5">
+
+                    <div className="flex flex-wrap justify-center gap-2">
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                fileRef.current?.click()
+                            }
+                            disabled={saving}
+                            className="flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
+                        >
+                            <Upload size={13} />
+
+                            {file
+                                ? "Choose another"
+                                : "Upload image"}
+                        </button>
+
+                        {file && (
+                            <button
+                                type="button"
+                                onClick={reset}
+                                disabled={saving}
+                                className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                            >
+                                <Undo2 size={13} />
+                                Discard
+                            </button>
+                        )}
+                    </div>
+
+                    <p className="text-[11px] text-slate-400">
+                        jpg, jpeg, png, gif, bmp. Max 1MB.
+                    </p>
+
+                    {error && (
+                        <p className="text-[11.5px] text-red-500">
+                            {error}
+                        </p>
+                    )}
+
+                    <input
+                        ref={fileRef}
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.gif,.bmp"
+                        onChange={pick}
+                        className="hidden"
+                    />
+                </div>
+            )}
+        </SectionCard>
+    );
+}
+
+
+/* =========================================================
+   STAT TILE
+========================================================= */
+
+function StatTile({
+    icon: Icon,
+    label,
+    value,
+}) {
+    return (
+        <div className="min-w-0 rounded-lg border border-slate-200 bg-blue-500 px-3 py-2.5">
+
+            <div className="flex items-center gap-1.5 text-gray-100">
+
+                <Icon
+                    size={14}
+                    className="shrink-0 text-gray-100"
+                />
+
+                <span className="truncate text-[10.5px]">
+                    {label}
+                </span>
+            </div>
+
+            <p className="mt-1 truncate text-[14px] font-semibold leading-tight text-white">
+
+                {value || (
+                    <span className="text-slate-300">
+                        -
+                    </span>
+                )}
+            </p>
+        </div>
+    );
+}
+
+
+/* =========================================================
+   COVER ART
+========================================================= */
+
+function CoverArt() {
+    return (
+        <svg
+            viewBox="0 0 800 160"
+            preserveAspectRatio="xMidYMid slice"
+            className="h-full w-full"
+            aria-hidden="true"
+        >
+            <defs>
+                <linearGradient
+                    id="company-cover-sky"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                >
+                    <stop
+                        offset="0"
+                        stopColor="#2c6a9b"
+                    />
+
+                    <stop
+                        offset="1"
+                        stopColor="#c3dcec"
+                    />
+                </linearGradient>
+            </defs>
+
+            <rect
+                width="800"
+                height="160"
+                fill="url(#company-cover-sky)"
+            />
+
+            <path
+                d="M0 120 L90 72 L150 96 L240 48 L330 100 L420 62 L520 106 L610 56 L700 96 L800 70 L800 160 L0 160Z"
+                fill="#86aecb"
+                opacity="0.85"
+            />
+
+            <path
+                d="M0 138 L120 92 L200 112 L330 28 L400 82 L462 52 L560 112 L650 86 L760 122 L800 106 L800 160 L0 160Z"
+                fill="#3a6a92"
+            />
+
+            <path
+                d="M330 28 L298 64 L316 58 L330 72 L346 56 L364 64Z"
+                fill="#f4f8fb"
+            />
+
+            <path
+                d="M462 52 L440 76 L455 70 L463 82 L478 68 L488 78Z"
+                fill="#f4f8fb"
+            />
+
+            <path
+                d="M0 152 Q200 128 400 146 T800 140 L800 160 L0 160Z"
+                fill="#24496b"
+            />
+        </svg>
+    );
+}
+
+
+/* =========================================================
+   PAGE
+========================================================= */
+
+export default function CompanyProfileOverview({
+    companyId,
+}) {
+    const dispatch = useDispatch();
+
+    const navigate = useNavigate();
+
+    const {
+        id: paramId,
+    } = useParams();
+
+    const {
+        company,
+        companies,
+        loading,
+        error,
+    } = useSelector(
+        (state) => state.company
+    );
+
+
+    /* -------------------------------------------------------
+       COMPANY ID
+    ------------------------------------------------------- */
+
+    const id =
+        companyId ?? paramId;
+
+    const current =
+        id
+            ? company
+            : companies?.[0];
+
+    const ready =
+        !!current?.id;
+
+
+    /* -------------------------------------------------------
+       LOCAL UI STATE
+    ------------------------------------------------------- */
+
+    const [tab, setTab] =
+        useState("Dashboard");
+
+    const [activity, setActivity] =
+        useState([]);
+
+
+    /* -------------------------------------------------------
+       FETCH COMPANY
+    ------------------------------------------------------- */
+
+    useEffect(() => {
+        if (id) {
+            dispatch(
+                fetchCompanyById(id)
+            );
+        } else {
+            dispatch(
+                fetchAllCompanies()
+            );
+        }
+    }, [
+        id,
+        dispatch,
+    ]);
+
+
+    /* -------------------------------------------------------
+       ACTIVITY
+    ------------------------------------------------------- */
+
+    const logActivity = (text) => {
+        setActivity((previous) => [
+            {
+                text,
+                at: Date.now(),
+            },
+            ...previous,
+        ].slice(0, 8));
+    };
+
+
+    /* -------------------------------------------------------
+       SAVE COMPANY
+    ------------------------------------------------------- */
+
+    const saveFields = async (
+        patch,
+        label
+    ) => {
+        const response =
+            await dispatch(
+                updateCompany({
+                    id: current.id,
+                    data: buildPayload(
+                        current,
+                        patch
+                    ),
+                })
+            );
+
+        if (
+            updateCompany.fulfilled.match(
+                response
+            )
+        ) {
+            if (label) {
+                logActivity(
+                    `Updated ${label}`
+                );
+            }
+
+            return {
+                ok: true,
+            };
+        }
+
+        return {
+            ok: false,
+            message:
+                response.payload ||
+                "Failed to update company.",
+        };
+    };
+
+
+    /* -------------------------------------------------------
+       REACTIVATE
+    ------------------------------------------------------- */
+
+    const handleReactivate = () => {
+        dispatch(
+            reactivateCompany(
+                current.id
+            )
+        );
+    };
+
+
+    /* -------------------------------------------------------
+       RETRY
+    ------------------------------------------------------- */
+
+    const retry = () => {
+        if (id) {
+            dispatch(
+                fetchCompanyById(id)
+            );
+        } else {
+            dispatch(
+                fetchAllCompanies()
+            );
+        }
+    };
+
+
+    /* =======================================================
+       LOADING
+    ======================================================= */
+
+    if (!ready && loading) {
+        return (
+            <div className="flex min-h-[400px] items-center justify-center text-slate-400">
+                <Loader2
+                    size={26}
+                    className="animate-spin"
+                />
+            </div>
+        );
+    }
+
+
+    /* =======================================================
+       EMPTY / ERROR
+    ======================================================= */
+
+    if (!ready) {
+        return (
+            <div className="flex min-h-[400px] flex-col items-center justify-center gap-3 text-center">
+
+                <AlertCircle
+                    size={32}
+                    className="text-slate-300"
+                />
+
+                <p className="text-sm text-slate-500">
+                    {error ||
+                        "No company found."}
+                </p>
+
+                <button
+                    type="button"
+                    onClick={retry}
+                    className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[13px] font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                    <RotateCcw size={13} />
+                    Try again
+                </button>
+            </div>
+        );
+    }
+
+
+    /* =======================================================
+       DERIVED VALUES
+    ======================================================= */
+
+    const initials =
+        toText(
+            current.companyName
+        )
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((word) => word[0])
+            .join("")
+            .toUpperCase();
+
+    const isActive =
+        (current.status ||
+            "ACTIVE") === "ACTIVE";
+
+    const logoSrc =
+        imageUrl(
+            current,
+            "logo"
+        );
+
+    const location =
+        [
+            current.city,
+            current.state,
+        ]
+            .filter(Boolean)
+            .join(", ");
+
+    const nextInvoice =
+        `${toText(
+            current.invoicePrefix
+        )}${toText(
+            current.invoiceStartNumber
+        )}`;
+
+
+    /* =======================================================
+       UI
+    ======================================================= */
+
+    return (
+        <div className="min-h-full bg-[#f7f8fa]">
+
+            {/* =================================================
+               TABS
+            ================================================= */}
+
+            <div className="border-b border-slate-200 bg-white px-6 pt-4">
+
+                <nav className="-mb-px flex gap-7">
+
+                    {TABS.map((tabName) => (
+                        <button
+                            key={tabName}
+                            type="button"
+                            onClick={() =>
+                                setTab(tabName)
+                            }
+                            className={`border-b-2 pb-3 text-[13.5px] transition ${tab === tabName
+                                ? "border-blue-600 font-semibold text-slate-900"
+                                : "border-transparent text-slate-400 hover:text-slate-600"
+                                }`}
+                        >
+                            {tabName}
+                        </button>
+                    ))}
+                </nav>
+            </div>
+
+
+            {/* =================================================
+               BODY
+            ================================================= */}
+
+            {tab !== "Dashboard" ? (
+                <div className="p-10 text-center text-sm text-slate-400">
+                    {tab} will appear here.
+                </div>
+            ) : (
+                <div className="space-y-6 p-8">
+
+                    {/* =================================================
+                       PROFILE HEADER
+                    ================================================= */}
+
+                    <div className="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
+
+                        <div className="h-[122px] overflow-hidden rounded-lg">
+                            <CoverArt />
+                        </div>
+
+                        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 px-5 pb-2">
+
+                            <div className="flex items-start gap-4">
+
+                                {/* Avatar */}
+                                <div className="-mt-[38px] flex h-[86px] w-[86px] shrink-0 items-center justify-center overflow-hidden rounded-full border-[4px] border-white bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md cursor-pointer"
+                                    onClick={() => (navigate("/companies"))} >
+
+                                    {logoSrc ? (
+                                        <img
+                                            src={logoSrc}
+                                            alt="Company logo"
+                                            className="h-full w-full bg-white object-contain p-1.5"
+
+                                        />
+                                    ) : (
+                                        <span className="text-[24px] font-bold tracking-tight text-white">
+                                            {initials}
+                                        </span>
+                                    )}
+                                </div>
+
+
+                                <div className="pt-2.5">
+
+                                    <h2 className="text-[24px] font-semibold leading-tight text-blue-600 cursor-pointer hover:text-[#3b82f6]"
+                                        onClick={() => (navigate("/companies"))}>
+                                        {
+                                            current.companyName
+                                        }
+                                    </h2>
+
+                                    <p className="mt-0.5 text-[12px] text-blue-900">
+                                        @ -
+                                        {toText(
+                                            current.companyCode
+                                        ).toLowerCase() ||
+                                            toText(
+                                                current.displayName
+                                            ).toLowerCase()}
+                                    </p>
+
+                                    <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-slate-500">
+
+                                        {location && (
+                                            <span className="flex items-center gap-1 text-slate-700">
+                                                <MapPin size={13} />
+                                                {location}
+                                            </span>
+                                        )}
+
+                                        <span>
+                                            Code:{" "}
+                                            <b className="font-semibold text-slate-900">
+                                                {
+                                                    current.companyCode ||
+                                                    "-"
+                                                }
+                                            </b>
+                                        </span>
+
+                                        <span>
+                                            Status:{" "}
+                                            <b
+                                                className={`font-semibold ${isActive
+                                                    ? "text-emerald-600"
+                                                    : "text-slate-500"
+                                                    }`}
+                                            >
+                                                {
+                                                    current.status ||
+                                                    "ACTIVE"
+                                                }
+                                            </b>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            {!isActive && (
+                                <div className="pt-2.5">
+
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            handleReactivate
+                                        }
+                                        className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3.5 py-2 text-[13px] font-medium text-emerald-600 transition hover:bg-emerald-50"
+                                    >
+                                        <RotateCcw size={14} />
+                                        Reactivate
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+
+                    {/* =================================================
+                       ROW 1
+                       COMPANY INFORMATION + IMAGES
+                    ================================================= */}
+
+                    <div className="grid items-stretch gap-4 lg:grid-cols-2 ">
+
+                        {/* LEFT — Company Information */}
+                        <div>
+                            <FieldsSection
+                                title="Company Information"
+                                fields={BASIC_FIELDS}
+                                values={current}
+                                onSave={(patch) =>
+                                    saveFields(
+                                        patch,
+                                        "company information"
+                                    )
+                                }
+                            />
+                        </div>
+
+
+                        {/* RIGHT — Logo + Signature */}
+                        <div className="flex flex-col gap-4">
+
+                            {/* Company Logo — Top */}
+                            <ImageSection
+                                title="Company Logo"
+                                savedUrl={imageUrl(
+                                    current,
+                                    "logo"
+                                )}
+                                initials={initials}
+                                onSave={(file) =>
+                                    saveFields(
+                                        {
+                                            logo: file,
+                                        },
+                                        "company logo"
+                                    )
+                                }
+                            />
+
+                            {/* Signature — Bottom */}
+                            <ImageSection
+                                title="Signature"
+                                savedUrl={imageUrl(
+                                    current,
+                                    "signature"
+                                )}
+                                initials={initials}
+                                onSave={(file) =>
+                                    saveFields(
+                                        {
+                                            signature: file,
+                                        },
+                                        "signature"
+                                    )
+                                }
+                            />
+
+                        </div>
+
+                    </div>
+
+                    {/* =================================================
+                       ROW 2
+                       ADDRESS + ACTIVITY
+                    ================================================= */}
+
+                    <div className="grid items-stretch gap-4 lg:grid-cols-2">
+
+                        {/* Address */}
+                        <FieldsSection
+                            title="Address Information"
+                            fields={ADDRESS_FIELDS}
+                            values={current}
+                            onSave={(patch) =>
+                                saveFields(
+                                    patch,
+                                    "address information"
+                                )
+                            }
+                        />
+
+
+                        {/* Activity */}
+                        <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+
+                            <h3 className="text-[14px] font-semibold text-slate-900">
+                                Activity Overview
+                            </h3>
+
+
+                            <div className="mt-3 grid grid-cols-3 gap-2.5">
+
+                                <StatTile
+
+                                    icon={Coins}
+                                    label="Currency"
+                                    value={
+                                        current.currency
+                                    }
+                                />
+
+                                <StatTile
+                                    icon={ReceiptText}
+                                    label="Invoice Start"
+                                    value={
+                                        nextInvoice
+                                    }
+                                />
+
+                                <StatTile
+                                    icon={CalendarDays}
+                                    label="Financial Year"
+                                    value={formatDate(
+                                        current.financialYearStart
+                                    )}
+                                />
+                            </div>
+
+
+                            <h4 className="mb-2 mt-5 text-[13px] font-semibold text-slate-900">
+                                Recent Activity
+                            </h4>
+
+
+                            {activity.length === 0 ? (
+                                <div className="flex flex-1 items-center justify-center">
+
+                                    <p className="px-3 py-4 text-center text-[13px] text-slate-400">
+                                        Changes you make on this page will appear here.
+                                    </p>
+                                </div>
+                            ) : (
+                                <ul>
+                                    {activity.map(
+                                        (
+                                            activityItem,
+                                            index
+                                        ) => (
+                                            <li
+                                                key={
+                                                    activityItem.at +
+                                                    index
+                                                }
+                                                className={`flex items-center justify-between gap-3 px-3 py-3 text-[12.5px] ${index >
+                                                    0
+                                                    ? "border-t border-slate-100"
+                                                    : ""
+                                                    }`}
+                                            >
+                                                <span className="text-slate-800">
+                                                    {
+                                                        activityItem.text
+                                                    }
+                                                </span>
+
+                                                <span className="shrink-0 text-[11.5px] text-slate-400">
+                                                    {timeAgo(
+                                                        activityItem.at
+                                                    )}
+                                                </span>
+                                            </li>
+                                        )
+                                    )}
+                                </ul>
+                            )}
+                        </div>
+                    </div>
+
+
+                    {/* =================================================
+                       ROW 3
+                       TAX + INVOICE
+                    ================================================= */}
+
+                    <div className="grid items-stretch gap-4 lg:grid-cols-2">
+
+                        <FieldsSection
+                            title="Tax Information"
+                            fields={TAX_FIELDS}
+                            values={current}
+                            onSave={(patch) =>
+                                saveFields(
+                                    patch,
+                                    "tax information"
+                                )
+                            }
+                        />
+
+                        <FieldsSection
+                            title="Invoice Settings"
+                            fields={INVOICE_FIELDS}
+                            values={current}
+                            onSave={(patch) =>
+                                saveFields(
+                                    patch,
+                                    "invoice settings"
+                                )
+                            }
+                        />
+                    </div>
+                </div>
+            )
+            }
+        </div >
+    );
+}

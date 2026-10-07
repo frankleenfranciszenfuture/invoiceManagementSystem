@@ -416,9 +416,11 @@ export default function NavbarCompany() {
 
                     <button
                         type="button"
-                        onClick={
-                            handleNewCompany
-                        }
+                        // onClick={
+                        //     handleNewCompany
+                        // }
+
+                        onClick={() => navigate("/companies/newSimple")}
                         className="
                             flex
                             items-center
