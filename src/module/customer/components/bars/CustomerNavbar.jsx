@@ -84,9 +84,9 @@ export default function CustomerNavbar({ title }) {
                 <button
                     type="button"
                     onClick={() => setDropdownOpen(!dropdownOpen)}
-                    className="flex items-center gap-1 rounded-md bg-blue-600 px-3 py-2 cursor-pointer"
+                    className="flex items-center gap-1 rounded-md bg-[#088178] hover:bg-[#088178]/80 hover:text-white px-3 py-2 cursor-pointer"
                 >
-                    <span className="text-sm font-semibold text-white">
+                    <span className="text-sm font-semibold text-white ">
                         {selectedView}
                     </span>
 
@@ -101,7 +101,7 @@ export default function CustomerNavbar({ title }) {
                     <div className="absolute left-0 mt-2 w-72 rounded-md border border-gray-200 bg-white shadow-lg z-50">
 
                         {/* Views */}
-                        <div className="max-h-72 overflow-y-auto">
+                        <div className="max-h-72 overflow-y-auto rounded-md">
                             {filteredViews.map((view) => (
                                 <button
                                     key={view.value}
@@ -114,7 +114,7 @@ export default function CustomerNavbar({ title }) {
                                         navigate(`/customers?status=${view.value}`);
                                         setDropdownOpen(false);
                                     }}
-                                    className="w-full px-5 py-3 border-b border-gray-100 text-left text-sm hover:bg-blue-500 hover:text-white"
+                                    className="w-full px-5 py-3 border-b border-gray-100 text-left text-sm hover:bg-[#088178]/60 hover:text-white rounded-md"
                                 >
                                     {view.label}
                                 </button>
@@ -129,7 +129,7 @@ export default function CustomerNavbar({ title }) {
                                 navigate("/customers/new");
                                 setDropdownOpen(false);
                             }}
-                            className="w-full border-t border-gray-200 px-4 py-3 text-left text-sm font-medium text-blue-600 hover:bg-gray-50"
+                            className="w-full border-t border-gray-200 px-4 py-3 text-left text-sm font-medium text-[#088178] hover:bg-[#088178]/20"
                         >
                             + New View
                         </button>
@@ -141,14 +141,14 @@ export default function CustomerNavbar({ title }) {
             <div className="flex items-center gap-2">
 
                 {/* New Button */}
-                <div className="flex overflow-hidden rounded-md border border-blue-600">
+                <div className="flex overflow-hidden rounded-md border border-[#088178]/70">
                     <button
                         type="button"
                         onClick={(e) => {
                             e.stopPropagation();
                             navigate("/customers/new");
                         }}
-                        className="flex items-center gap-1 bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 cursor-pointer"
+                        className="flex items-center gap-1 bg-[#088178] px-3 py-2 text-sm font-medium text-white hover:bg-[#088178]/80 cursor-pointer"
                     >
                         <Plus size={14} />
                         New Customer

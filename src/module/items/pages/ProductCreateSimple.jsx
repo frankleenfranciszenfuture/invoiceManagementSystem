@@ -230,27 +230,27 @@ function SearchSelect({
         >
 
             {/* LABEL */}
-
-            <label
-                className="
+            {required && (
+                <label
+                    className="
                     block
                     text-sm
                     font-medium
-                    text-gray-700
+                    text-red-500
                     mb-2
                 "
-            >
+                >
 
-                {safeLabel}
+                    {safeLabel}
 
-                {required && (
-                    <span className="text-red-500 ml-1">
-                        *
-                    </span>
-                )}
+                    {required && (
+                        <span className="text-red-500 ml-1">
+                            *
+                        </span>
+                    )}
 
-            </label>
-
+                </label>
+            )}
 
             {/* SELECT */}
 
@@ -586,6 +586,7 @@ function SearchSelect({
 
     );
 }
+
 
 
 /* =========================================================
@@ -1532,15 +1533,21 @@ export default function ProductCreateSimple() {
         disabled:cursor-not-allowed
     `;
 
+    //     const labelClass = `
+    //     block
+    //     text-xs
+    //     font-medium
+    //     ${required ? "text-red-500" : "text-gray-600"}
+    //     mb-1.5
+    // `;
 
-    const labelClass = `
-        block
-        text-xs
-        font-medium
-        text-gray-600
-        mb-1.5
-    `;
-
+    const getLabelClass = (required = false) => `
+    block
+    text-xs
+    font-medium
+    ${required ? "text-red-500" : "text-gray-600"}
+    mb-1.5
+`;
 
     /* =====================================================
        TABS
@@ -2299,7 +2306,7 @@ export default function ProductCreateSimple() {
 
 
             navigate(
-                "/items/newSimple"
+                "/items"
             );
 
         };
@@ -2979,11 +2986,11 @@ export default function ProductCreateSimple() {
             >
                 {/* HEADER */}
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-gray-800">
+                    <h2 className="text-base font-semibold text-[#088178]">
                         Product Information
                     </h2>
 
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-[#088178] mt-1">
                         Enter the basic information of the product.
                     </p>
                 </div>
@@ -3081,11 +3088,10 @@ export default function ProductCreateSimple() {
 
                             {/* PRODUCT NAME */}
                             <div>
-                                <label className={labelClass}>
+
+                                <label className={getLabelClass(true)}>
                                     Product Name
-                                    <span className="text-red-500 ml-1">
-                                        *
-                                    </span>
+                                    <span className="ml-1">*</span>
                                 </label>
 
                                 <input
@@ -3116,7 +3122,7 @@ export default function ProductCreateSimple() {
 
                             {/* BRAND */}
                             <div>
-                                <label className={labelClass}>
+                                <label className={getLabelClass(false)}>
                                     Brand
                                 </label>
 
@@ -3138,7 +3144,7 @@ export default function ProductCreateSimple() {
 
                         {/* HSN CODE */}
                         <div>
-                            <label className={labelClass}>
+                            <label className={getLabelClass(false)}>
                                 HSN Code
                             </label>
 
@@ -3158,7 +3164,7 @@ export default function ProductCreateSimple() {
 
                         {/* DESCRIPTION */}
                         <div>
-                            <label className={labelClass}>
+                            <label className={getLabelClass(false)}>
                                 Description
                             </label>
 
@@ -3407,14 +3413,14 @@ export default function ProductCreateSimple() {
                         <h2 className="
                             text-base
                             font-semibold
-                            text-gray-800
+                            text-[#088178]
                         ">
                             Pricing & Tax
                         </h2>
 
                         <p className="
                             text-sm
-                            text-gray-500
+                            text-[#088178]
                             mt-1
                         ">
                             Configure purchase price,
@@ -3439,7 +3445,7 @@ export default function ProductCreateSimple() {
 
                             <label
                                 className={
-                                    labelClass
+                                    getLabelClass(true)
                                 }
                             >
                                 Purchasing Price
@@ -3497,7 +3503,7 @@ export default function ProductCreateSimple() {
 
                             <label
                                 className={
-                                    labelClass
+                                    getLabelClass(true)
                                 }
                             >
                                 Selling Price
@@ -3622,14 +3628,14 @@ export default function ProductCreateSimple() {
                         <h2 className="
                             text-base
                             font-semibold
-                            text-gray-800
+                            text-[#088178]
                         ">
                             Inventory Information
                         </h2>
 
                         <p className="
                             text-sm
-                            text-gray-500
+                            text-[#088178]
                             mt-1
                         ">
                             Configure stock levels,
@@ -3656,7 +3662,7 @@ export default function ProductCreateSimple() {
 
                             <label
                                 className={
-                                    labelClass
+                                    getLabelClass(false)
                                 }
                             >
                                 Minimum Stock
@@ -3707,7 +3713,7 @@ export default function ProductCreateSimple() {
 
                             <label
                                 className={
-                                    labelClass
+                                    getLabelClass(false)
                                 }
                             >
                                 Maximum Stock
@@ -3760,7 +3766,7 @@ export default function ProductCreateSimple() {
 
                         <label
                             className={
-                                labelClass
+                                getLabelClass(false)
                             }
                         >
                             Sizes
@@ -3827,7 +3833,7 @@ export default function ProductCreateSimple() {
 
                         <label
                             className={
-                                labelClass
+                                getLabelClass(false)
                             }
                         >
                             Units
@@ -3920,7 +3926,7 @@ export default function ProductCreateSimple() {
                         className="
                         text-base
                         font-semibold
-                        text-gray-800
+                        text-[#088178]
                     "
                     >
                         Product Settings
@@ -3929,7 +3935,7 @@ export default function ProductCreateSimple() {
                     <p
                         className="
                         text-sm
-                        text-gray-500
+                        text-[#088178]
                         mt-1
                     "
                     >
@@ -3943,7 +3949,7 @@ export default function ProductCreateSimple() {
 
                 <div className="max-w-[460px]">
 
-                    <label className={labelClass}>
+                    <label className={getLabelClass(false)}>
                         Status
                     </label>
 
@@ -4080,6 +4086,9 @@ export default function ProductCreateSimple() {
                 h-full
                 min-h-0
                 bg-gray-50
+                
+                px-3.5
+                py-5
             "
         >
 
@@ -4118,12 +4127,14 @@ export default function ProductCreateSimple() {
                             flex
                             items-center
                             justify-center
+                            cursor-pointer
                         "
+                        onClick={() => (navigate("/items"))}
                     >
 
                         <Package
                             size={20}
-                            className="text-blue-600"
+                            className="text-[#088178]"
                         />
 
                     </div>
@@ -4134,8 +4145,11 @@ export default function ProductCreateSimple() {
                         <h1 className="
                             text-lg
                             font-semibold
-                            text-gray-800
-                        ">
+                            text-[#088178]
+                            cursor-pointer
+                        "
+                            onClick={() => (navigate("/items"))}
+                        >
                             {isEdit
                                 ? "Edit Product"
                                 : "New Product"}
@@ -4143,7 +4157,7 @@ export default function ProductCreateSimple() {
 
                         <p className="
                             text-xs
-                            text-gray-500
+                            text-[#088178]
                             mt-0.5
                         ">
                             {isEdit
@@ -4228,8 +4242,8 @@ export default function ProductCreateSimple() {
 
                                 ${activeTab ===
                                     tab.id
-                                    ? "text-blue-600 border-blue-600"
-                                    : "text-gray-500 border-transparent hover:text-gray-700"
+                                    ? "text-[#088178] border-[#088178]"
+                                    : "text-[#088178]/70 border-transparent hover:text-[#088178]"
                                 }
                             `}
                         >
@@ -4253,7 +4267,6 @@ export default function ProductCreateSimple() {
                     flex-1
                     min-h-0
                     overflow-y-auto
-                    px-6
                     py-6
                 "
             >
@@ -4291,11 +4304,12 @@ export default function ProductCreateSimple() {
                     border-gray-200
                     bg-white
                     px-6
-                    py-4
+                    py-2
                     flex
                     items-center
                     justify-end
                     gap-3
+                    mr-13
                 "
             >
 
@@ -4316,7 +4330,7 @@ export default function ProductCreateSimple() {
                         bg-white
                         text-sm
                         font-medium
-                        text-gray-700
+                        text-[#088178]
                         hover:bg-gray-50
                         disabled:opacity-50
                     "
@@ -4351,8 +4365,8 @@ export default function ProductCreateSimple() {
                         className="
                             h-10
                             px-5
-                            bg-blue-500
-                            hover:bg-blue-600
+                            bg-[#088178]
+                            hover:bg-[#088178]/70
                             text-white
                             text-sm
                             font-medium
@@ -4387,12 +4401,12 @@ export default function ProductCreateSimple() {
                         className="
                             h-10
                             w-10
-                            bg-blue-500
-                            hover:bg-blue-600
+                            bg-[#088178]
+                            hover:bg-[#088178]/70
                             text-white
                             rounded-r-md
                             border-l
-                            border-blue-400
+                            border-white
                             flex
                             items-center
                             justify-center
@@ -4478,7 +4492,7 @@ export default function ProductCreateSimple() {
                                             py-3
                                             text-left
                                             text-sm
-                                            text-gray-700
+                                            text-[#088178]
                                             hover:bg-gray-50
                                             disabled:opacity-50
                                         "
@@ -4530,8 +4544,8 @@ export default function ProductCreateSimple() {
                                         py-3
                                         text-left
                                         text-sm
-                                        text-gray-700
-                                        hover:bg-gray-50
+                                        text-[#088178]
+                                        hover:bg-[gray-50]
                                         disabled:opacity-50
                                     "
                                 >

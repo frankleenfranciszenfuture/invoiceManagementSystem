@@ -1,43 +1,32 @@
-
 import React from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import RightTooltip from "../toolTip/RightTooltip";
+import { showLeaveDialog, toggleSidebar } from "../../module/ui/uiSlice";
 
 import {
-    NavLink,
-    useNavigate,
-    useLocation,
-} from "react-router-dom";
-
-import {
-    useDispatch,
-    useSelector,
-} from "react-redux";
-
-import {
-    showLeaveDialog,
-    toggleSidebar,
-} from "../../module/ui/uiSlice";
-
-import UnsavedChangesDialog from "../dialogue/UnsavedChangesDialog";
-
-import {
-    Sparkles,
     ChevronRight,
+    ChevronLeft,
     ChevronDown,
+    ChevronUp,
     LayoutDashboard,
     Users,
     FileText,
     Wallet,
     Plus,
-    TrendingUp,
-    Menu,
-    X,
     Package,
+    LogOut,
 } from "lucide-react";
+import { assets } from "../../assets/assets";
 
 
 // ============================================================
 // NAVIGATION
 // ============================================================
+/*
+ * children[].action  -> permission needed to see the child (default VIEW)
+ * badge              -> optional number/string shown as an amber chip
+ */
 
 const NAV = [
     {
@@ -46,7 +35,6 @@ const NAV = [
         icon: LayoutDashboard,
         to: "/dashboard",
     },
-
     {
         label: "Customers",
         moduleName: "Customers",
@@ -73,12 +61,7 @@ const NAV = [
         basePath: "/items",
         dropdown: true,
 
-        // children: [
-        //     {
-        //         label: "Items",
-        //         to: "/items",
-        //     },
-        // ],
+
     },
 
     {
@@ -91,12 +74,11 @@ const NAV = [
         dropdown: true,
 
         // children: [
-        //     {
-        //         label: "Invoices",
-        //         to: "/invoices",
-        //     },
+        //     { label: "All invoices", to: "/invoices", action: "VIEW" },
+        //     { label: "New invoice", to: "/invoices/new", action: "CREATE" },
         // ],
     },
+
 
     {
         label: "Payments",
@@ -107,94 +89,35 @@ const NAV = [
         queryKey: "status",
         dropdown: true,
 
-        children: [
-            {
-                label: "All",
-                status: "ALL",
-            },
-            {
-                label: "Active",
-                status: "ACTIVE",
-            },
-            {
-                label: "Inactive",
-                status: "INACTIVE",
-            },
-            {
-                label: "Draft",
-                status: "DRAFT",
-            },
-        ],
+        // children: [
+        //     { label: "All payments", to: "/payments", action: "VIEW" },
+        //     { label: "New payment", to: "/payments/new", action: "CREATE" },
+        // ],
     },
 ];
 
 
 // ============================================================
-// EMPTY VALUES
+// HELPERS
 // ============================================================
 
 const EMPTY_PERMISSIONS = [];
 
+const normalizeAction = (action) =>
+    action == null ? "" : String(action).trim().toUpperCase();
 
-// ============================================================
-// NORMALIZE ACTION
-// ============================================================
-
-const normalizeAction = (action) => {
-    if (action == null) {
-        return "";
-    }
-
-    return String(action)
-        .trim()
-        .toUpperCase();
-};
-
-
-// ============================================================
-// NORMALIZE MODULE
-// ============================================================
-
-const normalizeModule = (moduleName) => {
-    if (moduleName == null) {
-        return "";
-    }
-
-    return String(moduleName)
-        .trim()
-        .toLowerCase();
-};
-
-
-// ============================================================
-// NORMALIZE PERMISSION ARRAY
-// ============================================================
+const normalizeModule = (moduleName) =>
+    moduleName == null ? "" : String(moduleName).trim().toLowerCase();
 
 const normalizePermissionArray = (value) => {
-    if (Array.isArray(value)) {
-        return value;
-    }
-
-    if (Array.isArray(value?.data)) {
-        return value.data;
-    }
-
-    if (Array.isArray(value?.content)) {
-        return value.content;
-    }
-
+    if (Array.isArray(value)) return value;
+    if (Array.isArray(value?.data)) return value.data;
+    if (Array.isArray(value?.content)) return value.content;
     return EMPTY_PERMISSIONS;
 };
 
-
-// ============================================================
-// GET ROLE NAME
-// ============================================================
-
 const getRoleName = (user) => {
-    if (!user) {
-        return "";
-    }
+    if (!user) return "";
 
     const role =
         user?.roleName ||
@@ -204,776 +127,287 @@ const getRoleName = (user) => {
         user?.authority ||
         "";
 
-    return String(role)
-        .trim()
-        .toUpperCase();
+    return String(role).trim().toUpperCase();
 };
+
+// SUPER_ADMIN -> Super Admin
+const formatRole = (role) =>
+    role
+        .toLowerCase()
+        .split("_")
+        .filter(Boolean)
+        .map((word) => word[0].toUpperCase() + word.slice(1))
+        .join(" ");
+
+const getDisplayName = (user) =>
+    user?.name ||
+    user?.fullName ||
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+    user?.username ||
+    user?.email ||
+    "User";
+
+const getInitials = (name) =>
+    String(name)
+        .split(/[\s@._-]+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0].toUpperCase())
+        .join("");
+
+/*
+ * Merge flat / grouped permission formats into one flat list.
+ * User permissions are applied after role permissions, so they override.
+ */
+const collectPermissions = (list, source, permissionMap) => {
+    list.forEach((permission) => {
+        if (permission?.moduleId != null && permission?.actionId != null) {
+            permissionMap.set(`${permission.moduleId}-${permission.actionId}`, {
+                ...permission,
+                source,
+            });
+            return;
+        }
+
+        if (Array.isArray(permission?.actions)) {
+            permission.actions.forEach((action) => {
+                permissionMap.set(`${permission.moduleId}-${action?.actionId}`, {
+                    ...action,
+                    moduleId: permission?.moduleId,
+                    moduleName: permission?.moduleName,
+                    roleId: permission?.roleId,
+                    userId: permission?.userId,
+                    source,
+                });
+            });
+        }
+    });
+};
+
+
+// ============================================================
+// SMALL UI PIECES
+// ============================================================
+
+const Badge = ({ value }) =>
+    value ? (
+        <span className="ml-auto rounded-md bg-amber-400 px-1.5 py-0.5 text-[11px] font-bold leading-none text-slate-900">
+            {value}
+        </span>
+    ) : null;
+
+/* Row used inside the expanded tree and inside the collapsed flyout */
+const ChildRow = ({ child, active, onClick }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        className={`
+            my-0.5 flex w-full items-center justify-between rounded-lg
+            px-3 py-2 text-left text-sm transition-colors
+            ${active
+                ? "bg-white/10 font-medium text-white"
+                : "text-white hover:bg-white/10 hover:text-white"}
+        `}
+    >
+        <span className="truncate">{child.label}</span>
+        {active && <ChevronRight size={15} className="shrink-0" />}
+    </button>
+);
+
+/* Round initials avatar used in the bottom user card */
+const AvatarCircle = ({ src, name }) => (
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sky-100 text-sm font-semibold text-sky-600 ring-2 ring-white/10">
+        {src ? (
+            <img src={assets.zenfutureLogo} alt={name} className="h-full w-full object-cover" />
+        ) : (
+            getInitials(name)
+        )}
+    </div>
+);
 
 
 // ============================================================
 // SIDEBAR
 // ============================================================
 
-const Sidebar = () => {
-
+/*
+ * onLogout: pass your logout handler, e.g.
+ *   <Sidebar onLogout={() => dispatch(logoutUser())} />
+ * Falls back to navigating to /login.
+ */
+const Sidebar = ({ onLogout }) => {
     const dispatch = useDispatch();
-
     const navigate = useNavigate();
-
     const location = useLocation();
 
 
-    // ========================================================
-    // SIDEBAR STATE
-    // ========================================================
+    // ---------- STORE ----------
 
-    const open = useSelector(
-        (state) =>
-            state.ui?.sidebarOpen
-    );
+    const open = useSelector((state) => state.ui?.sidebarOpen);
+    const isDirty = useSelector((state) => state.customers?.isDirty);
 
-
-    // ========================================================
-    // AUTH STATE
-    // ========================================================
-
-    const currentUser = useSelector(
-        (state) =>
-            state.auth?.user || null
-    );
-
-    const isAuthenticated = useSelector(
-        (state) =>
-            state.auth?.isAuthenticated === true
-    );
-
-    const authChecking = useSelector(
-        (state) =>
-            state.auth?.authChecking === true
-    );
-
-
-    // ========================================================
-    // ROLE PERMISSIONS
-    // ========================================================
+    const currentUser = useSelector((state) => state.auth?.user || null);
+    const isAuthenticated = useSelector((state) => state.auth?.isAuthenticated === true);
+    const authChecking = useSelector((state) => state.auth?.authChecking === true);
 
     const rolePermissionsState = useSelector(
-        (state) =>
-            state.menuPermission?.rolePermissions ||
-            EMPTY_PERMISSIONS
+        (state) => state.menuPermission?.rolePermissions || EMPTY_PERMISSIONS
     );
-
-
-    // ========================================================
-    // DIRECT USER PERMISSIONS
-    // ========================================================
-
     const userPermissionsState = useSelector(
-        (state) =>
-            state.menuPermission?.userPermissions ||
-            EMPTY_PERMISSIONS
+        (state) => state.menuPermission?.userPermissions || EMPTY_PERMISSIONS
     );
-
-
-    // ========================================================
-    // PERMISSION LOADING
-    // ========================================================
-
     const permissionLoading = useSelector(
-        (state) =>
-            state.menuPermission?.loading === true
+        (state) => state.menuPermission?.loading === true
     );
 
+    const [openMenu, setOpenMenu] = React.useState(null);
 
-    // ========================================================
-    // NORMALIZED ROLE PERMISSIONS
-    // ========================================================
+
+    // ---------- PERMISSIONS ----------
 
     const rolePermissions = React.useMemo(
-        () =>
-            normalizePermissionArray(
-                rolePermissionsState
-            ),
-        [
-            rolePermissionsState,
-        ]
+        () => normalizePermissionArray(rolePermissionsState),
+        [rolePermissionsState]
     );
-
-
-    // ========================================================
-    // NORMALIZED USER PERMISSIONS
-    // ========================================================
 
     const userPermissions = React.useMemo(
-        () =>
-            normalizePermissionArray(
-                userPermissionsState
-            ),
-        [
-            userPermissionsState,
-        ]
+        () => normalizePermissionArray(userPermissionsState),
+        [userPermissionsState]
     );
-
-
-    // ========================================================
-    // ROLE
-    // ========================================================
 
     const normalizedRoleName = React.useMemo(
-        () =>
-            getRoleName(
-                currentUser
-            ),
-        [
-            currentUser,
-        ]
+        () => getRoleName(currentUser),
+        [currentUser]
     );
-
-
-    // ========================================================
-    // ADMIN ACCESS
-    // ========================================================
-
-    const isSuperAdmin =
-        normalizedRoleName === "SUPER_ADMIN";
-
-    const isAdmin =
-        normalizedRoleName === "ADMIN";
 
     const hasFullAccess =
-        isSuperAdmin ||
-        isAdmin;
+        normalizedRoleName === "SUPER_ADMIN" || normalizedRoleName === "ADMIN";
 
+    // ROLE first, USER overrides ROLE
+    const effectivePermissions = React.useMemo(() => {
+        if (hasFullAccess) return [];
 
-    // ========================================================
-    // CURRENT USER IDENTIFIER
-    // ========================================================
+        const permissionMap = new Map();
+        collectPermissions(rolePermissions, "ROLE", permissionMap);
+        collectPermissions(userPermissions, "USER", permissionMap);
 
-    const currentUserId =
-        currentUser?.id ??
-        currentUser?.userId ??
-        currentUser?.email ??
-        currentUser?.username ??
-        null;
-
-
-    // ========================================================
-    // EFFECTIVE PERMISSIONS
-    // ========================================================
-
-    /*
-     * IMPORTANT
-     *
-     * Role permissions are loaded by authThunks.
-     *
-     * Direct user permissions are also loaded by authThunks.
-     *
-     * Sidebar DOES NOT fetch permissions anymore.
-     *
-     * Priority:
-     *
-     * ROLE
-     *   ↓
-     * USER OVERRIDES ROLE
-     *
-     * Example:
-     *
-     * Role:
-     * Products -> VIEW -> true
-     *
-     * User:
-     * Products -> VIEW -> false
-     *
-     * Result:
-     * Products -> VIEW -> false
-     */
-
-    const effectivePermissions =
-        React.useMemo(() => {
-
-            if (hasFullAccess) {
-                return [];
-            }
-
-
-            const permissionMap =
-                new Map();
-
-
-            // =================================================
-            // ROLE PERMISSIONS
-            // =================================================
-
-            rolePermissions.forEach(
-                (permission) => {
-
-                    /*
-                     * FLAT FORMAT
-                     *
-                     * {
-                     *   roleId,
-                     *   moduleId,
-                     *   actionId,
-                     *   moduleName,
-                     *   actionName,
-                     *   allowed
-                     * }
-                     */
-
-                    if (
-                        permission?.moduleId != null &&
-                        permission?.actionId != null
-                    ) {
-
-                        const key =
-                            `${permission.moduleId}-${permission.actionId}`;
-
-                        permissionMap.set(
-                            key,
-                            {
-                                ...permission,
-                                source: "ROLE",
-                            }
-                        );
-
-                        return;
-                    }
-
-
-                    /*
-                     * GROUPED FORMAT
-                     *
-                     * {
-                     *   roleId,
-                     *   moduleId,
-                     *   moduleName,
-                     *   actions: [...]
-                     * }
-                     */
-
-                    if (
-                        Array.isArray(
-                            permission?.actions
-                        )
-                    ) {
-
-                        permission.actions.forEach(
-                            (action) => {
-
-                                const key =
-                                    `${permission.moduleId}-${action?.actionId}`;
-
-                                permissionMap.set(
-                                    key,
-                                    {
-                                        ...action,
-
-                                        moduleId:
-                                            permission?.moduleId,
-
-                                        moduleName:
-                                            permission?.moduleName,
-
-                                        roleId:
-                                            permission?.roleId,
-
-                                        source:
-                                            "ROLE",
-                                    }
-                                );
-                            }
-                        );
-                    }
-
-                }
-            );
-
-
-            // =================================================
-            // USER PERMISSIONS
-            // =================================================
-
-            /*
-             * User permissions are added AFTER role
-             * permissions.
-             *
-             * Therefore they override role permissions.
-             */
-
-            userPermissions.forEach(
-                (permission) => {
-
-                    /*
-                     * FLAT FORMAT
-                     */
-
-                    if (
-                        permission?.moduleId != null &&
-                        permission?.actionId != null
-                    ) {
-
-                        const key =
-                            `${permission.moduleId}-${permission.actionId}`;
-
-                        permissionMap.set(
-                            key,
-                            {
-                                ...permission,
-                                source: "USER",
-                            }
-                        );
-
-                        return;
-                    }
-
-
-                    /*
-                     * GROUPED FORMAT
-                     */
-
-                    if (
-                        Array.isArray(
-                            permission?.actions
-                        )
-                    ) {
-
-                        permission.actions.forEach(
-                            (action) => {
-
-                                const key =
-                                    `${permission.moduleId}-${action?.actionId}`;
-
-                                permissionMap.set(
-                                    key,
-                                    {
-                                        ...action,
-
-                                        moduleId:
-                                            permission?.moduleId,
-
-                                        moduleName:
-                                            permission?.moduleName,
-
-                                        userId:
-                                            permission?.userId,
-
-                                        source:
-                                            "USER",
-                                    }
-                                );
-                            }
-                        );
-                    }
-
-                }
-            );
-
-
-            return Array.from(
-                permissionMap.values()
-            );
-
-        }, [
-            rolePermissions,
-            userPermissions,
-            hasFullAccess,
-        ]);
-
-
-    // ========================================================
-    // DEBUG PERMISSIONS
-    // ========================================================
-
-    React.useEffect(() => {
-
-        if (
-            authChecking ||
-            !isAuthenticated ||
-            !currentUser
-        ) {
-            return;
-        }
-
-        console.log(
-            "SIDEBAR CURRENT USER:",
-            currentUser
-        );
-
-        console.log(
-            "SIDEBAR ROLE:",
-            normalizedRoleName
-        );
-
-        console.log(
-            "SIDEBAR ROLE PERMISSIONS:",
-            rolePermissions
-        );
-
-        console.log(
-            "SIDEBAR USER PERMISSIONS:",
-            userPermissions
-        );
-
-        console.log(
-            "SIDEBAR EFFECTIVE PERMISSIONS:",
-            effectivePermissions
-        );
-
-    }, [
-        authChecking,
-        isAuthenticated,
-        currentUser,
-        normalizedRoleName,
-        rolePermissions,
-        userPermissions,
-        effectivePermissions,
-    ]);
-
-
-    // ========================================================
-    // UNSAVED CHANGES
-    // ========================================================
-
-    const isDirty = useSelector(
-        (state) =>
-            state.customers?.isDirty
-    );
-
-    const leaveDialog = useSelector(
-        (state) =>
-            state.ui?.leaveDialog
-    );
-
-
-    // ========================================================
-    // OPEN MENU
-    // ========================================================
-
-    const [
-        openMenu,
-        setOpenMenu
-    ] = React.useState(null);
-
-
-    // ========================================================
-    // HAS PERMISSION
-    // ========================================================
+        return Array.from(permissionMap.values());
+    }, [rolePermissions, userPermissions, hasFullAccess]);
 
     const hasPermission = React.useCallback(
-        (
-            moduleName,
-            action = "VIEW"
-        ) => {
+        (moduleName, action = "VIEW") => {
+            if (hasFullAccess) return true;
+            if (!moduleName) return false;
 
-            /*
-             * ================================================
-             * FULL ACCESS
-             * ================================================
-             */
+            const requestedModule = normalizeModule(moduleName);
+            const requestedAction = normalizeAction(action);
 
-            if (hasFullAccess) {
-                return true;
-            }
-
-
-            if (!moduleName) {
-                return false;
-            }
-
-
-            const requestedModule =
-                normalizeModule(
-                    moduleName
-                );
-
-            const requestedAction =
-                normalizeAction(
-                    action
-                );
-
-
-            /*
-             * ================================================
-             * FIRST TRY FLAT PERMISSIONS
-             * ================================================
-             */
-
-            const flatPermission =
-                effectivePermissions.find(
-                    (permission) => {
-
-                        const permissionModule =
-                            normalizeModule(
-                                permission?.moduleName
-                            );
-
-                        const permissionAction =
-                            normalizeAction(
-                                permission?.actionName
-                            );
-
-
-                        return (
-                            permissionModule ===
-                            requestedModule &&
-
-                            permissionAction ===
-                            requestedAction
-                        );
-                    }
-                );
-
-
-            if (flatPermission) {
-
-                return (
-                    flatPermission?.allowed === true &&
-
-                    flatPermission?.active !== false &&
-
-                    normalizeAction(
-                        flatPermission?.status
-                    ) !== "INACTIVE"
-                );
-            }
-
-
-            /*
-             * ================================================
-             * GROUPED PERMISSION FALLBACK
-             * ================================================
-             */
-
-            const groupedPermission =
-                effectivePermissions.find(
-                    (permission) =>
-                        normalizeModule(
-                            permission?.moduleName
-                        ) ===
-                        requestedModule
-                );
-
-
-            if (
-                !groupedPermission ||
-                !Array.isArray(
-                    groupedPermission?.actions
-                )
-            ) {
-                return false;
-            }
-
-
-            return groupedPermission.actions.some(
-                (actionItem) => {
-
-                    if (
-                        typeof actionItem ===
-                        "string"
-                    ) {
-
-                        return (
-                            normalizeAction(
-                                actionItem
-                            ) ===
-                            requestedAction
-                        );
-                    }
-
-
-                    return (
-                        normalizeAction(
-                            actionItem?.actionName
-                        ) ===
-                        requestedAction &&
-
-                        actionItem?.allowed === true &&
-
-                        actionItem?.active !== false &&
-
-                        normalizeAction(
-                            actionItem?.status
-                        ) !== "INACTIVE"
-                    );
-                }
+            // flat format
+            const flat = effectivePermissions.find(
+                (p) =>
+                    normalizeModule(p?.moduleName) === requestedModule &&
+                    normalizeAction(p?.actionName) === requestedAction
             );
 
-        }, [
-        effectivePermissions,
-        hasFullAccess,
-    ]
+            if (flat) {
+                return (
+                    flat.allowed === true &&
+                    flat.active !== false &&
+                    normalizeAction(flat.status) !== "INACTIVE"
+                );
+            }
+
+            // grouped format fallback
+            const grouped = effectivePermissions.find(
+                (p) => normalizeModule(p?.moduleName) === requestedModule
+            );
+
+            if (!grouped || !Array.isArray(grouped.actions)) return false;
+
+            return grouped.actions.some((a) => {
+                if (typeof a === "string") {
+                    return normalizeAction(a) === requestedAction;
+                }
+
+                return (
+                    normalizeAction(a?.actionName) === requestedAction &&
+                    a?.allowed === true &&
+                    a?.active !== false &&
+                    normalizeAction(a?.status) !== "INACTIVE"
+                );
+            });
+        },
+        [effectivePermissions, hasFullAccess]
     );
 
 
-    // ========================================================
-    // VIEW PERMISSION
-    // ========================================================
+    // ---------- NAVIGATION ----------
 
-    const canView = React.useCallback(
-        (moduleName) =>
-            hasPermission(
-                moduleName,
-                "VIEW"
-            ),
-        [
-            hasPermission,
-        ]
-    );
+    const isActiveRoute = (path) =>
+        !!path &&
+        (location.pathname === path || location.pathname.startsWith(`${path}/`));
 
+    const goTo = (path) => {
+        if (!path) return;
 
-    // ========================================================
-    // CREATE PERMISSION
-    // ========================================================
-
-    const canCreate = React.useCallback(
-        (moduleName) =>
-            hasPermission(
-                moduleName,
-                "CREATE"
-            ),
-        [
-            hasPermission,
-        ]
-    );
-
-
-    // ========================================================
-    // ACTIVE ROUTE
-    // ========================================================
-
-    const isActiveRoute = (
-        path
-    ) => {
-
-        if (!path) {
-            return false;
+        if (isDirty) {
+            dispatch(showLeaveDialog(path));
+        } else {
+            navigate(path);
         }
-
-        return (
-            location.pathname === path ||
-            location.pathname.startsWith(
-                `${path}/`
-            )
-        );
     };
 
+    // Only the items (and children) the user may see
+    const visibleNav = React.useMemo(
+        () =>
+            NAV.filter((item) => hasPermission(item.moduleName, "VIEW")).map(
+                (item) => ({
+                    ...item,
+                    children: item.children?.filter((child) =>
+                        hasPermission(item.moduleName, child.action || "VIEW")
+                    ),
+                })
+            ),
+        [hasPermission]
+    );
 
-    // ========================================================
-    // MENU CLICK
-    // ========================================================
+    // Auto-open the menu that matches the current route
+    React.useEffect(() => {
+        const activeItem = NAV.find(
+            (item) => item.children?.length && isActiveRoute(item.to)
+        );
 
-    const handleMenuClick = (
-        item
-    ) => {
+        if (activeItem) setOpenMenu(activeItem.label);
+    }, [location.pathname]);
 
-        if (!item) {
+    const handleParentClick = (item) => {
+        if (!open) {
+            // collapsed: icon goes straight to the module
+            goTo(item.to);
             return;
         }
 
+        setOpenMenu((prev) => (prev === item.label ? null : item.label));
+    };
 
-        if (item.to) {
-            navigate(
-                item.to
-            );
-        }
-
-
-        if (item.children) {
-
-            setOpenMenu(
-                (previous) =>
-                    previous === item.label
-                        ? null
-                        : item.label
-            );
+    const handleLogout = () => {
+        if (typeof onLogout === "function") {
+            onLogout();
+        } else {
+            navigate("/login");
         }
     };
 
 
-    // ========================================================
-    // AUTO OPEN ACTIVE MENU
-    // ========================================================
-
-    React.useEffect(() => {
-
-        const activeItem =
-            NAV.find(
-                (item) =>
-                    item.to &&
-                    isActiveRoute(
-                        item.to
-                    )
-            );
-
-
-        if (
-            activeItem?.children
-        ) {
-
-            setOpenMenu(
-                activeItem.label
-            );
-        }
-
-    }, [
-        location.pathname,
-    ]);
-
-
-    // ========================================================
-    // AUTH CHECKING
-    // ========================================================
-
-    /*
-     * This is the critical part.
-     *
-     * Sidebar waits for authentication.
-     *
-     * loginUser/checkAuthentication already load
-     * permissions before becoming fulfilled.
-     */
+    // ---------- EARLY STATES ----------
 
     if (authChecking) {
-
         return (
-            <aside
-                className="
-                    fixed
-                    top-0
-                    left-0
-                    z-30
-                    flex
-                    h-full
-                    w-14
-                    flex-col
-                    border-r
-                    border-white/10
-                    bg-[#080c39]
-                "
-            />
+            <aside className="fixed bottom-3 left-3 top-3 z-30 w-[72px] rounded-3xl bg-[#1b1f27]" />
         );
     }
 
-
-    // ========================================================
-    // NOT AUTHENTICATED
-    // ========================================================
-
-    if (!isAuthenticated) {
-        return null;
-    }
-
-
-    // ========================================================
-    // PERMISSION LOADING
-    // ========================================================
-
-    /*
-     * Do NOT display the normal sidebar for a normal user
-     * while permissions are still loading.
-     *
-     * ADMIN/SUPER_ADMIN are not dependent on permission APIs.
-     */
+    if (!isAuthenticated) return null;
 
     if (
         !hasFullAccess &&
@@ -981,751 +415,335 @@ const Sidebar = () => {
         rolePermissions.length === 0 &&
         userPermissions.length === 0
     ) {
-
         return (
-            <aside
-                className="
-                    fixed
-                    top-0
-                    left-0
-                    z-30
-                    flex
-                    h-full
-                    w-14
-                    items-center
-                    justify-center
-                    border-r
-                    border-white/10
-                    bg-[#080c39]
-                "
-            >
-
-                <div
-                    className="
-                        h-5
-                        w-5
-                        animate-spin
-                        rounded-full
-                        border-2
-                        border-gray-500
-                        border-t-blue-500
-                    "
-                />
-
+            <aside className="fixed bottom-3 left-3 top-3 z-30 flex w-[72px] items-center justify-center rounded-xl bg-[#1b1f27]">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-600 border-t-blue-500" />
             </aside>
         );
     }
 
 
-    // ========================================================
-    // RENDER
-    // ========================================================
+    // ---------- DERIVED ----------
+
+    const displayName = getDisplayName(currentUser);
+    const roleLabel = formatRole(normalizedRoleName);
+    const avatarSrc =
+        currentUser?.avatar || currentUser?.profileImage || currentUser?.imageUrl;
+
+    const canCreateInvoice = hasPermission("Invoices", "CREATE");
+
+    const Avatar = (
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#088178] text-sm font-semibold text-white ring-1 ring-white/10">
+            {avatarSrc ? (
+                <img src={avatarSrc} alt={displayName} className="h-full w-full object-cover" />
+            ) : (
+                getInitials(displayName)
+            )}
+        </div>
+    );
+
+
+    // ---------- RENDER ----------
 
     return (
         <>
-
-            {/* ==================================================
-                OVERLAY
-            ================================================== */}
-
+            {/* Mobile overlay */}
             {open && (
                 <div
-                    className="
-                        fixed
-                        inset-0
-                        z-20
-                        bg-black/30
-                        lg:hidden
-                    "
-                    onClick={() =>
-                        dispatch(
-                            toggleSidebar()
-                        )
-                    }
+                    className="fixed inset-0 z-20 bg-black/40 lg:hidden"
+                    onClick={() => dispatch(toggleSidebar())}
                 />
             )}
 
-
-            {/* ==================================================
-                SIDEBAR
-            ================================================== */}
-
             <aside
                 className={`
-                    fixed
-                    top-0
-                    left-0
-                    z-30
-                    flex
-                    h-full
-                    flex-col
-                    border-r
-                    border-white/10
-                    bg-[#080c39]
-                    transition-all
-                    duration-300
-
-                    ${open
-                        ? "w-53"
-                        : "w-14 overflow-visible"
-                    }
+                    fixed bottom-3 left-3 top-3 z-30 flex flex-col
+                    rounded-xl border border-white/5 bg-[#088178]
+                    shadow-2xl shadow-black/30
+                    transition-[width] duration-300
+                    ${open ? "w-54" : "w-[72px]"}
                 `}
             >
 
-                {/* ==================================================
-                    LOGO
-                ================================================== */}
+                {/* ================= COLLAPSE TOGGLE ================= */}
 
-                <div
+                <button
+                    type="button"
+                    onClick={() => dispatch(toggleSidebar())}
+                    aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
                     className="
-                        flex
-                        h-16
-                        items-center
-                        gap-3
-                        border-b
-                        border-white/10
-                        px-4
+                        absolute -right-3 top-[34px] z-40 flex h-6 w-6
+                        items-center justify-center rounded-full
+                        bg-[#4EBBB4] text-[white] hover:text-[#088178] shadow-lg shadow-blue-500/30
+                        transition hover:bg-[#B6E7E4]
                     "
                 >
-
-                    <div
-                        className="
-                            flex
-                            h-8
-                            w-8
-                            items-center
-                            justify-center
-                            rounded-lg
-                            bg-blue-600
-                        "
-                    >
-
-                        <TrendingUp
-                            size={16}
-                            className="text-white"
-                        />
-
-                    </div>
+                    {open ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+                </button>
 
 
-                    {open && (
-                        <span
-                            className="
-                                text-sm
-                                font-semibold
-                                text-gray-200
-                            "
-                        >
-                            InvoicePro
-                        </span>
-                    )}
+                {/* ================= USER HEADER ================= */}
 
-                </div>
+                <div className={`px-4 pb-4 pt-5 ${open ? "" : "flex justify-center px-0"}`}>
+                    <div className={`flex items-center gap-3 ${open ? "border-b border-white/10 pb-4" : ""}`}>
+                        {Avatar}
 
-
-                {/* ==================================================
-                    GETTING STARTED
-                ================================================== */}
-
-                <div className="mt-3 px-3">
-
-                    <div
-                        className="
-                            rounded-xl
-                            bg-white/5
-                            transition
-                            hover:bg-white/10
-                        "
-                    >
-
-                        <button
-                            type="button"
-                            className="
-                                flex
-                                w-full
-                                items-center
-                                justify-between
-                                rounded-lg
-                                bg-white/5
-                                px-3
-                                py-2.5
-                                transition-colors
-                                hover:bg-white/10
-                            "
-                        >
-
-                            <span
-                                className="
-                                    flex
-                                    min-w-0
-                                    flex-1
-                                    items-center
-                                    gap-2
-                                    text-sm
-                                    text-white
-                                "
-                            >
-
-                                <Sparkles
-                                    className="
-                                        h-4
-                                        w-4
-                                        flex-shrink-0
-                                        text-amber-300
-                                    "
-                                />
-
-                                <span
-                                    className="
-                                        truncate
-                                        whitespace-nowrap
-                                    "
-                                >
-                                    Getting Started
-                                </span>
-
-                            </span>
-
-
-                            <ChevronRight
-                                className="
-                                    h-4
-                                    w-4
-                                    flex-shrink-0
-                                    text-gray-400
-                                "
-                            />
-
-                        </button>
-
-
-                        <div className="px-3 pb-3">
-
-                            <div
-                                className="
-                                    h-1
-                                    overflow-hidden
-                                    rounded-full
-                                    bg-white/10
-                                "
-                            >
-
-                                <div
-                                    className="
-                                        h-full
-                                        w-[95%]
-                                        rounded-full
-                                        bg-blue-500
-                                    "
-                                />
-
+                        {open && (
+                            <div className="min-w-0 leading-tight">
+                                <p className="text-[12px] text-white">InvoicePro</p>
+                                <p className="truncate text-base font-semibold text-white">
+                                    {displayName}
+                                </p>
                             </div>
-
-                        </div>
-
+                        )}
                     </div>
-
                 </div>
 
 
-                {/* ==================================================
-                    NAVIGATION
-                ================================================== */}
+                {/* ================= NAV ================= */}
 
                 <nav
-                    className="
-                        flex-1
-                        space-y-1
-                        overflow-y-auto
-                        px-3
-                        py-3
-                    "
+                    className={`
+                        flex-1 space-y-1 px-3 py-1
+                        ${open ? "overflow-y-auto" : "overflow-visible"}
+                    `}
                 >
+                    {visibleNav.map((item) => {
+                        const Icon = item.icon;
+                        const hasChildren = item.children?.length > 0;
+                        const active = isActiveRoute(item.to);
+                        const expanded = open && hasChildren && openMenu === item.label;
 
-                    {NAV
-                        .filter(
-                            (item) =>
-                                canView(
-                                    item.moduleName
-                                )
-                        )
-                        .map(
-                            (item) => {
+                        return (
+                            <div key={item.label} className="group/item relative">
 
-                                const Icon =
-                                    item.icon;
+                                {/* active marker on the panel edge */}
+                                {active && (
+                                    <span className="absolute -left-3 top-1/2 h-9 w-1.5 -translate-y-1/2 rounded-r-full bg-lime-400" />
+                                )}
 
-
-                                const active =
-                                    item.to &&
-                                    isActiveRoute(
-                                        item.to
-                                    );
-
-
-                                return (
-                                    <div
-                                        key={
-                                            item.label
+                                {/* ---------- MAIN ROW ---------- */}
+                                <button
+                                    type="button"
+                                    title={!open ? item.label : undefined}
+                                    onClick={() =>
+                                        hasChildren
+                                            ? handleParentClick(item)
+                                            : goTo(item.to)
+                                    }
+                                    className={`
+        flex items-center rounded-xl text-sm font-medium
+        transition-colors duration-150
+        ${open
+                                            ? "w-full gap-3 px-5 py-2.5"
+                                            : "mx-auto h-11 w-11 justify-center"
                                         }
-                                        className="
-                                            group
-                                            relative
-                                            flex
-                                            flex-col
-                                        "
-                                    >
+        ${active
+                                            ? "bg-white/[0.08] text-white"
+                                            : "text-white hover:bg-white/10 hover:text-white"
+                                        }
+    `}
+                                >
+                                    <Icon size={18} className="shrink-0" />
 
-                                        {/* ==================================================
-                                            MAIN ROW
-                                        ================================================== */}
+                                    {open && <span className="truncate">{item.label}</span>}
 
-                                        <div
-                                            className="
-                                                flex
-                                                items-stretch
-                                                justify-between
-                                                overflow-visible
-                                                rounded-md
-                                            "
-                                        >
+                                    {open && <Badge value={item.badge} />}
 
-                                            {/* ==================================================
-                                                MAIN MENU
-                                            ================================================== */}
+                                    {open && hasChildren && (
+                                        <span className="ml-auto text-white">
+                                            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                        </span>
+                                    )}
+                                </button>
 
-                                            {item.children ? (
+                                {/* ---------- EXPANDED TREE ---------- */}
+                                {expanded && (
+                                    <div className="relative ml-[22px] mt-1 mb-1">
+                                        {item.children.map((child, index) => {
+                                            const isLast = index === item.children.length - 1;
+                                            const childActive = location.pathname === child.to;
 
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleMenuClick(item)}
-                                                    className={`
-    relative
-    flex
-    flex-1
-    items-center
-    gap-3
-    rounded-xl
-    border
-    px-3
-    py-2
-
-    text-gray-300
-
-    border-transparent
-    bg-transparent
-
-    transition-all
-    duration-200
-    ease-out
-
-    hover:border-white/[0.08]
-    hover:bg-white/[0.07]
-    hover:text-white
-    hover:backdrop-blur-xl
-    hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_4px_16px_rgba(0,0,0,0.12)]
-
-    ${active
-                                                            ? `
-            border-white/[0.10]
-            bg-white/[0.10]
-            text-white
-            backdrop-blur-xl
-            shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_4px_16px_rgba(0,0,0,0.15)]
-        `
-                                                            : ""
-                                                        }
-`}
-                                                >
-                                                    {open && (
-                                                        <ChevronDown
-                                                            size={16}
-                                                            className={`
-                shrink-0
-                transition-transform
-                duration-200
-
-                ${openMenu === item.label
-                                                                    ? "rotate-180"
-                                                                    : ""
-                                                                }
-            `}
-                                                        />
+                                            return (
+                                                <div key={child.to} className="relative pl-5">
+                                                    {!isLast && (
+                                                        <span className="absolute left-0 top-0 h-full border-l border-white/15" />
                                                     )}
 
-                                                    <Icon
-                                                        size={18}
-                                                        className="
-        shrink-0
-        transition-all
-        duration-200
-        group-hover:scale-105
-        group-hover:text-white
-    "
+                                                    <span className="absolute left-0 top-0 h-1/2 w-3.5 rounded-bl-lg border-b border-l border-white/15" />
+
+                                                    <ChildRow
+                                                        child={child}
+                                                        active={childActive}
+                                                        onClick={() => goTo(child.to)}
                                                     />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
 
-                                                    {open && (
-                                                        <span className="whitespace-nowrap">
-                                                            {item.label}
-                                                        </span>
-                                                    )}
-                                                </button>
+                                {!open && (
+                                    <>
+                                        {/* =====================================================
+            NORMAL MODULE → SIMPLE TOOLTIP
+        ===================================================== */}
+                                        {!hasChildren && (
+                                            <RightTooltip text={item.label} />
+                                        )}
 
-                                            ) : (
-
-                                                <NavLink
-                                                    to={
-                                                        item.to
-                                                    }
-                                                    className={({
-                                                        isActive,
-                                                    }) =>
-                                                        `
-                                                            relative
-                                                            flex
-                                                            flex-1
-                                                            items-center
-                                                            gap-2
-                                                            px-3
-                                                            py-2
-                                                            transition
-
-                                                            ${isActive
-                                                            ? "bg-blue-500 text-white"
-                                                            : "text-gray-300 hover:bg-white/10 hover:text-white"
-                                                        }
-                                                        `
-                                                    }
-                                                >
-
-                                                    <Icon
-                                                        size={18}
-                                                        className="
-                                                            flex-shrink-0
-                                                        "
-                                                    />
-
-
-                                                    {open && (
-                                                        <span
-                                                            className="
-                                                                whitespace-nowrap
-                                                            "
-                                                        >
-                                                            {
-                                                                item.label
-                                                            }
-                                                        </span>
-                                                    )}
-
-                                                </NavLink>
-
-                                            )}
-
-
-                                            {/* ==================================================
-                                                CREATE BUTTON
-                                            ================================================== */}
-
-                                            {open &&
-                                                item.addTo &&
-                                                canCreate(
-                                                    item.moduleName
-                                                ) && (
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-
-                                                            if (
-                                                                isDirty
-                                                            ) {
-
-                                                                dispatch(
-                                                                    showLeaveDialog(
-                                                                        item.addTo
-                                                                    )
-                                                                );
-
-                                                            } else {
-
-                                                                navigate(
-                                                                    item.addTo
-                                                                );
-                                                            }
-
-                                                        }}
-                                                        className="
-                                                            flex
-                                                            w-12
-                                                            items-center
-                                                            justify-center
-                                                            border-l
-                                                            border-white/10
-                                                            opacity-0
-                                                            hover:bg-white/20
-                                                            group-hover:opacity-100
-                                                        "
-                                                    >
-
-                                                        <Plus
-                                                            size={16}
-                                                        />
-
-                                                    </button>
-
-                                                )}
-
-
-                                            {/* ==================================================
-                                                COLLAPSED TOOLTIP
-                                            ================================================== */}
-
-                                            {!open && (
+                                        {/* =====================================================
+                                        MODULE WITH CHILDREN → FLYOUT TOOLTIP
+                                    ===================================================== */}
+                                        {hasChildren && (
+                                            <div
+                                                className="
+                                                    absolute
+                                                    left-full
+                                                    top-1/2
+                                                    z-[9999]
+                                                    hidden
+                                                    -translate-y-1/2
+                                                    pl-5
+                                                    group-hover/item:block
+                                                    group-focus-within/item:block
+                                                "
+                                            >
                                                 <div
                                                     className="
-                                                        pointer-events-none
-                                                        invisible
-                                                        absolute
-                                                        left-[72px]
-                                                        top-1/2
-                                                        z-[9999]
-                                                        min-w-max
-                                                        -translate-y-1/2
-                                                        rounded-lg
-                                                        bg-blue-600
-                                                        px-4
-                                                        py-2.5
-                                                        text-sm
+                                                            min-w-[210px]
+                                                            overflow-hidden
+                                                            rounded-xl
+                                                            bg-[#088178]
+                                                            p-1.5
+                                                            shadow-2xl
+                                                            ring-1
+                                                            ring-white/10
+                                                        "
+                                                >
+                                                    {/* Parent / tooltip title */}
+                                                    <div
+                                                        className="
+                                                        px-3
+                                                        py-2
+                                                        text-xs
                                                         font-semibold
                                                         text-white
-                                                        opacity-0
-                                                        shadow-lg
-                                                        transition-opacity
-                                                        duration-150
-                                                        before:absolute
-                                                        before:left-[-8px]
-                                                        before:top-1/2
-                                                        before:-translate-y-1/2
-                                                        before:border-b-[8px]
-                                                        before:border-r-[8px]
-                                                        before:border-t-[8px]
-                                                        before:border-b-transparent
-                                                        before:border-t-transparent
-                                                        before:border-r-blue-600
-                                                        group-hover:visible
-                                                        group-hover:opacity-100
                                                     "
-                                                >
-                                                    {
-                                                        item.label
-                                                    }
+                                                    >
+                                                        {item.label}
+                                                    </div>
+
+                                                    {/* Divider */}
+                                                    <div className="mx-2 border-t border-white/10" />
+
+                                                    {/* Children */}
+                                                    <div className="pt-1">
+                                                        {item.children.map((child) => (
+                                                            <ChildRow
+                                                                key={child.to}
+                                                                child={child}
+                                                                active={location.pathname === child.to}
+                                                                onClick={() => goTo(child.to)}
+                                                            />
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            )}
-
-                                        </div>
-
-
-                                        {/* ==================================================
-                                            CHILDREN
-                                        ================================================== */}
-
-                                        {item.children &&
-                                            openMenu ===
-                                            item.label && (
-
-                                                <div
-                                                    className="
-                                                        mt-1
-                                                        flex
-                                                        flex-col
-                                                    "
-                                                >
-
-                                                    {item.children.map(
-                                                        (
-                                                            child
-                                                        ) => {
-
-                                                            // ==================================================
-                                                            // ROUTE CHILD
-                                                            // ==================================================
-
-                                                            if (
-                                                                child.to
-                                                            ) {
-
-                                                                const childActive =
-                                                                    location.pathname ===
-                                                                    child.to ||
-                                                                    location.pathname.startsWith(
-                                                                        `${child.to}/`
-                                                                    );
-
-
-                                                                return (
-                                                                    <NavLink
-                                                                        key={`${item.label}-${child.label}`}
-                                                                        to={
-                                                                            child.to
-                                                                        }
-                                                                        className={`
-                                                                            ml-6
-                                                                            rounded-md
-                                                                            px-3
-                                                                            py-2
-                                                                            text-sm
-                                                                            transition
-
-                                                                            ${childActive
-                                                                                ? "bg-white/10 font-medium text-white"
-                                                                                : "text-gray-400 hover:bg-white/5 hover:text-white"
-                                                                            }
-                                                                        `}
-                                                                        style={{
-                                                                            paddingLeft:
-                                                                                "2.75rem",
-                                                                        }}
-                                                                    >
-                                                                        {
-                                                                            child.label
-                                                                        }
-                                                                    </NavLink>
-                                                                );
-
-                                                            }
-
-
-                                                            // ==================================================
-                                                            // STATUS FILTER
-                                                            // ==================================================
-
-                                                            const search =
-                                                                new URLSearchParams(
-                                                                    location.search
-                                                                );
-
-
-                                                            const childActive =
-                                                                location.pathname ===
-                                                                item.basePath &&
-                                                                search.get(
-                                                                    item.queryKey
-                                                                ) ===
-                                                                child.status;
-
-
-                                                            return (
-                                                                <NavLink
-                                                                    key={`${item.label}-${child.status}`}
-                                                                    to={`${item.basePath}?${item.queryKey}=${child.status}`}
-                                                                    className={`
-                                                                        ml-6
-                                                                        rounded-md
-                                                                        px-3
-                                                                        py-2
-                                                                        text-sm
-                                                                        transition
-
-                                                                        ${childActive
-                                                                            ? "bg-white/10 font-medium text-white"
-                                                                            : "text-gray-400 hover:bg-white/5 hover:text-white"
-                                                                        }
-                                                                    `}
-                                                                    style={{
-                                                                        paddingLeft:
-                                                                            "2.75rem",
-                                                                    }}
-                                                                >
-                                                                    {
-                                                                        child.label
-                                                                    }
-                                                                </NavLink>
-                                                            );
-
-                                                        }
-                                                    )}
-
-                                                </div>
-                                            )}
-
-                                    </div>
-                                );
-
-                            }
-                        )}
-
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        );
+                    })}
                 </nav>
 
 
-                {/* ==================================================
-                    BOTTOM TOGGLE
-                ================================================== */}
+                {/* ================= QUICK ACTION ================= */}
 
-                <div
-                    className="
-                        border-t
-                        border-white/10
-                        p-2
-                    "
-                >
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            dispatch(
-                                toggleSidebar()
-                            )
-                        }
-                        className="
-                            flex
-                            w-full
-                            items-center
-                            justify-center
-                            gap-2
-                            rounded-lg
-                            px-3
-                            py-2
-                            text-gray-400
-                            transition
-                            hover:bg-white/5
-                        "
-                    >
-
+                {/* {canCreateInvoice && (
+                    <div className="px-3 pt-3">
                         {open ? (
-                            <X size={16} />
-                        ) : (
-                            <Menu size={16} />
-                        )}
-
-                        {open && (
-                            <span
+                            <button
+                                type="button"
+                                onClick={() => goTo("/invoices/new")}
                                 className="
-                                    text-xs
+                                    flex w-full flex-col items-center gap-2 rounded-2xl
+                                    border border-dashed border-white/15 px-4 py-4
+                                    transition hover:border-blue-400/60 hover:bg-white/[0.03]
                                 "
                             >
-                                Collapse
-                            </span>
+                                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg shadow-blue-500/30">
+                                    <Plus size={20} />
+                                </span>
+
+                                <span className="text-sm font-semibold text-white">
+                                    Create invoice
+                                </span>
+
+                                <span className="text-[11px] text-gray-500">
+                                    Start a new bill
+                                </span>
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => goTo("/invoices/new")}
+                                className="mx-auto flex flex-col items-center gap-1.5"
+                                aria-label="Create invoice"
+                            >
+                                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-400">
+                                    <Plus size={20} />
+                                </span>
+
+                                <span className="text-xs font-semibold text-white">New</span>
+                            </button>
                         )}
+                    </div>
+                )} */}
 
-                    </button>
 
+                {/* ================= USER CARD (BOTTOM) ================= */}
+
+                <div className="shrink-0 p-3">
+                    {open ? (
+                        <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.04] p-2.5">
+                            <AvatarCircle src={avatarSrc} name={displayName} />
+
+                            <div className="min-w-0 flex-1 leading-tight">
+                                <p className="truncate text-sm font-semibold text-white">
+                                    {displayName}
+                                </p>
+                                <p className="truncate text-xs text-gray-400">{roleLabel}</p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleLogout}
+                                aria-label="Log out"
+                                className="rounded-lg p-2 text-gray-400 transition hover:bg-white/10 hover:text-white"
+                            >
+                                <LogOut size={18} />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center gap-1.5">
+                            <AvatarCircle src={avatarSrc} name={displayName} />
+
+                            <button
+                                type="button"
+                                onClick={handleLogout}
+                                aria-label="Log out"
+                                className="rounded-lg p-2 text-gray-400 transition hover:bg-white/10 hover:text-white"
+                            >
+                                <LogOut size={18} />
+                            </button>
+                        </div>
+                    )}
                 </div>
-
             </aside>
-
-
-            {/* ==================================================
-                UNSAVED CHANGES
-            ================================================== */}
-
-            {leaveDialog?.open && (
-                <UnsavedChangesDialog />
-            )}
-
         </>
     );
 };
-
 
 export default Sidebar;

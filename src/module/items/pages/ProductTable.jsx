@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { openModal } from "../../ui/uiSlice";
@@ -27,6 +27,10 @@ export default function ProductTable({ products = [] }) {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
+
+
+    const [showEdit, setShowEdit] = useState(false);
+    const [showView, setShowView] = useState(false);
 
     /* =====================================================
        REDUX STATE
@@ -230,82 +234,77 @@ export default function ProductTable({ products = [] }) {
 
     return (
 
-        <div className="bg-white rounded-xl border border-gray-200">
 
-            <table className="w-full">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
+            <div className="overflow-x-auto overflow-y-visible">
+                <table className="w-full">
+                    <thead className="bg-[#088178]/70 border-b border-gray-300">
+                        <tr>
 
-                {/* =================================================
-                    TABLE HEADER
-                ================================================= */}
+                            {[
+                                "Product",
+                                "SKU",
+                                "Category",
+                                "HSN",
+                                "Selling Price",
+                                "Purchase Price",
+                                "Tax",
+                                "Status",
+                                "Actions",
+                            ].map((header) => (
 
-                <thead className="sticky top-0 z-20 bg-gray-100 border-b border-gray-300">
-
-                    <tr>
-
-                        {[
-                            "Product",
-                            "SKU",
-                            "Category",
-                            "HSN",
-                            "Selling Price",
-                            "Purchase Price",
-                            "Tax",
-                            "Status",
-                            "Actions",
-                        ].map((header) => (
-
-                            <th
-                                key={header}
-                                className={`
+                                <th
+                                    key={header}
+                                    className={`
                                     px-4
                                     py-3
                                     font-medium
                                     text-sm
-                                    text-gray-600
+                                    text-white
                                     uppercase
                                     ${header === "Actions"
-                                        ? "text-right"
-                                        : "text-left"
-                                    }
+                                            ? "text-center"
+                                            : "text-left"
+                                        }
                                 `}
-                            >
-                                {header}
-                            </th>
+                                >
+                                    {header}
+                                </th>
 
-                        ))}
+                            ))}
 
-                    </tr>
+                        </tr>
 
-                </thead>
+                    </thead>
 
-                {/* =================================================
+                    {/* =================================================
                     TABLE BODY
                 ================================================= */}
 
-                <tbody>
+                    <tbody>
 
-                    {[...currentProducts]
-                        .sort(
-                            (a, b) =>
-                                a.id - b.id
-                        )
-                        .map(
-                            (
-                                product,
-                                index
-                            ) => (
+                        {[...currentProducts]
+                            .sort(
+                                (a, b) =>
+                                    a.id - b.id
+                            )
+                            .map(
+                                (
+                                    product,
+                                    index
+                                ) => (
 
-                                <tr
-                                    key={
-                                        product.id ||
-                                        index
-                                    }
-                                    onClick={() =>
-                                        handleView(
-                                            product
-                                        )
-                                    }
-                                    className="
+                                    <tr
+                                        key={
+                                            product.id ||
+                                            index
+                                        }
+                                        onClick={() =>
+                                            handleView(
+                                                product
+                                            )
+                                        }
+                                        className="
                                         border-b
                                         border-gray-100
                                         hover:bg-gray-50
@@ -313,18 +312,18 @@ export default function ProductTable({ products = [] }) {
                                         cursor-pointer
                                         transition-colors
                                     "
-                                >
+                                    >
 
-                                    {/* =================================
+                                        {/* =================================
                                         PRODUCT
                                     ================================= */}
 
-                                    <td className="px-2 py-3">
+                                        <td className="px-2 py-3">
 
-                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-3">
 
-                                            <div
-                                                className={`
+                                                <div
+                                                    className={`
                                                     w-10
                                                     h-10
                                                     rounded-full
@@ -334,409 +333,318 @@ export default function ProductTable({ products = [] }) {
                                                     text-md
                                                     font-bold
                                                     ${getAvatarColor(
-                                                    product.productName
-                                                )}
+                                                        product.productName
+                                                    )}
                                                 `}
-                                            >
-                                                {initials(
-                                                    product.productName
-                                                )}
+                                                >
+                                                    {initials(
+                                                        product.productName
+                                                    )}
+                                                </div>
+
+                                                <div>
+
+                                                    <p className="font-medium text-gray-800">
+                                                        {product.productName ||
+                                                            "—"}
+                                                    </p>
+
+                                                    <p className="text-sm text-gray-500">
+                                                        ID: #
+                                                        {product.id}
+                                                    </p>
+
+                                                </div>
+
                                             </div>
 
-                                            <div>
+                                        </td>
 
-                                                <p className="font-medium text-gray-800">
-                                                    {product.productName ||
-                                                        "—"}
-                                                </p>
-
-                                                <p className="text-sm text-gray-500">
-                                                    ID: #
-                                                    {product.id}
-                                                </p>
-
-                                            </div>
-
-                                        </div>
-
-                                    </td>
-
-                                    {/* =================================
+                                        {/* =================================
                                         SKU
                                     ================================= */}
 
-                                    <td className="px-4 py-3">
-                                        {product.sku ||
-                                            "—"}
-                                    </td>
+                                        <td className="px-4 py-3">
+                                            {product.sku ||
+                                                "—"}
+                                        </td>
 
-                                    {/* =================================
+                                        {/* =================================
                                         CATEGORY
                                     ================================= */}
 
-                                    <td className="px-4 py-3">
-                                        {product.categoryName ||
-                                            product.category
-                                                ?.categoryName ||
-                                            "—"}
-                                    </td>
+                                        <td className="px-4 py-3">
+                                            {product.categoryName ||
+                                                product.category
+                                                    ?.categoryName ||
+                                                "—"}
+                                        </td>
 
-                                    {/* =================================
+                                        {/* =================================
                                         HSN
                                     ================================= */}
 
-                                    <td className="px-4 py-3">
-                                        {product.hsnCode ||
-                                            "—"}
-                                    </td>
+                                        <td className="px-4 py-3">
+                                            {product.hsnCode ||
+                                                "—"}
+                                        </td>
 
-                                    {/* =================================
+                                        {/* =================================
                                         SELLING PRICE
                                     ================================= */}
 
-                                    <td className="px-4 py-3">
-                                        ₹{" "}
-                                        {product.sellingPrice ??
-                                            "0.00"}
-                                    </td>
+                                        <td className="px-4 py-3">
+                                            ₹{" "}
+                                            {product.sellingPrice ??
+                                                "0.00"}
+                                        </td>
 
-                                    {/* =================================
+                                        {/* =================================
                                         PURCHASE PRICE
                                     ================================= */}
 
-                                    <td className="px-4 py-3">
-                                        ₹{" "}
-                                        {product.purchasingPrice ??
-                                            "0.00"}
-                                    </td>
+                                        <td className="px-4 py-3">
+                                            ₹{" "}
+                                            {product.purchasingPrice ??
+                                                "0.00"}
+                                        </td>
 
-                                    {/* =================================
+                                        {/* =================================
                                         TAX
                                     ================================= */}
 
-                                    <td className="px-4 py-3">
+                                        <td className="px-4 py-3">
 
-                                        {product.taxName ? (
+                                            {product.taxName ? (
 
-                                            <div>
+                                                <div>
 
-                                                <p className="text-gray-800">
-                                                    {
-                                                        product.taxName
-                                                    }
-                                                </p>
+                                                    <p className="text-gray-800">
+                                                        {
+                                                            product.taxName
+                                                        }
+                                                    </p>
 
-                                                <p className="text-xs text-gray-500">
-                                                    {
-                                                        product.taxRate ??
-                                                        0
-                                                    }
-                                                    %
-                                                </p>
+                                                    <p className="text-xs text-gray-500">
+                                                        {
+                                                            product.taxRate ??
+                                                            0
+                                                        }
+                                                        %
+                                                    </p>
 
-                                            </div>
+                                                </div>
 
-                                        ) : (
+                                            ) : (
 
-                                            "—"
+                                                "—"
 
-                                        )}
+                                            )}
 
-                                    </td>
+                                        </td>
 
-                                    {/* =================================
+                                        {/* =================================
                                         STATUS
                                     ================================= */}
 
-                                    <td className="px-5 py-3 font-semibold">
+                                        <td className="px-5 py-3 font-semibold">
 
-                                        <span
-                                            className={`
+                                            <span
+                                                className={`
                                                 px-2
                                                 py-1
                                                 rounded-full
                                                 text-xs
                                                 font-medium
                                                 ${statusColor[
-                                                product.status
-                                                ] ||
-                                                "bg-gray-100 text-gray-700"
-                                                }
+                                                    product.status
+                                                    ] ||
+                                                    "bg-gray-100 text-gray-700"
+                                                    }
                                             `}
-                                        >
-                                            {product.status ||
-                                                "—"}
-                                        </span>
+                                            >
+                                                {product.status ||
+                                                    "—"}
+                                            </span>
 
-                                    </td>
+                                        </td>
 
-                                    {/* =================================
+                                        {/* =================================
                                         ACTIONS
                                     ================================= */}
 
-                                    <td
-                                        className="
-                                            relative
-                                            overflow-visible
-                                            px-2
-                                            py-3
-                                        "
-                                        onClick={(e) =>
-                                            e.stopPropagation()
-                                        }
-                                    >
+                                        {/* Actions */}
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-center gap-2">
 
-                                        <div className="flex justify-end">
-
-                                            <div className="relative group inline-block">
-
-                                                {/* ACTION BUTTON */}
-
+                                                {/* View */}
                                                 <button
                                                     type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowView(true);
+                                                        dispatch(setExsistingProduct(product));
+                                                        navigate(`/items/view/${product.id}`);
+                                                    }}
+                                                    title="View"
                                                     className="
-                                                        p-1
-                                                        rounded-full
-                                                        bg-blue-500
-                                                        text-white
-                                                        hover:bg-blue-600
-                                                        transition-colors
-                                                    "
+                                            flex h-8 w-8 items-center justify-center
+                                            rounded-lg
+                                            bg-blue-50
+                                            text-blue-600
+                                            transition
+                                            hover:bg-blue-100
+                                            hover:text-blue-700
+                                        "
                                                 >
-
-                                                    <ChevronDown
-                                                        size={16}
-                                                    />
-
+                                                    <Eye size={16} />
                                                 </button>
 
-                                                {/* ACTION MENU */}
-
-                                                <div
+                                                {/* Edit */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowEdit(true);
+                                                        dispatch(setExsistingProduct(product));
+                                                        navigate(`/items/editSimple/${product.id}`);
+                                                    }}
+                                                    title="Edit"
                                                     className="
-                                                        absolute
-                                                        right-0
-                                                        top-full
-                                                        mt-1
-                                                        z-[9999]
-                                                        opacity-0
-                                                        invisible
-                                                        group-hover:opacity-100
-                                                        group-hover:visible
-                                                        transition-all
-                                                        duration-150
-                                                    "
+                                                   flex h-8 w-8 items-center justify-center
+                                                   rounded-lg
+                                                   bg-amber-50
+                                                   text-amber-600
+                                                   transition
+                                                   hover:bg-amber-100
+                                                   hover:text-amber-700
+                                               "
                                                 >
+                                                    <Edit size={16} />
+                                                </button>
 
-                                                    <div
-                                                        className="
-                                                            w-36
-                                                            rounded-md
-                                                            bg-blue-500
-                                                            shadow-lg
-                                                            overflow-hidden
-                                                        "
-                                                    >
+                                                {/* Delete */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
 
-                                                        {/* VIEW */}
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handleView(
-                                                                    product
-                                                                )
-                                                            }
-                                                            className="
-                                                                flex
-                                                                w-full
-                                                                items-center
-                                                                gap-2
-                                                                px-4
-                                                                py-2
-                                                                text-sm
-                                                                text-white
-                                                                hover:bg-blue-600
-                                                                transition-colors
-                                                            "
-                                                        >
-
-                                                            <Eye
-                                                                size={16}
-                                                            />
-
-                                                            View
-
-                                                        </button>
-
-                                                        {/* EDIT */}
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handleEdit(
-                                                                    product
-                                                                )
-                                                            }
-                                                            className="
-                                                                flex
-                                                                w-full
-                                                                items-center
-                                                                gap-2
-                                                                px-4
-                                                                py-2
-                                                                text-sm
-                                                                text-white
-                                                                hover:bg-blue-600
-                                                                transition-colors
-                                                            "
-                                                        >
-
-                                                            <Edit
-                                                                size={16}
-                                                            />
-
-                                                            Edit
-
-                                                        </button>
-
-                                                        {/* DELETE */}
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handleDelete(
-                                                                    product.id
-                                                                )
-                                                            }
-                                                            className="
-                                                                flex
-                                                                w-full
-                                                                items-center
-                                                                gap-2
-                                                                px-4
-                                                                py-2
-                                                                text-sm
-                                                                text-white
-                                                                hover:bg-red-600
-                                                                transition-colors
-                                                            "
-                                                        >
-
-                                                            <Trash2
-                                                                size={16}
-                                                            />
-
-                                                            Delete
-
-                                                        </button>
-
-                                                    </div>
-
-                                                </div>
+                                                        // Your delete confirmation logic
+                                                        handleDelete(product.id);
+                                                    }}
+                                                    title="Delete"
+                                                    className="
+                                                    flex h-8 w-8 items-center justify-center
+                                                    rounded-lg
+                                                    bg-red-50
+                                                    text-red-600
+                                                    transition
+                                                    hover:bg-red-100
+                                                    hover:text-red-700
+                                                "
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
 
                                             </div>
+                                        </td>
+                                    </tr>
 
-                                        </div>
+                                )
+                            )}
 
-                                    </td>
+                    </tbody>
 
-                                </tr>
+                </table>
 
-                            )
-                        )}
-
-                </tbody>
-
-            </table>
-
-            {/* =====================================================
+                {/* =====================================================
                 PAGINATION
             ===================================================== */}
 
-            <div className="p-5 border-t border-gray-100 flex items-center justify-between">
+                <div className="p-5 border-t border-gray-100 flex items-center justify-between">
 
-                <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500">
 
-                    Showing{" "}
-                    {currentProducts.length}{" "}
-                    of{" "}
-                    {totalElements || 0}{" "}
-                    products
+                        Showing{" "}
+                        {currentProducts.length}{" "}
+                        of{" "}
+                        {totalElements || 0}{" "}
+                        products
 
-                </p>
+                    </p>
 
-                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3">
 
-                    {/* PREVIOUS */}
+                        {/* PREVIOUS */}
 
-                    <button
-                        type="button"
-                        disabled={
-                            Number(pageNumber) <=
-                            0
-                        }
-                        onClick={() => {
-                            // Add server-side page support here
-                        }}
-                        className="
+                        <button
+                            type="button"
+                            disabled={
+                                Number(pageNumber) <=
+                                0
+                            }
+                            onClick={() => {
+                                // Add server-side page support here
+                            }}
+                            className="
                             text-sm
-                            text-gray-400
-                            hover:text-gray-600
+                           text-[#088178] 
+                           hover:text-[#088178]/60
                             disabled:opacity-50
                         "
-                    >
-                        Previous
-                    </button>
+                        >
+                            Previous
+                        </button>
 
-                    {/* CURRENT PAGE */}
+                        {/* CURRENT PAGE */}
 
-                    <span
-                        className="
+                        <span
+                            className="
                             w-8
                             h-8
                             flex
                             items-center
                             justify-center
                             rounded-lg
-                            bg-blue-500
+                            bg-[#088178]
                             text-white
                             text-sm
                             font-medium
                         "
-                    >
-                        {(Number(pageNumber) ||
-                            0) + 1}
-                    </span>
+                        >
+                            {(Number(pageNumber) ||
+                                0) + 1}
+                        </span>
 
-                    {/* NEXT */}
+                        {/* NEXT */}
 
-                    <button
-                        type="button"
-                        disabled={
-                            (Number(pageNumber) ||
-                                0) >=
-                            (Number(totalPages) ||
-                                1) -
-                            1
-                        }
-                        onClick={() => {
-                            // Add server-side page support here
-                        }}
-                        className="
+                        <button
+                            type="button"
+                            disabled={
+                                (Number(pageNumber) ||
+                                    0) >=
+                                (Number(totalPages) ||
+                                    1) -
+                                1
+                            }
+                            onClick={() => {
+                                // Add server-side page support here
+                            }}
+                            className="
                             text-sm
-                            text-gray-400
-                            hover:text-gray-600
+                            text-[#088178]
+                            hover:text-[#088178]/60
                             disabled:opacity-50
                         "
-                    >
-                        Next
-                    </button>
+                        >
+                            Next
+                        </button>
+
+                    </div>
 
                 </div>
 
             </div>
-
         </div>
     );
 }

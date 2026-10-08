@@ -1,0 +1,46 @@
+export default function RightTooltip({ text }) {
+    return (
+        <div
+            className="
+                pointer-events-none
+                absolute
+                left-full
+                top-1/2
+                z-[9999]
+                ml-5
+                -translate-y-1/2
+                whitespace-nowrap
+                rounded-md
+                bg-gray-900
+                px-3
+                py-1.5
+                text-xs
+                font-medium
+                text-white
+                opacity-0
+                invisible
+                transition-all
+                duration-200
+                group-hover/item:visible
+                group-hover/item:opacity-100
+                group-focus-within/item:visible
+                group-focus-within/item:opacity-100
+            "
+        >
+            {text}
+
+            <span
+                className="
+                    absolute
+                    left-[-4px]
+                    top-1/2
+                    h-2
+                    w-2
+                    -translate-y-1/2
+                    rotate-45
+                    bg-gray-900
+                "
+            />
+        </div>
+    );
+}

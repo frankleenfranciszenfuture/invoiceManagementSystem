@@ -15,7 +15,7 @@ import {
 
 
 import { openModal } from "../../ui/uiSlice";
-import { ChevronDown, Edit, Pencil, Trash2, User } from "lucide-react";
+import { ChevronDown, Edit, Pencil, User, Eye, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function CustomerTable() {
@@ -39,6 +39,7 @@ export default function CustomerTable() {
 
 
     const [showEdit, setShowEdit] = useState(false);
+    const [showView, setShowView] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
 
 
@@ -112,7 +113,7 @@ export default function CustomerTable() {
         <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
             <div className="overflow-x-auto overflow-y-visible">
                 <table className="w-full">
-                    <thead className="bg-gray-100 border-b border-gray-300">
+                    <thead className="bg-[#088178]/70 border-b border-gray-300">
                         <tr>
                             {[
                                 "Display Name",
@@ -128,7 +129,7 @@ export default function CustomerTable() {
                             ].map((h) => (
                                 <th
                                     key={h}
-                                    className={`px-4 py-3 font-medium text-sm text-gray-600 uppercase ${h === "Actions" ? "text-right" : "text-left"
+                                    className={`px-4 py-3 font-medium text-sm text-white uppercase ${h === "Actions" ? "text-Center" : "text-left"
                                         }`}
                                 >
                                     {h}
@@ -204,44 +205,79 @@ export default function CustomerTable() {
                                         </td>
 
 
-                                        {/* Actions */}
-                                        <td className="relative overflow-visible px-4 py-3">
-                                            <div className="flex justify-end">
-                                                <div className="relative group inline-block">
-                                                    <button className="p-1 rounded-full bg-blue-500 text-white ">
-                                                        <ChevronDown size={16} />
-                                                    </button>
 
-                                                    <div
-                                                        className="
-                                absolute
-                                right-0
-                                top-full
-                                mt-1
-                                z-[9999]
-                                opacity-0
-                                invisible
-                                group-hover:opacity-100
-                                group-hover:visible
-                                transition-all
-                              "
-                                                    >
-                                                        <div className="w-32 rounded-md bg-blue-500 shadow-lg ">
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation(); // Prevent row click
-                                                                    setShowEdit(true);
-                                                                    dispatch(setSelectedCustomer(c));
-                                                                    navigate(`/customers/edit/${c.id}`);
-                                                                }}
-                                                                className="flex w-full items-center gap-2 px-4 py-2 text-white hover:bg-blue-600 rounded-md"
-                                                            >
-                                                                <Edit size={16} />
-                                                                Edit
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                        {/* Actions */}
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-end gap-2">
+
+                                                {/* View */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowView(true);
+                                                        dispatch(setSelectedCustomer(c));
+                                                        navigate(`/customers/view/${c.id}`);
+                                                    }}
+                                                    title="View"
+                                                    className="
+                                                        flex h-8 w-8 items-center justify-center
+                                                        rounded-lg
+                                                        bg-blue-50
+                                                        text-blue-600
+                                                        transition
+                                                        hover:bg-blue-100
+                                                        hover:text-blue-700
+                                                    "
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
+
+                                                {/* Edit */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowEdit(true);
+                                                        dispatch(setSelectedCustomer(c));
+                                                        navigate(`/customers/edit/${c.id}`);
+                                                    }}
+                                                    title="Edit"
+                                                    className="
+                flex h-8 w-8 items-center justify-center
+                rounded-lg
+                bg-amber-50
+                text-amber-600
+                transition
+                hover:bg-amber-100
+                hover:text-amber-700
+            "
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+
+                                                {/* Delete */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+
+                                                        // Your delete confirmation logic
+                                                        handleDelete(c.id);
+                                                    }}
+                                                    title="Delete"
+                                                    className="
+                                                            flex h-8 w-8 items-center justify-center
+                                                            rounded-lg
+                                                            bg-red-50
+                                                            text-red-600
+                                                            transition
+                                                            hover:bg-red-100
+                                                            hover:text-red-700
+                                                        "
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
 
                                             </div>
                                         </td>
@@ -267,12 +303,12 @@ export default function CustomerTable() {
                         <button
                             disabled={page <= 0}
                             onClick={() => dispatch(setCurrentPage(Math.max(0, page - 1)))}
-                            className="text-sm text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                            className="text-sm text-[#088178] hover:text-[#088178]/60 disabled:opacity-50"
                         >
                             Previous
                         </button>
 
-                        <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-600 text-white text-sm font-medium">
+                        <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#088178] text-white text-sm font-medium">
                             {(Number(page) || 0) + 1}
                         </span>
 
@@ -283,7 +319,7 @@ export default function CustomerTable() {
                             onClick={() =>
                                 dispatch(setCurrentPage((Number(page) || 0) + 1))
                             }
-                            className="text-sm text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                            className="text-sm text-[#088178] hover:text-[#088178]/60 disabled:opacity-50"
                         >
                             Next
                         </button>

@@ -18,6 +18,10 @@ import {
 } from "lucide-react";
 
 import {
+    setExsistingProduct,
+} from "../../../slices/productSlice";
+
+import {
     setProductStatus,
     setSelectedProductView,
 } from "../../../slices/productViewSlice";
@@ -114,15 +118,8 @@ export default function NavbarProduct() {
     // ============================================================
 
     const handleNewProduct = () => {
-
-        setMoreOpen(false);
-
-        dispatch(
-            openModal({
-                type: "addProduct",
-                data: null,
-            })
-        );
+        dispatch(setExsistingProduct(null));
+        navigate("/items/newSimple");
     };
 
     // ============================================================
@@ -192,11 +189,11 @@ export default function NavbarProduct() {
                         items-center
                         gap-1
                         rounded-md
-                        bg-blue-500
+                        bg-[#088178]
                         px-3
                         py-2
                         cursor-pointer
-                        hover:bg-blue-600
+                        hover:bg-[#088178]/70
                     "
                 >
 
@@ -232,16 +229,7 @@ export default function NavbarProduct() {
 
                     <div
                         className="
-                            absolute
-                            left-0
-                            mt-2
-                            w-72
-                            rounded-md
-                            border
-                            border-gray-200
-                            bg-white
-                            shadow-lg
-                            z-50
+                           absolute left-0 mt-2 w-72 rounded-md border border-gray-200 bg-white shadow-lg z-50
                         "
                     >
 
@@ -273,13 +261,11 @@ export default function NavbarProduct() {
                                             border-gray-50
                                             rounded-lg
                                             text-left
-                                            hover:bg-blue-500
+                                            text-sm
+                                            hover:bg-[#088178]/60
                                             hover:text-white
-                                            ${productStatus ===
-                                                view.value
-                                                ? "bg-blue-50 text-blue-600"
-                                                : ""
-                                            }
+                                            rounded-md
+                                           
                                         `}
                                     >
 
@@ -305,8 +291,8 @@ export default function NavbarProduct() {
                                 px-4
                                 py-3
                                 text-left
-                                text-blue-600
-                                hover:bg-gray-50
+                               text-[#088178] 
+                               hover:bg-[#088178]/20
                             "
                             onClick={() => {
                                 setDropdownOpen(
@@ -352,18 +338,18 @@ export default function NavbarProduct() {
 
                     <button
                         type="button"
-                        onClick={() => navigate("/items/newSimple")}
+                        onClick={handleNewProduct}
                         className="
                             flex
                             items-center
                             gap-1
-                            bg-blue-500
+                            bg-[#088178]
                             px-3
                             py-2
                             text-sm
                             font-medium
                             text-white
-                            hover:bg-blue-600
+                            hover:bg-[#088178]/70
                         "
                     >
 

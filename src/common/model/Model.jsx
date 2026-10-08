@@ -19,8 +19,7 @@ import RoleCreate from "../../module/role/pages/RoleCreate";
 import BankAccountCreate from "../../module/bankAccount/pages/BankAccountCreate";
 import CompanyCreate from "../../module/company/pages/CompanyCreate";
 import UserCreate from "../../module/users/pages/UserCreate";
-import RolePermissionCreate from "../../module/rolePermission/pages/RolePermissionCreate";
-import UserPermissionCreate from "../../module/userPermission/pages/UserPermissionCreate";
+
 
 export default function Modal() {
 
@@ -91,16 +90,7 @@ export default function Modal() {
         editCompany: CompanyCreate,
 
 
-        //rolePermission
 
-        addRolePermission: RolePermissionCreate,
-        editRolePermission: RolePermissionCreate,
-
-
-        //rolePermission
-
-        addUserPermission: UserPermissionCreate,
-        editUserPermission: UserPermissionCreate
 
     };
 

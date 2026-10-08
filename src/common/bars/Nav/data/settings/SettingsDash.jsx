@@ -92,7 +92,7 @@ function Panel({ title, children }) {
     );
 }
 
-export default function SettingsDashboard() {
+export default function SettingsDash() {
 
     const navigate = useNavigate();
     const searchRef = useRef(null);
@@ -158,7 +158,7 @@ export default function SettingsDashboard() {
             <div className="flex-1 min-h-0 bg-white overflow-hidden rounded-lg">
                 <div className="px-2 py-5 max-w-30xl w-full">
                     {/* ================= TOP HEADER ================= */}
-                    <header className="top-0 z-40 h-[74px] border-b border-gray-200 bg-white rounded-lg ">
+                    <header className="sticky top-0 z-40 h-[74px] border-b border-gray-200 bg-white rounded-lg ">
                         <div className="flex h-full items-center px-6">
                             <div className="flex items-center gap-3">
                                 <div className="flex h-10 w-10 items-center justify-center">

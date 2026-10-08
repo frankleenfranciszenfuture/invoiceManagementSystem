@@ -473,7 +473,7 @@ export default function EditCustomer({ mode = "page",
             <div className="flex-1 min-h-0 bg-white overflow-y-auto">
                 <div className="px-6 py-5 max-w-30xl w-full ">
                     <div className="w-full border-b border-gray-100">
-                        <h1 className="flex items-center gap-2 text-xl font-medium text-gray-800 mt-2 mb-4">
+                        <h1 className="flex items-center gap-2 text-xl font-medium text-[#088178] mt-2 mb-4">
                             <SquarePenIcon className="w-6 h-6" />
                             <span>Edit Customer</span>
                         </h1>

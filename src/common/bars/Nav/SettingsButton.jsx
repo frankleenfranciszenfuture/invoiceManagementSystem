@@ -12,7 +12,7 @@ export default function SettingsButton() {
         <div className="relative group">
             <button
                 onClick={() => dispatch(toggleSettings())}
-                className="w-9 h-9 rounded hover:bg-gray-100 flex items-center justify-center"
+                className="w-9 h-9 rounded hover:bg-[#088178]/50 flex items-center justify-center"
             >
                 <Settings size={18} />
             </button>

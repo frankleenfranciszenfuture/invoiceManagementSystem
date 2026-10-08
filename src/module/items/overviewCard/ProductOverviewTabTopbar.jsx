@@ -5,6 +5,7 @@ import {
     Paperclip,
     SquarePenIcon,
     SquareX,
+    X,
 } from "lucide-react";
 
 import { useDispatch, useSelector } from "react-redux";
@@ -105,7 +106,7 @@ export default function ProductOverviewTabTopbar() {
                     EDIT
                 ================================================= */}
 
-                <div className="flex cursor-pointer overflow-hidden rounded-sm border border-blue-600 bg-blue-500 shadow-sm">
+                <div className="flex cursor-pointer overflow-hidden rounded-sm border border-blue-600 bg-[#088178] shadow-sm">
                     <button
                         type="button"
                         onClick={handleEdit}
@@ -119,42 +120,22 @@ export default function ProductOverviewTabTopbar() {
                     </button>
                 </div>
 
-                {/* =================================================
-                    ATTACHMENT
-                ================================================= */}
 
-                <div className="flex cursor-pointer overflow-hidden rounded-sm border border-blue-600 bg-blue-500 shadow-sm">
-                    <button
-                        type="button"
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-400"
-                    >
-                        <Paperclip size={16} />
-                    </button>
-                </div>
-
-                {/* =================================================
-                    HISTORY
-                ================================================= */}
-
-                <div className="flex cursor-pointer overflow-hidden rounded-sm border border-blue-600 bg-blue-500 shadow-sm">
-                    <button
-                        type="button"
-                        className="flex items-center px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-400"
-                    >
-                        <FolderClock size={16} />
-                    </button>
-                </div>
 
                 {/* =================================================
                     CLOSE
                 ================================================= */}
 
-                <div className="flex cursor-pointer overflow-hidden rounded-sm border border-blue-600 bg-blue-500 shadow-sm">
+                <div className="flex cursor-pointer overflow-hidden rounded-sm border border-blue-600 bg-[#088178] shadow-sm">
                     <button
                         type="button"
-                        className="flex items-center px-2.5 py-1 text-xs font-medium text-white hover:bg-red-800"
-                    >
-                        <SquareX size={16} />
+                        className="flex items-center px-2.5 py-1 text-xs font-medium text-white hover:bg-[#FED7D9]"
+
+                        onClick={() => (navigate("/items"))}>
+                        <X size={16} />
+                        <span>
+                            Close
+                        </span>
                     </button>
                 </div>
 

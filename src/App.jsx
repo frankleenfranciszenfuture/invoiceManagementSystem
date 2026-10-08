@@ -106,6 +106,8 @@ import BankAccountCreateSimple from "./module/bankAccount/pages/BankAccountCreat
 import SettingsDashboard from "./common/bars/Nav/data/settings/SettingsDashboard";
 import CompanyProfileOverview from "./module/company/pages/CompanyProfileOverview";
 import UserProfileOverview from "./module/users/pages/UserProfileOverview";
+import CustomerProfileOverview from "./module/customer/pages/Customerprofileoverview";
+
 
 
 // =====================================================
@@ -304,7 +306,8 @@ function AppContent() {
 
         <Route
           path="/customers/view/:id"
-          element={<CustomerOverViewDashboard />}
+          // element={<CustomerOverViewDashboard />}
+          element={<CustomerProfileOverview />}
         />
 
 

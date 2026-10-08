@@ -14,6 +14,8 @@ import ProductOverViewSiderTopbar from "../overviewCard/ProductOverViewSiderTopb
 import ProductOverViewSiderDetails from "../overviewCard/ProductOverViewSiderDetails";
 import ProductOverviewTabTopbar from "../overviewCard/ProductOverviewTabTopbar";
 import ProductOverViewTabsTopbardown from "../overviewCard/ProductOverViewTabsTopbardown";
+import CustomerProfileOverview from "../../customer/pages/Customerprofileoverview";
+import ProductViewDetails from "../pages/Productviewdetails";
 
 export default function ProductOverViewDashboard() {
     const { id } = useParams();
@@ -50,9 +52,9 @@ export default function ProductOverViewDashboard() {
        ========================================================= */
 
     return (
-        <div className="flex h-screen flex-col bg-gray-100">
+        <div className="flex h-screen flex-col bg-gray-100 mt-3">
 
-            <div className="flex min-h-0 flex-1">
+            <div className="flex min-h-0 flex-1 rounded-lg">
 
                 {/* =================================================
                     LEFT SIDEBAR
@@ -76,7 +78,8 @@ export default function ProductOverViewDashboard() {
 
                     <div className="min-h-0 flex-1 overflow-y-auto">
 
-                        <ProductOverViewTabsTopbardown />
+                        {/* <ProductOverViewTabsTopbardown /> */}
+                        <ProductViewDetails />
 
                     </div>
 

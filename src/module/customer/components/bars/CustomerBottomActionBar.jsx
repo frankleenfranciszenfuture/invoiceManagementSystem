@@ -4,7 +4,7 @@ export default function CustomerBottomActionBar({ onSave, onCancel, onSubmit }) 
 
     return (
         // className="h-[60px] border-b border-gray-200 flex items-center justify-between px-4 bg-white flex-shrink-0
-        <div className="fixed bottom-0 left-61 right-0 bg-white border-t border-gray-200 shadow-md px-4 py-4">
+        <div className="fixed bottom-0 left-63 right-8 bg-white border-t border-gray-200 shadow-md px-4 py-4">
             <div className="flex justify-start gap-3">
                 <button
                     onClick={onCancel}

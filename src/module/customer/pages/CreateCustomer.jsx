@@ -527,11 +527,11 @@ export default function CreateCustomer({
 
 
     return (
-        <div className="min-h-screen bg-gray-50 font-sans text-[13px]">
+        <div className="min-h-screen bg-gray-50 font-sans text-[13px] mt-4 p-3">
             {/* Form Container Wrapper allowing separate inner scrolling */}
-            <div className="flex-1 min-h-0 bg-white ">
-                <div className="px-6 py-5 max-w-30xl w-full ">
-                    <h1 className="flex items-center gap-2 text-xl font-medium text-gray-800 mb-4">
+            <div className="flex-1 min-h-0 bg-white rounded-lg">
+                <div className="px-3 py-3 max-w-30xl w-full ">
+                    <h1 className="flex items-center gap-2 text-xl font-medium text-[#088178] mb-4">
                         <Users2Icon className="w-6 h-6" />
                         <span>New Customer</span>
                     </h1>

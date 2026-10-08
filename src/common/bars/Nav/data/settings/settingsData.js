@@ -286,8 +286,8 @@ export const settings = [
       { label: "Users", path: "/users", component: ComingSoon },
       { label: "Roles", path: "/roles", component: ComingSoon },
       {
-        label: "User Preferences",
-        path: "/settings/user-preferences",
+        label: "Menu Permission",
+        path: "/menuPermission",
         component: ComingSoon,
       },
     ],

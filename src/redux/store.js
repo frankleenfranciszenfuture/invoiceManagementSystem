@@ -35,10 +35,6 @@ import bankAccountViewReducer from "../module/bankAccount/slices/bankAccountView
 import companyReducer from "../module/company/slices/companySlice";
 import companyViewReducer from "../module/company/slices/companyViewSlice";
 
-import rolePermissionReducer from "../module/rolePermission/slices/rolePermissionSlice";
-import permissionReducer from "../module/permission/slices/permissionSlice";
-import userPermissionReducer from "../module/permission/slices/permissionSlice";
-
 import menuPermissionReducer from "../module/menuPermission/slices/menuPermissionSlice";
 
 export const store = configureStore({
@@ -104,12 +100,6 @@ export const store = configureStore({
     //menuPermission
 
     menuPermission: menuPermissionReducer,
-
-    //Permission
-
-    permission: permissionReducer,
-    rolePermission: rolePermissionReducer,
-    userPermission: userPermissionReducer,
   },
 });
 
