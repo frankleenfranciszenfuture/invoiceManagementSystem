@@ -17,6 +17,7 @@ import RoleOverviewTabTopbar
 
 import RoleOverViewTabsTopbardown
     from "../overViewCard/RoleOverViewTabsTopbardown";
+import RoleProfileOverview from "../pages/RoleProfileOverview";
 
 export default function RoleOverViewCardDashboard() {
 
@@ -104,7 +105,7 @@ export default function RoleOverViewCardDashboard() {
                     "
                 >
 
-                    <RoleOverviewTabTopbar />
+                    {/* <RoleOverviewTabTopbar /> */}
 
                 </div>
 
@@ -123,7 +124,7 @@ export default function RoleOverViewCardDashboard() {
                     "
                 >
 
-                    <RoleOverViewTabsTopbardown />
+                    <RoleProfileOverview />
 
                 </div>
 

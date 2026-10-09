@@ -106,12 +106,13 @@ export default function ProductOverViewSiderTopbar() {
 
         dispatch(setExsistingProduct(null));
 
-        dispatch(
-            openModal({
-                type: "addProduct",
-                data: null,
-            })
-        )
+        navigate("/items/newSimple")
+        // dispatch(
+        //     openModal({
+        //         type: "addProduct",
+        //         data: null,
+        //     })
+        // )
     };
 
     /* =========================================================
@@ -137,7 +138,7 @@ export default function ProductOverViewSiderTopbar() {
                                 !previous
                         )
                     }
-                    className="flex cursor-pointer select-none items-center gap-1 rounded-md bg-blue-500 px-3 py-1.5 hover:bg-blue-400"
+                    className="flex cursor-pointer select-none items-center gap-1 rounded-md bg-[#0F4659] px-3 py-1.5 hover:bg-[#0F4659]/90"
                 >
                     <h2 className="text-sm font-medium text-white">
                         {selectedProductView}
@@ -172,8 +173,8 @@ export default function ProductOverViewSiderTopbar() {
                                     }
                                     className={`w-full border-b border-gray-100 px-4 py-2.5 text-left text-sm transition-colors ${selectedProductView ===
                                         view.label
-                                        ? "bg-blue-500 text-white"
-                                        : "text-gray-700 hover:bg-blue-500 hover:text-white"
+                                        ? "bg-[#0F4659]/90 text-white"
+                                        : "text-gray-700 hover:bg-[#0F4659]/90 hover:text-white"
                                         }`}
                                 >
                                     {view.label}
@@ -189,7 +190,7 @@ export default function ProductOverViewSiderTopbar() {
                         <button
                             type="button"
                             onClick={handleNewProduct}
-                            className="w-full border-t border-gray-200 px-4 py-2.5 text-left text-sm font-medium text-blue-600 hover:bg-gray-50"
+                            className="w-full border-t border-[#0F4659] px-4 py-2.5 text-left text-sm font-medium text-[#0F4659] hover:text-[white] bg-[#0F4659]/10 hover:bg-[#0F4659]/90"
                         >
                             + New Product
                         </button>
@@ -202,18 +203,18 @@ export default function ProductOverViewSiderTopbar() {
                 RIGHT - NEW BUTTON
             ===================================================== */}
 
-            <div className="flex items-center gap-2">
+            {/* <div className="flex items-center gap-2">
 
                 <button
                     type="button"
                     onClick={handleNewProduct}
-                    className="flex items-center gap-1 rounded-md bg-blue-500 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-400"
+                    className="flex items-center gap-1 rounded-md bg-[#088178] px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#088178]/70"
                 >
                     <Plus size={13} />
                     New
                 </button>
 
-            </div>
+            </div> */}
 
         </div>
     );

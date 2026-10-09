@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import {
     useDispatch,
@@ -21,72 +22,81 @@ export default function ProductOverViewDashboard() {
     const { id } = useParams();
     const dispatch = useDispatch();
 
-    /* =========================================================
-       PRODUCT LIST
-       ========================================================= */
-
     const products = useSelector(
         (state) => state.product?.products ?? []
     );
 
-    /* =========================================================
-       FETCH PRODUCTS
-       ========================================================= */
-
     useEffect(() => {
-        if (!id) {
-            return;
-        }
+        if (!id) return;
 
-        // Load product list for left sidebar
         if (products.length === 0) {
             dispatch(fetchAllProducts());
         }
 
-        // Load currently selected product
         dispatch(fetchProductById(id));
     }, [id, dispatch, products.length]);
 
-    /* =========================================================
-       RENDER
-       ========================================================= */
-
     return (
-        <div className="flex h-screen flex-col bg-gray-100 mt-3">
+        <div className="mt-3 h-[calc(100vh-16px)] min-h-0 overflow-hidden bg-gray-100 p-2">
 
-            <div className="flex min-h-0 flex-1 rounded-lg">
+            {/* SINGLE PARENT CONTAINER */}
+            <div className="
+                flex
+                h-full
+                min-h-0
+                min-w-0
+                overflow-hidden
+                rounded-lg
+                border
+                border-gray-200
+                bg-white
+                shadow-sm
+            ">
 
-                {/* =================================================
-                    LEFT SIDEBAR
-                ================================================= */}
-
-                <div className="flex w-[387px] shrink-0 flex-col overflow-y-auto border-r border-gray-200 bg-white">
-
+                {/* LEFT SIDEBAR */}
+                <aside className="
+                    flex
+                    w-[260px]
+                    min-w-[220px]
+                    shrink-0
+                    flex-col
+                    overflow-y-auto
+                    border-r
+                    border-gray-200
+                    bg-white
+                ">
                     <ProductOverViewSiderTopbar />
 
                     <ProductOverViewSiderDetails />
+                </aside>
 
-                </div>
-
-                {/* =================================================
-                    RIGHT CONTENT
-                ================================================= */}
-
-                <div className="flex min-w-0 flex-1 flex-col">
-
-                    <ProductOverviewTabTopbar />
-
-                    <div className="min-h-0 flex-1 overflow-y-auto">
-
-                        {/* <ProductOverViewTabsTopbardown /> */}
-                        <ProductViewDetails />
-
+                {/* RIGHT CONTENT */}
+                <main className="
+                    flex
+                    min-h-0
+                    min-w-0
+                    flex-1
+                    flex-col
+                    overflow-hidden
+                    bg-gray-50
+                ">
+                    {/* TOP BAR */}
+                    <div className="shrink-0 border-b border-gray-200 bg-white">
+                        {/* <ProductOverviewTabTopbar /> */}
                     </div>
 
-                </div>
+                    {/* DETAILS CONTENT */}
+                    <div className="
+                        min-h-0
+                        min-w-0
+                        flex-1
+                        
+                    ">
+                        <ProductViewDetails />
+                    </div>
+                </main>
 
             </div>
-
         </div>
     );
 }

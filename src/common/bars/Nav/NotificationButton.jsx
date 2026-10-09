@@ -12,7 +12,7 @@ export default function NotificationButton() {
         <div className="relative group">
             <button
                 onClick={() => dispatch(toggleNotifications())}
-                className="w-9 h-9 rounded hover:bg-[#088178]/50 flex items-center justify-center"
+                className="w-9 h-9 rounded hover:bg-[#0F4659]/70 flex items-center justify-center"
             >
                 <Bell size={18} />
             </button>

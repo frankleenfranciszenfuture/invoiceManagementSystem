@@ -107,6 +107,7 @@ import SettingsDashboard from "./common/bars/Nav/data/settings/SettingsDashboard
 import CompanyProfileOverview from "./module/company/pages/CompanyProfileOverview";
 import UserProfileOverview from "./module/users/pages/UserProfileOverview";
 import CustomerProfileOverview from "./module/customer/pages/Customerprofileoverview";
+import RoleProfileOverview from "./module/role/pages/RoleProfileOverview";
 
 
 
@@ -407,7 +408,7 @@ function AppContent() {
 
         <Route
           path="/roles/view/:id"
-          element={<RoleOverViewCardDashboard />}
+          element={<RoleProfileOverview />}
         />
 
 

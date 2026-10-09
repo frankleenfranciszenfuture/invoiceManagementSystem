@@ -15,6 +15,7 @@ import {
     Plus,
     ChevronDown,
     MoreHorizontal,
+    Settings,
 } from "lucide-react";
 
 import {
@@ -189,11 +190,11 @@ export default function NavbarProduct() {
                         items-center
                         gap-1
                         rounded-md
-                        bg-[#088178]
+                        bg-[#0F4659]
                         px-3
                         py-2
                         cursor-pointer
-                        hover:bg-[#088178]/70
+                        hover:bg-[#0F4659]/90
                     "
                 >
 
@@ -262,7 +263,7 @@ export default function NavbarProduct() {
                                             rounded-lg
                                             text-left
                                             text-sm
-                                            hover:bg-[#088178]/60
+                                            hover:bg-[#0F4659]/90
                                             hover:text-white
                                             rounded-md
                                            
@@ -291,13 +292,14 @@ export default function NavbarProduct() {
                                 px-4
                                 py-3
                                 text-left
-                               text-[#088178] 
-                               hover:bg-[#088178]/20
+                               text-[#0F4659] 
+                               hover:text-white
+                               hover:bg-[#0F4659]/80
+                               rounded-lg
                             "
                             onClick={() => {
-                                setDropdownOpen(
-                                    false
-                                );
+                                dispatch(setExsistingProduct(null));
+                                navigate("/items/newSimple")
                             }}
                         >
                             + New View
@@ -343,13 +345,13 @@ export default function NavbarProduct() {
                             flex
                             items-center
                             gap-1
-                            bg-[#088178]
+                            bg-[#0F4659]
                             px-3
                             py-2
                             text-sm
                             font-medium
                             text-white
-                            hover:bg-[#088178]/70
+                            hover:bg-[#0F4659]/90
                         "
                     >
 
@@ -373,10 +375,14 @@ export default function NavbarProduct() {
 
                     <button
                         type="button"
+                        // onClick={() =>
+                        //     setMoreOpen(
+                        //         (prev) => !prev
+                        //     )
+                        // }
+
                         onClick={() =>
-                            setMoreOpen(
-                                (prev) => !prev
-                            )
+                            navigate("/settings")
                         }
                         className="
                             rounded-md
@@ -386,9 +392,10 @@ export default function NavbarProduct() {
                             hover:bg-gray-50
                         "
                         title="More"
+
                     >
 
-                        <MoreHorizontal
+                        <Settings
                             size={18}
                         />
 
@@ -401,7 +408,7 @@ export default function NavbarProduct() {
                                 absolute
                                 right-0
                                 mt-2
-                                w-52
+                                w-35
                                 rounded-md
                                 border
                                 border-gray-200
@@ -413,201 +420,31 @@ export default function NavbarProduct() {
                             "
                         >
 
-                            {/* PRODUCT */}
+                            {/* Settings */}
 
                             <button
                                 type="button"
-                                onClick={
-                                    handleNewProduct
-                                }
+
                                 className="
                                     w-full
-                                    px-4
+                                    flex
+                                    items-center justify-left gap-1.5
+                                    px-3
                                     py-3
                                     text-left
                                     text-sm
-                                    text-gray-900
-                                    hover:bg-blue-500
+                                    text-[#0F4659]
+                                    hover:bg-[#0F4659]/90
                                     hover:text-white
                                 "
                             >
-                                Product
+
+                                <Plus size={13} />
+                                Settings
                             </button>
 
 
-                            {/* ADD Category */}
 
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(
-                                        false
-                                    );
-
-                                    dispatch(
-                                        openModal({
-                                            type: "addCategory",
-                                            data: null,
-                                        })
-                                    );
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-900
-                                    hover:bg-blue-500
-                                    hover:text-white
-                                "
-                            >
-                                Add Category
-                            </button>
-
-
-                            {/* ADD SubCategory */}
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(
-                                        false
-                                    );
-
-                                    dispatch(
-                                        openModal({
-                                            type: "addSubCategory",
-                                            data: null,
-                                        })
-                                    );
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-900
-                                    hover:bg-blue-500
-                                    hover:text-white
-                                "
-                            >
-                                Add SubCategory
-                            </button>
-
-
-                            {/* ADD Sizes */}
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(
-                                        false
-                                    );
-
-                                    dispatch(
-                                        openModal({
-                                            type: "addSize",
-                                            data: null,
-                                        })
-                                    );
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-900
-                                    hover:bg-blue-500
-                                    hover:text-white
-                                "
-                            >
-                                Add Sizes
-                            </button>
-
-                            {/* ADD Units */}
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(
-                                        false
-                                    );
-
-                                    dispatch(
-                                        openModal({
-                                            type: "addUnit",
-                                            data: null,
-                                        })
-                                    );
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-900
-                                    hover:bg-blue-500
-                                    hover:text-white
-                                "
-                            >
-                                Add Units
-                            </button>
-
-                            {/* ADD Taxes */}
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(
-                                        false
-                                    );
-
-                                    dispatch(
-                                        openModal({
-                                            type: "addTaxMaster",
-                                            data: null,
-                                        })
-                                    );
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-900
-                                    hover:bg-blue-500
-                                    hover:text-white
-                                "
-                            >
-                                Add Taxes
-                            </button>
-
-
-                            {/* PRODUCT SETTINGS */}
-
-
-
-                            {/* DIVIDER */}
-
-
-
-
-                            {/* OTHER SETTINGS */}
 
 
 

@@ -16,6 +16,8 @@ import {
     Plus,
     ChevronDown,
     MoreHorizontal,
+    Settings,
+    Home,
 } from "lucide-react";
 
 import {
@@ -24,6 +26,7 @@ import {
 } from "../../../slices/roleViewSlice";
 
 import { openModal } from "../../../../ui/uiSlice";
+import { setExsistingRole } from "../../../slices/roleSlice";
 
 export default function NavbarRole() {
 
@@ -111,7 +114,7 @@ export default function NavbarRole() {
     const handleNewRole = () => {
 
         setMoreOpen(false);
-
+        dispatch(setExsistingRole(null));
         dispatch(
             openModal({
                 type: "addRole",
@@ -166,156 +169,148 @@ export default function NavbarRole() {
         >
 
             {/* =====================================================
-                LEFT - ROLE STATUS FILTER
-            ====================================================== */}
+    LEFT - HOME + ALL PRODUCTS + ROLE STATUS FILTER
+====================================================== */}
 
-            <div
-                ref={dropdownOpenRef}
-                className="relative"
-            >
+            <div className="flex items-center gap-2">
 
-                <button
-                    type="button"
-                    onClick={() =>
-                        setDropdownOpen(
-                            (prev) => !prev
-                        )
-                    }
-                    className="
-                        flex
-                        items-center
-                        gap-1
-                        rounded-md
-                        bg-blue-500
-                        px-3
-                        py-2
-                        cursor-pointer
-                        hover:bg-blue-600
-                    "
+                {/* HOME + ALL PRODUCTS */}
+                <div className="flex items-center gap-2">
+
+                    <button
+                        type="button"
+                        onClick={() => navigate("/")}
+                        className="
+                flex
+                items-center
+                justify-center
+                rounded-md
+                border
+                border-gray-200
+                bg-[white]
+                p-2
+                text-[#0F4659]
+                hover:bg-[#0F4659]/20
+                transition
+            "
+                        title="Home"
+                    >
+                        <Home size={18} />
+                    </button>
+
+
+
+                </div>
+
+                {/* EXISTING ROLE STATUS FILTER */}
+                <div
+                    ref={dropdownOpenRef}
+                    className="relative"
                 >
 
-                    <h2
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setDropdownOpen((prev) => !prev)
+                        }
                         className="
-                            font-semibold
-                            text-gray-100
-                        "
+                flex
+                items-center
+                gap-1
+                rounded-md
+                bg-[#0F4659]
+                px-3
+                py-2
+                cursor-pointer
+                hover:bg-[#0F4659]/90
+            "
                     >
-                        {selectedRoleView ||
-                            "All Roles"}
-                    </h2>
+                        <h2 className="font-semibold text-gray-100">
+                            {selectedRoleView || "All Roles"}
+                        </h2>
 
-                    <ChevronDown
-                        size={14}
-                        className={`
-                            text-gray-100
-                            transition
-                            ${dropdownOpen
-                                ? "rotate-180"
-                                : ""
-                            }
-                        `}
-                    />
+                        <ChevronDown
+                            size={14}
+                            className={`
+                    text-gray-100
+                    transition
+                    ${dropdownOpen ? "rotate-180" : ""}
+                `}
+                        />
+                    </button>
 
-                </button>
-
-                {/* =================================================
-                    STATUS DROPDOWN
-                ================================================== */}
-
-                {dropdownOpen && (
-
-                    <div
-                        className="
-                            absolute
-                            left-0
-                            mt-2
-                            w-72
-                            rounded-md
-                            border
-                            border-gray-200
-                            bg-white
-                            shadow-lg
-                            z-50
-                        "
-                    >
-
+                    {dropdownOpen && (
                         <div
                             className="
-                                max-h-72
-                                overflow-y-auto
-                            "
+                    absolute
+                    left-0
+                    mt-2
+                    w-72
+                    rounded-md
+                    border
+                    border-gray-200
+                    bg-white
+                    shadow-lg
+                    z-50
+                "
                         >
-
-                            {views.map(
-                                (view) => (
-
+                            <div className="max-h-72 overflow-y-auto">
+                                {views.map((view) => (
                                     <button
                                         type="button"
-                                        key={
-                                            view.value
-                                        }
-                                        onClick={() =>
-                                            handleViewChange(
-                                                view
-                                            )
-                                        }
-                                        className={`
-                                            w-full
-                                            px-5
-                                            py-4
-                                            border-b
-                                            border-gray-50
-                                            rounded-lg
-                                            text-left
-                                            hover:bg-blue-500
-                                            hover:text-white
-                                            ${roleStatus ===
-                                                view.value
-                                                ? "bg-blue-50 text-blue-600"
-                                                : ""
-                                            }
-                                        `}
-                                    >
-
-                                        {view.label}
-
-                                    </button>
-
-                                )
-                            )}
-
-                        </div>
-
-                        {/* =================================================
-                            NEW VIEW
-                        ================================================== */}
-
-                        <button
-                            type="button"
-                            className="
+                                        key={view.value}
+                                        onClick={() => handleViewChange(view)}
+                                        className="
                                 w-full
-                                border-t
-                                border-gray-200
-                                px-4
-                                py-3
+                                px-5
+                                py-4
+                                border-b
+                                border-gray-50
                                 text-left
-                                text-blue-600
-                                hover:bg-gray-50
+                                text-sm
+                                hover:bg-[#0F4659]/90
+                                hover:text-white
+                                rounded-md
                             "
-                            onClick={() => {
-                                setDropdownOpen(
-                                    false
-                                );
-                            }}
-                        >
-                            + New View
-                        </button>
+                                    >
+                                        {view.label}
+                                    </button>
+                                ))}
+                            </div>
 
-                    </div>
+                            <button
+                                type="button"
+                                className="
+                        w-full
+                        border-t
+                        border-gray-200
+                        px-4
+                        py-3
+                        text-left
+                        text-[#0F4659]
+                        bg-[#0F4659]/20
+                        hover:text-white
+                        hover:bg-[#0F4659]/80
+                        rounded-md
+                    "
+                                onClick={() => {
+                                    setDropdownOpen(false);
 
-                )}
+                                    dispatch(
+                                        openModal({
+                                            type: "addRole",
+                                        })
+                                    );
+                                }}
+                            >
+                                + New View
+                            </button>
+                        </div>
+                    )}
+                </div>
 
             </div>
+
 
             {/* =====================================================
                 RIGHT
@@ -352,13 +347,13 @@ export default function NavbarRole() {
                             flex
                             items-center
                             gap-1
-                            bg-blue-500
+                            bg-[#0F4659]
                             px-3
                             py-2
                             text-sm
                             font-medium
                             text-white
-                            hover:bg-blue-600
+                            hover:bg-[#0F4659]/90
                         "
                     >
 
@@ -381,10 +376,14 @@ export default function NavbarRole() {
 
                     <button
                         type="button"
+                        // onClick={() =>
+                        //     setMoreOpen(
+                        //         (prev) => !prev
+                        //     )
+                        // }
+
                         onClick={() =>
-                            setMoreOpen(
-                                (prev) => !prev
-                            )
+                            navigate("/settings")
                         }
                         className="
                             rounded-md
@@ -396,157 +395,13 @@ export default function NavbarRole() {
                         title="More"
                     >
 
-                        <MoreHorizontal
+                        <Settings
                             size={18}
                         />
 
                     </button>
 
-                    {/* =================================================
-                        MORE DROPDOWN
-                    ================================================== */}
 
-                    {moreOpen && (
-
-                        <div
-                            className="
-                                absolute
-                                right-0
-                                mt-2
-                                w-52
-                                rounded-md
-                                border
-                                border-gray-200
-                                bg-white
-                                shadow-lg
-                                z-50
-                                overflow-hidden
-                            "
-                        >
-
-                            {/* =========================================
-                                ROLE
-                            ========================================== */}
-
-                            <button
-                                type="button"
-                                onClick={
-                                    handleNewRole
-                                }
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-blue-50
-                                    hover:text-blue-600
-                                "
-                            >
-                                Role
-                            </button>
-
-                            {/* =========================================
-                                ADD ROLE
-                            ========================================== */}
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(
-                                        false
-                                    );
-
-                                    // Add Role action
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-blue-50
-                                    hover:text-blue-600
-                                "
-                            >
-                                Add Role
-                            </button>
-
-                            {/* =========================================
-                                ROLE SETTINGS
-                            ========================================== */}
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(
-                                        false
-                                    );
-
-                                    // Role Settings action
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-blue-50
-                                    hover:text-blue-600
-                                "
-                            >
-                                Role Settings
-                            </button>
-
-                            {/* =========================================
-                                DIVIDER
-                            ========================================== */}
-
-                            <div
-                                className="
-                                    border-t
-                                    border-gray-100
-                                "
-                            />
-
-                            {/* =========================================
-                                OTHER SETTINGS
-                            ========================================== */}
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(
-                                        false
-                                    );
-
-                                    // Other Settings action
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-gray-50
-                                "
-                            >
-                                Other Settings
-                            </button>
-
-                        </div>
-
-                    )}
 
                 </div>
 

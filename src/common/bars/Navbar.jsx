@@ -17,8 +17,11 @@ export default function Navbar({ title }) {
         (state) => state.auth.user
     );
 
-    const hideNavbar =
-        location.pathname.startsWith("/items");
+    const hiddenPaths = ["/customers", "/invoices", "/settings"];
+
+    const hideNavbar = hiddenPaths.some((path) =>
+        location.pathname.startsWith(path)
+    );
 
     if (hideNavbar) {
         return null;
@@ -53,9 +56,9 @@ export default function Navbar({ title }) {
          */
         <header
             className="
-                relative z-20 mr-5 mx-1 mt-3 flex h-[64px] shrink-0
-                items-center justify-between rounded-xl
-                border border-white/5 bg-[#ff000] px-4
+                relative z-20 mr-2 mx-1 mt-2 flex h-[64px] shrink-0
+                items-center justify-between rounded-lg
+                border border-white/5 bg-[#FFFFFF] px-4
                 shadow-xl shadow-slate-900/20
             "
         >
@@ -67,26 +70,19 @@ export default function Navbar({ title }) {
                 <div
                     className="
                         flex h-10 w-10 shrink-0 items-center justify-center
-                        rounded-xl bg-[#088178]-to-br from-[green]-500/25 to-green-500/5
+                        rounded-xl bg-[#0F4659]-to-br from-[green]-500/25 to-green-500/5
                         ring-1 ring-blue-400/20
                     "
                 >
-                    <FileText className="h-5 w-5 text-[#088178]" />
+                    <FileText className="h-5 w-5 text-[#0F4659]" />
                 </div>
 
                 <div className="min-w-0 leading-tight">
-                    <h1 className="truncate text-lg font-semibold text-[#088178]">
-                        {title || `Hello, ${firstName} 👋`}
+                    <h1 className="truncate text-lg font-semibold text-[#0F4659]">
+                        {`Hello, ${firstName} 👋`}
                     </h1>
 
-                    <p className="hidden items-center gap-2 truncate text-xs text-[#088178] sm:flex">
-                        {title && (
-                            <>
-                                <span>Hello, {firstName} 👋</span>
-                                <span className="h-1 w-1 rounded-full bg-gray-600" />
-                            </>
-                        )}
-
+                    <p className="hidden items-center gap-2 truncate text-xs text-[#0F4659] sm:flex">
                         <span className="truncate">Today is {today}</span>
                     </p>
                 </div>

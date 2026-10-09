@@ -76,12 +76,6 @@ const ACCOUNT_FIELDS = [
     },
 ];
 
-const TABS = [
-    "Dashboard",
-    "Transaction",
-    "Recent Updates",
-    "Activity",
-];
 
 /* =========================================================
    HELPERS
@@ -218,8 +212,7 @@ function SectionCard({
     children,
 }) {
     return (
-        <div className="flex h-full min-h-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
-
+        <div className="flex h-full min-w-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
             {/* HEADER */}
 
             <div className="flex items-center justify-between gap-3 px-4 pt-4">
@@ -332,8 +325,7 @@ function SectionCard({
 
             {/* CONTENT */}
 
-            <div className="px-4 pb-4 pt-2.5">
-
+            <div className="flex-1 px-4 pb-4 pt-2.5">
                 {error && (
                     <div className="mb-2.5 flex items-start gap-2 rounded-md bg-red-50 px-2.5 py-2 text-[11.5px] text-red-600">
 
@@ -855,9 +847,9 @@ function UserAvatarSection({
                         items-center
                         justify-center
                         rounded-full
-                        bg-gradient-to-br
-                        from-blue-500
-                        to-indigo-600
+                        bg-[#0F4659]-to-br
+                        from-[#0F4659]
+                        to-[#0F4659]
                         shadow-sm
                     "
                     title={name || "User"}
@@ -892,7 +884,7 @@ function StatTile({
     value,
 }) {
     return (
-        <div className="min-w-0 rounded-lg border border-slate-200 bg-blue-500 px-3 py-2.5">
+        <div className="min-w-0 rounded-lg border border-slate-200 bg-[#0F4659] px-3 py-2.5">
 
             <div className="flex items-center gap-1.5 text-gray-100">
 
@@ -1031,8 +1023,7 @@ export default function UserProfileOverview({
        LOCAL UI STATE
     ------------------------------------------------------- */
 
-    const [tab, setTab] =
-        useState("Dashboard");
+
 
     const [activity, setActivity] =
         useState([]);
@@ -1262,84 +1253,38 @@ export default function UserProfileOverview({
     ======================================================= */
 
     return (
-        <div className="min-h-full bg-[#f7f8fa]">
+        <div className="w-full space-y-4 p-3">
+
 
             {/* =================================================
                TABS
             ================================================= */}
 
-            <div className="border-b border-slate-200 bg-white px-6 pt-4">
 
-                <nav className="-mb-px flex gap-7">
-
-                    {TABS.map(
-                        (tabName) => (
-                            <button
-                                key={
-                                    tabName
-                                }
-                                type="button"
-                                onClick={() =>
-                                    setTab(
-                                        tabName
-                                    )
-                                }
-                                className={`
-                                    border-b-2
-                                    pb-3
-                                    text-[13.5px]
-                                    transition
-                                    ${tab ===
-                                        tabName
-                                        ? "border-blue-600 font-semibold text-slate-900"
-                                        : "border-transparent text-slate-400 hover:text-slate-600"
-                                    }
-                                `}
-                            >
-                                {
-                                    tabName
-                                }
-                            </button>
-                        )
-                    )}
-
-                </nav>
-
-            </div>
 
             {/* =================================================
                BODY
             ================================================= */}
 
-            {tab !==
-                "Dashboard" ? (
 
-                <div className="p-10 text-center text-sm text-slate-400">
-                    {tab} will appear here.
-                </div>
-
-            ) : (
-
-                <div className="space-y-6 p-8">
-
-                    {/* =================================================
+            {/* =================================================
                        PROFILE HEADER
                     ================================================= */}
 
-                    <div className="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
-
-                        {/* <div className="h-[122px] overflow-hidden rounded-lg">
+            <div className="w-full space-y-4">
+                <div className="rounded-xl border border-slate-100 bg-white p-4">
+                    {/* <div className="h-[122px] overflow-hidden rounded-lg">
                             <CoverArt />
                         </div> */}
 
-                        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 px-5 pb-2">
+                    <div className="flex flex-wrap items-start justify-between gap-4 px-2 py-3 pb-5">
 
-                            <div className="flex items-start gap-4">
+                        <div className="flex items-start gap-4">
 
-                                {/* AVATAR */}
+                            {/* AVATAR */}
 
-                                <div
-                                    className="
+                            <div
+                                className="
                                         -mt-[38px]
                                         flex
                                         h-[86px]
@@ -1353,133 +1298,133 @@ export default function UserProfileOverview({
                                         border-[4px]
                                         border-white
                                         bg-gradient-to-br
-                                        from-blue-500
-                                        to-indigo-600
+                                        from-[#0F4659]/70
+                                        to-[#0F4659]
                                         shadow-md
                                     "
+                                onClick={() =>
+                                    navigate(
+                                        "/users"
+                                    )
+                                }
+                                title="Back to Users"
+                            >
+                                <span className="text-[24px] font-bold tracking-tight text-white">
+                                    {
+                                        initials
+                                    }
+                                </span>
+                            </div>
+
+                            {/* USER DETAILS */}
+
+                            <div className="pt-2.5">
+
+                                <h2
+                                    className="
+                                            cursor-pointer
+                                            text-[24px]
+                                            font-semibold
+                                            leading-tight
+                                            text-[#0F4659]
+                                            hover:text-[#3b82f6]
+                                        "
                                     onClick={() =>
                                         navigate(
                                             "/users"
                                         )
                                     }
-                                    title="Back to Users"
                                 >
-                                    <span className="text-[24px] font-bold tracking-tight text-white">
+                                    {
+                                        current.name ||
+                                        "User"
+                                    }
+                                </h2>
+
+                                <p className="mt-0.5 text-[12px] text-[#0F4659]">
+                                    @ -
+                                    {toText(
+                                        current.userId
+                                    ).toLowerCase() ||
+                                        "user"}
+                                </p>
+
+                                <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-slate-500">
+
+                                    <span className="flex items-center gap-1 text-slate-700">
+                                        <UserRound
+                                            size={
+                                                13
+                                            }
+                                        />
+
                                         {
-                                            initials
+                                            current.userId ||
+                                            "-"
                                         }
                                     </span>
-                                </div>
 
-                                {/* USER DETAILS */}
+                                    <span className="flex items-center gap-1 text-slate-700">
+                                        <Mail
+                                            size={
+                                                13
+                                            }
+                                        />
 
-                                <div className="pt-2.5">
-
-                                    <h2
-                                        className="
-                                            cursor-pointer
-                                            text-[24px]
-                                            font-semibold
-                                            leading-tight
-                                            text-blue-600
-                                            hover:text-[#3b82f6]
-                                        "
-                                        onClick={() =>
-                                            navigate(
-                                                "/users"
-                                            )
-                                        }
-                                    >
                                         {
-                                            current.name ||
-                                            "User"
+                                            current.email ||
+                                            "-"
                                         }
-                                    </h2>
+                                    </span>
 
-                                    <p className="mt-0.5 text-[12px] text-blue-900">
-                                        @ -
-                                        {toText(
-                                            current.userId
-                                        ).toLowerCase() ||
-                                            "user"}
-                                    </p>
-
-                                    <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-slate-500">
-
-                                        <span className="flex items-center gap-1 text-slate-700">
-                                            <UserRound
-                                                size={
-                                                    13
-                                                }
-                                            />
-
+                                    <span>
+                                        Role:{" "}
+                                        <b className="font-semibold text-slate-900">
                                             {
-                                                current.userId ||
+                                                current.role ||
                                                 "-"
                                             }
-                                        </span>
+                                        </b>
+                                    </span>
 
-                                        <span className="flex items-center gap-1 text-slate-700">
-                                            <Mail
-                                                size={
-                                                    13
-                                                }
-                                            />
-
-                                            {
-                                                current.email ||
-                                                "-"
-                                            }
-                                        </span>
-
-                                        <span>
-                                            Role:{" "}
-                                            <b className="font-semibold text-slate-900">
-                                                {
-                                                    current.role ||
-                                                    "-"
-                                                }
-                                            </b>
-                                        </span>
-
-                                        <span>
-                                            Status:{" "}
-                                            <b
-                                                className={`
+                                    <span>
+                                        Status:{" "}
+                                        <b
+                                            className={`
                                                     font-semibold
                                                     ${isActive
-                                                        ? "text-emerald-600"
-                                                        : "text-slate-500"
-                                                    }
-                                                `}
-                                            >
-                                                {
-                                                    current.status ||
-                                                    "ACTIVE"
+                                                    ? "text-emerald-600"
+                                                    : "text-slate-500"
                                                 }
-                                            </b>
-                                        </span>
-
-                                    </div>
+                                                `}
+                                        >
+                                            {
+                                                current.status ||
+                                                "ACTIVE"
+                                            }
+                                        </b>
+                                    </span>
 
                                 </div>
 
                             </div>
 
-                            {/* REACTIVATE */}
+                        </div>
 
-                            {!isActive && (
-                                <div className="pt-2.5">
+                        {/* REACTIVATE */}
 
-                                    <button
-                                        type="button"
-                                        onClick={
-                                            handleReactivate
-                                        }
-                                        disabled={
-                                            loading
-                                        }
-                                        className="
+                        {!isActive && (
+                            <div className="pt-2.5">
+
+                                <button
+                                    type="button"
+                                    onClick={
+                                        handleReactivate
+                                    }
+                                    disabled={
+                                        loading
+                                    }
+                                    className="
                                             flex
                                             items-center
                                             gap-1.5
@@ -1496,299 +1441,145 @@ export default function UserProfileOverview({
                                             hover:bg-emerald-50
                                             disabled:opacity-50
                                         "
-                                    >
-                                        <RotateCcw
-                                            size={
-                                                14
-                                            }
-                                        />
+                                >
+                                    <RotateCcw
+                                        size={
+                                            14
+                                        }
+                                    />
 
-                                        Reactivate
-                                    </button>
+                                    Reactivate
+                                </button>
 
-                                </div>
-                            )}
+                            </div>
+                        )}
+
+                    </div>
+
+                </div>
+
+                <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-1">
+
+                    {/* ACCOUNT OVERVIEW */}
+
+                    <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+
+                        <h3 className="text-[14px] font-semibold text-slate-900">
+                            Account Overview
+                        </h3>
+
+                        <div className="mt-2 grid grid-cols-3 gap-2.5">
+
+                            <StatTile
+                                icon={
+                                    UserCog
+                                }
+                                label="Role"
+                                value={
+                                    current.role
+                                }
+                            />
+
+                            <StatTile
+                                icon={
+                                    BadgeCheck
+                                }
+                                label="Verified"
+                                value={
+                                    isVerified
+                                        ? "Yes"
+                                        : "No"
+                                }
+                            />
+
+                            <StatTile
+                                icon={
+                                    ShieldCheck
+                                }
+                                label="Status"
+                                value={
+                                    current.status
+                                }
+                            />
+
+                        </div>
+
+                        <h4 className="mb-2 mt-5 text-[13px] font-semibold text-slate-900">
+                            Account Details
+                        </h4>
+
+                        <div className="space-y-0">
+
+                            <div className="flex items-center justify-between border-t border-slate-100 px-3 py-3 text-[12.5px]">
+
+                                <span className="text-slate-500">
+                                    User ID
+                                </span>
+
+                                <span className="font-medium text-slate-800">
+                                    {
+                                        current.userId ||
+                                        "-"
+                                    }
+                                </span>
+
+                            </div>
+
+                            <div className="flex items-center justify-between border-t border-slate-100 px-3 py-3 text-[12.5px]">
+
+                                <span className="text-slate-500">
+                                    Email
+                                </span>
+
+                                <span className="max-w-[65%] truncate font-medium text-slate-800">
+                                    {
+                                        current.email ||
+                                        "-"
+                                    }
+                                </span>
+
+                            </div>
+
+                            <div className="flex items-center justify-between border-t border-slate-100 px-3 py-3 text-[12.5px]">
+
+                                <span className="text-slate-500">
+                                    Account Verified
+                                </span>
+
+                                <span
+                                    className={`
+                                            font-medium
+                                            ${isVerified
+                                            ? "text-emerald-600"
+                                            : "text-amber-600"
+                                        }
+                                        `}
+                                >
+                                    {isVerified
+                                        ? "Verified"
+                                        : "Not Verified"}
+                                </span>
+
+                            </div>
 
                         </div>
 
                     </div>
 
-                    {/* =================================================
+
+
+                </div>
+
+                {/* =================================================
                        ROW 1
                        USER INFORMATION + PROFILE
                     ================================================= */}
 
-                    <div className="grid items-stretch gap-4 lg:grid-cols-2">
+                <div className="grid grid-cols- items-start gap-4 lg:grid-cols-2">
 
-                        {/* LEFT — USER INFORMATION */}
+                    {/* LEFT — USER INFORMATION */}
 
-                        <div>
-                            <FieldsSection
-                                title="User Information"
-                                fields={
-                                    BASIC_FIELDS
-                                }
-                                values={
-                                    current
-                                }
-                                onSave={(
-                                    patch
-                                ) =>
-                                    saveFields(
-                                        patch,
-                                        "user information"
-                                    )
-                                }
-                            />
-                        </div>
-
-                        {/* RIGHT — USER PROFILE */}
-
-                        <div className="flex flex-col gap-4">
-
-                            <UserAvatarSection
-                                name={
-                                    current.name
-                                }
-                                initials={
-                                    initials
-                                }
-                            />
-
-                            <FieldsSection
-                                title="Account Information"
-                                fields={
-                                    ACCOUNT_FIELDS
-                                }
-                                values={
-                                    current
-                                }
-                                onSave={(
-                                    patch
-                                ) =>
-                                    saveFields(
-                                        patch,
-                                        "account information"
-                                    )
-                                }
-                            />
-
-                        </div>
-
-                    </div>
-
-                    {/* =================================================
-                       ROW 2
-                       ACTIVITY + USER STATUS
-                    ================================================= */}
-
-                    <div className="grid items-stretch gap-4 lg:grid-cols-2">
-
-                        {/* ACCOUNT OVERVIEW */}
-
-                        <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-
-                            <h3 className="text-[14px] font-semibold text-slate-900">
-                                Account Overview
-                            </h3>
-
-                            <div className="mt-3 grid grid-cols-3 gap-2.5">
-
-                                <StatTile
-                                    icon={
-                                        UserCog
-                                    }
-                                    label="Role"
-                                    value={
-                                        current.role
-                                    }
-                                />
-
-                                <StatTile
-                                    icon={
-                                        BadgeCheck
-                                    }
-                                    label="Verified"
-                                    value={
-                                        isVerified
-                                            ? "Yes"
-                                            : "No"
-                                    }
-                                />
-
-                                <StatTile
-                                    icon={
-                                        ShieldCheck
-                                    }
-                                    label="Status"
-                                    value={
-                                        current.status
-                                    }
-                                />
-
-                            </div>
-
-                            <h4 className="mb-2 mt-5 text-[13px] font-semibold text-slate-900">
-                                Account Details
-                            </h4>
-
-                            <div className="space-y-0">
-
-                                <div className="flex items-center justify-between border-t border-slate-100 px-3 py-3 text-[12.5px]">
-
-                                    <span className="text-slate-500">
-                                        User ID
-                                    </span>
-
-                                    <span className="font-medium text-slate-800">
-                                        {
-                                            current.userId ||
-                                            "-"
-                                        }
-                                    </span>
-
-                                </div>
-
-                                <div className="flex items-center justify-between border-t border-slate-100 px-3 py-3 text-[12.5px]">
-
-                                    <span className="text-slate-500">
-                                        Email
-                                    </span>
-
-                                    <span className="max-w-[65%] truncate font-medium text-slate-800">
-                                        {
-                                            current.email ||
-                                            "-"
-                                        }
-                                    </span>
-
-                                </div>
-
-                                <div className="flex items-center justify-between border-t border-slate-100 px-3 py-3 text-[12.5px]">
-
-                                    <span className="text-slate-500">
-                                        Account Verified
-                                    </span>
-
-                                    <span
-                                        className={`
-                                            font-medium
-                                            ${isVerified
-                                                ? "text-emerald-600"
-                                                : "text-amber-600"
-                                            }
-                                        `}
-                                    >
-                                        {isVerified
-                                            ? "Verified"
-                                            : "Not Verified"}
-                                    </span>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        {/* ACTIVITY */}
-
-                        <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-
-                            <h3 className="text-[14px] font-semibold text-slate-900">
-                                Recent Activity
-                            </h3>
-
-                            {activity.length ===
-                                0 ? (
-
-                                <div className="flex flex-1 items-center justify-center">
-
-                                    <p className="px-3 py-8 text-center text-[13px] text-slate-400">
-                                        Changes you make on this page will appear here.
-                                    </p>
-
-                                </div>
-
-                            ) : (
-
-                                <ul className="mt-3">
-
-                                    {activity.map(
-                                        (
-                                            activityItem,
-                                            index
-                                        ) => (
-                                            <li
-                                                key={
-                                                    activityItem.at +
-                                                    index
-                                                }
-                                                className={`
-                                                    flex
-                                                    items-center
-                                                    justify-between
-                                                    gap-3
-                                                    px-3
-                                                    py-3
-                                                    text-[12.5px]
-                                                    ${index >
-                                                        0
-                                                        ? "border-t border-slate-100"
-                                                        : ""
-                                                    }
-                                                `}
-                                            >
-                                                <span className="text-slate-800">
-                                                    {
-                                                        activityItem.text
-                                                    }
-                                                </span>
-
-                                                <span className="shrink-0 text-[11.5px] text-slate-400">
-                                                    {timeAgo(
-                                                        activityItem.at
-                                                    )}
-                                                </span>
-                                            </li>
-                                        )
-                                    )}
-
-                                </ul>
-
-                            )}
-
-                        </div>
-
-                    </div>
-
-                    {/* =================================================
-                       ROW 3
-                       ROLE + ACCOUNT
-                    ================================================= */}
-
-                    <div className="grid items-stretch gap-4 lg:grid-cols-2">
-
-                        <FieldsSection
-                            title="Role Information"
-                            fields={[
-                                {
-                                    key: "role",
-                                    label: "Role",
-                                    required: true,
-                                },
-                            ]}
-                            values={
-                                current
-                            }
-                            onSave={(
-                                patch
-                            ) =>
-                                saveFields(
-                                    patch,
-                                    "role information"
-                                )
-                            }
-                        />
+                    <div className="grid grid-cols-1 content-start gap-4 ">
 
                         <FieldsSection
                             title="Account Status"
@@ -1819,10 +1610,90 @@ export default function UserProfileOverview({
 
                     </div>
 
+
+                    {/* ACTIVITY */}
+
+                    <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+
+                        <h3 className="text-[14px] font-semibold text-slate-900">
+                            Recent Activity
+                        </h3>
+
+                        {activity.length ===
+                            0 ? (
+
+                            <div className="flex flex-1 items-center justify-center">
+
+                                <p className="px-3 py-8 text-center text-[13px] text-slate-400">
+                                    Changes you make on this page will appear here.
+                                </p>
+
+                            </div>
+
+                        ) : (
+
+                            <ul className="mt-3">
+
+                                {activity.map(
+                                    (
+                                        activityItem,
+                                        index
+                                    ) => (
+                                        <li
+                                            key={
+                                                activityItem.at +
+                                                index
+                                            }
+                                            className={`
+                                                    flex
+                                                    items-center
+                                                    justify-between
+                                                    gap-3
+                                                    px-3
+                                                    py-3
+                                                    text-[12.5px]
+                                                    ${index >
+                                                    0
+                                                    ? "border-t border-slate-100"
+                                                    : ""
+                                                }
+                                                `}
+                                        >
+                                            <span className="text-slate-800">
+                                                {
+                                                    activityItem.text
+                                                }
+                                            </span>
+
+                                            <span className="shrink-0 text-[11.5px] text-slate-400">
+                                                {timeAgo(
+                                                    activityItem.at
+                                                )}
+                                            </span>
+                                        </li>
+                                    )
+                                )}
+
+                            </ul>
+
+                        )}
+
+                    </div>
+
                 </div>
 
-            )}
+                {/* =================================================
+                       ROW 2
+                       ACTIVITY + USER STATUS
+                    ================================================= */}
 
-        </div>
+
+
+
+
+            </div>
+
+
+        </div >
     );
 }

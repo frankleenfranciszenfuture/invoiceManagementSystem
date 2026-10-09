@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
@@ -31,6 +31,8 @@ export default function RoleTable({
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
+    const [showEdit, setShowEdit] = useState(false);
+    const [showView, setShowView] = useState(false);
     /* =====================================================
        REDUX STATE
     ===================================================== */
@@ -312,117 +314,49 @@ export default function RoleTable({
 
     return (
 
-        <div
-            className="
-                bg-white
-                rounded-xl
-                border
-                border-gray-200
-                overflow-visible
-                w-full
-            "
-        >
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
 
             {/* =================================================
                 TABLE CONTAINER
             ================================================= */}
 
-            <div
-                className="
-                    w-full
-                    overflow-visible
-                "
-            >
+            <div className="w-full overflow-visible">
 
-                <table
-                    className="
-                        w-full
-                        table-fixed
-                        border-collapse
-                    "
-                >
+                <table className="w-full table-fixed border-collapse">
 
                     {/* =================================================
                         TABLE HEADER
                     ================================================= */}
 
-                    <thead
-                        className="
-                            bg-gray-100
-                            border-b
-                            border-gray-300
-                        "
-                    >
-
+                    <thead className="bg-[#EDE8D9]/90 border-b border-gray-300">
                         <tr>
 
-                            {/* ROLE NAME */}
+                            {[
+                                "Role Name",
+                                "Description",
+                                "Status",
+                                "Actions",
+                            ].map((header) => (
 
-                            <th
-                                className="
-                                    w-[30%]
-                                    px-2
+                                <th
+                                    key={header}
+                                    className={`
+                                    px-5
                                     py-3
                                     font-medium
                                     text-sm
-                                    text-gray-600
+                                    text-[#0F4659]/90
                                     uppercase
-                                    text-left
-                                "
-                            >
-                                Role Name
-                            </th>
+                                    ${header === "Actions"
+                                            ? "text-right"
+                                            : "text-left"
+                                        }
+                                `}
+                                >
+                                    {header}
+                                </th>
 
-                            {/* DESCRIPTION */}
-
-                            <th
-                                className="
-                                    w-[40%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                Description
-                            </th>
-
-                            {/* STATUS */}
-
-                            <th
-                                className="
-                                    w-[15%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                Status
-                            </th>
-
-                            {/* ACTIONS */}
-
-                            <th
-                                className="
-                                    w-[15%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-right
-                                "
-                            >
-                                Actions
-                            </th>
+                            ))}
 
                         </tr>
 
@@ -457,13 +391,14 @@ export default function RoleTable({
                                             )
                                         }
                                         className="
-                                            border-b
-                                            border-gray-100
-                                            hover:bg-gray-50
-                                            text-sm
-                                            cursor-pointer
-                                            transition-colors
-                                        "
+                                        cursor-pointer
+                                        border-b
+                                        border-gray-100
+                                        text-sm
+                                        transition-colors
+                                        cursor-pointer
+                                        hover:bg-gray-50
+                                    "
                                     >
 
                                         {/* =================================
@@ -629,184 +564,85 @@ export default function RoleTable({
                                             ACTIONS
                                         ================================= */}
 
-                                        <td
-                                            className="
-                                                relative
-                                                overflow-visible
-                                                px-2
-                                                py-3
-                                            "
-                                            onClick={(e) =>
-                                                e.stopPropagation()
-                                            }
-                                        >
+                                        {/* Actions */}
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-end gap-2">
 
-                                            <div
-                                                className="
-                                                    flex
-                                                    justify-end
-                                                "
-                                            >
-
-                                                <div
+                                                {/* View */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowView(true);
+                                                        dispatch(setExsistingRole(role));
+                                                        navigate(`/roles/view/${role.id}`);
+                                                    }}
+                                                    title="View"
                                                     className="
-                                                        relative
-                                                        group
-                                                        inline-block
+                                                    flex h-8 w-8 items-center justify-center
+                                                    rounded-lg
+                                                    bg-blue-50
+                                                    text-blue-600
+                                                    transition
+                                                    hover:bg-blue-100
+                                                    hover:text-blue-700
+                                                                               "
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
+
+                                                {/* Edit */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowEdit(true);
+                                                        dispatch(
+                                                            openModal({
+                                                                type: "editRole",
+                                                                data: role,
+                                                            })
+                                                        );
+
+                                                    }}
+                                                    title="Edit"
+                                                    className="
+                                                    flex h-8 w-8 items-center justify-center
+                                                    rounded-lg
+                                                    bg-amber-50
+                                                    text-amber-600
+                                                    transition
+                                                    hover:bg-amber-100
+                                                    hover:text-amber-700
+                                                "
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+
+                                                {/* Delete */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+
+                                                        // Your delete confirmation logic
+                                                        handleDelete(role.id);
+                                                    }}
+                                                    title="Delete"
+                                                    className="
+                                                        flex h-8 w-8 items-center justify-center
+                                                        rounded-lg
+                                                        bg-red-50
+                                                        text-red-600
+                                                        transition
+                                                        hover:bg-red-100
+                                                        hover:text-red-700
                                                     "
                                                 >
-
-                                                    {/* ACTION BUTTON */}
-
-                                                    <button
-                                                        type="button"
-                                                        className="
-                                                            p-1
-                                                            rounded-full
-                                                            bg-blue-500
-                                                            text-white
-                                                            hover:bg-blue-600
-                                                            transition-colors
-                                                        "
-                                                    >
-
-                                                        <ChevronDown
-                                                            size={16}
-                                                        />
-
-                                                    </button>
-
-                                                    {/* =========================
-                                                        ACTION MENU
-                                                    ========================= */}
-
-                                                    <div
-                                                        className="
-                                                            absolute
-                                                            right-0
-                                                            top-full
-                                                            mt-1
-                                                            z-[9999]
-                                                            opacity-0
-                                                            invisible
-                                                            group-hover:opacity-100
-                                                            group-hover:visible
-                                                            transition-all
-                                                            duration-150
-                                                        "
-                                                    >
-
-                                                        <div
-                                                            className="
-                                                                w-36
-                                                                rounded-md
-                                                                bg-blue-500
-                                                                shadow-lg
-                                                                overflow-hidden
-                                                            "
-                                                        >
-
-                                                            {/* VIEW */}
-
-                                                            {/* <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleView(
-                                                                        role
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-blue-600
-                                                                    transition-colors
-                                                                "
-                                                            >
-
-                                                                <Eye
-                                                                    size={16}
-                                                                />
-
-                                                                View
-
-                                                            </button> */}
-
-                                                            {/* EDIT */}
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleEdit(
-                                                                        role
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-blue-600
-                                                                    transition-colors
-                                                                "
-                                                            >
-
-                                                                <Edit
-                                                                    size={16}
-                                                                />
-
-                                                                Edit
-
-                                                            </button>
-
-                                                            {/* DELETE */}
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleDelete(
-                                                                        role.id
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-red-600
-                                                                    transition-colors
-                                                                "
-                                                            >
-
-                                                                <Trash2
-                                                                    size={16}
-                                                                />
-
-                                                                Delete
-
-                                                            </button>
-
-                                                        </div>
-
-                                                    </div>
-
-                                                </div>
+                                                    <Trash2 size={16} />
+                                                </button>
 
                                             </div>
-
                                         </td>
 
                                     </tr>
@@ -867,10 +703,10 @@ export default function RoleTable({
                             disabled={true}
                             className="
                                 text-sm
-                                text-gray-400
-                                hover:text-gray-600
-                                disabled:opacity-50
+                               text-[#0F4659] 
+                                hover:text-[#0F4659]/90
                                 disabled:cursor-not-allowed
+                                disabled:opacity-50
                             "
                         >
                             Previous
@@ -884,12 +720,12 @@ export default function RoleTable({
                                 h-8
                                 flex
                                 items-center
-                                justify-center
+                                 justify-center
                                 rounded-lg
-                                bg-blue-500
-                                text-white
+                                bg-[#0F4659]
                                 text-sm
                                 font-medium
+                                text-white
                             "
                         >
                             1
@@ -901,11 +737,13 @@ export default function RoleTable({
                             type="button"
                             disabled={true}
                             className="
-                                text-sm
-                                text-gray-400
-                                hover:text-gray-600
-                                disabled:opacity-50
+                               text-sm
+                                text-gray-500
+                                transition-colors
+                                 text-[#0F4659]
+                            hover:text-[#0F4659]/90
                                 disabled:cursor-not-allowed
+                                disabled:opacity-50
                             "
                         >
                             Next

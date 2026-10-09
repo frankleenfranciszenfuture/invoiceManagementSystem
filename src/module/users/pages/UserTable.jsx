@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
@@ -16,6 +16,7 @@ import { openModal } from "../../ui/uiSlice";
 import {
     ChevronDown,
     Edit,
+    Eye,
     Trash2,
     UserRound,
 } from "lucide-react";
@@ -27,6 +28,9 @@ export default function UserTable({
 }) {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+
+    const [showEdit, setShowEdit] = useState(false);
+    const [showView, setShowView] = useState(false);
 
     /* =====================================================
        REDUX STATE
@@ -314,7 +318,7 @@ export default function UserTable({
     ===================================================== */
 
     return (
-        <div className="w-full overflow-visible rounded-xl border border-gray-200 bg-white">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
 
             {/* =================================================
                 TABLE
@@ -328,113 +332,43 @@ export default function UserTable({
                         TABLE HEADER
                     ================================================= */}
 
-                    <thead className="border-b border-gray-300 bg-gray-100">
+                    <thead className="bg-[#ECE6D5]/90 border-b border-gray-300">
                         <tr>
 
-                            {/* USER */}
+                            {[
+                                "User",
+                                "Email",
+                                "Role",
+                                "Status",
+                                "Verified",
+                                "Actions",
+                            ].map((header) => (
 
-                            <th
-                                className="
-                                    w-[28%]
-                                    px-2
+                                <th
+                                    key={header}
+                                    className={`
+                                    px-5
                                     py-3
-                                    text-left
-                                    text-sm
                                     font-medium
-                                    uppercase
-                                    text-gray-600
-                                "
-                            >
-                                User
-                            </th>
-
-                            {/* EMAIL */}
-
-                            <th
-                                className="
-                                    w-[25%]
-                                    px-2
-                                    py-3
-                                    text-left
                                     text-sm
-                                    font-medium
+                                    text-[#0F4659]/90
                                     uppercase
-                                    text-gray-600
-                                "
-                            >
-                                Email
-                            </th>
+                                    ${header === "Actions"
+                                            ? "text-right"
+                                            : "text-left"
+                                        }
+                                `}
+                                >
+                                    {header}
+                                </th>
 
-                            {/* ROLE */}
-
-                            <th
-                                className="
-                                    w-[15%]
-                                    px-2
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    font-medium
-                                    uppercase
-                                    text-gray-600
-                                "
-                            >
-                                Role
-                            </th>
-
-                            {/* STATUS */}
-
-                            <th
-                                className="
-                                    w-[12%]
-                                    px-2
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    font-medium
-                                    uppercase
-                                    text-gray-600
-                                "
-                            >
-                                Status
-                            </th>
-
-                            {/* VERIFIED */}
-
-                            <th
-                                className="
-                                    w-[10%]
-                                    px-2
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    font-medium
-                                    uppercase
-                                    text-gray-600
-                                "
-                            >
-                                Verified
-                            </th>
-
-                            {/* ACTIONS */}
-
-                            <th
-                                className="
-                                    w-[10%]
-                                    px-2
-                                    py-3
-                                    text-right
-                                    text-sm
-                                    font-medium
-                                    uppercase
-                                    text-gray-600
-                                "
-                            >
-                                Actions
-                            </th>
+                            ))}
 
                         </tr>
+
                     </thead>
+
+
 
                     {/* =================================================
                         TABLE BODY
@@ -460,6 +394,7 @@ export default function UserTable({
                                         border-gray-100
                                         text-sm
                                         transition-colors
+                                        cursor-pointer
                                         hover:bg-gray-50
                                     "
                                 >
@@ -633,128 +568,84 @@ export default function UserTable({
                                         ACTIONS
                                     ================================= */}
 
-                                    <td
-                                        className="
-                                            relative
-                                            overflow-visible
-                                            px-2
-                                            py-3
+                                    {/* Actions */}
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center justify-end gap-2">
+
+                                            {/* View */}
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setShowView(true);
+                                                    dispatch(setExsistingUser(user));
+                                                    navigate(`/users/view/${user.id}`);
+                                                }}
+                                                title="View"
+                                                className="
+                                            flex h-8 w-8 items-center justify-center
+                                            rounded-lg
+                                            bg-blue-50
+                                            text-blue-600
+                                            transition
+                                            hover:bg-blue-100
+                                            hover:text-blue-700
                                         "
-                                        onClick={(e) =>
-                                            e.stopPropagation()
-                                        }
-                                    >
-                                        <div className="flex justify-end">
+                                            >
+                                                <Eye size={16} />
+                                            </button>
 
-                                            <div className="group relative inline-block">
+                                            {/* Edit */}
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setShowEdit(true);
+                                                    dispatch(
+                                                        openModal({
+                                                            type: "editUser",
+                                                            data: user,
+                                                        })
+                                                    );
 
-                                                {/* ACTION BUTTON */}
+                                                }}
+                                                title="Edit"
+                                                className="
+                                                   flex h-8 w-8 items-center justify-center
+                                                   rounded-lg
+                                                   bg-amber-50
+                                                   text-amber-600
+                                                   transition
+                                                   hover:bg-amber-100
+                                                   hover:text-amber-700
+                                               "
+                                            >
+                                                <Edit size={16} />
+                                            </button>
 
-                                                <button
-                                                    type="button"
-                                                    className="
-                                                        rounded-full
-                                                        bg-blue-500
-                                                        p-1
-                                                        text-white
-                                                        transition-colors
-                                                        hover:bg-blue-600
-                                                    "
-                                                >
-                                                    <ChevronDown
-                                                        size={16}
-                                                    />
-                                                </button>
+                                            {/* Delete */}
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
 
-                                                {/* ACTION MENU */}
+                                                    // Your delete confirmation logic
+                                                    handleDelete(user.id);
+                                                }}
+                                                title="Delete"
+                                                className="
+                                                    flex h-8 w-8 items-center justify-center
+                                                    rounded-lg
+                                                    bg-red-50
+                                                    text-red-600
+                                                    transition
+                                                    hover:bg-red-100
+                                                    hover:text-red-700
+                                                "
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
 
-                                                <div
-                                                    className="
-                                                        invisible
-                                                        absolute
-                                                        right-0
-                                                        top-full
-                                                        z-[9999]
-                                                        mt-1
-                                                        opacity-0
-                                                        transition-all
-                                                        duration-150
-                                                        group-hover:visible
-                                                        group-hover:opacity-100
-                                                    "
-                                                >
-                                                    <div
-                                                        className="
-                                                            w-36
-                                                            overflow-hidden
-                                                            rounded-md
-                                                            bg-blue-500
-                                                            shadow-lg
-                                                        "
-                                                    >
-
-                                                        {/* EDIT */}
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handleEdit(
-                                                                    user
-                                                                )
-                                                            }
-                                                            className="
-                                                                flex
-                                                                w-full
-                                                                items-center
-                                                                gap-2
-                                                                px-4
-                                                                py-2
-                                                                text-sm
-                                                                text-white
-                                                                transition-colors
-                                                                hover:bg-blue-600
-                                                            "
-                                                        >
-                                                            <Edit
-                                                                size={16}
-                                                            />
-
-                                                            Edit
-                                                        </button>
-
-                                                        {/* DELETE */}
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handleDelete(
-                                                                    user.id
-                                                                )
-                                                            }
-                                                            className="
-                                                                flex
-                                                                w-full
-                                                                items-center
-                                                                gap-2
-                                                                px-4
-                                                                py-2
-                                                                text-sm
-                                                                text-white
-                                                                transition-colors
-                                                                hover:bg-red-600
-                                                            "
-                                                        >
-                                                            <Trash2
-                                                                size={16}
-                                                            />
-
-                                                            Delete
-                                                        </button>
-
-                                                    </div>
-                                                </div>
-
-                                            </div>
                                         </div>
                                     </td>
 
@@ -784,15 +675,12 @@ export default function UserTable({
 
                     <p className="text-sm text-gray-500">
                         Showing{" "}
-                        <span className="font-medium text-gray-700">
+                        <span className="text-sm text-gray-700">
                             {showingFrom}
                         </span>{" "}
-                        to{" "}
-                        <span className="font-medium text-gray-700">
-                            {showingTo}
-                        </span>{" "}
+
                         of{" "}
-                        <span className="font-medium text-gray-700">
+                        <span className="text-sm text-gray-700">
                             {totalElements}
                         </span>{" "}
                         users
@@ -817,7 +705,8 @@ export default function UserTable({
                                 text-sm
                                 text-gray-500
                                 transition-colors
-                                hover:text-gray-700
+                                text-[#0F4659] 
+                                hover:text-[#0F4659]/90
                                 disabled:cursor-not-allowed
                                 disabled:opacity-50
                             "
@@ -835,7 +724,7 @@ export default function UserTable({
                                 items-center
                                 justify-center
                                 rounded-lg
-                                bg-blue-500
+                                bg-[#0F4659]
                                 text-sm
                                 font-medium
                                 text-white
@@ -860,7 +749,8 @@ export default function UserTable({
                                 text-sm
                                 text-gray-500
                                 transition-colors
-                                hover:text-gray-700
+                                 text-[#0F4659]
+                            hover:text-[#0F4659]/90
                                 disabled:cursor-not-allowed
                                 disabled:opacity-50
                             "

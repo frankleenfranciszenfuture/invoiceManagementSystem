@@ -80,7 +80,7 @@ export default function ProductOverviewTabTopbar() {
     // =========================================================
 
     return (
-        <div className="flex items-center justify-between border border-gray-100 bg-white px-5 py-5">
+        <div className="flex items-center justify-between border border-gray-100 bg-white px-5 py-2.5">
 
             {/* =================================================
                 LEFT - PRODUCT NAME
@@ -106,11 +106,11 @@ export default function ProductOverviewTabTopbar() {
                     EDIT
                 ================================================= */}
 
-                <div className="flex cursor-pointer overflow-hidden rounded-sm border border-blue-600 bg-[#088178] shadow-sm">
+                <div className="flex cursor-pointer overflow-hidden rounded-sm border border-[#088178] bg-[#088178] shadow-sm">
                     <button
                         type="button"
                         onClick={handleEdit}
-                        className="flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-400"
+                        className="flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium text-white hover:bg-[#088178]/70 cursor-pointer"
                     >
                         <SquarePenIcon size={16} />
 
@@ -126,19 +126,37 @@ export default function ProductOverviewTabTopbar() {
                     CLOSE
                 ================================================= */}
 
-                <div className="flex cursor-pointer overflow-hidden rounded-sm border border-blue-600 bg-[#088178] shadow-sm">
+
+                <div className="inline-flex overflow-hidden rounded-md border border-red-200 bg-white shadow-sm transition-all duration-200 hover:border-red-500 hover:shadow-md">
                     <button
                         type="button"
-                        className="flex items-center px-2.5 py-1 text-xs font-medium text-white hover:bg-[#FED7D9]"
-
-                        onClick={() => (navigate("/items"))}>
-                        <X size={16} />
-                        <span>
-                            Close
-                        </span>
+                        onClick={() => navigate("/items")}
+                        className="
+            group
+            flex
+            items-center
+            gap-1.5
+            px-3
+            py-1.5
+            text-xs
+            font-semibold
+            text-red-600
+            transition-all
+            duration-200
+            hover:bg-red-600
+            hover:text-white
+            active:scale-95
+            cursor-pointer
+        "
+                    >
+                        <X
+                            size={15}
+                            strokeWidth={2.2}
+                            className="transition-transform duration-200 group-hover:rotate-90"
+                        />
+                        <span>Close</span>
                     </button>
                 </div>
-
             </div>
         </div>
     );

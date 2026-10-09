@@ -132,7 +132,7 @@ export default function ProductOverViewSiderDetails() {
                                     )
                                 }
                                 className={`w-full cursor-pointer border-b border-gray-100 px-4 py-4 transition-all ${isSelected
-                                    ? "border-l-4 border-l-blue-600 bg-blue-50"
+                                    ? "border-l-4 border-l-[#0F4659] bg-[#0F4659]/10"
                                     : "hover:bg-gray-50"
                                     }`}
                             >
@@ -222,8 +222,14 @@ export default function ProductOverViewSiderDetails() {
                    EMPTY STATE
                    ===================================================== */
 
-                <div className="flex min-h-[200px] items-center justify-center text-gray-500">
-                    No products found.
+                <div className="flex min-h-[200px] flex-col items-center justify-center px-4 text-center">
+                    <p className="text-sm font-medium text-gray-700">
+                        No products found
+                    </p>
+
+                    <p className="mt-1 text-xs text-gray-400">
+                        No products match "{productStatus}".
+                    </p>
                 </div>
             )}
 

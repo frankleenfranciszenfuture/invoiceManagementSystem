@@ -262,6 +262,8 @@ export default function InvoiceCreate() {
     setDiscountMode,
   ] = useState("COMMON");
 
+  const [dropdownOpen, setDropdownOpen] =
+    useState(false);
 
   /* =======================================================
      INVOICE REDUX
@@ -2859,9 +2861,23 @@ export default function InvoiceCreate() {
                       <button
                         type="button"
                         className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
+                        // onClick={() => {
+                        //   setDropdownOpen(
+                        //     false
+                        //   );
+                        //   dispatch(
+                        //     openModal({
+                        //       type: "addCustomer",
+                        //     })
+                        //   );
+
+                        // }}
+
+                        onClick={() => (navigate("/customers/new"))}
                       >
 
-                        <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center"
+                        >
 
                           <Plus
                             size={14}
@@ -3898,6 +3914,7 @@ export default function InvoiceCreate() {
                     <button
                       type="button"
                       className="w-full border-t border-gray-200 px-4 py-3 flex items-center gap-2 text-blue-600 hover:bg-blue-50"
+                      onClick={() => (navigate("/items/newSimple"))}
                     >
 
                       <Plus

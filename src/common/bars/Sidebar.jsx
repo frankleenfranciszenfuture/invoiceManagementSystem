@@ -216,7 +216,7 @@ const ChildRow = ({ child, active, onClick }) => (
 
 /* Round initials avatar used in the bottom user card */
 const AvatarCircle = ({ src, name }) => (
-    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sky-100 text-sm font-semibold text-sky-600 ring-2 ring-white/10">
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#FCF7F8] text-sm font-semibold text-[#0F4659] ring-2 ring-white/10">
         {src ? (
             <img src={assets.zenfutureLogo} alt={name} className="h-full w-full object-cover" />
         ) : (
@@ -433,7 +433,7 @@ const Sidebar = ({ onLogout }) => {
     const canCreateInvoice = hasPermission("Invoices", "CREATE");
 
     const Avatar = (
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#088178] text-sm font-semibold text-white ring-1 ring-white/10">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#FCF7F8] text-sm font-semibold text-[#0F4659] ring-1 ring-white/10">
             {avatarSrc ? (
                 <img src={avatarSrc} alt={displayName} className="h-full w-full object-cover" />
             ) : (
@@ -458,7 +458,7 @@ const Sidebar = ({ onLogout }) => {
             <aside
                 className={`
                     fixed bottom-3 left-3 top-3 z-30 flex flex-col
-                    rounded-xl border border-white/5 bg-[#088178]
+                    rounded-xl border border-white/5 bg-[#0F4659]
                     shadow-2xl shadow-black/30
                     transition-[width] duration-300
                     ${open ? "w-54" : "w-[72px]"}
@@ -474,8 +474,8 @@ const Sidebar = ({ onLogout }) => {
                     className="
                         absolute -right-3 top-[34px] z-40 flex h-6 w-6
                         items-center justify-center rounded-full
-                        bg-[#4EBBB4] text-[white] hover:text-[#088178] shadow-lg shadow-blue-500/30
-                        transition hover:bg-[#B6E7E4]
+                        bg-[#FCF7F8] text-[#0F4659] hover:text-[#FCF7F8] shadow-lg shadow-blue-500/30
+                        transition hover:bg-[#0F4659]
                     "
                 >
                     {open ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
@@ -714,14 +714,14 @@ const Sidebar = ({ onLogout }) => {
                                 <p className="truncate text-sm font-semibold text-white">
                                     {displayName}
                                 </p>
-                                <p className="truncate text-xs text-gray-400">{roleLabel}</p>
+                                <p className="truncate text-xs text-white">{roleLabel}</p>
                             </div>
 
                             <button
                                 type="button"
                                 onClick={handleLogout}
                                 aria-label="Log out"
-                                className="rounded-lg p-2 text-gray-400 transition hover:bg-white/10 hover:text-white"
+                                className="rounded-lg p-2 text-white transition hover:bg-white/10 hover:text-white"
                             >
                                 <LogOut size={18} />
                             </button>
@@ -734,7 +734,7 @@ const Sidebar = ({ onLogout }) => {
                                 type="button"
                                 onClick={handleLogout}
                                 aria-label="Log out"
-                                className="rounded-lg p-2 text-gray-400 transition hover:bg-white/10 hover:text-white"
+                                className="rounded-lg p-2 text-white transition hover:bg-white/10 hover:text-white"
                             >
                                 <LogOut size={18} />
                             </button>

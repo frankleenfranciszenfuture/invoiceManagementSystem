@@ -238,7 +238,7 @@ export default function ProductTable({ products = [] }) {
         <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
             <div className="overflow-x-auto overflow-y-visible">
                 <table className="w-full">
-                    <thead className="bg-[#088178]/70 border-b border-gray-300">
+                    <thead className="bg-[#CFD7CC]/90 border-b border-gray-300">
                         <tr>
 
                             {[
@@ -260,7 +260,7 @@ export default function ProductTable({ products = [] }) {
                                     py-3
                                     font-medium
                                     text-sm
-                                    text-white
+                                    text-[#0F4659]/90
                                     uppercase
                                     ${header === "Actions"
                                             ? "text-center"
@@ -588,9 +588,10 @@ export default function ProductTable({ products = [] }) {
                             }}
                             className="
                             text-sm
-                           text-[#088178] 
-                           hover:text-[#088178]/60
-                            disabled:opacity-50
+                           text-[#0F4659] 
+                           hover:text-[#0F4659]/90
+                          disabled:cursor-not-allowed
+                          disabled:opacity-50
                         "
                         >
                             Previous
@@ -606,7 +607,7 @@ export default function ProductTable({ products = [] }) {
                             items-center
                             justify-center
                             rounded-lg
-                            bg-[#088178]
+                            bg-[#0F4659]
                             text-white
                             text-sm
                             font-medium
@@ -632,9 +633,10 @@ export default function ProductTable({ products = [] }) {
                             }}
                             className="
                             text-sm
-                            text-[#088178]
-                            hover:text-[#088178]/60
-                            disabled:opacity-50
+                            text-[#0F4659]
+                            hover:text-[#0F4659]/90
+                             disabled:cursor-not-allowed
+                                disabled:opacity-50
                         "
                         >
                             Next
