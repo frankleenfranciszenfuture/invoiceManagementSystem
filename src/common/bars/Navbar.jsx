@@ -17,7 +17,7 @@ export default function Navbar({ title }) {
         (state) => state.auth.user
     );
 
-    const hiddenPaths = ["/customers", "/invoices", "/settings"];
+    const hiddenPaths = ["/customers", "/settings"];
 
     const hideNavbar = hiddenPaths.some((path) =>
         location.pathname.startsWith(path)
@@ -56,9 +56,9 @@ export default function Navbar({ title }) {
          */
         <header
             className="
-                relative z-20 mr-2 mx-1 mt-2 flex h-[64px] shrink-0
-                items-center justify-between rounded-lg
-                border border-white/5 bg-[#FFFFFF] px-4
+                relative z-20 mr-5 mx-2 mt-3 flex h-[54px] shrink-0
+                items-center justify-between rounded-md
+                border border-white/5 bg-[#FFFFFF] px-3
                 shadow-xl shadow-slate-900/20
             "
         >
@@ -104,7 +104,7 @@ export default function Navbar({ title }) {
                     className="
                         flex items-center gap-1 rounded-xl
                         bg-white/[0.05] p-1 ring-1 ring-white/5
-                        [&_button_svg]:text-gray-300
+                        [&_button_svg]:text-[#0F4659]
                         [&_button:hover_svg]:text-white
                     "
                 >

@@ -162,14 +162,14 @@ export default function SettingsDashboard() {
                         <div className="flex h-full items-center px-6">
                             <div className="flex items-center gap-3">
                                 <div className="flex h-10 w-10 items-center justify-center">
-                                    <Settings size={26} className="text-blue-600" />
+                                    <Settings size={26} className="text-[#0F4659]" />
                                 </div>
 
                                 <div className="border-l border-gray-200 pl-3">
-                                    <h1 className="text-[18px] font-medium leading-tight text-gray-900">
+                                    <h1 className="text-[18px] font-medium leading-tight text-[#0F4659]">
                                         All Settings
                                     </h1>
-                                    <p className="text-xs text-gray-500">WXYZ</p>
+                                    <p className="text-xs text-[#0F4659]">WXYZ</p>
                                 </div>
                             </div>
 
@@ -177,7 +177,7 @@ export default function SettingsDashboard() {
                                 <div className="relative">
                                     <Search
                                         size={15}
-                                        className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600"
+                                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0F4659]"
                                     />
                                     <input
                                         ref={searchRef}
@@ -185,7 +185,7 @@ export default function SettingsDashboard() {
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                         placeholder="Search settings ( / )"
-                                        className="h-11 w-full rounded-xl border border-blue-400 bg-white pl-9 pr-4 text-sm text-gray-700 outline-none ring-2 ring-blue-100 transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-blue-200"
+                                        className="h-11 w-full rounded-xl border border-[#0F4659]/50 bg-white pl-9 pr-4 text-sm text-[#0F4659] outline-none ring-2 ring-[#0F4659]/20 transition placeholder:text-gray-400 focus:border-[#0F4659] focus:ring-[#0F4659]/20"
                                     />
                                 </div>
                             </div>
@@ -193,7 +193,7 @@ export default function SettingsDashboard() {
                             <button
                                 type="button"
                                 onClick={() => navigate(-1)}
-                                className="flex items-center gap-1.5 rounded-lg bg-gray-50 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-100"
+                                className="flex items-center gap-1.5 rounded-lg bg-[#0F4659]/20 px-4 py-2 text-sm text-gray-700 transition hover:bg-[#0F4659]/50"
                             >
                                 Close Settings
                                 <X size={14} className="text-red-500" />
@@ -205,9 +205,9 @@ export default function SettingsDashboard() {
                     <main className="px-6 py-7">
                         {/* Promo banner */}
                         {showBanner && (
-                            <div className="mb-10 flex items-center gap-4 rounded-xl bg-[#eef3fd] px-4 py-3.5">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
-                                    <Settings size={20} className="text-blue-600" />
+                            <div className="mb-10 flex items-center gap-4 rounded-xl bg-[#0F4659]/20 px-4 py-3.5">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#0F4659]/70 shadow-sm">
+                                    <Settings size={20} className="text-white" />
                                 </div>
 
                                 <p className="flex-1 text-[13px] text-gray-700">

@@ -16,6 +16,7 @@ import {
     Plus,
     Package,
     LogOut,
+    Settings,
 } from "lucide-react";
 import { assets } from "../../assets/assets";
 
@@ -46,8 +47,8 @@ const NAV = [
 
         // children: [
         //     {
-        //         label: "Customers",
-        //         to: "/customers",
+        //         label: "Create",
+        //         to: "/customers/new",
         //     },
         // ],
     },
@@ -86,6 +87,21 @@ const NAV = [
         icon: Wallet,
         to: "/payments",
         addTo: "/payments/new",
+        queryKey: "status",
+        dropdown: true,
+
+        // children: [
+        //     { label: "All payments", to: "/payments", action: "VIEW" },
+        //     { label: "New payment", to: "/payments/new", action: "CREATE" },
+        // ],
+    },
+
+    {
+        label: "Settings",
+        moduleName: "Settings",
+        icon: Settings,
+        to: "/settings",
+        addTo: "/settings",
         queryKey: "status",
         dropdown: true,
 

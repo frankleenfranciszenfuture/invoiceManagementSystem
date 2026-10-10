@@ -1,6 +1,6 @@
 
-import React from "react";
-
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     useDispatch,
     useSelector,
@@ -36,8 +36,9 @@ export default function BankAccountTable({
 }) {
 
     const dispatch = useDispatch();
-
-
+    const navigate = useNavigate();
+    const [showEdit, setShowEdit] = useState(false);
+    const [showView, setShowView] = useState(false);
     /* =====================================================
        REDUX STATE
     ===================================================== */
@@ -701,159 +702,46 @@ export default function BankAccountTable({
 
     return (
 
-        <div
-            className="
-                bg-white
-                rounded-xl
-                border
-                border-gray-200
-                overflow-visible
-                w-full
-            "
-        >
-
-            <div
-                className="
-                    w-full
-                    overflow-visible
-                "
-            >
-
-                <table
-                    className="
-                        w-full
-                        table-fixed
-                        border-collapse
-                    "
-                >
-
-                    {/* =================================================
-                        TABLE HEADER
-                    ================================================= */}
-
-                    <thead
-                        className="
-                            sticky
-                            top-0
-                            z-20
-                            bg-gray-100
-                            border-b
-                            border-gray-300
-                        "
-                    >
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
+            <div className="overflow-x-auto overflow-y-visible">
+                <table className="w-full">
+                    <thead className="bg-[#ECE6D5]/90 border-b border-gray-300">
 
                         <tr>
 
-                            {/* ACCOUNT */}
+                            {[
+                                "Account",
+                                "Bank Name",
+                                "Account no",
+                                "Type",
+                                "Status",
+                                "Actions",
+                            ].map((header) => (
 
-                            <th
-                                className="
-                                    w-[25%]
-                                    px-2
+                                <th
+                                    key={header}
+                                    className={`
+                                    px-5
                                     py-3
                                     font-medium
                                     text-sm
-                                    text-gray-600
+                                    text-[#0F4659]/90
                                     uppercase
-                                    text-left
-                                "
-                            >
-                                Account
-                            </th>
+                                    ${header === "Actions"
+                                            ? "text-right"
+                                            : "text-left"
+                                        }
+                                `}
+                                >
+                                    {header}
+                                </th>
 
-
-                            {/* BANK */}
-
-                            <th
-                                className="
-                                    w-[20%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                Bank
-                            </th>
-
-
-                            {/* ACCOUNT NUMBER */}
-
-                            <th
-                                className="
-                                    w-[20%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                Account Number
-                            </th>
-
-
-                            {/* TYPE */}
-
-                            <th
-                                className="
-                                    w-[12%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                Type
-                            </th>
-
-
-                            {/* STATUS */}
-
-                            <th
-                                className="
-                                    w-[13%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                Status
-                            </th>
-
-
-                            {/* ACTIONS */}
-
-                            <th
-                                className="
-                                    w-[10%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-right
-                                "
-                            >
-                                Actions
-                            </th>
+                            ))}
 
                         </tr>
 
                     </thead>
+
 
 
                     {/* =================================================
@@ -1114,6 +1002,7 @@ export default function BankAccountTable({
                                         </td>
 
 
+
                                         {/* =================================
                                             ACCOUNT TYPE
                                         ================================= */}
@@ -1185,208 +1074,85 @@ export default function BankAccountTable({
 
                                         </td>
 
-
                                         {/* =================================
                                             ACTIONS
                                         ================================= */}
 
-                                        <td
-                                            className="
-                                                relative
-                                                overflow-visible
-                                                px-2
-                                                py-3
-                                            "
-                                            onClick={(e) =>
-                                                e.stopPropagation()
-                                            }
-                                        >
+                                        {/* Actions */}
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-end gap-2">
 
-                                            <div
-                                                className="
-                                                    flex
-                                                    justify-end
-                                                "
-                                            >
-
-                                                <div
+                                                {/* View */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowView(true);
+                                                        dispatch(setExsistingBankAccount(bankAccount));
+                                                        navigate(`/bankAccount/view/${bankAccount.id}`);
+                                                    }}
+                                                    title="View"
                                                     className="
-                                                        relative
-                                                        group
-                                                        inline-block
-                                                    "
+                                                    flex h-8 w-8 items-center justify-center
+                                                    rounded-lg
+                                                    bg-blue-50
+                                                    text-blue-600
+                                                    transition
+                                                    hover:bg-blue-100
+                                                    hover:text-blue-700
+                                                "
                                                 >
+                                                    <Eye size={16} />
+                                                </button>
 
-                                                    {/* ACTION BUTTON */}
+                                                {/* Edit */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowEdit(true);
+                                                        dispatch(setExsistingBankAccount(bankAccount));
+                                                        navigate(`/bankAccount/editSimple/${bankAccount.id}`);
 
-                                                    <button
-                                                        type="button"
-                                                        className="
-                                                            p-1
-                                                            rounded-full
-                                                            bg-blue-500
-                                                            text-white
-                                                            hover:bg-blue-600
-                                                            transition-colors
+                                                    }}
+                                                    title="Edit"
+                                                    className="
+                                                    flex h-8 w-8 items-center justify-center
+                                                    rounded-lg
+                                                    bg-amber-50
+                                                    text-amber-600
+                                                    transition
+                                                    hover:bg-amber-100
+                                                    hover:text-amber-700
+                                                "
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+
+                                                {/* Delete */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+
+                                                        // Your delete confirmation logic
+                                                        handleDelete(bankAccount.id);
+                                                    }}
+                                                    title="Delete"
+                                                    className="
+                                                            flex h-8 w-8 items-center justify-center
+                                                            rounded-lg
+                                                            bg-red-50
+                                                            text-red-600
+                                                            transition
+                                                            hover:bg-red-100
+                                                            hover:text-red-700
                                                         "
-                                                    >
-
-                                                        <ChevronDown
-                                                            size={16}
-                                                        />
-
-                                                    </button>
-
-
-                                                    {/* ACTION MENU */}
-
-                                                    <div
-                                                        className="
-                                                            absolute
-                                                            right-0
-                                                            top-full
-                                                            mt-1
-                                                            z-[9999]
-                                                            opacity-0
-                                                            invisible
-                                                            group-hover:opacity-100
-                                                            group-hover:visible
-                                                            transition-all
-                                                            duration-150
-                                                        "
-                                                    >
-
-                                                        <div
-                                                            className="
-                                                                w-36
-                                                                rounded-md
-                                                                bg-blue-500
-                                                                shadow-lg
-                                                                overflow-hidden
-                                                            "
-                                                        >
-
-                                                            {/* =================================
-                                                                VIEW
-                                                            ================================= */}
-
-                                                            {canViewBankAccount && (
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        handleView(
-                                                                            bankAccount
-                                                                        )
-                                                                    }
-                                                                    className="
-                                                                        flex
-                                                                        w-full
-                                                                        items-center
-                                                                        gap-2
-                                                                        px-4
-                                                                        py-2
-                                                                        text-sm
-                                                                        text-white
-                                                                        hover:bg-blue-600
-                                                                        transition-colors
-                                                                    "
-                                                                >
-
-                                                                    <Eye
-                                                                        size={16}
-                                                                    />
-
-                                                                    View
-
-                                                                </button>
-
-                                                            )}
-
-
-                                                            {/* =================================
-                                                                EDIT
-                                                            ================================= */}
-
-                                                            {canEditBankAccount && (
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        handleEdit(
-                                                                            bankAccount
-                                                                        )
-                                                                    }
-                                                                    className="
-                                                                        flex
-                                                                        w-full
-                                                                        items-center
-                                                                        gap-2
-                                                                        px-4
-                                                                        py-2
-                                                                        text-sm
-                                                                        text-white
-                                                                        hover:bg-blue-600
-                                                                        transition-colors
-                                                                    "
-                                                                >
-
-                                                                    <Edit
-                                                                        size={16}
-                                                                    />
-
-                                                                    Edit
-
-                                                                </button>
-
-                                                            )}
-
-
-                                                            {/* =================================
-                                                                DELETE
-                                                            ================================= */}
-
-                                                            {canDeleteBankAccount && (
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        handleDelete(
-                                                                            bankAccount.id
-                                                                        )
-                                                                    }
-                                                                    className="
-                                                                        flex
-                                                                        w-full
-                                                                        items-center
-                                                                        gap-2
-                                                                        px-4
-                                                                        py-2
-                                                                        text-sm
-                                                                        text-white
-                                                                        hover:bg-red-600
-                                                                        transition-colors
-                                                                    "
-                                                                >
-
-                                                                    <Trash2
-                                                                        size={16}
-                                                                    />
-
-                                                                    Delete
-
-                                                                </button>
-
-                                                            )}
-
-                                                        </div>
-
-                                                    </div>
-
-                                                </div>
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
 
                                             </div>
-
                                         </td>
 
                                     </tr>
@@ -1452,12 +1218,11 @@ export default function BankAccountTable({
                             type="button"
                             disabled={true}
                             className="
-                                text-sm
-                                text-gray-400
-                                hover:text-gray-600
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
-                            "
+                            text-sm
+                           text-[#0F4659] 
+                           hover:text-[#0F4659]/90
+                          disabled:cursor-not-allowed
+                          disabled:opacity-50"
                         >
                             Previous
                         </button>
@@ -1467,16 +1232,16 @@ export default function BankAccountTable({
 
                         <span
                             className="
-                                w-8
-                                h-8
-                                flex
-                                items-center
-                                justify-center
-                                rounded-lg
-                                bg-blue-500
-                                text-white
-                                text-sm
-                                font-medium
+                            w-8
+                            h-8
+                            flex
+                            items-center
+                            justify-center
+                            rounded-lg
+                            bg-[#0F4659]
+                            text-white
+                            text-sm
+                            font-medium
                             "
                         >
                             1
@@ -1489,11 +1254,11 @@ export default function BankAccountTable({
                             type="button"
                             disabled={true}
                             className="
-                                text-sm
-                                text-gray-400
-                                hover:text-gray-600
+                            text-sm
+                            text-[#0F4659]
+                            hover:text-[#0F4659]/90
+                             disabled:cursor-not-allowed
                                 disabled:opacity-50
-                                disabled:cursor-not-allowed
                             "
                         >
                             Next
@@ -1505,7 +1270,7 @@ export default function BankAccountTable({
 
             </div>
 
-        </div>
+        </div >
 
     );
 

@@ -258,8 +258,8 @@ export const settings = [
         component: ComingSoon,
       },
       {
-        label: "Custom Domain",
-        path: "/settings/organization/custom-domain",
+        label: "Bank Account",
+        path: "/bankAccount",
         component: ComingSoon,
       },
       {

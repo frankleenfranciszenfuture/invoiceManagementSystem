@@ -108,6 +108,7 @@ import CompanyProfileOverview from "./module/company/pages/CompanyProfileOvervie
 import UserProfileOverview from "./module/users/pages/UserProfileOverview";
 import CustomerProfileOverview from "./module/customer/pages/Customerprofileoverview";
 import RoleProfileOverview from "./module/role/pages/RoleProfileOverview";
+import BankAccountProfileOverview from "./module/bankAccount/pages/BankAccountProfileOverview";
 
 
 
@@ -441,6 +442,15 @@ function AppContent() {
           element={<BankAccountCreateSimple />}
         />
 
+        <Route
+          path="/bankAccount/editSimple/:id"
+          element={<BankAccountCreateSimple />}
+        />
+
+        <Route
+          path="/bankAccount/view/:id"
+          element={<BankAccountProfileOverview />}
+        />
         {/* =================================================
                     COMPANY
             ================================================= */}
