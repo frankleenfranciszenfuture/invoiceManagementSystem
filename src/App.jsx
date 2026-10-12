@@ -112,6 +112,7 @@ import BankAccountProfileOverview from "./module/bankAccount/pages/BankAccountPr
 
 
 
+
 // =====================================================
 // APP CONTENT
 // =====================================================
@@ -473,9 +474,14 @@ function AppContent() {
         <Route
           path="/companies/newSimple"
           element={<CompanyCreateSimple />}
+
         />
 
 
+        <Route
+          path="/companies/editSimple/:id"
+          element={<CompanyCreateSimple />}
+        />
         {/* =================================================
                     INVOICES
             ================================================= */}

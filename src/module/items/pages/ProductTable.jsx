@@ -238,7 +238,7 @@ export default function ProductTable({ products = [] }) {
         <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
             <div className="overflow-x-auto overflow-y-visible">
                 <table className="w-full">
-                    <thead className="bg-[#CFD7CC]/90 border-b border-gray-300">
+                    <thead className="bg-[#F3F4F6] border-b border-gray-300">
                         <tr>
 
                             {[

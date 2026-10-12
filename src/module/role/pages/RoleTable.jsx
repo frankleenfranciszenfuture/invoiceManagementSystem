@@ -328,7 +328,7 @@ export default function RoleTable({
                         TABLE HEADER
                     ================================================= */}
 
-                    <thead className="bg-[#EDE8D9]/90 border-b border-gray-300">
+                    <thead className="bg-[#F3F4F6] border-b border-gray-300">
                         <tr>
 
                             {[

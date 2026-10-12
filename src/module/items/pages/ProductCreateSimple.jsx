@@ -62,6 +62,7 @@ import {
 import {
     getUserPermission,
 } from "../../menuPermission/thunks/menuPermissionThunks";
+import CustomSelect from "../../../common/custom/CustomSelect";
 
 
 const EMPTY_ARRAY = [];
@@ -284,13 +285,13 @@ function SearchSelect({
                     ${error
                         ? "border-red-400"
                         : open
-                            ? "border-blue-500 ring-1 ring-blue-500"
-                            : "border-gray-300"
+                            ? "border-[#0F4659] ring-1 ring-[#0F4659]/70"
+                            : "border-[#0F4659]/70"
                     }
 
                     ${disabled
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : "hover:border-gray-400"
+                        ? "bg-gray-100 text-[#0F4659]/40 cursor-not-allowed"
+                        : "hover:border-[#0F4659]"
                     }
                 `}
             >
@@ -299,7 +300,7 @@ function SearchSelect({
                     className={
                         selectedOption
                             ? "truncate text-gray-700"
-                            : "truncate text-gray-400"
+                            : "truncate text-[#0F4659]/70"
                     }
                 >
 
@@ -346,6 +347,7 @@ function SearchSelect({
                         rounded-md
                         shadow-xl
                         overflow-hidden
+                        
                     "
                 >
 
@@ -369,6 +371,7 @@ function SearchSelect({
                                     top-1/2
                                     -translate-y-1/2
                                     text-gray-400
+                                    
                                 "
                             />
 
@@ -396,9 +399,10 @@ function SearchSelect({
                                     rounded-md
                                     text-sm
                                     outline-none
-                                    focus:border-blue-500
+                                    focus:border-[#0F4659]/70
                                     focus:ring-1
-                                    focus:ring-blue-500
+                                    focus:ring-[#0F4659]
+                                    
                                 "
                             />
 
@@ -780,9 +784,9 @@ function SearchMultiSelect({
                         : "border-gray-300"
                     }
 
-                    focus-within:border-blue-500
+                    focus-within:border-[#0F4659]
                     focus-within:ring-1
-                    focus-within:ring-blue-500
+                    focus-within:ring-[#0F4659]
                 `}
                 onClick={() =>
                     setOpen(true)
@@ -835,11 +839,11 @@ function SearchMultiSelect({
                                     px-2.5
                                     py-1
                                     rounded-full
-                                    bg-blue-50
+                                    bg-[#0F4659]/20
                                     border
-                                    border-blue-100
+                                    border-[#0F4659]
                                     text-xs
-                                    text-blue-700
+                                    text-[#0F4659]
                                 "
                             >
 
@@ -866,9 +870,9 @@ function SearchMultiSelect({
                                         items-center
                                         justify-center
                                         rounded-full
-                                        text-blue-400
-                                        hover:bg-blue-100
-                                        hover:text-blue-700
+                                        text-[#0F4659]
+                                        hover:bg-[#0F4659]/20
+                                        hover:text-[#0F4659]
                                     "
                                 >
                                     ×
@@ -1002,8 +1006,8 @@ function SearchMultiSelect({
                                                 justify-between
 
                                                 ${selectedOption
-                                                    ? "bg-gray-50 text-gray-400 cursor-not-allowed"
-                                                    : "text-gray-700 hover:bg-blue-50"
+                                                    ? "bg-gray-50 text-[#0F4659] cursor-not-allowed"
+                                                    : "text-gray-700 hover:bg-[#0F4659]/20"
                                                 }
                                             `}
                                         >
@@ -1015,7 +1019,7 @@ function SearchMultiSelect({
 
                                             {selectedOption && (
 
-                                                <span className="text-xs text-blue-500">
+                                                <span className="text-xs text-[#0F4659]">
                                                     Selected
                                                 </span>
 
@@ -1067,8 +1071,8 @@ function SearchMultiSelect({
                                                 gap-2
                                                 text-left
                                                 text-sm
-                                                text-blue-600
-                                                hover:bg-blue-50
+                                                text-[#0F4659]
+                                                hover:bg-[#0F4659]/20
                                             "
                                         >
 
@@ -1509,6 +1513,7 @@ export default function ProductCreateSimple() {
         useState(false);
 
 
+    const [editLoading, setEditLoading] = useState(isEdit);
     /* =====================================================
        UI CLASSES
     ===================================================== */
@@ -1525,9 +1530,9 @@ export default function ProductCreateSimple() {
         bg-white
         outline-none
         transition
-        focus:border-blue-500
+        focus:border-[#0F4659]
         focus:ring-1
-        focus:ring-blue-500
+        focus:ring-[#0F4659]
         disabled:bg-gray-100
         disabled:text-gray-500
         disabled:cursor-not-allowed
@@ -1545,7 +1550,7 @@ export default function ProductCreateSimple() {
     block
     text-xs
     font-medium
-    ${required ? "text-red-500" : "text-gray-600"}
+    ${required ? "text-red-500" : "text-[#0F4659]"}
     mb-1.5
 `;
 
@@ -2986,11 +2991,11 @@ export default function ProductCreateSimple() {
             >
                 {/* HEADER */}
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#088178]">
+                    <h2 className="text-base font-semibold text-[#0F4659]">
                         Product Information
                     </h2>
 
-                    <p className="text-sm text-[#088178] mt-1">
+                    <p className="text-sm text-[#0F4659] mt-1">
                         Enter the basic information of the product.
                     </p>
                 </div>
@@ -3210,7 +3215,7 @@ export default function ProductCreateSimple() {
                                         Status
                                     </p>
 
-                                    <p className="text-xs text-gray-400 mt-1">
+                                    <p className="text-xs text-[#0F4659] mt-1">
                                         Current product status
                                     </p>
                                 </div>
@@ -3263,7 +3268,7 @@ export default function ProductCreateSimple() {
                             p-4
                         "
                         >
-                            <p className="text-sm font-medium text-gray-800 mb-3">
+                            <p className="text-sm font-medium text-[#0F4659] mb-3">
                                 Product Image
                             </p>
 
@@ -3332,7 +3337,7 @@ export default function ProductCreateSimple() {
                                 bg-white
                                 text-sm
                                 font-medium
-                                text-gray-700
+                                text-[#0F4659]
                                 cursor-pointer
                                 hover:bg-gray-50
                             "
@@ -3413,14 +3418,14 @@ export default function ProductCreateSimple() {
                         <h2 className="
                             text-base
                             font-semibold
-                            text-[#088178]
+                            text-[#0F4659]
                         ">
                             Pricing & Tax
                         </h2>
 
                         <p className="
                             text-sm
-                            text-[#088178]
+                            text-[#0F4659]
                             mt-1
                         ">
                             Configure purchase price,
@@ -3628,14 +3633,14 @@ export default function ProductCreateSimple() {
                         <h2 className="
                             text-base
                             font-semibold
-                            text-[#088178]
+                            text-[#0F4659]
                         ">
                             Inventory Information
                         </h2>
 
                         <p className="
                             text-sm
-                            text-[#088178]
+                            text-[#0F4659]
                             mt-1
                         ">
                             Configure stock levels,
@@ -3926,7 +3931,7 @@ export default function ProductCreateSimple() {
                         className="
                         text-base
                         font-semibold
-                        text-[#088178]
+                        text-[#0F4659]
                     "
                     >
                         Product Settings
@@ -3935,7 +3940,7 @@ export default function ProductCreateSimple() {
                     <p
                         className="
                         text-sm
-                        text-[#088178]
+                        text-[#0F4659]
                         mt-1
                     "
                     >
@@ -3953,30 +3958,17 @@ export default function ProductCreateSimple() {
                         Status
                     </label>
 
-                    <select
-                        value={form.status ?? "ACTIVE"}
-                        onChange={(e) =>
-                            handleChange(
-                                "status",
-                                e.target.value
-                            )
+                    <CustomSelect
+                        value={form.status || "ACTIVE"}
+                        onChange={(value) =>
+                            handleChange("status", value)
                         }
-                        className={inputClass}
-                    >
-
-                        <option value="ACTIVE">
-                            ACTIVE
-                        </option>
-
-                        <option value="INACTIVE">
-                            INACTIVE
-                        </option>
-
-                        <option value="DRAFT">
-                            DRAFT
-                        </option>
-
-                    </select>
+                        options={[
+                            { value: "ACTIVE", label: "ACTIVE" },
+                            { value: "INACTIVE", label: "INACTIVE" },
+                            { value: "DRAFT", label: "DRAFT" },
+                        ]}
+                    />
 
                 </div>
 
@@ -4010,7 +4002,7 @@ export default function ProductCreateSimple() {
                                 className="
                                 text-sm
                                 font-medium
-                                text-gray-800
+                                text-[#0F4659]
                             "
                             >
                                 Product Status
@@ -4019,17 +4011,19 @@ export default function ProductCreateSimple() {
                             <p
                                 className="
                                 text-xs
-                                text-gray-500
+                                text-[#0F4659]/70
                                 mt-1
                             "
                             >
                                 This product is currently set to{" "}
 
                                 <span
-                                    className="
-                                    font-medium
-                                    text-gray-700
-                                "
+                                    className={`inline-flex mt-2 px-3 py-1 rounded-full text-xs font-medium ${form.status === "ACTIVE"
+                                        ? "bg-green-50 text-green-700"
+                                        : form.status === "INACTIVE"
+                                            ? "bg-red-50 text-red-700"
+                                            : "bg-yellow-50 text-yellow-700"
+                                        }`}
                                 >
                                     {form.status || "ACTIVE"}
                                 </span>
@@ -4079,62 +4073,20 @@ export default function ProductCreateSimple() {
 
     return (
 
-        <div
-            className="
-                flex
-                flex-col
-                h-full
-                min-h-0
-                bg-gray-50
-                
-                px-3.5
-                py-5
-            "
-        >
+        <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-5">
+            {/* HEADER */}
 
-            {/* =================================================
-                HEADER
-            ================================================= */}
-
-            <div
-                className="
-                    shrink-0
-                    px-6
-                    py-4
-                    bg-white
-                    border-b
-                    border-gray-200
-                    flex
-                    items-center
-                    justify-between
-                "
-            >
-
-                <div className="
-                    flex
-                    items-center
-                    gap-3
-                ">
-
+            <div className="shrink-0 px-6 py-4 bg-white border-b border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-3">
                     <div
-                        className="
-                            w-10
-                            h-10
-                            rounded-lg
-                            bg-blue-50
-                            border
-                            border-blue-100
-                            flex
-                            items-center
-                            justify-center
-                            cursor-pointer
-                        "
+                        className="w-10 h-10 rounded-lg bg-[#0F4659]/20 border border-blue-100 flex items-center justify-center cursor-pointer"
+
                         onClick={() => (navigate("/items"))}
                     >
 
                         <Package
                             size={20}
-                            className="text-[#088178]"
+                            className="text-[#0F4659]"
                         />
 
                     </div>
@@ -4142,12 +4094,7 @@ export default function ProductCreateSimple() {
 
                     <div>
 
-                        <h1 className="
-                            text-lg
-                            font-semibold
-                            text-[#088178]
-                            cursor-pointer
-                        "
+                        <h1 className="text-lg font-semibold text-[#0F4659]"
                             onClick={() => (navigate("/items"))}
                         >
                             {isEdit
@@ -4155,11 +4102,7 @@ export default function ProductCreateSimple() {
                                 : "New Product"}
                         </h1>
 
-                        <p className="
-                            text-xs
-                            text-[#088178]
-                            mt-0.5
-                        ">
+                        <p className="mt-0.5 text-xs text-[#0F4659]">
                             {isEdit
                                 ? "Update product information"
                                 : "Create a new product"}
@@ -4242,8 +4185,8 @@ export default function ProductCreateSimple() {
 
                                 ${activeTab ===
                                     tab.id
-                                    ? "text-[#088178] border-[#088178]"
-                                    : "text-[#088178]/70 border-transparent hover:text-[#088178]"
+                                    ? "text-[#0F4659] border-[#0F4659]"
+                                    : "text-[#0F4659]/70 border-transparent hover:text-[#0F4659]"
                                 }
                             `}
                         >
@@ -4297,286 +4240,122 @@ export default function ProductCreateSimple() {
                 FOOTER
             ================================================= */}
 
-            <div
-                className="
-                    shrink-0
-                    border-t
-                    border-gray-200
-                    bg-white
-                    px-6
-                    py-2
-                    flex
-                    items-center
-                    justify-end
-                    gap-3
-                    mr-13
-                "
-            >
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-6 py-3">
+                <div className="text-xs text-gray-500">
+                    <span className="text-red-500">*</span>
+                    {" "}Required fields
+                </div>
 
-                {/* CANCEL */}
-
-                <button
-                    type="button"
-                    disabled={loading}
-                    onClick={
-                        handleClose
-                    }
-                    className="
-                        h-10
-                        px-5
-                        border
-                        border-gray-300
-                        rounded-md
-                        bg-white
-                        text-sm
-                        font-medium
-                        text-[#088178]
-                        hover:bg-gray-50
-                        disabled:opacity-50
-                    "
-                >
-                    Cancel
-                </button>
-
-
-                {/* SAVE SPLIT BUTTON */}
-
-                <div className="
-                    relative
-                    flex
-                ">
-
-                    {/* MAIN SAVE */}
-
+                <div className="flex items-center justify-end gap-3">
                     <button
                         type="button"
-                        disabled={
-                            loading
-                        }
-                        onClick={() =>
-                            handleSave({
-                                saveAndNew:
-                                    false,
-
-                                saveAndClose:
-                                    true,
-                            })
-                        }
-                        className="
-                            h-10
-                            px-5
-                            bg-[#088178]
-                            hover:bg-[#088178]/70
-                            text-white
-                            text-sm
-                            font-medium
-                            rounded-l-md
-                            disabled:opacity-50
-                            disabled:cursor-not-allowed
-                        "
+                        disabled={loading || editLoading}
+                        onClick={handleClose}
+                        className="h-10 rounded-md border border-gray-300 bg-white px-5 text-sm font-medium text-[#0F4659] hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-
-                        {loading
-                            ? "Saving..."
-                            : isEdit
-                                ? "Update Product"
-                                : "Save Product"}
-
+                        Cancel
                     </button>
 
-
-                    {/* DROPDOWN */}
-
-                    <button
-                        type="button"
-                        disabled={
-                            loading
-                        }
-                        onClick={() =>
-                            setShowSaveMenu(
-                                (prev) =>
-                                    !prev
-                            )
-                        }
-                        className="
-                            h-10
-                            w-10
-                            bg-[#088178]
-                            hover:bg-[#088178]/70
-                            text-white
-                            rounded-r-md
-                            border-l
-                            border-white
-                            flex
-                            items-center
-                            justify-center
-                            disabled:opacity-50
-                        "
-                    >
-
-                        <ChevronDown
-                            size={16}
-                            className={
-                                showSaveMenu
-                                    ? "rotate-180"
-                                    : ""
+                    <div className="relative flex">
+                        <button
+                            type="button"
+                            disabled={loading || editLoading}
+                            onClick={() =>
+                                handleSave({
+                                    saveAndNew: false,
+                                    saveAndClose: true,
+                                })
                             }
-                        />
+                            className="h-10 rounded-l-md bg-[#0F4659] px-5 text-sm font-medium text-white hover:bg-[#0F4659]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {loading
+                                ? isEdit
+                                    ? "Updating..."
+                                    : "Saving..."
+                                : isEdit
+                                    ? "Update Company"
+                                    : "Save Company"}
+                        </button>
 
-                    </button>
-
-
-                    {/* MENU */}
-
-                    {showSaveMenu && (
-
-                        <>
-
-                            <div
-                                className="
-                                    fixed
-                                    inset-0
-                                    z-[80]
-                                "
-                                onClick={() =>
-                                    setShowSaveMenu(
-                                        false
-                                    )
+                        <button
+                            type="button"
+                            disabled={loading || editLoading}
+                            onClick={() =>
+                                setShowSaveMenu((previous) => !previous)
+                            }
+                            className="flex h-10 w-10 items-center justify-center rounded-r-md border-l border-white/30 bg-[#0F4659] text-white hover:bg-[#0F4659]/90 disabled:opacity-50"
+                            aria-label="More save options"
+                        >
+                            <ChevronDown
+                                size={16}
+                                className={
+                                    showSaveMenu
+                                        ? "rotate-180 transition-transform"
+                                        : "transition-transform"
                                 }
                             />
+                        </button>
 
+                        {showSaveMenu && (
+                            <>
+                                <button
+                                    type="button"
+                                    aria-label="Close save options"
+                                    className="fixed inset-0 z-[80] cursor-default"
+                                    onClick={() => setShowSaveMenu(false)}
+                                />
 
-                            <div
-                                className="
-                                    absolute
-                                    right-0
-                                    bottom-full
-                                    mb-2
-                                    w-52
-                                    bg-white
-                                    border
-                                    border-gray-200
-                                    rounded-md
-                                    shadow-xl
-                                    z-[90]
-                                    overflow-hidden
-                                "
-                            >
+                                <div className="absolute bottom-full right-0 z-[90] mb-2 w-56 overflow-hidden rounded-md border border-gray-200 bg-white shadow-xl">
+                                    {!isEdit && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowSaveMenu(false);
 
-                                {!isEdit && (
+                                                handleSave({
+                                                    saveAndNew: true,
+                                                    saveAndClose: false,
+                                                });
+                                            }}
+                                            className="w-full border-b border-gray-100 px-4 py-3 text-left hover:bg-gray-50"
+                                        >
+                                            <div className="text-sm font-medium text-gray-700">
+                                                Save & New
+                                            </div>
+
+                                            <div className="mt-0.5 text-xs text-gray-400">
+                                                Save and create another company
+                                            </div>
+                                        </button>
+                                    )}
 
                                     <button
                                         type="button"
-                                        disabled={
-                                            loading ||
-                                            savingAndNew
-                                        }
                                         onClick={() => {
-
-                                            setShowSaveMenu(
-                                                false
-                                            );
+                                            setShowSaveMenu(false);
 
                                             handleSave({
-                                                saveAndNew:
-                                                    true,
-
-                                                saveAndClose:
-                                                    false,
+                                                saveAndNew: false,
+                                                saveAndClose: true,
                                             });
-
                                         }}
-                                        className="
-                                            w-full
-                                            px-4
-                                            py-3
-                                            text-left
-                                            text-sm
-                                            text-[#088178]
-                                            hover:bg-gray-50
-                                            disabled:opacity-50
-                                        "
+                                        className="w-full px-4 py-3 text-left hover:bg-gray-50"
                                     >
-
-                                        <div className="
-                                            font-medium
-                                        ">
-                                            Save & New
+                                        <div className="text-sm font-medium text-gray-700">
+                                            {isEdit
+                                                ? "Update & Close"
+                                                : "Save & Close"}
                                         </div>
 
-                                        <div className="
-                                            text-xs
-                                            text-gray-400
-                                            mt-0.5
-                                        ">
-                                            Save and create
-                                            another product
+                                        <div className="mt-0.5 text-xs text-gray-400">
+                                            Save and return to companies
                                         </div>
-
                                     </button>
-
-                                )}
-
-
-                                <button
-                                    type="button"
-                                    disabled={
-                                        loading
-                                    }
-                                    onClick={() => {
-
-                                        setShowSaveMenu(
-                                            false
-                                        );
-
-                                        handleSave({
-                                            saveAndNew:
-                                                false,
-
-                                            saveAndClose:
-                                                true,
-                                        });
-
-                                    }}
-                                    className="
-                                        w-full
-                                        px-4
-                                        py-3
-                                        text-left
-                                        text-sm
-                                        text-[#088178]
-                                        hover:bg-[gray-50]
-                                        disabled:opacity-50
-                                    "
-                                >
-
-                                    <div className="
-                                        font-medium
-                                    ">
-                                        {isEdit
-                                            ? "Update & Close"
-                                            : "Save & Close"}
-                                    </div>
-
-                                    <div className="
-                                        text-xs
-                                        text-gray-400
-                                        mt-0.5
-                                    ">
-                                        Save and return
-                                        to products
-                                    </div>
-
-                                </button>
-
-                            </div>
-
-                        </>
-
-                    )}
-
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
-
             </div>
 
         </div>

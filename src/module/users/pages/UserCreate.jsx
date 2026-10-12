@@ -9,6 +9,8 @@ import { useNavigate } from "react-router-dom";
 
 import toast from "react-hot-toast";
 
+import CustomSelect from "../../../common/custom/CustomSelect";
+
 import {
     Check,
     UserKeyIcon,
@@ -366,9 +368,9 @@ export default function UserCreate() {
         bg-white
         outline-none
         transition
-        focus:border-blue-500
+        focus:border-[#0F4659]/20
         focus:ring-1
-        focus:ring-blue-500
+        focus:ring-[#0F4659]
         disabled:bg-gray-100
         disabled:text-gray-500
         disabled:cursor-not-allowed
@@ -378,7 +380,7 @@ export default function UserCreate() {
     block
     text-xs
     font-medium
-    ${required ? "text-red-500" : "text-gray-600"}
+    ${required ? "text-red-500" : "text-[#0F4659]"}
     mb-1.5
 `;
 
@@ -866,7 +868,7 @@ export default function UserCreate() {
         return (
             <div className="w-[950px] max-w-[95vw] min-h-[300px] bg-white rounded-xl shadow-2xl flex items-center justify-center p-8">
                 <div className="text-center">
-                    <div className="w-10 h-10 mx-auto mb-3 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                    <div className="w-10 h-10 mx-auto mb-3 border-2 border-[#0F4659]/20 border-t-[#0F4659]/90 rounded-full animate-spin" />
 
                     <p className="text-sm font-medium text-gray-600">
                         Loading permissions...
@@ -933,7 +935,7 @@ export default function UserCreate() {
                         <button
                             type="button"
                             onClick={handleClose}
-                            className="mt-6 h-10 px-5 rounded-md bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition"
+                            className="mt-6 h-10 px-5 rounded-md bg-[#0F4659] text-white text-sm font-medium hover:bg-blue-600 transition"
                         >
                             Close
                         </button>
@@ -1008,7 +1010,7 @@ export default function UserCreate() {
                                                 : "text-[#0F4659]"
                                             : hasError
                                                 ? "text-red-600"
-                                                : "text-gray-500 hover:text-gray-700"
+                                                : "text-[#0F4659] hover:text-[#0F4659/70"
                                         }
                                     `}
                                 >
@@ -1051,18 +1053,18 @@ export default function UserCreate() {
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between pb-3 border-b border-gray-200">
                                         <div>
-                                            <h3 className="text-sm font-semibold text-gray-800">
+                                            <h3 className="text-sm font-semibold text-[#0F4659]">
                                                 User Information
                                             </h3>
 
-                                            <p className="text-xs text-gray-500 mt-1">
+                                            <p className="text-xs text-[#0F4659]/70 mt-1">
                                                 Enter the basic user details.
                                             </p>
                                         </div>
 
                                         {isEdit && (
                                             <div className="flex items-center gap-3 shrink-0">
-                                                <label className="text-sm font-semibold text-gray-600">
+                                                <label className="text-sm font-semibold text-[#0F4659]">
                                                     Account :
                                                 </label>
 
@@ -1185,7 +1187,7 @@ export default function UserCreate() {
                                             <span className="text-red-500 ml-1">*</span>
                                         </label>
 
-                                        <select
+                                        {/* <select
                                             value={
                                                 form.roleId == null
                                                     ? ""
@@ -1215,7 +1217,29 @@ export default function UserCreate() {
                                                     {role.roleName}
                                                 </option>
                                             ))}
-                                        </select>
+                                        </select> */}
+
+                                        <CustomSelect
+                                            value={form.roleId == null ? "" : String(form.roleId)}
+                                            onChange={(value) =>
+                                                handleChange(
+                                                    "roleId",
+                                                    value === "" ? null : Number(value)
+                                                )
+                                            }
+                                            options={[
+                                                {
+                                                    value: "",
+                                                    label: rolesLoading
+                                                        ? "Loading roles..."
+                                                        : "Select role",
+                                                },
+                                                ...roles.map((role) => ({
+                                                    value: String(role.id),
+                                                    label: role.roleName,
+                                                })),
+                                            ]}
+                                        />
 
                                         {errors.roleId && (
                                             <p className="mt-1 text-xs text-red-500">
@@ -1231,11 +1255,11 @@ export default function UserCreate() {
                             {activeTab === "settings" && (
                                 <div className="space-y-6">
                                     <div className="pb-3 border-b border-gray-200">
-                                        <h3 className="text-sm font-semibold text-gray-800">
+                                        <h3 className="text-sm font-semibold text-[#0F4659]">
                                             Settings
                                         </h3>
 
-                                        <p className="text-xs text-gray-500 mt-1">
+                                        <p className="text-xs text-[#0F4659]/70 mt-1">
                                             Configure user account settings.
                                         </p>
                                     </div>
@@ -1247,28 +1271,17 @@ export default function UserCreate() {
                                             Status
                                         </label>
 
-                                        <select
-                                            value={form.status ?? "ACTIVE"}
-                                            onChange={(event) =>
-                                                handleChange(
-                                                    "status",
-                                                    event.target.value
-                                                )
+                                        <CustomSelect
+                                            value={form.status || "ACTIVE"}
+                                            onChange={(value) =>
+                                                handleChange("status", value)
                                             }
-                                            className={inputClass}
-                                        >
-                                            <option value="ACTIVE">
-                                                ACTIVE
-                                            </option>
-
-                                            <option value="INACTIVE">
-                                                INACTIVE
-                                            </option>
-
-                                            <option value="DRAFT">
-                                                DRAFT
-                                            </option>
-                                        </select>
+                                            options={[
+                                                { value: "ACTIVE", label: "ACTIVE" },
+                                                { value: "INACTIVE", label: "INACTIVE" },
+                                                { value: "DRAFT", label: "DRAFT" },
+                                            ]}
+                                        />
                                     </div>
 
                                     {/* ACCOUNT VERIFICATION */}
@@ -1278,28 +1291,24 @@ export default function UserCreate() {
                                             Account Verification
                                         </label>
 
-                                        <select
-                                            value={
-                                                form.accountVerified
-                                                    ? "true"
-                                                    : "false"
-                                            }
+                                        <CustomSelect
+                                            value={form.accountVerified
+                                                ? "true"
+                                                : "false"}
                                             onChange={(event) =>
                                                 handleChange(
                                                     "accountVerified",
                                                     event.target.value === "true"
                                                 )
                                             }
-                                            className={inputClass}
-                                        >
-                                            <option value="true">
-                                                VERIFIED
-                                            </option>
+                                            options={[
+                                                { value: "VERIFIED", label: "VERIFIED" },
+                                                { value: "NOT VERIFIED", label: "NOT VERIFIED" },
 
-                                            <option value="false">
-                                                NOT VERIFIED
-                                            </option>
-                                        </select>
+                                            ]}
+                                        />
+
+
                                     </div>
 
                                     {/* STATUS SUMMARY */}
@@ -1307,11 +1316,11 @@ export default function UserCreate() {
                                     <div className="max-w-md p-4 bg-white border border-gray-200 rounded-lg">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="text-sm font-semibold text-gray-700">
+                                                <p className="text-sm font-semibold text-[#0F4659]">
                                                     User Status
                                                 </p>
 
-                                                <p className="text-xs text-gray-500 mt-1">
+                                                <p className="text-xs text-[#0F4659]/70 mt-1">
                                                     Current status of this user.
                                                 </p>
                                             </div>
@@ -1355,7 +1364,7 @@ export default function UserCreate() {
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="h-10 px-6 rounded-md bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="h-10 px-6 rounded-md bg-[#0F4659] text-white text-sm font-medium hover:bg-[#0F4659]/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {loading
                                         ? isEdit

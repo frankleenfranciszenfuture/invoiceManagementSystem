@@ -1,150 +1,136 @@
-import React, {
-    useEffect,
-    useRef,
-    useState,
-} from "react";
 
-import {
-    useDispatch,
-    useSelector,
-} from "react-redux";
-
-import {
-    useNavigate,
-    useParams,
-} from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 
 import {
     SquarePen,
     Check,
     X,
-    Upload,
-    Undo2,
-    MapPin,
     Loader2,
     AlertCircle,
     RotateCcw,
-    Coins,
-    ReceiptText,
-    CalendarDays,
     Building2,
-    Globe,
-    Activity,
+    CircleDollarSign,
+    Hash,
+    ReceiptText,
 } from "lucide-react";
 
 import {
-    fetchAllCompanies,
     fetchCompanyById,
     updateCompany,
     reactivateCompany,
 } from "../thunks/companyThunks";
 
-
-/* =========================================================
-   THEME
-========================================================= */
-
-const PRIMARY = "#0F4659";
-
+import CustomSelect from "../../../common/custom/CustomSelect";
 
 /* =========================================================
    FIELD CONFIG
 ========================================================= */
 
-const BASIC_FIELDS = [
-    { key: "companyName", label: "Company Name", required: true },
-    { key: "displayName", label: "Display Name", required: true },
-    { key: "legalName", label: "Legal Name" },
-    { key: "companyCode", label: "Company Code", required: true },
-    { key: "email", label: "Email", type: "email" },
-    { key: "phone", label: "Phone", type: "phone" },
-    { key: "alternatePhone", label: "Alternate Phone", type: "phone" },
-    { key: "website", label: "Website", link: true },
+const COMPANY_DETAILS = [
+    {
+        key: "legalName",
+        label: "Legal Name",
+        required: true,
+    },
+    {
+        key: "financialYearStart",
+        label: "Financial Year Start",
+        required: true,
+    },
 ];
 
-const ADDRESS_FIELDS = [
-    { key: "addressLine1", label: "Address Line 1" },
-    { key: "addressLine2", label: "Address Line 2" },
-    { key: "city", label: "City" },
-    { key: "state", label: "State" },
-    { key: "country", label: "Country" },
-    { key: "pincode", label: "Pin Code", type: "pincode" },
+const COMPANY_FIELDS = [
+    {
+        key: "addressLine1",
+        label: "Address Line 1",
+        required: true,
+        type: "textarea",
+    },
+    {
+        key: "addressLine2",
+        label: "Address Line 2",
+        type: "textarea",
+    },
+    {
+        key: "city",
+        label: "City",
+    },
+    {
+        key: "state",
+        label: "State",
+        required: true,
+    },
+    {
+        key: "country",
+        label: "Country",
+        required: true,
+    },
+    {
+        key: "pincode",
+        label: "PinCode",
+        required: true,
+    },
+];
+
+const CONTACT_FIELDS = [
+    {
+        key: "email",
+        label: "Email Address",
+    },
+    {
+        key: "phone",
+        label: "Phone Number",
+    },
+    {
+        key: "alternatePhone",
+        label: "Alternate Phone Number",
+    },
 ];
 
 const TAX_FIELDS = [
     {
         key: "gstNumber",
-        label: "GST Number",
-        type: "gst",
-        upper: true,
+        label: "GSTIN",
     },
     {
         key: "panNumber",
-        label: "PAN Number",
-        type: "pan",
-        upper: true,
+        label: "PAN",
     },
     {
         key: "tanNumber",
-        label: "TAN Number",
-        type: "tan",
-        upper: true,
+        label: "TAN",
     },
 ];
 
-const INVOICE_FIELDS = [
-    { key: "invoicePrefix", label: "Invoice Prefix" },
+const SETTINGS_FIELDS = [
+    {
+        key: "invoicePrefix",
+        label: "Invoice Prefix",
+    },
     {
         key: "invoiceStartNumber",
         label: "Invoice Start Number",
         type: "number",
     },
-    { key: "currency", label: "Currency" },
+    {
+        key: "currency",
+        label: "Currency",
+        type: "currency",
+        required: true,
+    },
     {
         key: "financialYearStart",
         label: "Financial Year Start",
-        type: "date",
+    },
+    {
+        key: "status",
+        label: "Status",
+        type: "status",
     },
 ];
-
-const STRING_KEYS = [
-    "companyName",
-    "displayName",
-    "legalName",
-    "companyCode",
-    "gstNumber",
-    "panNumber",
-    "tanNumber",
-    "email",
-    "phone",
-    "alternatePhone",
-    "website",
-    "addressLine1",
-    "addressLine2",
-    "city",
-    "state",
-    "country",
-    "pincode",
-    "invoicePrefix",
-    "currency",
-];
-
-const TABS = [
-    "Dashboard",
-    "Transaction",
-    "Recent Updates",
-    "Top Quotation",
-];
-
-const MAX_IMAGE_SIZE = 1024 * 1024;
-
-const IMAGE_TYPES = [
-    "image/jpeg",
-    "image/png",
-    "image/gif",
-    "image/bmp",
-];
-
 
 /* =========================================================
    HELPERS
@@ -155,162 +141,47 @@ const toText = (value) =>
         ? ""
         : String(value);
 
-
-function buildPayload(company, patch) {
-    const base = {
-        ...company,
-    };
-
-    STRING_KEYS.forEach((key) => {
-        base[key] = toText(company[key]);
-    });
-
-    base.invoiceStartNumber = toText(
-        company.invoiceStartNumber
-    );
-
-    base.financialYearStart =
-        company.financialYearStart || "";
-
-    return {
-        ...base,
-        ...patch,
-    };
-}
-
-
-function imageUrl(company, kind) {
-    const value =
-        company?.[kind] ||
-        company?.[`${kind}Url`] ||
-        company?.[`${kind}Path`] ||
-        null;
-
-    return typeof value === "string"
-        ? value
-        : null;
-}
-
-
-function formatDate(value) {
-    if (!value) return "";
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return toText(value);
-    }
-
-    return date.toLocaleDateString(undefined, {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-    });
-}
-
-
 function timeAgo(milliseconds) {
     const seconds = Math.floor(
-        (Date.now() - milliseconds) / 1000
+        (Date.now() - milliseconds) / 1000,
     );
 
     if (seconds < 60) return "Just now";
 
     const minutes = Math.floor(seconds / 60);
 
-    if (minutes < 60) {
-        return `${minutes} min ago`;
-    }
+    if (minutes < 60) return `${minutes} min ago`;
 
     const hours = Math.floor(minutes / 60);
 
-    if (hours < 24) {
-        return `${hours} hr ago`;
-    }
+    if (hours < 24) return `${hours} hr ago`;
 
     return `${Math.floor(hours / 24)} days ago`;
 }
-
-
-function validateImage(file) {
-    if (!IMAGE_TYPES.includes(file.type)) {
-        return "Supported files: jpg, jpeg, png, gif, bmp";
-    }
-
-    if (file.size > MAX_IMAGE_SIZE) {
-        return "Maximum file size is 1MB";
-    }
-
-    return "";
-}
-
 
 function validate(fields, values) {
     const errors = {};
 
     fields.forEach((field) => {
-        const value = toText(
-            values[field.key]
-        ).trim();
+        const value = toText(values[field.key]).trim();
 
         if (field.required && !value) {
-            errors[field.key] =
-                `${field.label} is required`;
-        } else if (
-            value &&
-            field.type === "email" &&
-            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
-        ) {
-            errors[field.key] = "Enter a valid email";
-        } else if (
-            value &&
-            field.type === "phone" &&
-            !/^\+?\d{7,15}$/.test(value)
-        ) {
-            errors[field.key] = "Enter a valid phone number";
-        } else if (
-            value &&
-            field.type === "pincode" &&
-            !/^\d{4,10}$/.test(value)
-        ) {
-            errors[field.key] = "Enter a valid pin code";
-        } else if (
-            value &&
-            field.type === "gst" &&
-            !/^[0-9A-Z]{15}$/i.test(value)
-        ) {
-            errors[field.key] =
-                "GST number must be 15 characters";
-        } else if (
-            value &&
-            field.type === "pan" &&
-            !/^[A-Z]{5}[0-9]{4}[A-Z]$/i.test(value)
-        ) {
-            errors[field.key] =
-                "Enter a valid PAN (e.g. ABCDE1234F)";
-        } else if (
-            value &&
-            field.type === "tan" &&
-            !/^[A-Z]{4}[0-9]{5}[A-Z]$/i.test(value)
-        ) {
-            errors[field.key] =
-                "Enter a valid TAN (e.g. ABCD12345E)";
-        } else if (
-            value &&
+            errors[field.key] = `${field.label} is required`;
+        }
+
+        if (
             field.type === "number" &&
-            !/^\d+$/.test(value)
+            value &&
+            (!Number.isFinite(Number(value)) ||
+                Number(value) < 0)
         ) {
-            errors[field.key] = "Enter a whole number";
+            errors[field.key] =
+                `${field.label} must be a valid non-negative number`;
         }
     });
 
     return errors;
 }
-
-
-/* =========================================================
-   SAVED FLASH
-========================================================= */
 
 function useSavedFlash() {
     const [saved, setSaved] = useState(false);
@@ -332,7 +203,6 @@ function useSavedFlash() {
     return [saved, flash];
 }
 
-
 /* =========================================================
    SECTION CARD
 ========================================================= */
@@ -343,26 +213,21 @@ function SectionCard({
     saving,
     saved,
     error,
-    canSave = true,
     onEdit,
     onSave,
     onCancel,
     children,
 }) {
     return (
-        <section className="flex h-full min-h-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md">
-
-            {/* Header */}
-            <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
-
-                <h3 className="text-[13.5px] font-semibold text-[#0F4659]">
+        <div className="flex h-full min-w-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between gap-3 px-4 pt-4">
+                <h3 className="text-[14px] font-semibold text-slate-900">
                     {title}
                 </h3>
 
                 <div className="flex items-center gap-2">
-
                     {saved && !editing && (
-                        <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10.5px] font-medium text-emerald-700">
+                        <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10.5px] font-medium text-emerald-600">
                             <Check size={11} />
                             Saved
                         </span>
@@ -383,8 +248,8 @@ function SectionCard({
                             <button
                                 type="button"
                                 onClick={onSave}
-                                disabled={saving || !canSave}
-                                className="flex items-center gap-1 rounded-md bg-[#0F4659] px-2.5 py-1.5 text-[11.5px] font-medium text-white shadow-sm transition hover:bg-[#0b3746] disabled:cursor-not-allowed disabled:opacity-50"
+                                disabled={saving}
+                                className="flex items-center gap-1 rounded-md bg-[#0F4659] px-2.5 py-1.5 text-[11.5px] font-medium text-white shadow-sm transition hover:bg-[#0a3543] disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {saving ? (
                                     <Loader2
@@ -404,7 +269,7 @@ function SectionCard({
                             onClick={onEdit}
                             aria-label={`Edit ${title}`}
                             title="Edit"
-                            className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-[#0F4659]/10 hover:text-[#0F4659]"
+                            className="flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition hover:bg-slate-100 hover:text-[#0F4659]"
                         >
                             <SquarePen size={15} />
                         </button>
@@ -412,9 +277,7 @@ function SectionCard({
                 </div>
             </div>
 
-            {/* Content */}
-            <div className="px-4 pb-3 pt-1">
-
+            <div className="flex-1 px-4 pb-4 pt-2.5">
                 {error && (
                     <div className="mb-2.5 flex items-start gap-2 rounded-md bg-red-50 px-2.5 py-2 text-[11.5px] text-red-600">
                         <AlertCircle
@@ -427,13 +290,12 @@ function SectionCard({
 
                 {children}
             </div>
-        </section>
+        </div>
     );
 }
 
-
 /* =========================================================
-   FIELDS SECTION
+   EDITABLE FIELDS SECTION
 ========================================================= */
 
 function FieldsSection({
@@ -441,6 +303,7 @@ function FieldsSection({
     fields,
     values,
     onSave,
+    onActivity,
 }) {
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -453,8 +316,7 @@ function FieldsSection({
         const draftValues = {};
 
         fields.forEach((field) => {
-            draftValues[field.key] =
-                toText(values[field.key]);
+            draftValues[field.key] = values[field.key];
         });
 
         setDraft(draftValues);
@@ -481,13 +343,16 @@ function FieldsSection({
         const patch = {};
 
         fields.forEach((field) => {
-            const value = toText(
-                draft[field.key]
-            ).trim();
+            const value = draft[field.key];
 
-            patch[field.key] = field.upper
-                ? value.toUpperCase()
-                : value;
+            if (field.type === "number") {
+                patch[field.key] =
+                    value === "" || value == null
+                        ? null
+                        : Number(value);
+            } else {
+                patch[field.key] = toText(value).trim();
+            }
         });
 
         setSaving(true);
@@ -499,20 +364,172 @@ function FieldsSection({
             if (result.ok) {
                 setEditing(false);
                 flash();
+                onActivity?.(`Updated ${title.toLowerCase()}`);
             } else {
                 setServerError(
-                    result.message ||
-                    "Failed to save changes."
+                    result.message || "Failed to save changes.",
                 );
             }
         } catch (error) {
             setServerError(
-                error?.message ||
-                "Failed to save changes."
+                error?.message || "Failed to save changes.",
             );
         } finally {
             setSaving(false);
         }
+    };
+
+    const updateDraft = (key, value) => {
+        setDraft((previous) => ({
+            ...previous,
+            [key]: value,
+        }));
+
+        setErrors((previous) => ({
+            ...previous,
+            [key]: "",
+        }));
+    };
+
+    const commonClass = (field) => `
+        w-full rounded-lg border bg-white px-3
+        text-[13px] text-slate-800 outline-none
+        transition focus:border-[#0F4659]
+        focus:ring-2 focus:ring-[#0F4659]/10
+        disabled:bg-slate-50
+        ${errors[field.key]
+            ? "border-red-400"
+            : "border-slate-300"
+        }
+    `;
+
+    const renderInput = (field) => {
+        const value = draft[field.key];
+        const className = commonClass(field);
+
+        if (field.type === "status") {
+            return (
+                <CustomSelect
+                    value={value || "ACTIVE"}
+                    onChange={(event) =>
+                        updateDraft(
+                            field.key,
+                            event.target.value,
+                        )
+                    }
+                    disabled={saving}
+                    options={[
+                        {
+                            value: "ACTIVE",
+                            label: "ACTIVE",
+                        },
+                        {
+                            value: "INACTIVE",
+                            label: "INACTIVE",
+                        },
+                        {
+                            value: "VERIFIED",
+                            label: "VERIFIED",
+                        },
+                        {
+                            value: "NOT VERIFIED",
+                            label: "NOT VERIFIED",
+                        },
+                    ]}
+                />
+            );
+        }
+
+        if (field.type === "currency") {
+            return (
+                <CustomSelect
+                    value={value || "INR"}
+                    onChange={(event) =>
+                        updateDraft(
+                            field.key,
+                            event.target.value,
+                        )
+                    }
+                    disabled={saving}
+                    options={[
+                        { value: "INR", label: "INR" },
+                        { value: "USD", label: "USD" },
+                        { value: "EURO", label: "EURO" },
+                    ]}
+                />
+            );
+        }
+
+        if (field.type === "textarea") {
+            return (
+                <textarea
+                    rows={3}
+                    value={value ?? ""}
+                    onChange={(event) =>
+                        updateDraft(
+                            field.key,
+                            event.target.value,
+                        )
+                    }
+                    disabled={saving}
+                    placeholder={field.label}
+                    className={`${className} min-h-[76px] py-2`}
+                />
+            );
+        }
+
+        return (
+            <input
+                type={
+                    field.type === "number"
+                        ? "number"
+                        : "text"
+                }
+                min={field.type === "number" ? 0 : undefined}
+                value={value ?? ""}
+                onChange={(event) =>
+                    updateDraft(
+                        field.key,
+                        event.target.value,
+                    )
+                }
+                placeholder={field.label}
+                disabled={saving}
+                className={`${className} h-[34px]`}
+            />
+        );
+    };
+
+    const renderValue = (field, value) => {
+        if (field.type === "status") {
+            const status = toText(
+                value || "ACTIVE",
+            ).toUpperCase();
+
+            const statusClass =
+                status === "ACTIVE" ||
+                    status === "VERIFIED"
+                    ? "bg-emerald-50 text-emerald-600"
+                    : status === "INACTIVE"
+                        ? "bg-slate-100 text-slate-600"
+                        : "bg-amber-50 text-amber-600";
+
+            return (
+                <span
+                    className={`inline-flex rounded-full px-2 py-1 text-[11px] font-medium ${statusClass}`}
+                >
+                    {status}
+                </span>
+            );
+        }
+
+        return value !== null &&
+            value !== undefined &&
+            toText(value).trim() !== "" ? (
+            toText(value)
+        ) : (
+            <span className="text-slate-300">-</span>
+        );
     };
 
     return (
@@ -526,342 +543,316 @@ function FieldsSection({
             onSave={save}
             onCancel={cancel}
         >
-            {fields.map((field, index) => {
-                const value = toText(values[field.key]);
+            {fields.map((field, index) => (
+                <div
+                    key={field.key}
+                    className={`py-2.5 ${index > 0
+                        ? "border-t border-slate-100"
+                        : ""
+                        }`}
+                >
+                    <p className="text-[12px] font-medium text-slate-700">
+                        {field.label}
 
-                const display =
-                    field.type === "date"
-                        ? formatDate(value)
-                        : value;
-
-                return (
-                    <div
-                        key={field.key}
-                        className={`py-2.5 ${index > 0
-                            ? "border-t border-slate-100"
-                            : ""
-                            }`}
-                    >
-                        <p className="text-[11.5px] font-medium text-slate-500">
-                            {field.label}
-                            {editing && field.required && (
-                                <span className="text-red-500">
-                                    {" "}*
-                                </span>
-                            )}
-                        </p>
-
-                        {editing ? (
-                            <div className="mt-1.5">
-                                <input
-                                    type={
-                                        field.type === "date"
-                                            ? "date"
-                                            : field.type === "number"
-                                                ? "number"
-                                                : "text"
-                                    }
-                                    value={draft[field.key] ?? ""}
-                                    onChange={(event) =>
-                                        setDraft((previous) => ({
-                                            ...previous,
-                                            [field.key]: event.target.value,
-                                        }))
-                                    }
-                                    placeholder={field.label}
-                                    disabled={saving}
-                                    className={`h-9 w-full rounded-md border bg-white px-3 text-[12.5px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:ring-2 disabled:bg-slate-50 ${errors[field.key]
-                                        ? "border-red-400 focus:border-red-500 focus:ring-red-100"
-                                        : "border-slate-300 focus:border-[#0F4659] focus:ring-[#0F4659]/10"
-                                        }`}
-                                />
-
-                                {errors[field.key] && (
-                                    <p className="mt-1 text-[11px] text-red-500">
-                                        {errors[field.key]}
-                                    </p>
-                                )}
-                            </div>
-                        ) : (
-                            <p className="mt-0.5 break-words text-[12.5px] leading-5 text-slate-800">
-                                {!display ? (
-                                    <span className="text-slate-300">-</span>
-                                ) : field.link ? (
-                                    <a
-                                        href={
-                                            /^https?:\/\//i.test(display)
-                                                ? display
-                                                : `https://${display}`
-                                        }
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="text-[#0F4659] underline decoration-[#0F4659]/30 underline-offset-2 transition hover:decoration-[#0F4659]"
-                                    >
-                                        {display}
-                                    </a>
-                                ) : (
-                                    display
-                                )}
-                            </p>
+                        {editing && field.required && (
+                            <span className="text-red-500">
+                                {" "}*
+                            </span>
                         )}
-                    </div>
-                );
-            })}
-        </SectionCard>
-    );
-}
-
-
-/* =========================================================
-   IMAGE SECTION
-========================================================= */
-
-function ImageSection({
-    title,
-    savedUrl,
-    initials,
-    onSave,
-}) {
-    const fileRef = useRef(null);
-
-    const [editing, setEditing] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [file, setFile] = useState(null);
-    const [preview, setPreview] = useState(null);
-    const [error, setError] = useState("");
-    const [serverError, setServerError] = useState("");
-    const [saved, flash] = useSavedFlash();
-
-    useEffect(() => {
-        return () => {
-            if (preview) {
-                URL.revokeObjectURL(preview);
-            }
-        };
-    }, [preview]);
-
-    const reset = () => {
-        if (preview) {
-            URL.revokeObjectURL(preview);
-        }
-
-        setFile(null);
-        setPreview(null);
-        setError("");
-        setServerError("");
-    };
-
-    const startEdit = () => {
-        reset();
-        setEditing(true);
-    };
-
-    const cancel = () => {
-        reset();
-        setEditing(false);
-    };
-
-    const pick = (event) => {
-        const selectedFile = event.target.files?.[0];
-
-        event.target.value = "";
-
-        if (!selectedFile) return;
-
-        const message = validateImage(selectedFile);
-
-        if (message) {
-            setError(message);
-            return;
-        }
-
-        setError("");
-
-        if (preview) {
-            URL.revokeObjectURL(preview);
-        }
-
-        setFile(selectedFile);
-        setPreview(URL.createObjectURL(selectedFile));
-    };
-
-    const save = async () => {
-        if (!file) {
-            cancel();
-            return;
-        }
-
-        setSaving(true);
-        setServerError("");
-
-        try {
-            const result = await onSave(file);
-
-            if (result.ok) {
-                reset();
-                setEditing(false);
-                flash();
-            } else {
-                setServerError(
-                    result.message ||
-                    "Failed to upload image."
-                );
-            }
-        } catch (error) {
-            setServerError(
-                error?.message ||
-                "Failed to upload image."
-            );
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const shown = preview || savedUrl;
-
-    return (
-        <SectionCard
-            title={title}
-            editing={editing}
-            saving={saving}
-            saved={saved}
-            error={serverError}
-            canSave={!!file}
-            onEdit={startEdit}
-            onSave={save}
-            onCancel={cancel}
-        >
-            <div className="flex min-h-[145px] items-center justify-center rounded-lg bg-slate-50 px-3 py-4">
-                <div className="flex h-[104px] w-[104px] items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                    {shown ? (
-                        <img
-                            src={shown}
-                            alt={title}
-                            className="h-full w-full object-contain p-2"
-                        />
-                    ) : (
-                        <span className="text-[28px] font-bold tracking-tight text-[#0F4659]">
-                            {initials}
-                        </span>
-                    )}
-                </div>
-            </div>
-
-            {editing && (
-                <div className="mt-3 flex flex-col items-center gap-1.5">
-                    <div className="flex flex-wrap justify-center gap-2">
-                        <button
-                            type="button"
-                            onClick={() => fileRef.current?.click()}
-                            disabled={saving}
-                            className="flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-[11.5px] font-medium text-slate-700 transition hover:border-[#0F4659]/40 hover:bg-[#0F4659]/5 hover:text-[#0F4659] disabled:opacity-50"
-                        >
-                            <Upload size={13} />
-                            {file ? "Choose another" : "Upload image"}
-                        </button>
-
-                        {file && (
-                            <button
-                                type="button"
-                                onClick={reset}
-                                disabled={saving}
-                                className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[11.5px] font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
-                            >
-                                <Undo2 size={13} />
-                                Discard
-                            </button>
-                        )}
-                    </div>
-
-                    <p className="text-[10.5px] text-slate-400">
-                        jpg, jpeg, png, gif, bmp. Max 1MB.
                     </p>
 
-                    {error && (
-                        <p className="text-[11px] text-red-500">
-                            {error}
+                    {editing ? (
+                        <div className="mt-1.5">
+                            {renderInput(field)}
+
+                            {errors[field.key] && (
+                                <p className="mt-1 text-[11.5px] text-red-500">
+                                    {errors[field.key]}
+                                </p>
+                            )}
+                        </div>
+                    ) : (
+                        <p className="mt-1 break-words whitespace-pre-wrap text-[12.5px] leading-5 text-slate-800">
+                            {renderValue(
+                                field,
+                                values[field.key],
+                            )}
                         </p>
                     )}
-
-                    <input
-                        ref={fileRef}
-                        type="file"
-                        accept=".jpg,.jpeg,.png,.gif,.bmp"
-                        onChange={pick}
-                        className="hidden"
-                    />
                 </div>
-            )}
+            ))}
         </SectionCard>
     );
 }
-
 
 /* =========================================================
    STAT TILE
 ========================================================= */
 
-function StatTile({
-    icon: Icon,
-    label,
-    value,
-}) {
+function StatTile({ icon: Icon, label, value }) {
     return (
-        <div className="min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-3 transition hover:border-[#0F4659]/30 hover:bg-[#0F4659]/[0.03]">
-            <div className="flex items-center gap-1.5 text-slate-500">
+        <div className="min-w-0 rounded-lg border border-slate-200 bg-[#0F4659] px-3 py-2.5">
+            <div className="flex items-center gap-1.5 text-gray-100">
                 <Icon
                     size={14}
-                    className="shrink-0 text-[#0F4659]"
+                    className="shrink-0 text-gray-100"
                 />
-
-                <span className="truncate text-[10.5px] font-medium">
+                <span className="truncate text-[10.5px]">
                     {label}
                 </span>
             </div>
 
-            <p className="mt-1.5 truncate text-[13px] font-semibold text-[#0F4659]">
-                {value || (
-                    <span className="text-slate-300">-</span>
-                )}
+            <p className="mt-1 truncate text-[14px] font-semibold leading-tight text-white">
+                {value || "-"}
             </p>
         </div>
     );
 }
 
-
 /* =========================================================
-   COVER ART
+   COMPANY IMAGE CARD
 ========================================================= */
 
-function CoverArt() {
-    return (
-        <div className="relative h-full w-full overflow-hidden bg-gradient-to-r from-[#0F4659] via-[#15586A] to-[#287486]">
-            <div className="absolute -right-10 -top-24 h-64 w-64 rounded-full border border-white/10" />
-            <div className="absolute -right-2 -top-16 h-48 w-48 rounded-full border border-white/10" />
-            <div className="absolute right-24 top-8 h-24 w-24 rounded-full bg-white/[0.04]" />
-            <div className="absolute -bottom-24 left-[35%] h-48 w-48 rounded-full bg-white/[0.04]" />
+function CompanyImageCard({
+    title,
+    field,
+    image,
+    initials,
+    saving,
+    onSave,
+    onActivity,
+}) {
+    const inputRef = useRef(null);
+    const [file, setFile] = useState(null);
+    const [preview, setPreview] = useState(null);
+    const [uploading, setUploading] = useState(false);
 
-            <div className="relative flex h-full items-center px-6 sm:px-8">
-                <div className="flex items-center gap-3 text-white">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-white/10">
-                        <Building2 size={23} />
+    /* -------------------------------------------------------
+       CREATE AND CLEAN UP PREVIEW URL
+    ------------------------------------------------------- */
+
+    useEffect(() => {
+        if (!file) {
+            setPreview(null);
+            return undefined;
+        }
+
+        const objectUrl = URL.createObjectURL(file);
+        setPreview(objectUrl);
+
+        return () => {
+            URL.revokeObjectURL(objectUrl);
+        };
+    }, [file]);
+
+    /* -------------------------------------------------------
+       SELECT IMAGE
+    ------------------------------------------------------- */
+
+    const handleSelect = (event) => {
+        const selectedFile = event.target.files?.[0];
+
+        // Allow the same file to be selected again.
+        event.target.value = "";
+
+        if (!selectedFile) return;
+
+        const allowedTypes = [
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/gif",
+        ];
+
+        if (!allowedTypes.includes(selectedFile.type)) {
+            toast.error(
+                "Select a PNG, JPG, WEBP, or GIF image.",
+            );
+            return;
+        }
+
+        if (selectedFile.size > 5 * 1024 * 1024) {
+            toast.error("Image size must be 5 MB or less.");
+            return;
+        }
+
+        setFile(selectedFile);
+    };
+
+    /* -------------------------------------------------------
+       CANCEL IMAGE
+    ------------------------------------------------------- */
+
+    const handleCancel = () => {
+        setFile(null);
+
+        if (inputRef.current) {
+            inputRef.current.value = "";
+        }
+    };
+
+    /* -------------------------------------------------------
+       SAVE IMAGE
+    ------------------------------------------------------- */
+
+    const handleSave = async () => {
+        if (!file) {
+            toast.error("Please select an image first.");
+            return;
+        }
+
+        setUploading(true);
+
+        try {
+            const result = await onSave(field, file);
+
+            if (result?.ok) {
+                setFile(null);
+
+                if (inputRef.current) {
+                    inputRef.current.value = "";
+                }
+
+                toast.success(result.message);
+
+                onActivity?.(
+                    field === "logo"
+                        ? "Updated company logo"
+                        : "Updated company signature",
+                );
+            } else {
+                toast.error(
+                    result?.message || "Failed to save image.",
+                );
+            }
+        } catch (error) {
+            toast.error(
+                error?.message || "Failed to save image.",
+            );
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const displayedImage = preview || image;
+    const isSaving = saving || uploading;
+
+    return (
+        <div className="flex min-w-0 flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            {/* HEADER */}
+
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h3 className="text-[14px] font-semibold text-slate-900">
+                        {title}
+                    </h3>
+
+                    <p className="mt-1 text-[11.5px] text-slate-500">
+                        Upload or update your {title.toLowerCase()}
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => inputRef.current?.click()}
+                    disabled={isSaving}
+                    className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#0F4659]/20 px-3 py-2 text-[12px] font-medium text-[#0F4659] transition hover:bg-[#0F4659]/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    <SquarePen size={13} />
+                    {displayedImage ? "Change" : "Upload"}
+                </button>
+
+                <input
+                    ref={inputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleSelect}
+                />
+            </div>
+
+            {/* IMAGE PREVIEW */}
+
+            <div className="flex min-h-[220px] items-center justify-center overflow-hidden rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4">
+                {displayedImage ? (
+                    <img
+                        src={displayedImage}
+                        alt={`${title}`}
+                        className="max-h-[250px] max-w-full object-contain"
+                    />
+                ) : (
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#0F4659]">
+                            <span className="text-2xl font-semibold text-white">
+                                {initials}
+                            </span>
+                        </div>
+
+                        <p className="text-[12px] text-slate-400">
+                            No {title.toLowerCase()} uploaded
+                        </p>
+                    </div>
+                )}
+            </div>
+
+            {/* SELECTED FILE */}
+
+            {file && (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-3">
+                    <div className="min-w-0">
+                        <p className="truncate text-[12px] font-medium text-slate-700">
+                            {file.name}
+                        </p>
+
+                        <p className="mt-1 text-[10.5px] text-amber-600">
+                            Unsaved changes
+                        </p>
                     </div>
 
-                    <div>
-                        <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/70">
-                            Company profile
-                        </p>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={handleCancel}
+                            disabled={isSaving}
+                            className="flex items-center gap-1 rounded-md px-2 py-1.5 text-[11.5px] font-medium text-slate-600 hover:bg-slate-200 disabled:opacity-50"
+                        >
+                            <X size={12} />
+                            Cancel
+                        </button>
 
-                        <p className="mt-0.5 text-[17px] font-semibold">
-                            Business Overview
-                        </p>
+                        <button
+                            type="button"
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="flex items-center gap-1.5 rounded-md bg-[#0F4659] px-3 py-1.5 text-[11.5px] font-medium text-white transition hover:bg-[#0a3543] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {isSaving ? (
+                                <Loader2
+                                    size={12}
+                                    className="animate-spin"
+                                />
+                            ) : (
+                                <Check size={12} />
+                            )}
+
+                            {isSaving
+                                ? "Saving..."
+                                : field === "logo"
+                                    ? "Save Logo"
+                                    : "Save Signature"}
+                        </button>
                     </div>
                 </div>
-            </div>
+            )}
+
+            {!file && (
+                <p className="mt-3 text-[10.5px] text-slate-400">
+                    PNG, JPG, WEBP, or GIF · Maximum 5 MB
+                </p>
+            )}
         </div>
     );
 }
-
 
 /* =========================================================
    PAGE
@@ -872,33 +863,16 @@ export default function CompanyProfileOverview({
 }) {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-
     const { id: paramId } = useParams();
-
-    const {
-        company,
-        companies,
-        loading,
-        error,
-    } = useSelector((state) => state.company);
-
-    /* -------------------------------------------------------
-       COMPANY ID
-    ------------------------------------------------------- */
 
     const id = companyId ?? paramId;
 
-    const current = id
-        ? company
-        : companies?.[0];
+    const {
+        company,
+        loading,
+        error,
+    } = useSelector((state) => state.company || {});
 
-    const ready = !!current?.id;
-
-    /* -------------------------------------------------------
-       LOCAL UI STATE
-    ------------------------------------------------------- */
-
-    const [tab, setTab] = useState("Dashboard");
     const [activity, setActivity] = useState([]);
 
     /* -------------------------------------------------------
@@ -908,10 +882,8 @@ export default function CompanyProfileOverview({
     useEffect(() => {
         if (id) {
             dispatch(fetchCompanyById(id));
-        } else {
-            dispatch(fetchAllCompanies());
         }
-    }, [id, dispatch]);
+    }, [dispatch, id]);
 
     /* -------------------------------------------------------
        ACTIVITY
@@ -928,50 +900,157 @@ export default function CompanyProfileOverview({
     };
 
     /* -------------------------------------------------------
-       SAVE COMPANY
+       CURRENT COMPANY
     ------------------------------------------------------- */
 
-    const saveFields = async (patch, label) => {
-        const response = await dispatch(
-            updateCompany({
-                id: current.id,
-                data: buildPayload(current, patch),
-            })
-        );
+    const current =
+        company && String(company.id) === String(id)
+            ? company
+            : null;
 
-        if (updateCompany.fulfilled.match(response)) {
-            if (label) {
-                logActivity(`Updated ${label}`);
-            }
+    const ready = Boolean(current?.id);
 
-            return { ok: true };
+    /* -------------------------------------------------------
+       SAVE COMPANY FIELDS
+    ------------------------------------------------------- */
+
+    const saveFields = async (patch) => {
+        if (!current?.id) {
+            return {
+                ok: false,
+                message: "Company ID is missing.",
+            };
         }
 
-        return {
-            ok: false,
-            message:
-                response.payload ||
-                "Failed to update company.",
-        };
+        try {
+            const response = await dispatch(
+                updateCompany({
+                    id: current.id,
+                    data: {
+                        ...current,
+                        ...patch,
+                    },
+                }),
+            );
+
+            if (updateCompany.fulfilled.match(response)) {
+                logActivity("Updated company information");
+                return { ok: true };
+            }
+
+            return {
+                ok: false,
+                message:
+                    typeof response.payload === "string"
+                        ? response.payload
+                        : response.payload?.message ||
+                        response.error?.message ||
+                        "Failed to update company.",
+            };
+        } catch (error) {
+            return {
+                ok: false,
+                message:
+                    error?.message ||
+                    "Failed to update company.",
+            };
+        }
     };
 
     /* -------------------------------------------------------
-       REACTIVATE
+       SAVE COMPANY IMAGE
+       Reuses the existing multipart updateCompany thunk.
+    ------------------------------------------------------- */
+
+    const saveCompanyImage = async (field, file) => {
+        if (!current?.id) {
+            return {
+                ok: false,
+                message: "Company ID is missing.",
+            };
+        }
+
+        if (!["logo", "signature"].includes(field)) {
+            return {
+                ok: false,
+                message: "Invalid company image field.",
+            };
+        }
+
+        if (!(file instanceof File)) {
+            return {
+                ok: false,
+                message: "Please select an image first.",
+            };
+        }
+
+        try {
+            const response = await dispatch(
+                updateCompany({
+                    id: current.id,
+                    data: {
+                        ...current,
+                        [field]: file,
+                    },
+                }),
+            );
+
+            if (!updateCompany.fulfilled.match(response)) {
+                return {
+                    ok: false,
+                    message:
+                        typeof response.payload === "string"
+                            ? response.payload
+                            : response.payload?.message ||
+                            response.error?.message ||
+                            `Failed to save company ${field}.`,
+                };
+            }
+
+            // The update succeeded. Refresh company details.
+            // A refresh failure does not undo a successful upload.
+            dispatch(fetchCompanyById(current.id));
+
+            return {
+                ok: true,
+                message:
+                    field === "logo"
+                        ? "Company logo saved successfully."
+                        : "Company signature saved successfully.",
+            };
+        } catch (error) {
+            return {
+                ok: false,
+                message:
+                    error?.message ||
+                    `Failed to save company ${field}.`,
+            };
+        }
+    };
+
+    /* -------------------------------------------------------
+       REACTIVATE COMPANY
     ------------------------------------------------------- */
 
     const handleReactivate = async () => {
+        if (!current?.id) return;
+
         const response = await dispatch(
-            reactivateCompany(current.id)
+            reactivateCompany(current.id),
         );
 
         if (reactivateCompany.fulfilled.match(response)) {
+            toast.success("Company reactivated successfully.");
             logActivity("Reactivated company");
-
-            if (id) {
-                dispatch(fetchCompanyById(id));
-            } else {
-                dispatch(fetchAllCompanies());
-            }
+            dispatch(fetchCompanyById(current.id));
+        } else {
+            toast.error(
+                typeof response.payload === "string"
+                    ? response.payload
+                    : response.payload?.message ||
+                    response.error?.message ||
+                    "Failed to reactivate company.",
+            );
         }
     };
 
@@ -982,8 +1061,6 @@ export default function CompanyProfileOverview({
     const retry = () => {
         if (id) {
             dispatch(fetchCompanyById(id));
-        } else {
-            dispatch(fetchAllCompanies());
         }
     };
 
@@ -993,10 +1070,10 @@ export default function CompanyProfileOverview({
 
     if (!ready && loading) {
         return (
-            <div className="flex min-h-[400px] items-center justify-center">
+            <div className="flex min-h-[400px] items-center justify-center text-slate-400">
                 <Loader2
                     size={26}
-                    className="animate-spin text-[#0F4659]"
+                    className="animate-spin"
                 />
             </div>
         );
@@ -1009,12 +1086,10 @@ export default function CompanyProfileOverview({
     if (!ready) {
         return (
             <div className="flex min-h-[400px] flex-col items-center justify-center gap-3 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
-                    <AlertCircle
-                        size={28}
-                        className="text-slate-400"
-                    />
-                </div>
+                <AlertCircle
+                    size={32}
+                    className="text-slate-300"
+                />
 
                 <p className="text-sm text-slate-500">
                     {error || "No company found."}
@@ -1023,10 +1098,18 @@ export default function CompanyProfileOverview({
                 <button
                     type="button"
                     onClick={retry}
-                    className="flex items-center gap-1.5 rounded-md bg-[#0F4659] px-3.5 py-2 text-[12px] font-medium text-white transition hover:bg-[#0b3746]"
+                    className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[13px] font-medium text-slate-700 transition hover:bg-slate-50"
                 >
                     <RotateCcw size={13} />
                     Try again
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => navigate("/company")}
+                    className="text-[13px] font-medium text-[#0F4659] hover:underline"
+                >
+                    Back to Companies
                 </button>
             </div>
         );
@@ -1036,395 +1119,279 @@ export default function CompanyProfileOverview({
        DERIVED VALUES
     ======================================================= */
 
-    const initials = toText(current.companyName)
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((word) => word[0])
-        .join("")
-        .toUpperCase();
+    const displayName =
+        current.displayName ||
+        current.companyName ||
+        current.legalName ||
+        "Company";
 
-    const isActive =
-        (current.status || "ACTIVE") === "ACTIVE";
+    const initials =
+        toText(displayName)
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((word) => word[0])
+            .join("")
+            .toUpperCase() || "CO";
 
-    const logoSrc = imageUrl(current, "logo");
+    const status = toText(
+        current.status || "ACTIVE",
+    ).toUpperCase();
 
-    const location = [
-        current.city,
-        current.state,
-    ]
-        .filter(Boolean)
-        .join(", ");
-
-    const nextInvoice =
-        `${toText(current.invoicePrefix)}${toText(
-            current.invoiceStartNumber
-        )}`;
+    const isActive = status === "ACTIVE";
 
     /* =======================================================
        UI
     ======================================================= */
 
     return (
-        <div className="min-h-full bg-[#F7F9FA]">
+        <div className="w-full space-y-4 p-3">
+            {/* COMPANY HEADER */}
 
-            {/* PAGE HEADER */}
-            {/* <div className="border-b border-slate-200 bg-white ml-2 px-4 py-4 sm:px-6 mt-5 py-6 mr-2">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="rounded-xl border border-slate-100 bg-white p-4">
+                <div className="flex flex-wrap items-start justify-between gap-4 px-2 py-3 pb-5">
+                    <div className="flex min-w-0 items-start gap-4">
+                        {/* COMPANY AVATAR */}
 
-                    <div className="flex items-center gap-3 ">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#0F4659]/10 text-[#0F4659]">
-                            <Building2 size={20} />
-                        </div>
-
-                        <div>
-                            <h1 className="text-[17px] font-semibold text-slate-900">
-                                Company Profile
-                            </h1>
-
-                            <p className="mt-0.5 text-[11.5px] text-slate-500">
-                                View and manage company information
-                            </p>
-                        </div>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={() => navigate("/companies")}
-                        className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-600 transition hover:border-[#0F4659]/30 hover:bg-[#0F4659]/5 hover:text-[#0F4659]"
-                    >
-                        <Undo2 size={14} />
-                        Back to Companies
-                    </button>
-                </div>
-            </div> */}
-
-            {/* PAGE CONTENT */}
-            <div className="space-y-5 p-4 sm:p-6">
-
-                {/* PROFILE HEADER CARD */}
-                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-
-                    {/* <div className="h-[105px] overflow-hidden">
-                        <CoverArt />
-                    </div> */}
-
-                    <div className="flex flex-wrap items-start justify-between gap-4 px-4 pb-4 sm:px-5 bg-gradient-to-br from-[#0F4659]/70 to-[#0F4659] shadow-md">
-
-                        <div className="flex min-w-0 flex-1 items-start gap-3">
-
-                            {/* COMPANY AVATAR */}
-                            <div
-                                className=" mt-2 flex h-[76px] w-[76px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-4 border-white bg-white shadow-md"
-                                onClick={() => navigate("/companies")}
-                                title="Back to companies"
-                            >
-                                {logoSrc ? (
-                                    <img
-                                        src={logoSrc}
-                                        alt="Company logo"
-                                        className="h-full w-full object-contain p-1.5"
-                                    />
-                                ) : (
-                                    <div className="flex h-full w-full items-center justify-center bg-[#0F4659] text-white">
-                                        <span className="text-[22px] font-bold">
-                                            {initials}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* COMPANY DETAILS */}
-                            <div className="min-w-0 pt-2">
-                                <h2
-                                    className="cursor-pointer truncate text-[19px] font-semibold text-[white] transition hover:text-[#15586A]"
-                                    onClick={() => navigate("/companies")}
-                                >
-                                    {current.companyName}
-                                </h2>
-
-                                <p className="mt-0.5 text-[11.5px] text-white">
-                                    {current.displayName || current.companyCode || "-"}
-                                </p>
-
-                                <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11.5px] text-slate-500">
-
-                                    {location && (
-                                        <span className="flex items-center gap-1.5">
-                                            <MapPin
-                                                size={13}
-                                                className="text-[#0F4659]"
-                                            />
-                                            {location}
-                                        </span>
-                                    )}
-
-                                    {current.website && (
-                                        <span className="flex items-center gap-1.5">
-                                            <Globe
-                                                size={13}
-                                                className="text-[#0F4659]"
-                                            />
-                                            <a
-                                                href={
-                                                    /^https?:\/\//i.test(current.website)
-                                                        ? current.website
-                                                        : `https://${current.website}`
-                                                }
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="max-w-[180px] truncate text-[#0F4659] hover:underline"
-                                            >
-                                                {current.website}
-                                            </a>
-                                        </span>
-                                    )}
-
-                                    <span>
-                                        Code:{" "}
-                                        <b className="font-semibold text-slate-800">
-                                            {current.companyCode || "-"}
-                                        </b>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* STATUS + REACTIVATE */}
-                        <div className="flex items-center gap-2 pt-2">
-
-                            <span
-                                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${isActive
-                                    ? "bg-emerald-50 text-emerald-700"
-                                    : "bg-slate-100 text-slate-600"
-                                    }`}
-                            >
-                                <span
-                                    className={`h-1.5 w-1.5 rounded-full ${isActive
-                                        ? "bg-emerald-500"
-                                        : "bg-slate-400"
-                                        }`}
+                        <div
+                            className="flex h-[86px] w-[86px] shrink-0 items-center justify-center overflow-hidden rounded-full border-[4px] border-white bg-gradient-to-br from-[#0F4659]/70 to-[#0F4659] shadow-md"
+                            title="Company"
+                        >
+                            {current.logo ? (
+                                <img
+                                    src={current.logo}
+                                    alt={`${displayName} logo`}
+                                    className="h-full w-full object-cover"
                                 />
-                                {current.status || "ACTIVE"}
-                            </span>
-
-                            {!isActive && (
-                                <button
-                                    type="button"
-                                    onClick={handleReactivate}
-                                    className="flex items-center gap-1.5 rounded-md border border-emerald-200 bg-white px-3 py-1.5 text-[11.5px] font-medium text-emerald-700 transition hover:bg-emerald-50"
-                                >
-                                    <RotateCcw size={13} />
-                                    Reactivate
-                                </button>
+                            ) : (
+                                <span className="text-[25px] font-semibold text-white">
+                                    {initials}
+                                </span>
                             )}
                         </div>
-                    </div>
-                </section>
 
-                {/* OVERVIEW STATISTICS */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        {/* COMPANY DETAILS */}
+
+                        <div className="min-w-0 pt-1">
+                            <h2 className="break-words text-[24px] font-semibold leading-tight text-[#0F4659]">
+                                {displayName}
+                            </h2>
+
+                            <p className="mt-0.5 text-[12px] text-[#0F4659]">
+                                Company Code:{" "}
+                                {current.companyCode || "-"}
+                            </p>
+
+                            <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-slate-500">
+                                <span className="flex items-center gap-1 text-slate-700">
+                                    <Building2 size={13} />
+                                    {current.legalName ||
+                                        current.companyName ||
+                                        "-"}
+                                </span>
+
+                                <span className="flex items-center gap-1 text-slate-700">
+                                    <ReceiptText size={13} />
+                                    GSTIN: {current.gstNumber || "-"}
+                                </span>
+
+                                <span className="flex items-center gap-1 text-slate-700">
+                                    <CircleDollarSign size={13} />
+                                    {current.currency || "INR"}
+                                </span>
+
+                                <span>
+                                    Status:{" "}
+                                    <b
+                                        className={
+                                            isActive
+                                                ? "font-semibold text-emerald-600"
+                                                : "font-semibold text-slate-500"
+                                        }
+                                    >
+                                        {status}
+                                    </b>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* REACTIVATE */}
+
+                    {!isActive && (
+                        <div className="pt-2.5">
+                            <button
+                                type="button"
+                                onClick={handleReactivate}
+                                disabled={loading}
+                                className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3.5 py-2 text-[13px] font-medium text-emerald-600 transition hover:bg-emerald-50 disabled:opacity-50"
+                            >
+                                {loading ? (
+                                    <Loader2
+                                        size={14}
+                                        className="animate-spin"
+                                    />
+                                ) : (
+                                    <RotateCcw size={14} />
+                                )}
+                                Reactivate
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* COMPANY OVERVIEW */}
+
+            <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                <h3 className="text-[14px] font-semibold text-slate-900">
+                    Company Overview
+                </h3>
+
+                <div className="mt-2 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                    <StatTile
+                        icon={Building2}
+                        label="Company"
+                        value={displayName}
+                    />
 
                     <StatTile
-                        icon={Coins}
-                        label="Currency"
-                        value={current.currency}
+                        icon={Hash}
+                        label="Company Code"
+                        value={current.companyCode}
                     />
 
                     <StatTile
                         icon={ReceiptText}
-                        label="Next Invoice Number"
-                        value={nextInvoice}
+                        label="GSTIN"
+                        value={current.gstNumber}
                     />
 
                     <StatTile
-                        icon={CalendarDays}
-                        label="Financial Year Start"
-                        value={formatDate(current.financialYearStart)}
+                        icon={CircleDollarSign}
+                        label="Currency"
+                        value={current.currency || "INR"}
                     />
                 </div>
+            </div>
 
-                {/* PROFILE TABS */}
-                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            {/* EDITABLE SECTIONS + ACTIVITY */}
 
-                    <div className="overflow-x-auto border-b border-slate-200 px-4 sm:px-5">
-                        <nav className="flex min-w-max gap-6">
-                            {TABS.map((tabName) => (
-                                <button
-                                    key={tabName}
-                                    type="button"
-                                    onClick={() => setTab(tabName)}
-                                    className={`border-b-2 px-0.5 py-3 text-[12.5px] transition ${tab === tabName
-                                        ? "border-[#0F4659] font-semibold text-[#0F4659]"
-                                        : "border-transparent text-slate-500 hover:text-[#0F4659]"
-                                        }`}
-                                >
-                                    {tabName}
-                                </button>
-                            ))}
-                        </nav>
+            <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+                {/* LEFT COLUMN */}
+
+                <div className="grid grid-cols-1 content-start gap-4">
+                    <FieldsSection
+                        title="Company Details"
+                        fields={COMPANY_DETAILS}
+                        values={current}
+                        onSave={saveFields}
+                        onActivity={logActivity}
+                    />
+
+                    <FieldsSection
+                        title="Address Information"
+                        fields={COMPANY_FIELDS}
+                        values={current}
+                        onSave={saveFields}
+                        onActivity={logActivity}
+                    />
+
+                    <FieldsSection
+                        title="Contact Details"
+                        fields={CONTACT_FIELDS}
+                        values={current}
+                        onSave={saveFields}
+                        onActivity={logActivity}
+                    />
+
+                    <FieldsSection
+                        title="Tax Information"
+                        fields={TAX_FIELDS}
+                        values={current}
+                        onSave={saveFields}
+                        onActivity={logActivity}
+                    />
+
+                    <FieldsSection
+                        title="Company Settings"
+                        fields={SETTINGS_FIELDS}
+                        values={current}
+                        onSave={saveFields}
+                        onActivity={logActivity}
+                    />
+
+
+                </div>
+
+                {/* RECENT ACTIVITY */}
+
+
+
+
+
+                <div className="grid grid-cols-1 content-start gap-4">
+                    {/* COMPANY LOGO */}
+
+                    <CompanyImageCard
+                        title="Company Logo"
+                        field="logo"
+                        image={current.logo}
+                        initials={initials}
+                        onSave={saveCompanyImage}
+                        onActivity={logActivity}
+                    />
+
+                    {/* COMPANY SIGNATURE */}
+
+                    <CompanyImageCard
+                        title="Company Signature"
+                        field="signature"
+                        image={current.signature}
+                        initials={initials}
+                        onSave={saveCompanyImage}
+                        onActivity={logActivity}
+                    />
+                    <div className="flex w-max-full flex-col rounded-xl border border-slate-200 bg-white p-4  shadow-sm lg:min-h-[800px]">
+
+                        <h3 className=" text-[14px] font-semibold text-slate-900">
+                            Recent Activity
+                        </h3>
+
+                        {activity.length === 0 ? (
+                            <div className="flex flex-1 items-center justify-center">
+                                <p className="px-3 py-8 text-center text-[13px] text-slate-400">
+                                    Changes you make on this page will
+                                    appear here.
+                                </p>
+                            </div>
+                        ) : (
+                            <ul className="mt-3">
+                                {activity.map((item, index) => (
+                                    <li
+                                        key={`${item.at}-${index}`}
+                                        className={`flex items-center justify-between gap-3 px-3 py-3 text-[12.5px] ${index > 0
+                                            ? "border-t border-slate-100"
+                                            : ""
+                                            }`}
+                                    >
+                                        <span className="text-slate-800">
+                                            {item.text}
+                                        </span>
+
+                                        <span className="shrink-0 text-[11.5px] text-slate-400">
+                                            {timeAgo(item.at)}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
 
-                    {tab !== "Dashboard" ? (
-                        <div className="flex min-h-[220px] flex-col items-center justify-center gap-2 p-8 text-center">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0F4659]/10 text-[#0F4659]">
-                                <Activity size={20} />
-                            </div>
 
-                            <p className="text-[13px] font-medium text-slate-700">
-                                {tab}
-                            </p>
-
-                            <p className="text-[11.5px] text-slate-400">
-                                {tab} will appear here.
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4 bg-[#F7F9FA] p-3 sm:p-5">
-
-                            {/* ROW 1: COMPANY INFORMATION + IMAGES */}
-                            <div className="grid items-stretch gap-4 lg:grid-cols-2">
-
-                                <FieldsSection
-                                    title="Company Information"
-                                    fields={BASIC_FIELDS}
-                                    values={current}
-                                    onSave={(patch) =>
-                                        saveFields(
-                                            patch,
-                                            "company information"
-                                        )
-                                    }
-                                />
-
-                                <div className="flex flex-col gap-4">
-                                    <ImageSection
-                                        title="Company Logo"
-                                        savedUrl={imageUrl(current, "logo")}
-                                        initials={initials}
-                                        onSave={(file) =>
-                                            saveFields(
-                                                { logo: file },
-                                                "company logo"
-                                            )
-                                        }
-                                    />
-
-                                    <ImageSection
-                                        title="Signature"
-                                        savedUrl={imageUrl(current, "signature")}
-                                        initials={initials}
-                                        onSave={(file) =>
-                                            saveFields(
-                                                { signature: file },
-                                                "signature"
-                                            )
-                                        }
-                                    />
-                                </div>
-                            </div>
-
-                            {/* ROW 2: ADDRESS + ACTIVITY */}
-                            <div className="grid items-stretch gap-4 lg:grid-cols-2">
-
-                                <FieldsSection
-                                    title="Address Information"
-                                    fields={ADDRESS_FIELDS}
-                                    values={current}
-                                    onSave={(patch) =>
-                                        saveFields(
-                                            patch,
-                                            "address information"
-                                        )
-                                    }
-                                />
-
-                                <section className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0F4659]/10 text-[#0F4659]">
-                                            <Activity size={16} />
-                                        </div>
-
-                                        <div>
-                                            <h3 className="text-[13.5px] font-semibold text-[#0F4659]">
-                                                Activity Overview
-                                            </h3>
-
-                                            <p className="text-[10.5px] text-slate-400">
-                                                Recent changes to this company
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <h4 className="mb-2 mt-5 text-[12px] font-semibold text-slate-700">
-                                        Recent Activity
-                                    </h4>
-
-                                    {activity.length === 0 ? (
-                                        <div className="flex min-h-[150px] flex-1 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-6">
-                                            <p className="max-w-[250px] text-center text-[11.5px] leading-5 text-slate-400">
-                                                Changes you make on this page will appear here.
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <ul className="overflow-hidden rounded-lg border border-slate-100">
-                                            {activity.map((activityItem, index) => (
-                                                <li
-                                                    key={activityItem.at + index}
-                                                    className={`flex items-center justify-between gap-3 px-3 py-3 ${index > 0
-                                                        ? "border-t border-slate-100"
-                                                        : ""
-                                                        }`}
-                                                >
-                                                    <div className="flex min-w-0 items-center gap-2">
-                                                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#0F4659]" />
-
-                                                        <span className="text-[11.5px] text-slate-700">
-                                                            {activityItem.text}
-                                                        </span>
-                                                    </div>
-
-                                                    <span className="shrink-0 text-[10.5px] text-slate-400">
-                                                        {timeAgo(activityItem.at)}
-                                                    </span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-                                </section>
-                            </div>
-
-                            {/* ROW 3: TAX + INVOICE SETTINGS */}
-                            <div className="grid items-stretch gap-4 lg:grid-cols-2">
-
-                                <FieldsSection
-                                    title="Tax Information"
-                                    fields={TAX_FIELDS}
-                                    values={current}
-                                    onSave={(patch) =>
-                                        saveFields(
-                                            patch,
-                                            "tax information"
-                                        )
-                                    }
-                                />
-
-                                <FieldsSection
-                                    title="Invoice Settings"
-                                    fields={INVOICE_FIELDS}
-                                    values={current}
-                                    onSave={(patch) =>
-                                        saveFields(
-                                            patch,
-                                            "invoice settings"
-                                        )
-                                    }
-                                />
-                            </div>
-                        </div>
-                    )}
                 </div>
+
             </div>
         </div>
     );

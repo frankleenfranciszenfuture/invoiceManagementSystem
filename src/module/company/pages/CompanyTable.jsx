@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 import {
     useDispatch,
@@ -42,7 +42,8 @@ export default function CompanyTable({
     const navigate =
         useNavigate();
 
-
+    const [showEdit, setShowEdit] = useState(false);
+    const [showView, setShowView] = useState(false);
     /* =====================================================
        REDUX STATE
     ===================================================== */
@@ -683,118 +684,89 @@ export default function CompanyTable({
 
     return (
 
-        <div
-            className="
-                bg-white
-                rounded-xl
-                border
-                border-gray-200
-            "
-        >
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
+            <div className="overflow-x-auto overflow-y-visible">
+                <table className="w-full">
+                    <thead className="bg-[#F3F4F6] border-b border-gray-300">
 
-            <table className="w-full">
+                        <tr>
 
-                {/* =================================================
-                    TABLE HEADER
-                ================================================= */}
-
-                <thead
-                    className="
-                        sticky
-                        top-0
-                        z-20
-                        bg-gray-100
-                        border-b
-                        border-gray-300
-                    "
-                >
-
-                    <tr>
-
-                        {[
-                            "Company",
-                            "Code",
-                            "GST Number",
-                            "PAN Number",
-                            "Email",
-                            "Phone",
-                            "City",
-                            "Status",
-                            "Actions",
-                        ].map(
-                            (
-                                header
-                            ) => (
+                            {[
+                                "Company",
+                                "Code",
+                                "GST Number",
+                                "PAN Number",
+                                "Email",
+                                "Phone",
+                                "City",
+                                "Status",
+                                "Actions",
+                            ].map((header) => (
 
                                 <th
-                                    key={
-                                        header
-                                    }
+                                    key={header}
                                     className={`
-                                        px-4
-                                        py-3
-                                        font-medium
-                                        text-sm
-                                        text-gray-600
-                                        uppercase
-                                        ${header ===
-                                            "Actions"
+                                    px-5
+                                    py-3
+                                    font-medium
+                                    text-sm
+                                    text-[#0F4659]/90
+                                    uppercase
+                                    ${header === "Actions"
                                             ? "text-right"
                                             : "text-left"
                                         }
-                                    `}
+                                `}
                                 >
-
                                     {header}
-
                                 </th>
 
-                            )
-                        )}
+                            ))}
 
-                    </tr>
+                        </tr>
 
-                </thead>
+                    </thead>
 
 
-                {/* =================================================
+
+                    {/* =================================================
                     TABLE BODY
                 ================================================= */}
 
-                <tbody>
+                    <tbody>
 
-                    {[
-                        ...currentCompanies,
-                    ]
-                        .sort(
-                            (
-                                a,
-                                b
-                            ) =>
+                        {[
+                            ...currentCompanies,
+                        ]
+                            .sort(
                                 (
-                                    a.id || 0
-                                ) -
+                                    a,
+                                    b
+                                ) =>
+                                    (
+                                        a.id || 0
+                                    ) -
+                                    (
+                                        b.id || 0
+                                    )
+                            )
+                            .map(
                                 (
-                                    b.id || 0
-                                )
-                        )
-                        .map(
-                            (
-                                company,
-                                index
-                            ) => (
+                                    company,
+                                    index
+                                ) => (
 
-                                <tr
-                                    key={
-                                        company.id ||
-                                        index
-                                    }
-                                    onClick={() =>
-                                        handleView(
-                                            company
-                                        )
-                                    }
-                                    className="
+                                    <tr
+                                        key={
+                                            company.id ||
+                                            index
+                                        }
+                                        onClick={() =>
+                                            handleView(
+                                                company
+                                            )
+                                        }
+                                        className="
                                         border-b
                                         border-gray-100
                                         hover:bg-gray-50
@@ -802,29 +774,29 @@ export default function CompanyTable({
                                         cursor-pointer
                                         transition-colors
                                     "
-                                >
+                                    >
 
-                                    {/* =================================
+                                        {/* =================================
                                         COMPANY
                                     ================================= */}
 
-                                    <td
-                                        className="
+                                        <td
+                                            className="
                                             px-2
                                             py-3
                                         "
-                                    >
+                                        >
 
-                                        <div
-                                            className="
+                                            <div
+                                                className="
                                                 flex
                                                 items-center
                                                 gap-3
                                             "
-                                        >
+                                            >
 
-                                            <div
-                                                className={`
+                                                <div
+                                                    className={`
                                                     w-10
                                                     h-10
                                                     rounded-full
@@ -834,533 +806,389 @@ export default function CompanyTable({
                                                     text-md
                                                     font-bold
                                                     ${getAvatarColor(
-                                                    company.companyName
-                                                )}
+                                                        company.companyName
+                                                    )}
                                                 `}
-                                            >
+                                                >
 
-                                                {initials(
-                                                    company.companyName
-                                                )}
+                                                    {initials(
+                                                        company.companyName
+                                                    )}
 
-                                            </div>
+                                                </div>
 
 
-                                            <div>
+                                                <div>
 
-                                                <p
-                                                    className="
+                                                    <p
+                                                        className="
                                                         font-medium
                                                         text-gray-800
                                                     "
-                                                >
-                                                    {
-                                                        company.companyName ||
-                                                        "—"
-                                                    }
-                                                </p>
+                                                    >
+                                                        {
+                                                            company.companyName ||
+                                                            "—"
+                                                        }
+                                                    </p>
 
 
-                                                <p
-                                                    className="
+                                                    <p
+                                                        className="
                                                         text-sm
                                                         text-gray-500
                                                     "
-                                                >
-                                                    ID: #
-                                                    {
-                                                        company.id
-                                                    }
-                                                </p>
+                                                    >
+                                                        ID: #
+                                                        {
+                                                            company.id
+                                                        }
+                                                    </p>
+
+                                                </div>
 
                                             </div>
 
-                                        </div>
-
-                                    </td>
+                                        </td>
 
 
-                                    {/* =================================
+                                        {/* =================================
                                         COMPANY CODE
                                     ================================= */}
 
-                                    <td
-                                        className="
+                                        <td
+                                            className="
                                             px-4
                                             py-3
                                         "
-                                    >
-                                        {
-                                            company.companyCode ||
-                                            "—"
-                                        }
-                                    </td>
+                                        >
+                                            {
+                                                company.companyCode ||
+                                                "—"
+                                            }
+                                        </td>
 
 
-                                    {/* =================================
+                                        {/* =================================
                                         GST NUMBER
                                     ================================= */}
 
-                                    <td
-                                        className="
+                                        <td
+                                            className="
                                             px-4
                                             py-3
                                         "
-                                    >
-                                        {
-                                            company.gstNumber ||
-                                            "—"
-                                        }
-                                    </td>
+                                        >
+                                            {
+                                                company.gstNumber ||
+                                                "—"
+                                            }
+                                        </td>
 
 
-                                    {/* =================================
+                                        {/* =================================
                                         PAN NUMBER
                                     ================================= */}
 
-                                    <td
-                                        className="
+                                        <td
+                                            className="
                                             px-4
                                             py-3
                                         "
-                                    >
-                                        {
-                                            company.panNumber ||
-                                            "—"
-                                        }
-                                    </td>
+                                        >
+                                            {
+                                                company.panNumber ||
+                                                "—"
+                                            }
+                                        </td>
 
 
-                                    {/* =================================
+                                        {/* =================================
                                         EMAIL
                                     ================================= */}
 
-                                    <td
-                                        className="
+                                        <td
+                                            className="
                                             px-4
                                             py-3
                                         "
-                                    >
-                                        {
-                                            company.email ||
-                                            "—"
-                                        }
-                                    </td>
+                                        >
+                                            {
+                                                company.email ||
+                                                "—"
+                                            }
+                                        </td>
 
 
-                                    {/* =================================
+                                        {/* =================================
                                         PHONE
                                     ================================= */}
 
-                                    <td
-                                        className="
+                                        <td
+                                            className="
                                             px-4
                                             py-3
                                         "
-                                    >
-                                        {
-                                            company.phone ||
-                                            "—"
-                                        }
-                                    </td>
+                                        >
+                                            {
+                                                company.phone ||
+                                                "—"
+                                            }
+                                        </td>
 
 
-                                    {/* =================================
+                                        {/* =================================
                                         CITY
                                     ================================= */}
 
-                                    <td
-                                        className="
+                                        <td
+                                            className="
                                             px-4
                                             py-3
                                         "
-                                    >
-                                        {
-                                            company.city ||
-                                            "—"
-                                        }
-                                    </td>
+                                        >
+                                            {
+                                                company.city ||
+                                                "—"
+                                            }
+                                        </td>
 
 
-                                    {/* =================================
+                                        {/* =================================
                                         STATUS
                                     ================================= */}
 
-                                    <td
-                                        className="
+                                        <td
+                                            className="
                                             px-5
                                             py-3
                                             font-semibold
                                         "
-                                    >
+                                        >
 
-                                        <span
-                                            className={`
+                                            <span
+                                                className={`
                                                 px-2
                                                 py-1
                                                 rounded-full
                                                 text-xs
                                                 font-medium
                                                 ${statusColor[
-                                                company.status
-                                                ] ||
-                                                "bg-gray-100 text-gray-700"
-                                                }
+                                                    company.status
+                                                    ] ||
+                                                    "bg-gray-100 text-gray-700"
+                                                    }
                                             `}
-                                        >
+                                            >
 
-                                            {
-                                                company.status ||
-                                                "—"
-                                            }
+                                                {
+                                                    company.status ||
+                                                    "—"
+                                                }
 
-                                        </span>
+                                            </span>
 
-                                    </td>
+                                        </td>
 
 
-                                    {/* =================================
+                                        {/* =================================
                                         ACTIONS
                                     ================================= */}
 
-                                    <td
-                                        className="
-                                            relative
-                                            overflow-visible
-                                            px-2
-                                            py-3
-                                        "
-                                        onClick={(e) =>
-                                            e.stopPropagation()
-                                        }
-                                    >
+                                        {/* Actions */}
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-end gap-2">
 
-                                        <div
-                                            className="
-                                                flex
-                                                justify-end
-                                            "
-                                        >
-
-                                            <div
-                                                className="
-                                                    relative
-                                                    group
-                                                    inline-block
-                                                "
-                                            >
-
-                                                {/* ACTION BUTTON */}
-
+                                                {/* View */}
                                                 <button
                                                     type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowView(true);
+                                                        dispatch(setExsistingCompany(company));
+                                                        navigate(`/companies/view/${company.id}`);
+                                                    }}
+                                                    title="View"
                                                     className="
-                                                        p-1
-                                                        rounded-full
-                                                        bg-blue-500
-                                                        text-white
-                                                        hover:bg-blue-600
-                                                        transition-colors
-                                                    "
+                                                            flex h-8 w-8 items-center justify-center
+                                                            rounded-lg
+                                                            bg-blue-50
+                                                            text-blue-600
+                                                            transition
+                                                            hover:bg-blue-100
+                                                            hover:text-blue-700
+                                                        "
                                                 >
-
-                                                    <ChevronDown
-                                                        size={16}
-                                                    />
-
+                                                    <Eye size={16} />
                                                 </button>
 
+                                                {/* Edit */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowEdit(true);
+                                                        dispatch(setExsistingCompany(company));
+                                                        navigate(`/companies/editSimple/${company.id}`);
 
-                                                {/* ACTION MENU */}
-
-                                                <div
+                                                    }}
+                                                    title="Edit"
                                                     className="
-                                                        absolute
-                                                        right-0
-                                                        top-full
-                                                        mt-1
-                                                        z-[9999]
-                                                        opacity-0
-                                                        invisible
-                                                        group-hover:opacity-100
-                                                        group-hover:visible
-                                                        transition-all
-                                                        duration-150
+                                                        flex h-8 w-8 items-center justify-center
+                                                        rounded-lg
+                                                        bg-amber-50
+                                                        text-amber-600
+                                                        transition
+                                                        hover:bg-amber-100
+                                                        hover:text-amber-700
                                                     "
                                                 >
+                                                    <Edit size={16} />
+                                                </button>
 
-                                                    <div
-                                                        className="
-                                                            w-36
-                                                            rounded-md
-                                                            bg-blue-500
-                                                            shadow-lg
-                                                            overflow-hidden
-                                                        "
-                                                    >
+                                                {/* Delete */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
 
-                                                        {/* =================================
-                                                            VIEW
-                                                        ================================= */}
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handleView(
-                                                                    company
-                                                                )
-                                                            }
-                                                            className="
-                                                                flex
-                                                                w-full
-                                                                items-center
-                                                                gap-2
-                                                                px-4
-                                                                py-2
-                                                                text-sm
-                                                                text-white
-                                                                hover:bg-blue-600
-                                                                transition-colors
-                                                            "
-                                                        >
-
-                                                            <Eye
-                                                                size={16}
-                                                            />
-
-                                                            View
-
-                                                        </button>
-
-
-                                                        {/* =================================
-                                                            EDIT
-                                                        ================================= */}
-
-                                                        {canEditCompany && (
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleEdit(
-                                                                        company
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-blue-600
-                                                                    transition-colors
-                                                                "
-                                                            >
-
-                                                                <Edit
-                                                                    size={16}
-                                                                />
-
-                                                                Edit
-
-                                                            </button>
-
-                                                        )}
-
-
-                                                        {/* =================================
-                                                            DELETE
-                                                        ================================= */}
-
-                                                        {canDeleteCompany && (
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleDelete(
-                                                                        company.id
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    flex
-                                                                    w-full
-                                                                    items-center
-                                                                    gap-2
-                                                                    px-4
-                                                                    py-2
-                                                                    text-sm
-                                                                    text-white
-                                                                    hover:bg-red-600
-                                                                    transition-colors
-                                                                "
-                                                            >
-
-                                                                <Trash2
-                                                                    size={16}
-                                                                />
-
-                                                                Delete
-
-                                                            </button>
-
-                                                        )}
-
-                                                    </div>
-
-                                                </div>
+                                                        // Your delete confirmation logic
+                                                        handleDelete(company.id);
+                                                    }}
+                                                    title="Delete"
+                                                    className="
+                                                        flex h-8 w-8 items-center justify-center
+                                                        rounded-lg
+                                                        bg-red-50
+                                                        text-red-600
+                                                        transition
+                                                        hover:bg-red-100
+                                                        hover:text-red-700
+                                                    "
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
 
                                             </div>
-
-                                        </div>
-
-                                    </td>
-
-                                </tr>
-
-                            )
-                        )}
-
-                </tbody>
-
-            </table>
+                                        </td>
 
 
-            {/* =====================================================
+                                    </tr>
+
+                                )
+                            )}
+
+                    </tbody>
+
+                </table>
+
+
+                {/* =====================================================
                 PAGINATION
             ===================================================== */}
 
-            <div
-                className="
-                    p-5
-                    border-t
-                    border-gray-100
-                    flex
-                    items-center
-                    justify-between
-                "
-            >
-
-                <p
-                    className="
-                        text-sm
-                        text-gray-500
-                    "
-                >
-
-                    Showing{" "}
-                    {
-                        currentCompanies.length
-                    }{" "}
-                    of{" "}
-                    {
-                        totalElements || 0
-                    }{" "}
-                    companies
-
-                </p>
-
-
                 <div
                     className="
+                        p-4
+                        border-t
+                        border-gray-100
                         flex
                         items-center
-                        gap-3
+                        justify-between
                     "
                 >
 
-                    {/* PREVIOUS */}
-
-                    <button
-                        type="button"
-                        disabled={
-                            Number(
-                                pageNumber
-                            ) <= 0
-                        }
-                        onClick={() => {
-                            // Add server-side page support here
-                        }}
+                    <p
                         className="
                             text-sm
-                            text-gray-400
-                            hover:text-gray-600
-                            disabled:opacity-50
+                            text-gray-500
                         "
                     >
 
-                        Previous
+                        Showing{" "}
 
-                    </button>
+                        {
+                            currentCompanies.length
+                        }
+
+                        {" "}of{" "}
+
+                        {
+                            currentCompanies.length
+                        }
+
+                        {" "}company Details
+
+                    </p>
 
 
-                    {/* CURRENT PAGE */}
-
-                    <span
+                    <div
                         className="
+                            flex
+                            items-center
+                            gap-3
+                        "
+                    >
+
+                        {/* PREVIOUS */}
+
+                        <button
+                            type="button"
+                            disabled={true}
+                            className="
+                            text-sm
+                           text-[#0F4659] 
+                           hover:text-[#0F4659]/90
+                          disabled:cursor-not-allowed
+                          disabled:opacity-50"
+                        >
+                            Previous
+                        </button>
+
+
+                        {/* CURRENT PAGE */}
+
+                        <span
+                            className="
                             w-8
                             h-8
                             flex
                             items-center
                             justify-center
                             rounded-lg
-                            bg-blue-500
+                            bg-[#0F4659]
                             text-white
                             text-sm
                             font-medium
-                        "
-                    >
-
-                        {
-                            (
-                                Number(
-                                    pageNumber
-                                ) || 0
-                            ) + 1
-                        }
-
-                    </span>
+                            "
+                        >
+                            1
+                        </span>
 
 
-                    {/* NEXT */}
+                        {/* NEXT */}
 
-                    <button
-                        type="button"
-                        disabled={
-                            (
-                                Number(
-                                    pageNumber
-                                ) || 0
-                            ) >=
-                            (
-                                Number(
-                                    totalPages
-                                ) || 1
-                            ) - 1
-                        }
-                        onClick={() => {
-                            // Add server-side page support here
-                        }}
-                        className="
+                        <button
+                            type="button"
+                            disabled={true}
+                            className="
                             text-sm
-                            text-gray-400
-                            hover:text-gray-600
-                            disabled:opacity-50
-                        "
-                    >
+                            text-[#0F4659]
+                            hover:text-[#0F4659]/90
+                             disabled:cursor-not-allowed
+                                disabled:opacity-50
+                            "
+                        >
+                            Next
+                        </button>
 
-                        Next
-
-                    </button>
+                    </div>
 
                 </div>
 
             </div>
 
-        </div>
-
+        </div >
     );
 
 }

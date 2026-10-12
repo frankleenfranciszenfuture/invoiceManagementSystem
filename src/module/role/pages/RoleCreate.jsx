@@ -25,6 +25,7 @@ import {
 import {
     getUserPermission,
 } from "../../menuPermission/thunks/menuPermissionThunks";
+import CustomSelect from "../../../common/custom/CustomSelect";
 
 export default function RoleCreate() {
     const dispatch = useDispatch();
@@ -729,9 +730,9 @@ export default function RoleCreate() {
         bg-white
         outline-none
         transition
-        focus:border-blue-500
+        focus:border-[#0F4659]
         focus:ring-1
-        focus:ring-blue-500
+        focus:ring-[#0F4659]/70
         disabled:bg-gray-100
         disabled:text-gray-500
         disabled:cursor-not-allowed
@@ -753,7 +754,7 @@ export default function RoleCreate() {
     block
     text-xs
     font-medium
-    ${required ? "text-red-500" : "text-gray-600"}
+    ${required ? "text-red-500" : "text-[#0F4659]"}
     mb-1.5
 `;
 
@@ -829,7 +830,7 @@ export default function RoleCreate() {
                                                 : "text-[#0F4659]"
                                             : hasError
                                                 ? "text-red-600"
-                                                : "text-gray-500 hover:text-gray-700"
+                                                : "text-[#0F4659] hover:text-[#0F4659]/90"
                                         }
                                     `}
                                 >
@@ -847,7 +848,7 @@ export default function RoleCreate() {
                                                 absolute bottom-0 left-0 right-0 h-0.5
                                                 ${hasError
                                                     ? "bg-red-500"
-                                                    : "bg-blue-500"
+                                                    : "bg-[#0F4659]"
                                                 }
                                             `}
                                         />
@@ -874,11 +875,11 @@ export default function RoleCreate() {
 
                                     <div className="flex items-center justify-between pb-3 border-b border-gray-200">
                                         <div>
-                                            <h3 className="text-sm font-semibold text-gray-800">
+                                            <h3 className="text-sm font-semibold text-[#0F4659]">
                                                 Role Information
                                             </h3>
 
-                                            <p className="text-xs text-gray-500 mt-1">
+                                            <p className="text-xs text-[#0F4659]/80 mt-1">
                                                 Enter the basic role details.
                                             </p>
                                         </div>
@@ -886,7 +887,7 @@ export default function RoleCreate() {
                                         {/* STATUS */}
 
                                         <div className="flex items-center gap-3 shrink-0">
-                                            <label className="text-md font-semibold text-gray-600">
+                                            <label className="text-md font-semibold text-[#0F4659]">
                                                 Status :
                                             </label>
 
@@ -964,7 +965,7 @@ export default function RoleCreate() {
                                             className="
                                                 w-full px-3 py-3 border border-gray-300 rounded-md
                                                 text-sm text-gray-700 bg-white outline-none resize-none
-                                                transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500
+                                                transition focus:border-[#0F4659] focus:ring-1 focus:ring-[#0F4659]/70
                                                 disabled:bg-gray-100
                                             "
                                         />
@@ -983,11 +984,11 @@ export default function RoleCreate() {
                             {activeTab === "settings" && (
                                 <div className="space-y-6">
                                     <div className="pb-3 border-b border-gray-200">
-                                        <h3 className="text-sm font-semibold text-gray-800">
+                                        <h3 className="text-sm font-semibold text-[#0F4659]">
                                             Settings
                                         </h3>
 
-                                        <p className="text-xs text-gray-500 mt-1">
+                                        <p className="text-xs text-[#0F4659]/70 mt-1">
                                             Configure role status.
                                         </p>
                                     </div>
@@ -999,29 +1000,17 @@ export default function RoleCreate() {
                                             Status
                                         </label>
 
-                                        <select
-                                            value={form.status ?? "ACTIVE"}
-                                            onChange={(e) =>
-                                                handleChange(
-                                                    "status",
-                                                    e.target.value
-                                                )
+                                        <CustomSelect
+                                            value={form.status || "ACTIVE"}
+                                            onChange={(value) =>
+                                                handleChange("status", value)
                                             }
-                                            className={inputClass}
-                                            disabled={loading}
-                                        >
-                                            <option value="ACTIVE">
-                                                ACTIVE
-                                            </option>
-
-                                            <option value="INACTIVE">
-                                                INACTIVE
-                                            </option>
-
-                                            <option value="DRAFT">
-                                                DRAFT
-                                            </option>
-                                        </select>
+                                            options={[
+                                                { value: "ACTIVE", label: "ACTIVE" },
+                                                { value: "INACTIVE", label: "INACTIVE" },
+                                                { value: "DRAFT", label: "DRAFT" },
+                                            ]}
+                                        />
                                     </div>
 
                                     {/* STATUS SUMMARY */}
@@ -1029,11 +1018,11 @@ export default function RoleCreate() {
                                     <div className="max-w-md p-4 bg-white border border-gray-200 rounded-lg">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="text-sm font-semibold text-gray-700">
+                                                <p className="text-sm font-semibold text-[#0F4659]">
                                                     Role Status
                                                 </p>
 
-                                                <p className="text-xs text-gray-500 mt-1">
+                                                <p className="text-xs text-[#0F4659]/80 mt-1">
                                                     Current status of this role.
                                                 </p>
                                             </div>

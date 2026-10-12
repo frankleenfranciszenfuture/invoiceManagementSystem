@@ -191,6 +191,7 @@ export default function NavbarUser() {
                 text-[#0F4659]
                 hover:bg-[#0F4659]/20
                 transition
+                cursor-pointer
             "
                         title="Home"
                     >
@@ -352,6 +353,7 @@ export default function NavbarUser() {
                             font-medium
                             text-white
                             hover:bg-[#0F4659]/90
+                            cursor-pointer
                         "
                     >
 
@@ -388,6 +390,7 @@ export default function NavbarUser() {
                             border-gray-300
                             p-2
                             hover:bg-gray-50
+                            cursor-pointer
                         "
                         title="More"
                     >

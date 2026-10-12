@@ -332,7 +332,7 @@ export default function UserTable({
                         TABLE HEADER
                     ================================================= */}
 
-                    <thead className="bg-[#ECE6D5]/90 border-b border-gray-300">
+                    <thead className="bg-[#F3F4F6] border-b border-gray-300">
                         <tr>
 
                             {[
