@@ -1,5 +1,8 @@
 package com.ims.dtos.invoice;
 
+import com.ims.entity.Currency;
+import com.ims.entity.ExchangeRate;
+import com.ims.entity.SalesPersonEntity;
 import com.ims.enums.InvoiceStatus;
 import com.ims.enums.InvoiceType;
 import jakarta.validation.Valid;
@@ -68,6 +71,23 @@ public class InvoiceCreateRequest {
     @Builder.Default
     private BigDecimal shippingAmount = BigDecimal.ZERO;
 
+    // =====================================================
+    // SALES PERSON
+    // =====================================================
+    private Long salesPersonId;
+
+    // =====================================================
+    // CURRENCY
+    // =====================================================
+
+    @NotNull(message = "Currency is required")
+    private Long currencyId;
+
+    // =====================================================
+    // EXCHANGE RATE
+    // =====================================================
+
+    private BigDecimal exchangeRate;
 
     // =====================================================
     // NOTES

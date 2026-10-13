@@ -1,6 +1,9 @@
 package com.ims.dtos.invoice;
 
 import com.ims.dtos.common.BaseResponse;
+import com.ims.entity.Currency;
+import com.ims.entity.ExchangeRate;
+import com.ims.entity.SalesPersonEntity;
 import com.ims.enums.InvoiceStatus;
 import com.ims.enums.InvoiceType;
 import lombok.*;
@@ -71,6 +74,23 @@ public class InvoiceResponse extends BaseResponse {
 
     private BigDecimal grandTotal;
 
+
+    private Long salesPersonId;
+    private String salesPersonName;
+
+    // =====================================================
+    // CURRENCY
+    // =====================================================
+
+    private Long currencyId;
+
+    private String currencyCode;
+
+    // =====================================================
+    // EXCHANGE RATE
+    // =====================================================
+
+    private BigDecimal exchangeRate;
 
     // =====================================================
     // STATUS

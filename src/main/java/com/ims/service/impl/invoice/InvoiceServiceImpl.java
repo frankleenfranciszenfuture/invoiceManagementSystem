@@ -7,24 +7,13 @@ import com.ims.dtos.invoice.InvoiceItemRequest;
 import com.ims.dtos.invoice.InvoiceResponse;
 import com.ims.dtos.invoice.InvoiceSearchRequest;
 import com.ims.dtos.invoice.InvoiceUpdateRequest;
-import com.ims.entity.CustomerEntity;
-import com.ims.entity.InvoiceEntity;
-import com.ims.entity.InvoiceItemEntity;
-import com.ims.entity.ProductEntity;
-import com.ims.entity.SizeEntity;
-import com.ims.entity.TaxMasterEntity;
-import com.ims.entity.UnitEntity;
+import com.ims.entity.*;
 import com.ims.enums.InvoiceStatus;
 import com.ims.exception.BadRequestException;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.exception.ValidationException;
 import com.ims.mapper.invoice.InvoiceMapper;
-import com.ims.repository.CustomerRepository;
-import com.ims.repository.InvoiceRepository;
-import com.ims.repository.ProductRepository;
-import com.ims.repository.SizeRepository;
-import com.ims.repository.TaxMasterRepository;
-import com.ims.repository.UnitRepository;
+import com.ims.repository.*;
 import com.ims.service.serviceInterface.invoice.InvoiceNumberService;
 import com.ims.service.serviceInterface.invoice.InvoiceService;
 import com.ims.utils.base.BaseEntityUtil;
@@ -69,6 +58,12 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     private final BaseEntityUtil baseEntityUtil;
 
+    private final CurrencyRepository currencyRepository;
+
+    private final SalesPersonRepository salesPersonRepository;
+
+    private final ExchangeRateRepository exchangeRateRepository;
+
 
     // =====================================================
     // CREATE INVOICE
@@ -108,6 +103,51 @@ public class InvoiceServiceImpl implements InvoiceService {
 
 
         // =====================================================
+// FIND CURRENCY
+// =====================================================
+
+        Currency currency = currencyRepository.findById(
+                request.getCurrencyId()
+        ).orElseThrow(() ->
+                new ResourceNotFoundException(
+                        "Currency not found with id: "
+                                + request.getCurrencyId()
+                )
+        );
+
+        // =====================================================
+        // FIND SALES PERSON (OPTIONAL)
+        // =====================================================
+
+        SalesPersonEntity salesPerson = null;
+
+        if (request.getSalesPersonId() != null) {
+            salesPerson = salesPersonRepository.findById(
+                    request.getSalesPersonId()
+            ).orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "Sales person not found with id: "
+                                    + request.getSalesPersonId()
+                    )
+            );
+        }
+
+        // =====================================================
+        // EXCHANGE RATE
+        // =====================================================
+
+        BigDecimal exchangeRate =
+                request.getExchangeRate() != null
+                        ? request.getExchangeRate()
+                        : BigDecimal.ONE;
+
+        if (exchangeRate.signum() <= 0) {
+            throw new BadRequestException(
+                    "Exchange rate must be greater than zero."
+            );
+        }
+
+        // =====================================================
         // 3. INVOICE NUMBER
         // =====================================================
 
@@ -128,6 +168,9 @@ public class InvoiceServiceImpl implements InvoiceService {
                                 request.getInvoiceType()
                         )
                         .customer(customer)
+                        .currency(currency)
+                        .exchangeRate(exchangeRate)
+                        .salesPerson(salesPerson)
                         .invoiceDate(
                                 request.getInvoiceDate() != null
                                         ? request.getInvoiceDate()
@@ -417,6 +460,51 @@ public class InvoiceServiceImpl implements InvoiceService {
                         )
                 );
 
+// =====================================================
+// FIND CURRENCY
+// =====================================================
+
+        Currency currency = currencyRepository.findById(
+                request.getCurrencyId()
+        ).orElseThrow(() ->
+                new ResourceNotFoundException(
+                        "Currency not found with id: "
+                                + request.getCurrencyId()
+                )
+        );
+
+        // =====================================================
+        // FIND SALES PERSON (OPTIONAL)
+        // =====================================================
+
+        SalesPersonEntity salesPerson = null;
+
+        if (request.getSalesPersonId() != null) {
+            salesPerson = salesPersonRepository.findById(
+                    request.getSalesPersonId()
+            ).orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "Sales person not found with id: "
+                                    + request.getSalesPersonId()
+                    )
+            );
+        }
+
+// =====================================================
+// EXCHANGE RATE
+// =====================================================
+
+        BigDecimal exchangeRate =
+                request.getExchangeRate() != null
+                        ? request.getExchangeRate()
+                        : invoice.getExchangeRate();
+
+        if (exchangeRate == null ||
+                exchangeRate.signum() <= 0) {
+            throw new BadRequestException(
+                    "Exchange rate must be greater than zero."
+            );
+        }
 
         // =====================================================
         // 5. UPDATE BASIC DETAILS

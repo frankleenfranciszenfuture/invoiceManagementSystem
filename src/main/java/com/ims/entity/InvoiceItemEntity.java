@@ -14,16 +14,13 @@ import java.math.BigDecimal;
 @Table(
         name = "invoice_items",
         indexes = {
-
                 @Index(
                         name = "idx_invoice_item_invoice",
                         columnList = "invoice_id"
                 ),
-
-
                 @Index(
-                        name = "idx_invoice_item_item_master",
-                        columnList = "item_master_id"
+                        name = "idx_invoice_item_product",
+                        columnList = "product_id"
                 )
         }
 )

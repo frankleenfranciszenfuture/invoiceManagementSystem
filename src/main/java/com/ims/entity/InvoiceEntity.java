@@ -161,6 +161,30 @@ public class InvoiceEntity extends BaseEntity {
     @Builder.Default
     private BigDecimal grandTotal = BigDecimal.ZERO;
 
+    // Sales Person
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sales_person_id")
+    private SalesPersonEntity salesPerson;
+
+    // =====================================================
+// CURRENCY & EXCHANGE RATE
+// =====================================================
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "currency_id",
+            nullable = false
+    )
+    private Currency currency;
+
+    @Column(
+            name = "exchange_rate",
+            nullable = false,
+            precision = 19,
+            scale = 8
+    )
+    @Builder.Default
+    private BigDecimal exchangeRate = BigDecimal.ONE;
 
     // =====================================================
     // STATUS

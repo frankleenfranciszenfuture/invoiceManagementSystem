@@ -3,6 +3,7 @@ package com.ims.mapper.invoice;
 import com.ims.dtos.invoice.InvoiceResponse;
 import com.ims.entity.InvoiceEntity;
 import com.ims.mapper.audit.AuditMapper;
+import com.ims.mapper.salesPerson.SalesPersonMapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -12,7 +13,8 @@ import java.util.List;
         componentModel = "spring",
         uses = {
                 AuditMapper.class,
-                InvoiceItemMapper.class
+                InvoiceItemMapper.class,
+                SalesPersonMapper.class
         }
 )
 public interface InvoiceMapper {
@@ -34,13 +36,30 @@ public interface InvoiceMapper {
             source = "invoiceItems"
     )
     @Mapping(
+            target = "salesPersonId",
+            source = "salesPerson.id")
+
+    @Mapping(
+            target = "salesPersonName",
+            source = "salesPerson.salesPersonName")
+
+    @Mapping(
+            target = "currencyId",
+            source = "currency.id"
+    )
+    @Mapping(
+            target = "currencyCode",
+            source = "currency.code"
+    )
+    @Mapping(
+            target = "exchangeRate",
+            source = "exchangeRate"
+    )
+    @Mapping(
             target = "audit",
             source = "."
     )
-    InvoiceResponse toResponse(
-            InvoiceEntity entity
-    );
-
+    InvoiceResponse toResponse(InvoiceEntity entity);
 
     // =====================================================
     // ENTITY LIST -> RESPONSE LIST
