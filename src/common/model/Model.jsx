@@ -375,7 +375,7 @@ export default function Modal() {
         top-0
         right-0
         bottom-0
-        left-[200px]
+        left-[5px]
 
         z-[99999]
 
@@ -404,6 +404,7 @@ export default function Modal() {
         rounded-xl
         bg-white
         shadow-2xl
+        left-[100px]             
 
         ${modalSizeClass[type] || "w-[900px] max-w-[90vw] max-h-[85vh]"}
     `}
