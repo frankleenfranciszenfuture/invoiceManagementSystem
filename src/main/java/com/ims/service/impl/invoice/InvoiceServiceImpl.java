@@ -2,6 +2,7 @@ package com.ims.service.impl.invoice;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.dtos.exchange.ExchangeRateResponseDTO;
 import com.ims.dtos.invoice.InvoiceCreateRequest;
 import com.ims.dtos.invoice.InvoiceItemRequest;
 import com.ims.dtos.invoice.InvoiceResponse;
@@ -14,6 +15,7 @@ import com.ims.exception.ResourceNotFoundException;
 import com.ims.exception.ValidationException;
 import com.ims.mapper.invoice.InvoiceMapper;
 import com.ims.repository.*;
+import com.ims.service.serviceInterface.currency.ExchangeRateService;
 import com.ims.service.serviceInterface.invoice.InvoiceNumberService;
 import com.ims.service.serviceInterface.invoice.InvoiceService;
 import com.ims.utils.base.BaseEntityUtil;
@@ -64,7 +66,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     private final ExchangeRateRepository exchangeRateRepository;
 
-
+    private final ExchangeRateService exchangeRateService;
     // =====================================================
     // CREATE INVOICE
     // =====================================================
@@ -136,10 +138,44 @@ public class InvoiceServiceImpl implements InvoiceService {
         // EXCHANGE RATE
         // =====================================================
 
-        BigDecimal exchangeRate =
-                request.getExchangeRate() != null
-                        ? request.getExchangeRate()
-                        : BigDecimal.ONE;
+        BigDecimal exchangeRate;
+
+        if (request.getExchangeRate() != null) {
+
+            // Use the rate supplied by the request
+            exchangeRate = request.getExchangeRate();
+
+        } else {
+
+            // Replace this with your configured base currency ID.
+            Long baseCurrencyId = 3L;
+
+            if (request.getCurrencyId().equals(baseCurrencyId)) {
+
+                // Same currency: no conversion required
+                exchangeRate = BigDecimal.ONE;
+
+            } else {
+
+                // Fetch the rate automatically
+                ApiResponse<ExchangeRateResponseDTO> rateResponse =
+                        exchangeRateService.getRate(
+                                baseCurrencyId,
+                                request.getCurrencyId(),
+                                LocalDate.now()
+                        );
+
+                if (rateResponse == null
+                        || rateResponse.getData() == null
+                        || rateResponse.getData().getRate() == null) {
+                    throw new IllegalStateException(
+                            "Unable to fetch exchange rate."
+                    );
+                }
+
+                exchangeRate = rateResponse.getData().getRate();
+            }
+        }
 
         if (exchangeRate.signum() <= 0) {
             throw new BadRequestException(

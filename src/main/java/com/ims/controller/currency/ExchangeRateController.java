@@ -66,13 +66,13 @@ public class ExchangeRateController {
 
     @GetMapping("/lookup")
     public ResponseEntity<ApiResponse<ExchangeRateResponseDTO>> getRate(
-            @RequestParam String from,
-            @RequestParam String to,
+            @RequestParam Long fromCurrencyId,
+            @RequestParam Long toCurrencyId,
             @RequestParam(required = false) LocalDate date) {
 
         return ResponseEntity.ok(
                 exchangeRateService.
-                        getRate(from, to, date));
+                        getRate(fromCurrencyId, toCurrencyId, date));
     }
 
     @DeleteMapping("/{id}")

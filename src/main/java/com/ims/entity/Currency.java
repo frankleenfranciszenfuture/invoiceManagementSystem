@@ -1,6 +1,8 @@
 package com.ims.entity;
 
 
+import com.ims.enums.CurrencyStatus;
+import com.ims.enums.Status;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -37,6 +39,14 @@ public class Currency extends BaseEntity{
     @Column(nullable = false)
     @Builder.Default
     private Integer decimalPlaces = 2;
+
+    //=====================================================
+    // STATUS
+    //=====================================================
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private CurrencyStatus status;
 
     @Column(nullable = false)
     @Builder.Default

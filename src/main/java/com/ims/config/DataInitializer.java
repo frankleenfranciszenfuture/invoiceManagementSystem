@@ -62,6 +62,10 @@ public class DataInitializer implements CommandLineRunner {
 
                 "BankAccounts",
 
+                "SalesPersons",
+
+                "Currency Detail",
+
                 "Staffs",
 
                 "Loan",
@@ -465,13 +469,33 @@ public class DataInitializer implements CommandLineRunner {
 
 
         // =====================================================
-        // CUSTOMER
+        // BANK ACCOUNTS
         // =====================================================
 
         addModuleAction("BankAccounts", "CREATE");
         addModuleAction("BankAccounts", "VIEW");
         addModuleAction("BankAccounts", "EDIT");
         addModuleAction("BankAccounts", "DELETE");
+
+
+        // =====================================================
+        // SALES PERSON
+        // =====================================================
+
+        addModuleAction("SalesPersons", "CREATE");
+        addModuleAction("SalesPersons", "VIEW");
+        addModuleAction("SalesPersons", "EDIT");
+        addModuleAction("SalesPersons", "DELETE");
+
+
+        // =====================================================
+        // CURRENCY
+        // =====================================================
+
+        addModuleAction("Currency Detail", "CREATE");
+        addModuleAction("Currency Detail", "VIEW");
+        addModuleAction("Currency Detail", "EDIT");
+        addModuleAction("Currency Detail", "DELETE");
 
         // =====================================================
         // CATEGORY

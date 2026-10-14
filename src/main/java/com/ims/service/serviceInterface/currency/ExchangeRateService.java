@@ -31,10 +31,9 @@ public interface ExchangeRateService {
     );
 
     ApiResponse<ExchangeRateResponseDTO> getRate(
-            String fromCode,
-            String toCode,
-            LocalDate date
-    );
+            Long fromCurrencyId,
+            Long toCurrencyId,
+            LocalDate date);
 
     ApiResponse<Void> delete(Long id);
 }

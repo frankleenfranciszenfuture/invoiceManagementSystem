@@ -5,6 +5,7 @@ import com.ims.common.PageResponse;
 import com.ims.dtos.currency.CurrencyRequestDTO;
 import com.ims.dtos.currency.CurrencyResponseDTO;
 import com.ims.entity.Currency;
+import com.ims.enums.CurrencyStatus;
 import com.ims.repository.CurrencyRepository;
 import com.ims.service.serviceInterface.currency.CurrencyService;
 import com.ims.utils.specification.CurrencySpecification;
@@ -39,6 +40,7 @@ public class CurrencyServiceImpl implements CurrencyService {
                 .name(dto.getName().trim())
                 .symbol(dto.getSymbol().trim())
                 .decimalPlaces(dto.getDecimalPlaces())
+                .status(dto.getStatus())
                 .active(dto.getActive() == null || dto.getActive())
                 .build();
 
@@ -65,7 +67,7 @@ public class CurrencyServiceImpl implements CurrencyService {
         currency.setName(dto.getName().trim());
         currency.setSymbol(dto.getSymbol().trim());
         currency.setDecimalPlaces(dto.getDecimalPlaces());
-
+        currency.setStatus(dto.getStatus());
         if (dto.getActive() != null) {
             currency.setActive(dto.getActive());
         }
@@ -136,6 +138,7 @@ public class CurrencyServiceImpl implements CurrencyService {
                 .name(currency.getName())
                 .symbol(currency.getSymbol())
                 .decimalPlaces(currency.getDecimalPlaces())
+                .status(currency.getStatus())
                 .active(currency.getActive())
                 .build();
     }

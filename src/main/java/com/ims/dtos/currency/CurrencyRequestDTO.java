@@ -1,5 +1,7 @@
 package com.ims.dtos.currency;
 
+import com.ims.enums.CompanyStatus;
+import com.ims.enums.CurrencyStatus;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
@@ -25,6 +27,13 @@ public class CurrencyRequestDTO {
     @Min(0)
     @Max(4)
     private Integer decimalPlaces = 2;
+
+    // =====================================================
+    // STATUS
+    // =====================================================
+
+    @NotNull(message = "Currency status is required")
+    private CurrencyStatus status;
 
     private Boolean active = true;
 }

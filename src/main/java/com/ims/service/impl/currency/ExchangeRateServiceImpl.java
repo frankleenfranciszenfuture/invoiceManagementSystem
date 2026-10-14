@@ -6,6 +6,7 @@ import com.ims.dtos.exchange.ExchangeRateRequestDTO;
 import com.ims.dtos.exchange.ExchangeRateResponseDTO;
 import com.ims.entity.Currency;
 import com.ims.entity.ExchangeRate;
+import com.ims.repository.CurrencyRepository;
 import com.ims.repository.ExchangeRateRepository;
 import com.ims.service.serviceInterface.currency.ExchangeRateService;
 import com.ims.utils.specification.ExchangeRateSpecification;
@@ -22,9 +23,12 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Locale;
 import java.util.Map;
 
@@ -36,7 +40,7 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
     private final ExchangeRateRepository exchangeRateRepository;
     private final ExchangeRateValidation validation;
     private final RestTemplate restTemplate;
-
+    private final CurrencyRepository currencyRepository;
     @Override
     public ApiResponse<ExchangeRateResponseDTO> create(
             ExchangeRateRequestDTO dto) {
@@ -182,20 +186,53 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<ExchangeRateResponseDTO> getRate(
-            String fromCode,
-            String toCode,
+            Long fromCurrencyId,
+            Long toCurrencyId,
             LocalDate date) {
 
-        if (fromCode == null || fromCode.isBlank()
-                || toCode == null || toCode.isBlank()) {
+        // 1. Validate currency IDs
+        if (fromCurrencyId == null || toCurrencyId == null) {
             throw new IllegalArgumentException(
-                    "Both source and target currencies are required"
+                    "Both source and target currency IDs are required"
             );
         }
 
-        String from = fromCode.trim().toUpperCase(Locale.ROOT);
-        String to = toCode.trim().toUpperCase(Locale.ROOT);
+        // 2. Fetch source currency
+        Currency fromCurrency = currencyRepository
+                .findById(fromCurrencyId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Source currency not found"
+                        )
+                );
 
+        // 3. Fetch target currency
+        Currency toCurrency = currencyRepository
+                .findById(toCurrencyId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Target currency not found"
+                        )
+                );
+
+        // 4. Validate active currencies
+        if (!Boolean.TRUE.equals(fromCurrency.getActive())
+                || !Boolean.TRUE.equals(toCurrency.getActive())) {
+            throw new IllegalArgumentException(
+                    "Both currencies must be active"
+            );
+        }
+
+        // 5. Normalize currency codes
+        String from = fromCurrency.getCode()
+                .trim()
+                .toUpperCase(Locale.ROOT);
+
+        String to = toCurrency.getCode()
+                .trim()
+                .toUpperCase(Locale.ROOT);
+
+        // 6. Validate requested date
         LocalDate today = LocalDate.now();
         LocalDate requestedDate = date == null ? today : date;
 
@@ -205,6 +242,7 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
             );
         }
 
+        // 7. Same-currency conversion
         if (from.equals(to)) {
             ExchangeRateResponseDTO dto =
                     ExchangeRateResponseDTO.builder()
@@ -221,6 +259,7 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
             );
         }
 
+        // 8. External API currently supports today's rates only
         if (!requestedDate.equals(today)) {
             throw new IllegalArgumentException(
                     "Historical exchange rates are not supported by this API"
@@ -250,27 +289,37 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
 
             if (rateValue == null) {
                 throw new IllegalArgumentException(
-                        "Exchange rate not available for "
-                                + from + " to " + to
+                        "Exchange rate not available for " + from + " to " + to
                 );
             }
 
             BigDecimal exchangeRate =
                     new BigDecimal(rateValue.toString());
 
-            LocalDate effectiveDate =
-                    response.get("time_last_update_utc") != null
-                            ? ZonedDateTime.parse(
-                            response.get("time_last_update_utc")
-                                    .toString(),
+            LocalDate effectiveDate = requestedDate;
+
+            Object lastUpdate = response.get("time_last_update_utc");
+
+            if (lastUpdate != null) {
+                try {
+                    effectiveDate = ZonedDateTime.parse(
+                            lastUpdate.toString(),
                             DateTimeFormatter.RFC_1123_DATE_TIME
-                    ).toLocalDate()
-                            : requestedDate;
+                    ).withZoneSameInstant(ZoneOffset.UTC).toLocalDate();
+                } catch (DateTimeParseException ignored) {
+                    // Retain requested date if timestamp parsing fails.
+                }
+            }
 
             ExchangeRateResponseDTO dto =
                     ExchangeRateResponseDTO.builder()
+                            .id(null)
+                            .fromCurrencyId(fromCurrency.getId())
                             .fromCurrencyCode(from)
+                            .fromCurrencyName(fromCurrency.getName())
+                            .toCurrencyId(toCurrency.getId())
                             .toCurrencyCode(to)
+                            .toCurrencyName(toCurrency.getName())
                             .rate(exchangeRate)
                             .effectiveDate(effectiveDate)
                             .active(true)

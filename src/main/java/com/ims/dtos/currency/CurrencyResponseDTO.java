@@ -1,5 +1,7 @@
 package com.ims.dtos.currency;
 
+import com.ims.enums.CurrencyStatus;
+import com.ims.enums.Status;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
@@ -14,5 +16,6 @@ public class CurrencyResponseDTO {
     private String name;
     private String symbol;
     private Integer decimalPlaces;
+    private CurrencyStatus status;
     private Boolean active;
 }
