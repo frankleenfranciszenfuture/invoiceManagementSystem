@@ -341,7 +341,7 @@ export default function NavbarInvoice() {
                         type="button"
                         onClick={(e) => {
                             e.stopPropagation();
-                            navigate("/invoices/new");
+                            navigate("/invoices/product/new");
                         }}
                         className="
                             flex

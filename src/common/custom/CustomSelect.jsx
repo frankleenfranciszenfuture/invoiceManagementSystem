@@ -138,7 +138,7 @@ export default function CustomSelect({
                     );
                 }}
                 className={`
-          flex h-10 w-full items-center justify-between
+          flex h-10 w-[260px] items-center justify-between
           rounded-md border border-gray-300 bg-white
           px-3 text-left text-sm text-[#0F4659]
           outline-none transition
@@ -169,7 +169,7 @@ export default function CustomSelect({
                     }
                     className="
             absolute left-0 right-0 top-full z-[100]
-            mt-1 max-h-60 overflow-y-auto
+            mt-1 max-h-60 w-[260px] overflow-y-auto
             rounded-md border border-gray-200
             bg-white p-1 shadow-lg
           "

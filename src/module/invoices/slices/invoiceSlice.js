@@ -35,6 +35,12 @@ const emptyInvoice = {
   customerId: "",
   customerName: "",
 
+  salesPersonId: "",
+  salesPersonName: "",
+
+  currencyId: "",
+  exchangeRate: "",
+
   invoiceDate: "",
   dueDate: "",
 

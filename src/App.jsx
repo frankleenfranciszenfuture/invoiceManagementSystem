@@ -63,6 +63,7 @@ import InvoiceCreate from "./module/invoices/pages/InvoiceCreate";
 import InvoiceDashboard from "./module/invoices/pages/InvoiceDashboard";
 import InvoiceOverViewDashboard from "./module/invoices/overviewCard/InvoiceOverViewDashboard";
 
+import ServiceInvoice from "./module/invoices/pages/ServiceInvoice";
 // =====================================================
 // ROLE
 // =====================================================
@@ -90,6 +91,7 @@ import BankAccountDashboard from "./module/bankAccount/pages/BankAccountDashboar
 import CompanyDashboard from "./module/company/pages/CompanyDashboard";
 import CompanyOverViewDashboard from "./module/company/overviewCard/CompanyOverViewDashboard";
 
+
 // =====================================================
 // MENU PERMISSION
 // =====================================================
@@ -113,6 +115,11 @@ import SalesPersonCreateSimple from "./module/salesPerson/pages/SalesPersonCreat
 
 import SalesPersonDashboard from "./module/salesPerson/pages/SalesPersonDashboard";
 import SalesPersonOverView from "./module/salesPerson/pages/SalesPersonOverView";
+import CurrencyDashboard from "./module/currency/pages/CurrencyDashboard";
+import CurrencyCreateSimple from "./module/currency/pages/CurrencyCreateSimple";
+
+
+
 
 // =====================================================
 // APP CONTENT
@@ -488,8 +495,13 @@ function AppContent() {
             ================================================= */}
 
         <Route
-          path="/invoices/new"
+          path="/invoices/product/new"
           element={<InvoiceCreate />}
+        />
+
+        <Route
+          path="/invoices/service/new"
+          element={<ServiceInvoice />}
         />
 
         <Route
@@ -529,6 +541,30 @@ function AppContent() {
         <Route
           path="/salesPersons/view/:id"
           element={<SalesPersonOverView />}
+        />
+
+
+        {/* =================================================
+                   CURRENCY
+            ================================================= */}
+
+        <Route
+          path="/currencies"
+          element={<CurrencyDashboard />}
+        />
+
+        <Route
+          path="/currencies/newSimple"
+          element={<CurrencyCreateSimple />}
+        />
+        <Route
+          path="/currencies/edit/:id"
+          element={<CurrencyCreateSimple />}
+        />
+
+        <Route
+          path="/currencies/view/:id"
+        // element={<CurrencyOverView />}
         />
 
         {/* =================================================

@@ -409,6 +409,11 @@ export const settings = [
         path: "/salesPersons",
         component: ComingSoon,
       },
+      {
+        label: "Currencies",
+        path: "/currencies",
+        component: ComingSoon,
+      },
     ],
   },
 

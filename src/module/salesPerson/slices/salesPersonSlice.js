@@ -188,7 +188,7 @@ const salesPersonSlice = createSlice({
         const response = action.payload;
         const data = response?.data;
 
-        state.salesPersons = data?.content || [];
+        state.salesPersons = Array.isArray(data?.content) ? data.content : [];
 
         state.pagination = {
           pageNumber: data?.pageNumber ?? 0,
