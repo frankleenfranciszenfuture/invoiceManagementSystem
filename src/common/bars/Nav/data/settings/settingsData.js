@@ -401,27 +401,12 @@ export const settings = [
   //   ],
   // },
   {
-    title: "Automation",
+    title: "Invoice Customization",
     group: "organization",
     items: [
       {
-        label: "Workflow Rules",
-        path: "/settings/automation/rules",
-        component: ComingSoon,
-      },
-      {
-        label: "Workflow Actions",
-        path: "/settings/automation/actions",
-        component: ComingSoon,
-      },
-      {
-        label: "Workflow Logs",
-        path: "/settings/automation/logs",
-        component: ComingSoon,
-      },
-      {
-        label: "Schedules",
-        path: "/settings/automation/schedules",
+        label: "Sales Persons",
+        path: "/salesPersons",
         component: ComingSoon,
       },
     ],

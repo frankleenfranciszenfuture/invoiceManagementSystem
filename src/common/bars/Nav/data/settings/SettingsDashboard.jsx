@@ -25,8 +25,8 @@ const COLUMNS = [
     ["Organization"],
     ["Users & Roles", "Taxes & Compliance"],
     ["Setup & Configurations"],
-    ["Customization"],
-    ["Automation"],
+    ["Products"],
+    ["Invoice Customization"],
 ];
 
 /* Icon + colors per section (full class names so Tailwind keeps them) */
@@ -35,8 +35,8 @@ const SECTION_STYLE = {
     "Users & Roles": { icon: Users, header: "from-rose-50 to-white", iconColor: "text-rose-500" },
     "Taxes & Compliance": { icon: FileText, header: "from-blue-50 to-white", iconColor: "text-blue-600" },
     "Setup & Configurations": { icon: SlidersHorizontal, header: "from-orange-50 to-white", iconColor: "text-orange-500" },
-    Customization: { icon: Palette, header: "from-amber-50 to-white", iconColor: "text-amber-500" },
-    Automation: { icon: Zap, header: "from-red-50 to-white", iconColor: "text-red-500" },
+    Products: { icon: Palette, header: "from-amber-50 to-white", iconColor: "text-amber-500" },
+    "Invoice Customization": { icon: Zap, header: "from-red-50 to-white", iconColor: "text-red-500" },
 };
 
 const DEFAULT_STYLE = {

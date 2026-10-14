@@ -109,9 +109,10 @@ import UserProfileOverview from "./module/users/pages/UserProfileOverview";
 import CustomerProfileOverview from "./module/customer/pages/Customerprofileoverview";
 import RoleProfileOverview from "./module/role/pages/RoleProfileOverview";
 import BankAccountProfileOverview from "./module/bankAccount/pages/BankAccountProfileOverview";
+import SalesPersonCreateSimple from "./module/salesPerson/pages/SalesPersonCreateSimple";
 
-
-
+import SalesPersonDashboard from "./module/salesPerson/pages/SalesPersonDashboard";
+import SalesPersonOverView from "./module/salesPerson/pages/SalesPersonOverView";
 
 // =====================================================
 // APP CONTENT
@@ -506,6 +507,29 @@ function AppContent() {
           element={<InvoiceOverViewDashboard />}
         />
 
+
+        {/* =================================================
+                    SALES PERSON
+            ================================================= */}
+
+        <Route
+          path="/salesPersons"
+          element={<SalesPersonDashboard />}
+        />
+
+        <Route
+          path="/salesPersons/newSimple"
+          element={<SalesPersonCreateSimple />}
+        />
+        <Route
+          path="/salesPersons/edit/:id"
+          element={<SalesPersonCreateSimple />}
+        />
+
+        <Route
+          path="/salesPersons/view/:id"
+          element={<SalesPersonOverView />}
+        />
 
         {/* =================================================
                     MENU PERMISSION
