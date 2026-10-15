@@ -132,7 +132,7 @@ export default function ProductOverViewSiderDetails() {
                                     )
                                 }
                                 className={`w-full cursor-pointer border-b border-gray-100 px-4 py-4 transition-all ${isSelected
-                                    ? "border-l-4 border-l-[#0F4659] bg-[#0F4659]/10"
+                                    ? "border-l-4 border-l-[#0095FD] bg-[#0095FD]/10"
                                     : "hover:bg-gray-50"
                                     }`}
                             >

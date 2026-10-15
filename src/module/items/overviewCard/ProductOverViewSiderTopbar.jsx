@@ -138,7 +138,7 @@ export default function ProductOverViewSiderTopbar() {
                                 !previous
                         )
                     }
-                    className="flex cursor-pointer select-none items-center gap-1 rounded-md bg-[#0F4659] px-3 py-1.5 hover:bg-[#0F4659]/90"
+                    className="flex cursor-pointer select-none items-center gap-1 rounded-md bg-[#0095FD] px-3 py-1.5 hover:bg-[#0095FD]/90"
                 >
                     <h2 className="text-sm font-medium text-white">
                         {selectedProductView}
@@ -173,8 +173,8 @@ export default function ProductOverViewSiderTopbar() {
                                     }
                                     className={`w-full border-b border-gray-100 px-4 py-2.5 text-left text-sm transition-colors ${selectedProductView ===
                                         view.label
-                                        ? "bg-[#0F4659]/90 text-white"
-                                        : "text-gray-700 hover:bg-[#0F4659]/90 hover:text-white"
+                                        ? "bg-[#0095FD]/90 text-white"
+                                        : "text-gray-700 hover:bg-[#0095FD]/90 hover:text-white"
                                         }`}
                                 >
                                     {view.label}
@@ -190,7 +190,8 @@ export default function ProductOverViewSiderTopbar() {
                         <button
                             type="button"
                             onClick={handleNewProduct}
-                            className="w-full border-t border-[#0F4659] px-4 py-2.5 text-left text-sm font-medium text-[#0F4659] hover:text-[white] bg-[#0F4659]/10 hover:bg-[#0F4659]/90"
+                            className="w-full border-t border-[#0F4659] px-4 py-2.5 text-left text-sm font-medium
+                             text-[#0F4659] hover:text-[white] bg-[#0095FD]/50 hover:bg-[#0095FD]/90"
                         >
                             + New Product
                         </button>

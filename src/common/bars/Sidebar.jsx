@@ -232,7 +232,7 @@ const ChildRow = ({ child, active, onClick }) => (
 
 /* Round initials avatar used in the bottom user card */
 const AvatarCircle = ({ src, name }) => (
-    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#FCF7F8] text-sm font-semibold text-[#0F4659] ring-2 ring-white/10">
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#CF230F] text-sm font-semibold text-[#FCF7F8] ring-2 ring-white/10">
         {src ? (
             <img src={assets.zenfutureLogo} alt={name} className="h-full w-full object-cover" />
         ) : (
@@ -474,7 +474,7 @@ const Sidebar = ({ onLogout }) => {
             <aside
                 className={`
                     fixed bottom-3 left-3 top-3 z-30 flex flex-col
-                    rounded-xl border border-white/5 bg-[#0F4659]
+                    rounded-xl border border-white/5 bg-[#12203F]
                     shadow-2xl shadow-black/30
                     transition-[width] duration-300
                     ${open ? "w-54" : "w-[72px]"}
@@ -555,8 +555,8 @@ const Sidebar = ({ onLogout }) => {
                                             : "mx-auto h-11 w-11 justify-center"
                                         }
         ${active
-                                            ? "bg-white/[0.08] text-white"
-                                            : "text-white hover:bg-white/10 hover:text-white"
+                                            ? "bg-[#FCF7F8]/40 text-[#FCF7F8]"
+                                            : "text-[#FCF7F8] hover:bg-[#FCF7F8] hover:text-[#00464F]"
                                         }
     `}
                                 >
@@ -723,21 +723,21 @@ const Sidebar = ({ onLogout }) => {
 
                 <div className="shrink-0 p-3">
                     {open ? (
-                        <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.04] p-2.5">
+                        <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-[#FCF7F8] p-2.5">
                             <AvatarCircle src={avatarSrc} name={displayName} />
 
                             <div className="min-w-0 flex-1 leading-tight">
-                                <p className="truncate text-sm font-semibold text-white">
+                                <p className="truncate text-sm font-semibold text-[#05142D]">
                                     {displayName}
                                 </p>
-                                <p className="truncate text-xs text-white">{roleLabel}</p>
+                                <p className="truncate text-xs text-[#05142D]">{roleLabel}</p>
                             </div>
 
                             <button
                                 type="button"
                                 onClick={handleLogout}
                                 aria-label="Log out"
-                                className="rounded-lg p-2 text-white transition hover:bg-white/10 hover:text-white"
+                                className="rounded-lg p-2 text-[#05142D] transition hover:bg-[#19253A]/80 hover:text-white"
                             >
                                 <LogOut size={18} />
                             </button>

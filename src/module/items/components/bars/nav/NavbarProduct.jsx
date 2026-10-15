@@ -190,18 +190,18 @@ export default function NavbarProduct() {
                         items-center
                         gap-1
                         rounded-md
-                        bg-[#0F4659]
+                        bg-[#0096FF]
                         px-3
                         py-2
                         cursor-pointer
-                        hover:bg-[#0F4659]/90
+                        hover:bg-[#0096FF]/90
                     "
                 >
 
                     <h2
                         className="
                             font-semibold
-                            text-gray-100
+                            text-[#FCF7F8]
                         "
                     >
                         {selectedProductView ||
@@ -263,7 +263,7 @@ export default function NavbarProduct() {
                                             rounded-lg
                                             text-left
                                             text-sm
-                                            hover:bg-[#0F4659]/90
+                                            hover:bg-[#0095FD]/90
                                             hover:text-white
                                             rounded-md
                                            
@@ -345,13 +345,13 @@ export default function NavbarProduct() {
                             flex
                             items-center
                             gap-1
-                            bg-[#0F4659]
+                            bg-[#0094FF]
                             px-3
                             py-2
                             text-sm
                             font-medium
                             text-white
-                            hover:bg-[#0F4659]/90
+                            hover:bg-[#0094FF]/90
                         "
                     >
 

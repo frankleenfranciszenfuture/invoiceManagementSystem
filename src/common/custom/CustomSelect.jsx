@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
 
@@ -8,6 +9,10 @@ export default function CustomSelect({
     placeholder = "Select an option",
     className = "",
     disabled = false,
+
+    // Default settings for every module
+    width = "w-full",
+    size = "md",
 }) {
     const [open, setOpen] = useState(false);
     const [activeIndex, setActiveIndex] = useState(-1);
@@ -15,12 +20,29 @@ export default function CustomSelect({
     const containerRef = useRef(null);
     const optionRefs = useRef([]);
 
+    const isSmall = size === "sm";
+    const isLarge = size === "lg";
+
     const selectedIndex = options.findIndex(
         (option) => option.value === value
     );
 
     const selectedOption =
         selectedIndex >= 0 ? options[selectedIndex] : null;
+
+    // const triggerSize = isSmall
+    //     ? "h-9 px-6 text-xs "
+    //     : isLarge
+    //         ? "h-12 px-4 text-base"
+    //         : "h-10 px-3 text-sm";
+
+    // const optionSize = isSmall
+    //     ? "px-2.5 py-1 text-xs"
+    //     : isLarge
+    //         ? "px-4 py-3 text-base"
+    //         : "px-3 py-2 text-sm";
+
+    const iconSize = isSmall ? 14 : isLarge ? 20 : 16;
 
     useEffect(() => {
         const handleOutsideClick = (event) => {
@@ -33,12 +55,17 @@ export default function CustomSelect({
             }
         };
 
-        document.addEventListener("mousedown", handleOutsideClick);
+        document.addEventListener(
+            "pointerdown",
+            handleOutsideClick,
+            true
+        );
 
         return () => {
             document.removeEventListener(
-                "mousedown",
-                handleOutsideClick
+                "pointerdown",
+                handleOutsideClick,
+                true
             );
         };
     }, []);
@@ -58,12 +85,11 @@ export default function CustomSelect({
     };
 
     const handleKeyDown = (event) => {
-        if (disabled) return;
+        if (disabled || options.length === 0) return;
 
         if (event.key === "Escape") {
             setOpen(false);
             setActiveIndex(-1);
-            return;
         }
 
         if (event.key === "ArrowDown") {
@@ -71,9 +97,7 @@ export default function CustomSelect({
 
             if (!open) {
                 setOpen(true);
-                setActiveIndex(
-                    selectedIndex >= 0 ? selectedIndex : 0
-                );
+                setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
             } else {
                 setActiveIndex((index) =>
                     Math.min(index + 1, options.length - 1)
@@ -92,22 +116,15 @@ export default function CustomSelect({
                         : options.length - 1
                 );
             } else {
-                setActiveIndex((index) =>
-                    Math.max(index - 1, 0)
-                );
+                setActiveIndex((index) => Math.max(index - 1, 0));
             }
         }
 
-        if (
-            event.key === "Enter" ||
-            event.key === " "
-        ) {
+        if (event.key === "Enter" || event.key === " ") {
             if (!open) {
                 event.preventDefault();
                 setOpen(true);
-                setActiveIndex(
-                    selectedIndex >= 0 ? selectedIndex : 0
-                );
+                setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
             } else if (activeIndex >= 0) {
                 event.preventDefault();
                 chooseOption(options[activeIndex]);
@@ -123,7 +140,7 @@ export default function CustomSelect({
     return (
         <div
             ref={containerRef}
-            className={`relative w-full ${className}`}
+            className={`relative ${width} min-w-0 ${className}`}
             onKeyDown={handleKeyDown}
         >
             <button
@@ -138,22 +155,23 @@ export default function CustomSelect({
                     );
                 }}
                 className={`
-          flex h-10 w-[260px] items-center justify-between
-          rounded-md border border-gray-300 bg-white
-          px-3 text-left text-sm text-[#0F4659]
-          outline-none transition
-          focus:border-[#0F4659]
-          focus:ring-1 focus:ring-[#0F4659]
-          disabled:cursor-not-allowed
-          disabled:bg-gray-100 disabled:opacity-60
-        `}
+                    flex w-full items-center justify-between gap-3 p-3 py-3
+                    rounded-md border border-gray-300 bg-white
+                    text-left text-[#0F4659] text-sm
+                    outline-none transition
+                    focus:border-[#0F4659]
+                    focus:ring-1 focus:ring-[#0F4659]
+                    disabled:cursor-not-allowed
+                    disabled:bg-gray-100 disabled:opacity-60
+                    
+                `}
             >
-                <span className={!selectedOption ? "text-gray-400" : ""}>
+                <span className="min-w-0 truncate">
                     {selectedOption?.label ?? placeholder}
                 </span>
 
                 <ChevronDown
-                    size={16}
+                    size={iconSize}
                     className={`shrink-0 transition-transform ${open ? "rotate-180" : ""
                         }`}
                 />
@@ -168,11 +186,12 @@ export default function CustomSelect({
                             : undefined
                     }
                     className="
-            absolute left-0 right-0 top-full z-[100]
-            mt-1 max-h-60 w-[260px] overflow-y-auto
-            rounded-md border border-gray-200
-            bg-white p-1 shadow-lg
-          "
+                            absolute left-0 top-full z-[100] mt-1
+                            max-h-60 w-full overflow-y-auto
+                            rounded-sm border border-gray-200
+                            bg-white p-3 shadow-lg 
+                            space-y-1
+                        "
                 >
                     {options.map((option, index) => {
                         const selected = option.value === value;
@@ -188,21 +207,30 @@ export default function CustomSelect({
                                 role="option"
                                 aria-selected={selected}
                                 onMouseEnter={() => setActiveIndex(index)}
-                                onMouseDown={(event) => event.preventDefault()}
+                                onMouseDown={(event) =>
+                                    event.preventDefault()
+                                }
                                 onClick={() => chooseOption(option)}
                                 className={`
-                  flex cursor-pointer items-center
-                  justify-between rounded-sm px-3 py-2
-                  text-sm transition-colors
-                  ${active
-                                        ? "bg-[#0F4659] text-white"
+                                     flex w-full cursor-pointer items-center justify-between
+                                    gap-2 rounded-sm px-3 py-2 text-sm transition-colors
+                                  
+                                    ${active
+                                        ? "bg-[#1A2444] text-white"
                                         : "text-[#0F4659] hover:bg-[#0F4659] hover:text-white"
                                     }
-                `}
+                                `}
                             >
-                                <span>{option.label}</span>
+                                <span className="min-w-0 truncate">
+                                    {option.label}
+                                </span>
 
-                                {selected && <Check size={16} />}
+                                {selected && (
+                                    <Check
+                                        size={iconSize}
+                                        className="shrink-0"
+                                    />
+                                )}
                             </li>
                         );
                     })}

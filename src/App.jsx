@@ -117,6 +117,7 @@ import SalesPersonDashboard from "./module/salesPerson/pages/SalesPersonDashboar
 import SalesPersonOverView from "./module/salesPerson/pages/SalesPersonOverView";
 import CurrencyDashboard from "./module/currency/pages/CurrencyDashboard";
 import CurrencyCreateSimple from "./module/currency/pages/CurrencyCreateSimple";
+import SaleInvoice from "./module/invoices/pages/SaleInvoice";
 
 
 
@@ -505,8 +506,18 @@ function AppContent() {
         />
 
         <Route
-          path="/invoices/edit/:id"
+          path="/invoices/product/edit/:id"
           element={<InvoiceCreate />}
+        />
+
+        <Route
+          path="/invoices/service/edit/:id"
+          element={<ServiceInvoice />}
+        />
+
+        <Route
+          path="/invoices/sale/edit/:id"
+          element={<SaleInvoice />}
         />
 
         <Route

@@ -238,7 +238,7 @@ export default function ProductTable({ products = [] }) {
         <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
             <div className="overflow-x-auto overflow-y-visible">
                 <table className="w-full">
-                    <thead className="bg-[#F3F4F6] border-b border-gray-300">
+                    <thead className="bg-[#E5DFD6]/20 border-b border-gray-300">
                         <tr>
 
                             {[
@@ -588,7 +588,7 @@ export default function ProductTable({ products = [] }) {
                             }}
                             className="
                             text-sm
-                           text-[#0F4659] 
+                           text-[#12203F] 
                            hover:text-[#0F4659]/90
                           disabled:cursor-not-allowed
                           disabled:opacity-50
@@ -607,7 +607,7 @@ export default function ProductTable({ products = [] }) {
                             items-center
                             justify-center
                             rounded-lg
-                            bg-[#0F4659]
+                            bg-[#754DD2]
                             text-white
                             text-sm
                             font-medium
@@ -633,7 +633,7 @@ export default function ProductTable({ products = [] }) {
                             }}
                             className="
                             text-sm
-                            text-[#0F4659]
+                            text-[#12203F]
                             hover:text-[#0F4659]/90
                              disabled:cursor-not-allowed
                                 disabled:opacity-50

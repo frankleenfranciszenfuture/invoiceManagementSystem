@@ -35,7 +35,7 @@ export default function Navbar({ title }) {
             user?.username ||
             ""
         )
-            .split(" ")[0] || "there";
+    // .split(" ")[0] || "there";
 
     const today =
         new Date().toLocaleDateString(
@@ -58,7 +58,7 @@ export default function Navbar({ title }) {
             className="
                 relative z-20 mr-5 mx-2 mt-3 flex h-[54px] shrink-0
                 items-center justify-between rounded-md
-                border border-white/5 bg-[#FFFFFF] px-3
+                border border-white/5 bg-[#FCF7F8] px-3
                 shadow-xl shadow-slate-900/20
             "
         >
@@ -70,19 +70,19 @@ export default function Navbar({ title }) {
                 <div
                     className="
                         flex h-10 w-10 shrink-0 items-center justify-center
-                        rounded-xl bg-[#0F4659]-to-br from-[green]-500/25 to-green-500/5
+                        rounded-xl bg-[#0D7169]-to-br from-[green]-500/25 to-green-500/5
                         ring-1 ring-blue-400/20
                     "
                 >
-                    <FileText className="h-5 w-5 text-[#0F4659]" />
+                    <FileText className="h-5 w-5 text-[#059C69]" />
                 </div>
 
                 <div className="min-w-0 leading-tight">
-                    <h1 className="truncate text-lg font-semibold text-[#0F4659]">
+                    <h1 className="truncate text-xl font-semibold text-[#0D7169]">
                         {`Hello, ${firstName} 👋`}
                     </h1>
 
-                    <p className="hidden items-center gap-2 truncate text-xs text-[#0F4659] sm:flex">
+                    <p className="hidden items-center gap-2 truncate text-xs text-[#0F172B]/70 sm:flex">
                         <span className="truncate">Today is {today}</span>
                     </p>
                 </div>
@@ -104,7 +104,7 @@ export default function Navbar({ title }) {
                     className="
                         flex items-center gap-1 rounded-xl
                         bg-white/[0.05] p-1 ring-1 ring-white/5
-                        [&_button_svg]:text-[#0F4659]
+                        [&_button_svg]:text-[#0097FF]
                         [&_button:hover_svg]:text-white
                     "
                 >

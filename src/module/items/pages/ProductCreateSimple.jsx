@@ -4079,14 +4079,14 @@ export default function ProductCreateSimple() {
             <div className="shrink-0 px-6 py-4 bg-white border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div
-                        className="w-10 h-10 rounded-lg bg-[#0F4659]/20 border border-blue-100 flex items-center justify-center cursor-pointer"
+                        className="w-10 h-10 rounded-lg bg-[#0095FD]/20 border border-blue-100 flex items-center justify-center cursor-pointer"
 
                         onClick={() => (navigate("/items"))}
                     >
 
                         <Package
                             size={20}
-                            className="text-[#0F4659]"
+                            className="text-[#0095FD]"
                         />
 
                     </div>
@@ -4094,7 +4094,7 @@ export default function ProductCreateSimple() {
 
                     <div>
 
-                        <h1 className="text-lg font-semibold text-[#0F4659]"
+                        <h1 className="text-lg font-semibold text-[#0095FD]"
                             onClick={() => (navigate("/items"))}
                         >
                             {isEdit
@@ -4102,7 +4102,7 @@ export default function ProductCreateSimple() {
                                 : "New Product"}
                         </h1>
 
-                        <p className="mt-0.5 text-xs text-[#0F4659]">
+                        <p className="mt-0.5 text-xs text-[#0095FD]">
                             {isEdit
                                 ? "Update product information"
                                 : "Create a new product"}
@@ -4266,7 +4266,7 @@ export default function ProductCreateSimple() {
                                     saveAndClose: true,
                                 })
                             }
-                            className="h-10 rounded-l-md bg-[#0F4659] px-5 text-sm font-medium text-white hover:bg-[#0F4659]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="h-10 rounded-l-md bg-[#0095FD] px-5 text-sm font-medium text-white hover:bg-[#0095FD]/90 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {loading
                                 ? isEdit
@@ -4283,7 +4283,7 @@ export default function ProductCreateSimple() {
                             onClick={() =>
                                 setShowSaveMenu((previous) => !previous)
                             }
-                            className="flex h-10 w-10 items-center justify-center rounded-r-md border-l border-white/30 bg-[#0F4659] text-white hover:bg-[#0F4659]/90 disabled:opacity-50"
+                            className="flex h-10 w-10 items-center justify-center rounded-r-md border-l border-white/30 bg-[#0095FD] text-white hover:bg-[#0095FD]/90 disabled:opacity-50"
                             aria-label="More save options"
                         >
                             <ChevronDown

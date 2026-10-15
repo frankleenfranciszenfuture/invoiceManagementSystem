@@ -26,7 +26,7 @@ export default function ProfileButton() {
             <button
                 ref={buttonRef}
                 onClick={() => dispatch(toggleProfileMenu())}
-                className="w-8 h-8 rounded-full bg-[#0F4659] text-white flex items-center justify-center text-sm font-medium"
+                className="w-10 h-10 rounded-full bg-[#6D3279] text-white flex items-center justify-center text-sm font-medium"
             >
                 {initials(user?.name)}
             </button>

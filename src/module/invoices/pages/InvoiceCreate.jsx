@@ -15,6 +15,7 @@ import {
 import {
   useNavigate,
   useParams,
+  useLocation
 } from "react-router-dom";
 
 import {
@@ -40,7 +41,10 @@ import {
   FileSpreadsheet,
   Package,
   Wrench,
-  ShieldCheck
+  ShieldCheck,
+  Landmark,
+  Inbox,
+  BoxIcon
 } from "lucide-react";
 
 import {
@@ -84,6 +88,8 @@ import {
 import { fetchAllSalesPersons } from "../../salesPerson/thunks/salesPersonThunks";
 
 import CustomSelect from "../../../common/custom/CustomSelect";
+import CustomStatusSelect from "../../../common/custom/CustomStatusSelect";
+import CustomSUSelect from "../../../common/custom/CustomSUSelect";
 
 
 /* =========================================================
@@ -126,7 +132,28 @@ const getArray = (value) => {
   return [];
 };
 
+const calculateDueDate = (invoiceDate, terms) => {
+  if (!invoiceDate) return "";
 
+  const daysMap = {
+    NET15: 15,
+    NET30: 30,
+    NET45: 45,
+    NET60: 60,
+    DUE_ON_RECEIPT: 0,
+  };
+
+  const days = daysMap[terms] ?? 0;
+  const date = new Date(`${invoiceDate.slice(0, 10)}T00:00:00`);
+
+  date.setDate(date.getDate() + days);
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
 /* =========================================================
    COMPONENT
 ========================================================= */
@@ -137,6 +164,7 @@ export default function InvoiceCreate() {
 
   const { id } = useParams();
 
+  const location = useLocation();
 
   const [showInvoiceTypeOptions, setShowInvoiceTypeOptions] =
     useState(true);
@@ -145,24 +173,43 @@ export default function InvoiceCreate() {
   // SELECT PRODUCT INVOICE
   // =========================================================
 
+  // CREATE PRODUCT INVOICE
   const handleProductInvoice = () => {
     setShowInvoiceTypeOptions(false);
-
     dispatch(closeModal());
 
-    navigate("/invoices/product/new");
+    navigate("/invoices/product/new", {
+      state: {
+        invoiceType: "PRODUCT_INVOICE",
+      },
+    });
   };
 
+  // EDIT PRODUCT INVOICE — skip type selection
+  const handleEditProductInvoice = (invoice) => {
+    setShowInvoiceTypeOptions(false);
+    dispatch(closeModal());
+
+    navigate(`/invoices/product/edit/${invoice.id}`, {
+      state: {
+        invoiceType: "PRODUCT_INVOICE",
+        invoice,
+      },
+    });
+  };
   // =========================================================
   // SELECT SERVICE INVOICE
   // =========================================================
 
   const handleServiceInvoice = () => {
     setShowInvoiceTypeOptions(false);
-
     dispatch(closeModal());
 
-    navigate("/invoices/service/new");
+    navigate("/invoices/service/new", {
+      state: {
+        invoiceType: "SERVICE_INVOICE",
+      },
+    });
   };
 
   // =========================================================
@@ -211,6 +258,13 @@ export default function InvoiceCreate() {
 
   const handleStayOnInvoiceType = () => {
     setShowLeaveConfirmation(false);
+    dispatch(
+      setInvoiceField({
+        field: "invoiceType",
+        value: location.state?.invoiceType || "PRODUCT_INVOICE",
+      })
+    );
+
   };
 
   // =========================================================
@@ -219,10 +273,8 @@ export default function InvoiceCreate() {
 
   const handleLeaveInvoiceType = () => {
     setShowLeaveConfirmation(false);
-    setShowInvoiceTypeOptions(false);
 
-    dispatch(closeModal());
-    navigate(-1);
+    navigate("/invoices");
   };
 
 
@@ -380,6 +432,10 @@ export default function InvoiceCreate() {
 
   const [dropdownOpen, setDropdownOpen] =
     useState(false);
+
+  const handleRequestLeave = () => {
+    setShowLeaveConfirmation(true);
+  };
 
   /* =======================================================
      INVOICE REDUX
@@ -621,7 +677,7 @@ export default function InvoiceCreate() {
     setSalesPersonSearch("");
     setItemSearch("");
     setOpenCustomer(false);
-    set(false);
+    setOpenSalesPerson(false);
     setOpenRowItemDropdown(false);
     setActiveItemId(null);
     setShowSummary(true);
@@ -679,7 +735,7 @@ export default function InvoiceCreate() {
     dispatch(
       setInvoiceField({
         field: "invoiceType",
-        value: "SALE_INVOICE",
+        value: location.state?.invoiceType || "PRODUCT_INVOICE",
       })
     );
 
@@ -708,7 +764,10 @@ export default function InvoiceCreate() {
       })
     );
 
-
+    dispatch(setInvoiceField({
+      field: "invoiceDate",
+      value: "",
+    }));
     /* ==========================================
        CLEAR CUSTOMER
     ========================================== */
@@ -911,6 +970,26 @@ export default function InvoiceCreate() {
     invoice?.invoiceNumber,
   ]);
 
+  /* =========================================================
+      LOAD INVOICE DATE
+   ========================================================= */
+
+  useEffect(() => {
+    if (!invoice.invoiceDate) {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
+
+      dispatch(
+        setInvoiceField({
+          field: "invoiceDate",
+          value: `${year}-${month}-${day}`,
+        })
+      );
+    }
+  }, [invoice.invoiceDate, dispatch]);
+
 
   useEffect(() => {
     // ADD MODAL MUST NEVER LOAD AN INVOICE
@@ -1072,6 +1151,7 @@ export default function InvoiceCreate() {
 
   const handleClose = () => {
 
+
     dispatch(
       resetInvoiceForm()
     );
@@ -1088,12 +1168,9 @@ export default function InvoiceCreate() {
       return;
     }
 
+    handleRequestLeave();
 
-    navigate(
-      "/invoices"
-    );
   };
-
 
   /* =========================================================
      CUSTOMER NAME
@@ -1672,124 +1749,73 @@ export default function InvoiceCreate() {
   };
 
 
-  const handleDueDateChange = (
-    date
-  ) => {
-
+  const handleDueDateChange = (date) => {
     if (!date) {
-
       dispatch(
         setInvoiceField({
-          field:
-            "dueDate",
+          field: "dueDate",
           value: "",
         })
       );
-
       return;
     }
 
-
-    const value =
-      date
-        .toISOString()
-        .split("T")[0];
-
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
 
     dispatch(
       setInvoiceField({
-        field:
-          "dueDate",
-        value,
+        field: "dueDate",
+        value: `${year}-${month}-${day}`,
       })
     );
   };
-
 
   /* =========================================================
      TERMS
   ========================================================= */
 
-  const handleTermsChange = (
-    value
-  ) => {
-
+  const handleTermsChange = (field, value) => {
+    // Update the selected payment terms
     dispatch(
       setInvoiceField({
-        field:
-          "termsAndConditions",
+        field,
         value,
       })
     );
 
+    if (field === "termsAndConditions") {
+      const invoiceDate = invoice.invoiceDate;
 
-    if (
-      !invoice.invoiceDate
-    ) {
-      return;
-    }
+      if (!invoiceDate) return;
 
+      const daysMap = {
+        "Due on Receipt": 0,
+        "Net 15": 15,
+        "Net 30": 30,
+      };
 
-    const invoiceDate =
-      new Date(
-        invoice.invoiceDate
+      const dueDate = new Date(
+        `${invoiceDate.slice(0, 10)}T00:00:00`
       );
 
-
-    if (
-      value ===
-      "Net 15"
-    ) {
-
-      invoiceDate.setDate(
-        invoiceDate.getDate() +
-        15
+      dueDate.setDate(
+        dueDate.getDate() + (daysMap[value] ?? 0)
       );
-    }
 
-
-    if (
-      value ===
-      "Net 30"
-    ) {
-
-      invoiceDate.setDate(
-        invoiceDate.getDate() +
-        30
-      );
-    }
-
-
-    if (
-      value ===
-      "Due on Receipt"
-    ) {
+      const year = dueDate.getFullYear();
+      const month = String(dueDate.getMonth() + 1).padStart(2, "0");
+      const day = String(dueDate.getDate()).padStart(2, "0");
 
       dispatch(
         setInvoiceField({
-          field:
-            "dueDate",
-          value:
-            invoice.invoiceDate,
+          field: "dueDate",
+          value: `${year}-${month}-${day}`,
         })
       );
-
-      return;
     }
-
-
-    dispatch(
-      setInvoiceField({
-        field:
-          "dueDate",
-        value:
-          invoiceDate
-            .toISOString()
-            .split("T")[0],
-      })
-    );
   };
-
 
   /* =========================================================
      ITEM FIELD
@@ -2177,9 +2203,7 @@ export default function InvoiceCreate() {
         invoice.invoiceNumber ||
         null,
 
-      invoiceType:
-        invoice.invoiceType ||
-        "SALE_INVOICE",
+      invoiceType: invoice.invoiceType || "PRODUCT_INVOICE",
 
       invoiceStatus: invoice.invoiceStatus || "DRAFT",
 
@@ -2455,7 +2479,7 @@ export default function InvoiceCreate() {
   return (
 
     <>
-      <div>
+      <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-5">
 
         <div
           className={
@@ -2469,24 +2493,36 @@ export default function InvoiceCreate() {
             HEADER
         ================================================= */}
 
-          <div className="px-6 py-4 bg-white border-b border-gray-200 shrink-0">
+          <div className="mr-2 px-6 py-4 bg-white border-b border-gray-200 shrink-0">
 
             <div className="flex items-center justify-between">
 
               <div className="flex items-center gap-3">
 
-                <div className="w-7 h-7 border-2 border-gray-400 rounded-sm flex items-center justify-center">
+                {/* <div className="w-7 h-7 border-2 border-[#12203F] rounded-sm flex items-center justify-center">
 
-                  <div className="w-3 h-3 border border-gray-400 rounded-sm" />
+                  <div className="w-3 h-3 border border-[#12203F] rounded-sm" />
 
+                </div> */}
+                <div
+                  className="w-10 h-10 rounded-lg bg-[#0095FD] border border-blue-100 flex items-center justify-center cursor-pointer"
+                  onClick={() => navigate("/bankAccount")}
+                >
+                  <BoxIcon
+                    size={20}
+                    className="text-[#FCF7F8]"
+                  />
                 </div>
 
-                <h1 className="text-lg font-semibold text-gray-800">
-
-                  {isEdit
-                    ? "Edit Product Invoice"
-                    : "Product Invoice"}
-
+                <h1 className="text-lg font-semibold text-[#0095FD]">
+                  {isEdit ? "Edit " : ""}
+                  {{
+                    PRODUCT_INVOICE: "Product Invoice",
+                    SERVICE_INVOICE: "Service Invoice",
+                    SALE_INVOICE: "Sales Invoice",
+                    PURCHASE_INVOICE: "Purchase Invoice",
+                    TAX_INVOICE: "Tax Invoice",
+                  }[invoice.invoiceType] || ""}
                 </h1>
 
               </div>
@@ -2494,16 +2530,14 @@ export default function InvoiceCreate() {
 
               <div className="flex items-center gap-4">
 
-                <button
+                <div
                   type="button"
                   className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700"
                 >
 
-                  <Settings size={15} />
+                  {invoice.invoiceType || ""}
 
-                  Customize invoice
-
-                </button>
+                </div>
 
 
                 <button
@@ -2518,6 +2552,7 @@ export default function InvoiceCreate() {
 
                 </button>
 
+
               </div>
 
             </div>
@@ -2529,7 +2564,7 @@ export default function InvoiceCreate() {
             BODY
         ================================================= */}
 
-          <div className="flex-1 overflow-y-auto px-5 py-4">
+          <div className="flex-1 overflow-y-auto px-5 py-6">
 
             {/* =================================================
               CUSTOMER
@@ -3013,32 +3048,6 @@ export default function InvoiceCreate() {
             </div>
 
 
-            {/* =================================================
-              INVOICE TYPE
-          ================================================= */}
-
-            <div className="flex items-center mb-4">
-
-              <label className="w-44 text-sm font-medium text-gray-700 shrink-0">
-                Invoice Type
-              </label>
-
-              <CustomSelect
-
-                value={invoice.invoiceType || ""}
-                onChange={(value) =>
-                  handleInvoiceFieldChange("invoiceType", value)
-                }
-                options={[
-                  { value: "SALE_INVOICE", label: "SALE_INVOICE" },
-                  { value: "PURCHASE_INVOICE", label: "PURCHASE_INVOICE" },
-                  { value: "TAX_INVOICE", label: "TAX_INVOICE" },
-                ]}
-              />
-
-
-
-            </div>
 
 
 
@@ -3306,69 +3315,6 @@ export default function InvoiceCreate() {
                 </div>
               </div>
 
-
-
-
-
-              {/* DETAILS */}
-
-              {invoice.salesPersonId && (
-
-                <div className="ml-auto w-60 shrink-0">
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowSalesPersonDetails(
-                        (v) => !v
-                      )
-                    }
-                    className="w-full h-11 px-4 flex items-center justify-between bg-slate-600 hover:bg-slate-700 text-white rounded-md font-semibold text-sm"
-                  >
-
-                    <span className="truncate">
-                      {invoice.salesPersonName}'s Details
-                    </span>
-
-
-                    <ChevronRight
-                      size={16}
-                      className={`transition-transform ${showSalesPersonDetails
-                        ? "rotate-90"
-                        : ""
-                        }`}
-                    />
-
-                  </button>
-
-
-                  {showSalesPersonDetails && (
-
-                    <div className="bg-white border border-gray-200 rounded-b-md p-3 text-sm text-gray-600 space-y-1">
-
-                      <p>
-                        {selectedSalesPerson?.salesPersonType ||
-                          "No email"}
-                      </p>
-                      <p>
-                        {selectedSalesPerson?.email ||
-                          "No email"}
-                      </p>
-
-                      <p>
-                        {selectedSalesPerson?.mobile ||
-                          selectedCustomer?.phoneNumber ||
-                          selectedCustomer?.mobileNumber ||
-                          "No phone"}
-                      </p>
-
-                    </div>
-
-                  )}
-
-                </div>
-              )}
-
             </div>
 
 
@@ -3407,11 +3353,12 @@ export default function InvoiceCreate() {
                 </label>
 
                 <CustomSelect
-
                   value={invoice.termsAndConditions || "Due on Receipt"}
                   onChange={(value) =>
                     handleTermsChange("termsAndConditions", value)
                   }
+                  width="w-[280px]"
+                  size="sm"
                   options={[
                     { value: "Due on Receipt", label: "Due on Receipt" },
                     { value: "Net 15", label: "Net 15" },
@@ -3433,42 +3380,20 @@ export default function InvoiceCreate() {
                 <DatePicker
                   selected={
                     invoice.dueDate
-                      ? new Date(
-                        invoice.dueDate
-                      )
+                      ? new Date(`${invoice.dueDate.slice(0, 10)}T00:00:00`)
                       : null
                   }
-                  onChange={
-                    handleDueDateChange
-                  }
+                  onChange={handleDueDateChange}
                   dateFormat="dd/MM/yyyy"
                   placeholderText="Due date"
-                  className="w-[150px] border border-gray-300 rounded px-3 py-2"
+                  className="w-[330px] border border-gray-300 rounded px-3 py-2"
                 />
 
               </div>
 
             </div>
 
-            <div className="flex items-center mb-4">
-              <label className="w-44 text-sm font-medium text-gray-700 shrink-0">
-                Invoice Status
-              </label>
 
-              <CustomSelect
-
-                value={invoice.status || "ACTIVE"}
-                onChange={(value) =>
-                  handleChange("status", value)
-                }
-                options={[
-                  { value: "ACTIVE", label: "ACTIVE" },
-                  { value: "INACTIVE", label: "INACTIVE" },
-                  { value: "DRAFT", label: "DRAFT" },
-                ]}
-              />
-
-            </div>
 
 
             {/* =================================================
@@ -3500,8 +3425,7 @@ export default function InvoiceCreate() {
               </div>
 
 
-              <div className="overflow-x-auto overflow-y-visible">
-
+              <div className="w-full max-w-full overflow-x-auto overflow-y-visible">
                 <table className="w-full min-w-[1250px]">
 
                   <thead>
@@ -3635,108 +3559,44 @@ export default function InvoiceCreate() {
                             {/* UNIT */}
 
                             <td className="px-3 py-3">
-
-                              <select
-                                value={
-                                  item.unitId ||
-                                  ""
+                              <CustomSUSelect
+                                value={item.unitId || ""}
+                                onChange={(value) =>
+                                  updateItem(index, "unitId", value)
                                 }
-                                onChange={(
-                                  event
-                                ) =>
-                                  updateItem(
-                                    index,
-                                    "unitId",
-                                    event.target.value
-                                  )
-                                }
-                                className="w-full border border-gray-200 rounded px-2 py-2 text-sm bg-white focus:outline-none focus:border-blue-400"
-                              >
-
-                                <option value="">
-                                  Select
-                                </option>
-
-
-                                {units.map(
-                                  (
-                                    unit
-                                  ) => (
-
-                                    <option
-                                      key={
-                                        unit.id
-                                      }
-                                      value={
-                                        unit.id
-                                      }
-                                    >
-                                      {
-                                        unit.unitName ||
-                                        unit.name ||
-                                        unit.unitCode
-                                      }
-                                    </option>
-
-                                  )
-                                )}
-
-                              </select>
-
+                                placeholder="Select"
+                                width="w-full"
+                                size="sm"
+                                options={[
+                                  { value: "", label: "Select" },
+                                  ...units.map((unit) => ({
+                                    value: String(unit.id),
+                                    label: unit.unitName || unit.name || unit.unitCode,
+                                  })),
+                                ]}
+                              />
                             </td>
 
 
                             {/* SIZE */}
 
                             <td className="px-3 py-3">
-
-                              <select
-                                value={
-                                  item.sizeId ||
-                                  ""
+                              <CustomSUSelect
+                                value={item.sizeId || ""}
+                                onChange={(value) =>
+                                  updateItem(index, "sizeId", value)
                                 }
-                                onChange={(
-                                  event
-                                ) =>
-                                  updateItem(
-                                    index,
-                                    "sizeId",
-                                    event.target.value
-                                  )
-                                }
-                                className="w-full border border-gray-200 rounded px-2 py-2 text-sm bg-white focus:outline-none focus:border-blue-400"
-                              >
-
-                                <option value="">
-                                  Select
-                                </option>
-
-
-                                {sizes.map(
-                                  (
-                                    size
-                                  ) => (
-
-                                    <option
-                                      key={
-                                        size.id
-                                      }
-                                      value={
-                                        size.id
-                                      }
-                                    >
-                                      {
-                                        size.sizeName ||
-                                        size.name ||
-                                        size.sizeCode
-                                      }
-                                    </option>
-
-                                  )
-                                )}
-
-                              </select>
-
+                                placeholder="Select"
+                                width="w-full"
+                                size="sm"
+                                options={[
+                                  { value: "", label: "Select" },
+                                  ...sizes.map((size) => ({
+                                    value: String(size.id),
+                                    label: size.sizeName || size.name || size.sizeCode,
+                                  })),
+                                ]}
+                              />
                             </td>
 
 
@@ -3785,33 +3645,20 @@ export default function InvoiceCreate() {
 
                             <td className="px-3 py-3">
 
-                              <select
-                                value={
-                                  item.taxMasterId ||
-                                  ""
+                              <CustomSUSelect
+                                value={String(item.taxMasterId || "")}
+                                onChange={(value) =>
+                                  updateItem(index, "taxMasterId", value)
                                 }
-                                onChange={(
-                                  event
-                                ) =>
-                                  updateItem(
-                                    index,
-                                    "taxMasterId",
-                                    event.target.value
-                                  )
-                                }
-                                className="w-full border border-gray-200 rounded px-2 py-2 text-sm bg-white focus:outline-none focus:border-blue-400"
-                              >
-
-                                <option value="">
-                                  Select
-                                </option>
-
-
-                                {taxMasters.map(
-                                  (
-                                    tax
-                                  ) => {
-
+                                placeholder="Select"
+                                width="w-full"
+                                size="sm"
+                                options={[
+                                  {
+                                    value: "",
+                                    label: "Select",
+                                  },
+                                  ...taxMasters.map((tax) => {
                                     const rate =
                                       tax.taxPercentage ??
                                       tax.taxRate ??
@@ -3819,35 +3666,13 @@ export default function InvoiceCreate() {
                                       tax.percentage ??
                                       0;
 
-
-                                    return (
-
-                                      <option
-                                        key={
-                                          tax.id
-                                        }
-                                        value={
-                                          tax.id
-                                        }
-                                      >
-
-                                        {
-                                          tax.taxName ||
-                                          tax.name ||
-                                          tax.taxType ||
-                                          "Tax"
-                                        }{" "}
-
-                                        ({rate}%)
-
-                                      </option>
-
-                                    );
-                                  }
-                                )}
-
-                              </select>
-
+                                    return {
+                                      value: String(tax.id),
+                                      label: `${tax.taxName || tax.name || tax.taxType || "Tax"} (${rate}%)`,
+                                    };
+                                  }),
+                                ]}
+                              />
                             </td>
 
 
@@ -4852,6 +4677,25 @@ export default function InvoiceCreate() {
                 </div>
               </button>
 
+              {/* SALE INVOICE */}
+              <button
+                type="button"
+                onClick={handleProductInvoice}
+                className="flex items-center gap-3 rounded-xl border border-gray-200 p-4 text-left transition hover:border-blue-400 hover:bg-blue-50"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+                  <Package className="text-blue-600" size={21} />
+                </div>
+
+                <div>
+                  <p className="font-semibold text-gray-800">
+                    SALE Invoice
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Create invoices for products and inventory.
+                  </p>
+                </div>
+              </button>
 
             </div>
 

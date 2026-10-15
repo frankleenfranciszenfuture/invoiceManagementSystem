@@ -290,7 +290,7 @@ export default function ProductViewDetails() {
                     {/* Product Summary */}
                     <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-3">
-                            <h2 className="text-lg font-semibold text-gray-900">
+                            <h2 className="text-lg font-semibold text-[#12203F]">
                                 {product.productName}
                             </h2>
                             <StatusBadge status={product.status} />
@@ -300,7 +300,7 @@ export default function ProductViewDetails() {
                             {product.description || "No description added."}
                         </p>
 
-                        <p className="mt-3 text-xl font-semibold text-[#0F4659]">
+                        <p className="mt-3 text-xl font-semibold text-[#CF230F]">
                             {money(product.sellingPrice)}
                         </p>
 
@@ -339,7 +339,8 @@ export default function ProductViewDetails() {
                         <button
                             type="button"
                             onClick={handleNew}
-                            className="flex items-center justify-center gap-1.5 rounded-full bg-[#0F4659] px-5 py-2.5 text-xs font-medium text-white transition hover:bg-[#066b63]"
+                            className="flex items-center justify-center gap-1.5 rounded-full bg-[#0095FD] px-5 py-2.5 text-xs 
+                                font-medium text-white transition hover:bg-[#0095FD]/90"
                         >
                             <Plus size={13} />
                             New Product

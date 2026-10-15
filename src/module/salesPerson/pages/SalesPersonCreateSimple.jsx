@@ -42,6 +42,7 @@ import {
 } from "../../menuPermission/thunks/menuPermissionThunks";
 
 import CustomSelect from "../../../common/custom/CustomSelect";
+import CustomStatusSelect from "../../../common/custom/CustomStatusSelect";
 
 /* =========================================================
    CONSTANTS
@@ -841,6 +842,33 @@ export default function SalesPersonCreateSimple() {
         </div>
     );
 
+    const renderStatusSelect = ({
+        field,
+        label,
+        options,
+        required = false,
+    }) => (
+        <div>
+            <label className={required ? getLabelClass(true) : labelClass}>
+                {label}
+                {required && (
+                    <span className="ml-1 text-red-500">*</span>
+                )}
+            </label>
+
+            <CustomStatusSelect
+                value={form[field] || ""}
+                onChange={(value) => handleChange(field, value)}
+                options={options}
+            />
+
+            {errors[field] && (
+                <p className={errorClass}>
+                    {errors[field]}
+                </p>
+            )}
+        </div>
+    );
     /* =====================================================
        COMPANY TAB
     ===================================================== */
@@ -860,20 +888,21 @@ export default function SalesPersonCreateSimple() {
 
                 <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
                     <div className="space-y-5">
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            {renderSelect({
+                                field: "salesPersonType",
+                                label: "Sales Person Type",
+                                options: SALESPERSON_OPTIONS,
+                                required: true,
+                            })}
 
-                        {renderSelect({
-                            field: "salesPersonType",
-                            label: "Sales Person Type",
-                            options: SALESPERSON_OPTIONS,
-                            required: true,
-                        })}
-
-                        {renderInput({
-                            field: "salesPersonName",
-                            label: "Sales Person Name",
-                            placeholder: "Enter sales person name",
-                            required: true,
-                        })}
+                            {renderInput({
+                                field: "salesPersonName",
+                                label: "Sales Person Name",
+                                placeholder: "Enter sales person name",
+                                required: true,
+                            })}
+                        </div>
                         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
 
                             {renderInput({
@@ -910,7 +939,7 @@ export default function SalesPersonCreateSimple() {
                             </h3>
                         </div>
 
-                        {renderSelect({
+                        {renderStatusSelect({
                             field: "status",
                             label: "Status",
                             options: STATUS_OPTIONS,

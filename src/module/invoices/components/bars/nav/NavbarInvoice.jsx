@@ -15,6 +15,7 @@ import {
     Plus,
     ChevronDown,
     MoreHorizontal,
+    Settings,
 } from "lucide-react";
 
 import {
@@ -23,6 +24,7 @@ import {
 } from "../../../slices/invoiceViewSlice";
 
 import { openModal } from "../../../../ui/uiSlice";
+import { setExistingInvoice } from "../../../slices/invoiceSlice";
 
 export default function NavbarInvoice() {
 
@@ -141,6 +143,7 @@ export default function NavbarInvoice() {
         setDropdownOpen(false);
     };
 
+
     // ============================================================
     // RENDER
     // ============================================================
@@ -183,17 +186,18 @@ export default function NavbarInvoice() {
                         items-center
                         gap-1
                         rounded-md
-                        bg-blue-600
-                        px-3
+                         bg-[#0096FF]
+                       px-3
                         py-2
                         cursor-pointer
+                        hover:bg-[#0096FF]/90
                     "
                 >
 
                     <h2
                         className="
                             font-semibold
-                            text-gray-100
+                           text-[#FCF7F8]
                         "
                     >
                         {selectedInvoiceView ||
@@ -261,13 +265,10 @@ export default function NavbarInvoice() {
                                             border-gray-50
                                             rounded-lg
                                             text-left
-                                            hover:bg-blue-500
+                                           text-sm
+                                            hover:bg-[#0095FD]/90
                                             hover:text-white
-                                            ${invoiceStatus ===
-                                                view.value
-                                                ? "bg-blue-50 text-blue-600"
-                                                : ""
-                                            }
+                                            rounded-md
                                         `}
                                     >
 
@@ -287,21 +288,25 @@ export default function NavbarInvoice() {
                         <button
                             type="button"
                             className="
-                                w-full
-                                border-t
-                                border-gray-200
-                                px-4
-                                py-3
-                                text-left
-                                text-blue-600
-                                hover:bg-gray-50
-                            "
+                                    w-full
+                                    border-t
+                                    border-gray-200
+                                    px-4
+                                    py-3
+                                    text-left
+                                    text-[#0F4659] 
+                                    hover:text-white
+                                    hover:bg-[#0095FD]/80
+                                    rounded-lg
+                                "
                             onClick={() => {
-                                setDropdownOpen(false);
+                                dispatch(setExistingInvoice(null));
+                                navigate("/invoices/product/new")
                             }}
                         >
                             + New View
                         </button>
+
 
                     </div>
 
@@ -347,13 +352,13 @@ export default function NavbarInvoice() {
                             flex
                             items-center
                             gap-1
-                            bg-blue-600
+                            bg-[#0095FD]
                             px-3
                             py-2
                             text-sm
                             font-medium
                             text-white
-                            hover:bg-blue-700
+                            hover:bg-[#0095FD]/90
                         "
                     >
 
@@ -377,10 +382,14 @@ export default function NavbarInvoice() {
 
                     <button
                         type="button"
+                        // onClick={() =>
+                        //     setMoreOpen(
+                        //         (prev) => !prev
+                        //     )
+                        // }
+
                         onClick={() =>
-                            setMoreOpen(
-                                (prev) => !prev
-                            )
+                            navigate("/settings")
                         }
                         className="
                             rounded-md
@@ -390,18 +399,14 @@ export default function NavbarInvoice() {
                             hover:bg-gray-50
                         "
                         title="More"
+
                     >
 
-                        <MoreHorizontal
+                        <Settings
                             size={18}
                         />
 
                     </button>
-
-
-                    {/* =================================================
-                        MORE DROPDOWN
-                    ================================================== */}
 
                     {moreOpen && (
 
@@ -410,7 +415,7 @@ export default function NavbarInvoice() {
                                 absolute
                                 right-0
                                 mt-2
-                                w-52
+                                w-35
                                 rounded-md
                                 border
                                 border-gray-200
@@ -418,126 +423,37 @@ export default function NavbarInvoice() {
                                 shadow-lg
                                 z-50
                                 overflow-hidden
+                                
                             "
                         >
 
-                            {/* =========================================
-                                CREATE INVOICE
-                            ========================================== */}
+                            {/* Settings */}
 
                             <button
                                 type="button"
-                                onClick={
-                                    handleNewInvoice
-                                }
+
                                 className="
                                     w-full
-                                    px-4
+                                    flex
+                                    items-center justify-left gap-1.5
+                                    px-3
                                     py-3
                                     text-left
                                     text-sm
-                                    text-gray-700
-                                    hover:bg-blue-50
-                                    hover:text-blue-600
+                                    text-[#0F4659]
+                                    hover:bg-[#0F4659]/90
+                                    hover:text-white
                                 "
                             >
-                                New Invoice
+
+                                <Plus size={13} />
+                                Settings
                             </button>
 
 
-                            {/* =========================================
-                                INVOICE
-                            ========================================== */}
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(false);
-
-                                    navigate(
-                                        "/invoices"
-                                    );
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-blue-50
-                                    hover:text-blue-600
-                                "
-                            >
-                                Invoice List
-                            </button>
 
 
-                            {/* =========================================
-                                CREATE PAGE
-                            ========================================== */}
 
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(false);
-
-                                    navigate(
-                                        "/invoices/create"
-                                    );
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-blue-50
-                                    hover:text-blue-600
-                                "
-                            >
-                                Create Invoice
-                            </button>
-
-
-                            {/* =========================================
-                                DIVIDER
-                            ========================================== */}
-
-                            <div
-                                className="
-                                    border-t
-                                    border-gray-100
-                                "
-                            />
-
-
-                            {/* =========================================
-                                INVOICE SETTINGS
-                            ========================================== */}
-
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setMoreOpen(false);
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-gray-50
-                                "
-                            >
-                                Invoice Settings
-                            </button>
 
                         </div>
 
@@ -547,6 +463,6 @@ export default function NavbarInvoice() {
 
             </div>
 
-        </div>
+        </div >
     );
 }

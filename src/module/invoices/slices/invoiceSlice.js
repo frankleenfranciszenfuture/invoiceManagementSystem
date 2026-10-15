@@ -24,13 +24,23 @@ const emptyInvoiceItem = {
   taxMasterId: "",
 };
 
+const getTodayDate = () => {
+  const today = new Date();
+
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
 /* =========================================================
    EMPTY INVOICE FORM
 ========================================================= */
 
 const emptyInvoice = {
   invoiceNumber: "",
-  invoiceType: "SALE_INVOICE",
+  invoiceType: "",
 
   customerId: "",
   customerName: "",
@@ -41,7 +51,7 @@ const emptyInvoice = {
   currencyId: "",
   exchangeRate: "",
 
-  invoiceDate: "",
+  invoiceDate: getTodayDate(),
   dueDate: "",
 
   subtotal: 0,
@@ -85,6 +95,8 @@ const initialState = {
     nextNumber: "0000",
     restartFiscalYear: false,
   },
+
+  invoiceDate: getTodayDate(),
 
   /*
    * Existing invoice
@@ -220,6 +232,7 @@ const invoiceSlice = createSlice({
       state.invoice = {
         ...emptyInvoice,
         invoiceItems: [],
+        invoiceDate: getTodayDate(),
       };
 
       state.exsistingInvoice = null;

@@ -15,6 +15,7 @@ import {
 import {
     useNavigate,
     useParams,
+    useLocation
 } from "react-router-dom";
 
 import {
@@ -40,7 +41,8 @@ import {
     FileSpreadsheet,
     Package,
     Wrench,
-    ShieldCheck
+    ShieldCheck,
+    BoxIcon
 } from "lucide-react";
 
 import {
@@ -138,6 +140,8 @@ export default function ServiceInvoice() {
     const { id } = useParams();
 
 
+    const location = useLocation();
+
     const [showInvoiceTypeOptions, setShowInvoiceTypeOptions] =
         useState(true);
 
@@ -166,6 +170,14 @@ export default function ServiceInvoice() {
 
     const handleStayOnInvoiceType = () => {
         setShowLeaveConfirmation(false);
+
+        dispatch(
+            setInvoiceField({
+                field: "invoiceType",
+                value: location.state?.invoiceType || "SERVICE_INVOICE",
+            })
+        );
+
     };
 
     // =========================================================
@@ -418,7 +430,7 @@ export default function ServiceInvoice() {
 
     /* =======================================================
       SALESPERSON REDUX
-   ======================================================= */
+    ======================================================= */
 
     const salesPersonState = useSelector(
         (state) => state.salesPerson
@@ -634,7 +646,7 @@ export default function ServiceInvoice() {
         dispatch(
             setInvoiceField({
                 field: "invoiceType",
-                value: "SALE_INVOICE",
+                value: location.state?.invoiceType || "SERVICE_INVOICE",
             })
         );
 
@@ -1137,7 +1149,7 @@ export default function ServiceInvoice() {
 
     /* =========================================================
     SALES PERSON NAME
-  ========================================================= */
+    ========================================================= */
 
     const getSalesPersonName = (
         salesPerson
@@ -2133,7 +2145,7 @@ export default function ServiceInvoice() {
 
             invoiceType:
                 invoice.invoiceType ||
-                "SALE_INVOICE",
+                "SERVICE_INVOICE",
 
             invoiceStatus: invoice.invoiceStatus || "DRAFT",
 
@@ -2409,7 +2421,7 @@ export default function ServiceInvoice() {
     return (
 
         <>
-            <div>
+            <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-5">
 
                 <div
                     className={
@@ -2423,16 +2435,20 @@ export default function ServiceInvoice() {
             HEADER
         ================================================= */}
 
-                    <div className="px-6 py-4 bg-white border-b border-gray-200 shrink-0">
+                    <div className="mr-2 px-6 py-4 bg-white border-b border-gray-200 shrink-0">
 
                         <div className="flex items-center justify-between">
 
                             <div className="flex items-center gap-3">
 
-                                <div className="w-7 h-7 border-2 border-gray-400 rounded-sm flex items-center justify-center">
-
-                                    <div className="w-3 h-3 border border-gray-400 rounded-sm" />
-
+                                <div
+                                    className="w-10 h-10 rounded-lg bg-[#0095FD] border border-blue-100 flex items-center justify-center cursor-pointer"
+                                    onClick={() => navigate("/bankAccount")}
+                                >
+                                    <BoxIcon
+                                        size={20}
+                                        className="text-[#FCF7F8]"
+                                    />
                                 </div>
 
                                 <h1 className="text-lg font-semibold text-gray-800">
@@ -2978,18 +2994,18 @@ export default function ServiceInvoice() {
                             </label>
 
                             <CustomSelect
-
                                 value={invoice.invoiceType || ""}
                                 onChange={(value) =>
                                     handleInvoiceFieldChange("invoiceType", value)
                                 }
                                 options={[
+                                    { value: "PRODUCT_INVOICE", label: "PRODUCT_INVOICE" },
+                                    { value: "SERVICE_INVOICE", label: "SERVICE_INVOICE" },
                                     { value: "SALE_INVOICE", label: "SALE_INVOICE" },
                                     { value: "PURCHASE_INVOICE", label: "PURCHASE_INVOICE" },
                                     { value: "TAX_INVOICE", label: "TAX_INVOICE" },
                                 ]}
                             />
-
 
 
                         </div>

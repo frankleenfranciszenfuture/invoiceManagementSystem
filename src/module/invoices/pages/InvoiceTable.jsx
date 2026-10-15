@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
@@ -31,6 +31,8 @@ export default function InvoiceTable({
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
+    const [showEdit, setShowEdit] = useState(false);
+    const [showView, setShowView] = useState(false);
     /* =====================================================
        REDUX STATE
     ===================================================== */
@@ -125,23 +127,27 @@ export default function InvoiceTable({
        EDIT INVOICE
     ===================================================== */
 
-    const handleEdit = (invoice) => {
+    const handleEditInvoice = (invoice) => {
+        const invoiceType = invoice.invoiceType;
 
-        try {
+        const editRoutes = {
+            PRODUCT_INVOICE: `/invoices/product/edit/${invoice.id}`,
+            SERVICE_INVOICE: `/invoices/service/edit/${invoice.id}`,
+            SALE_INVOICE: `/invoices/sale/edit/${invoice.id}`,
+            PURCHASE_INVOICE: `/invoices/purchase/edit/${invoice.id}`,
+            TAX_INVOICE: `/invoices/tax/edit/${invoice.id}`,
+        };
 
-            dispatch(
-                openModal({
-                    type: "editInvoice",
-                    data: invoice,
-                })
-            );
+        const path = editRoutes[invoiceType];
 
-        } catch (error) {
-
-            toast.error(
-                "Failed to open invoice"
-            );
+        if (!path) {
+            toast.error("Invalid invoice type");
+            return;
         }
+
+        navigate(path, {
+            state: { invoiceType },
+        });
     };
 
     /* =====================================================
@@ -463,78 +469,50 @@ export default function InvoiceTable({
 
     return (
 
-        <div
-            className="
-                bg-white
-                rounded-xl
-                border
-                border-gray-200
-                overflow-visible
-                w-full
-            "
-        >
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
+            <div className="overflow-x-auto overflow-y-visible">
 
-            <div
-                className="
-                    w-full
-                    overflow-visible
-                "
-            >
 
                 <table className="w-full min-w-[1200px] border-collapse table-fixed">
 
-                    <colgroup>
-                        <col className="w-[210px]" /> {/* Invoice */}
-                        <col className="w-[190px]" /> {/* Customer */}
-                        <col className="w-[150px]" /> {/* Type */}
-                        <col className="w-[125px]" /> {/* Date */}
-                        <col className="w-[125px]" /> {/* Taxable */}
-                        <col className="w-[110px]" /> {/* Tax */}
-                        <col className="w-[150px]" /> {/* Total */}
-                        <col className="w-[150px]" /> {/* Status */}
-                        <col className="w-[80px]" />  {/* Actions */}
-                    </colgroup>
 
-                    <thead className="bg-gray-100 border-b border-gray-300">
+                    <thead className="bg-[#E5DFD6]/20 border-b border-gray-300">
+
                         <tr>
 
-                            <th className="px-3 py-3 text-left font-medium text-sm text-gray-600 uppercase">
-                                Invoice
-                            </th>
+                            {[
+                                "Invoice",
+                                "Customer",
+                                "Invoice Type",
+                                "Invoice Date",
+                                "Taxable",
+                                "Total",
+                                "Status",
+                                "Actions",
+                            ].map((header) => (
 
-                            <th className="px-3 py-3 text-left font-medium text-sm text-gray-600 uppercase">
-                                Customer
-                            </th>
+                                <th
+                                    key={header}
+                                    className={`
+                                    px-5
+                                    py-3
+                                    font-medium
+                                    text-sm
+                                    text-[#0F4659]/90
+                                    uppercase
+                                    ${header === "Actions"
+                                            ? "text-right"
+                                            : "text-left"
+                                        }
+                                `}
+                                >
+                                    {header}
+                                </th>
 
-                            <th className="px-3 py-3 text-left font-medium text-sm text-gray-600 uppercase">
-                                Invoice Type
-                            </th>
-
-                            <th className="px-3 py-3 text-left font-medium text-sm text-gray-600 uppercase">
-                                Invoice Date
-                            </th>
-
-                            <th className="px-3 py-3 text-left font-medium text-sm text-gray-600 uppercase">
-                                Taxable
-                            </th>
-
-                            <th className="px-3 py-3 text-left font-medium text-sm text-gray-600 uppercase">
-                                Tax
-                            </th>
-
-                            <th className="px-3 py-3 text-left font-medium text-sm text-gray-600 uppercase">
-                                Total
-                            </th>
-
-                            <th className="px-3 py-3 text-left font-medium text-sm text-gray-600 uppercase">
-                                Status
-                            </th>
-
-                            <th className="px-3 py-3 text-left font-medium text-sm text-gray-600 uppercase">
-                                Actions
-                            </th>
+                            ))}
 
                         </tr>
+
                     </thead>
 
 
@@ -732,31 +710,19 @@ export default function InvoiceTable({
                                         </td>
 
 
-                                        {/* TAX */}
 
-                                        <td
-                                            className="
-                            px-3
-                            py-3
-                            align-middle
-                            
-                            whitespace-nowrap
-                        "
-                                        >
-                                            ₹{formatAmount(taxAmount)}
-                                        </td>
 
                                         {/* TOTAL */}
 
                                         <td
                                             className="
-        px-3
-        py-3
-        align-middle
-      
-        whitespace-nowrap
-        font-medium
-    "
+                                            px-3
+                                            py-3
+                                            align-middle
+                                        
+                                            whitespace-nowrap
+                                            font-medium
+                                        "
                                         >
                                             ₹{formatAmount(totalAmount)}
                                         </td>
@@ -776,161 +742,99 @@ export default function InvoiceTable({
                                         >
                                             <span
                                                 className={`
-            inline-flex
-            items-center
-            justify-center
-            min-w-[80px]
-            px-2.5
-            py-1
-            rounded-full
-            text-xs
-            font-medium
-            whitespace-nowrap
-            ${statusColor[invoiceStatus] ||
+                                                        inline-flex
+                                                        items-center
+                                                        justify-center
+                                                        min-w-[80px]
+                                                        px-2.5
+                                                        py-1
+                                                        rounded-full
+                                                        text-xs
+                                                        font-medium
+                                                        whitespace-nowrap
+                                                        ${statusColor[invoiceStatus] ||
                                                     "bg-gray-100 text-gray-700"}
-        `}
+                                                     `}
                                             >
                                                 {invoiceStatus}
                                             </span>
                                         </td>
                                         {/* ACTIONS */}
 
-                                        <td
-                                            className="
-                            px-3
-                            py-3
-                            align-middle
-                            text-center
-                            overflow-visible
-                        "
-                                            onClick={(e) =>
-                                                e.stopPropagation()
-                                            }
-                                        >
+                                        {/* Actions */}
+                                        <td className="px-2 py-2">
+                                            <div className="flex items-center justify-end gap-2">
 
-                                            <div className="flex justify-center">
+                                                {/* View */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowView(true);
+                                                        dispatch(setExistingInvoice(invoice));
+                                                        navigate(`/invoices/view/${invoice.id}`);
+                                                    }}
+                                                    title="View"
+                                                    className="
+                                                    flex h-8 w-8 items-center justify-center
+                                                    rounded-lg
+                                                    bg-blue-50
+                                                    text-blue-600
+                                                    transition
+                                                    hover:bg-blue-100
+                                                    hover:text-blue-700
+                                                "
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
 
-                                                <div className="relative group">
+                                                {/* Edit */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowEdit(true);
+                                                        dispatch(setExistingInvoice(invoice));
+                                                        handleEditInvoice(invoice);
+                                                    }}
+                                                    title="Edit"
+                                                    className="
+                                                        flex h-8 w-8 items-center justify-center
+                                                        rounded-lg
+                                                        bg-amber-50
+                                                        text-amber-600
+                                                        transition
+                                                        hover:bg-amber-100
+                                                        hover:text-amber-700
+                                                    "
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
 
-                                                    <button
-                                                        type="button"
-                                                        className="
-                                        w-8
-                                        h-8
-                                        flex
-                                        items-center
-                                        justify-center
-                                        rounded-full
-                                        bg-blue-500
-                                        text-white
-                                        hover:bg-blue-600
-                                    "
-                                                    >
-                                                        <ChevronDown size={16} />
-                                                    </button>
+                                                {/* Delete */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
 
-                                                    <div
-                                                        className="
-                                        absolute
-                                        right-0
-                                        top-full
-                                        mt-1
-                                        z-[9999]
-                                        opacity-0
-                                        invisible
-                                        group-hover:opacity-100
-                                        group-hover:visible
-                                        transition-all
-                                    "
-                                                    >
-
-                                                        <div
-                                                            className="
-                                            w-36
-                                            rounded-md
-                                            bg-blue-500
-                                            shadow-lg
-                                            overflow-hidden
-                                        "
-                                                        >
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleView(invoice)
-                                                                }
-                                                                className="
-                                                flex
-                                                w-full
-                                                items-center
-                                                gap-2
-                                                px-4
-                                                py-2
-                                                text-sm
-                                                text-white
-                                                hover:bg-blue-600
-                                            "
-                                                            >
-                                                                <Eye size={16} />
-                                                                View
-                                                            </button>
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-
-                                                                    navigate(
-                                                                        `/invoices/edit/${invoice.id}`
-                                                                    );
-                                                                }}
-                                                                className="
-                                                flex
-                                                w-full
-                                                items-center
-                                                gap-2
-                                                px-4
-                                                py-2
-                                                text-sm
-                                                text-white
-                                                hover:bg-blue-600
-                                            "
-                                                            >
-                                                                <Edit size={16} />
-                                                                Edit
-                                                            </button>
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleDelete(
-                                                                        invoice.id
-                                                                    )
-                                                                }
-                                                                className="
-                                                flex
-                                                w-full
-                                                items-center
-                                                gap-2
-                                                px-4
-                                                py-2
-                                                text-sm
-                                                text-white
-                                                hover:bg-red-600
-                                            "
-                                                            >
-                                                                <Trash2 size={16} />
-                                                                Delete
-                                                            </button>
-
-                                                        </div>
-
-                                                    </div>
-
-                                                </div>
+                                                        // Your delete confirmation logic
+                                                        handleDelete(invoice.id);
+                                                    }}
+                                                    title="Delete"
+                                                    className="
+                                                        flex h-8 w-8 items-center justify-center
+                                                        rounded-lg
+                                                        bg-red-50
+                                                        text-red-600
+                                                        transition
+                                                        hover:bg-red-100
+                                                        hover:text-red-700
+                                                    "
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
 
                                             </div>
-
                                         </td>
 
                                     </tr>
@@ -1038,7 +942,7 @@ export default function InvoiceTable({
                                 items-center
                                 justify-center
                                 rounded-lg
-                                bg-indigo-600
+                               bg-[#754DD2]
                                 text-white
                                 text-sm
                                 font-medium
