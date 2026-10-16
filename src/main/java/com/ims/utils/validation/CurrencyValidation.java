@@ -45,17 +45,17 @@ public class CurrencyValidation {
     }
 
     public void validateUniqueCode(
-            String code,
+            String currencyCode,
             Long currentId) {
 
         boolean exists = currentId == null
-                ? currencyRepository.existsByCodeIgnoreCase(code)
+                ? currencyRepository.existsByCurrencyCodeIgnoreCase(currencyCode)
                 : currencyRepository
-                .existsByCodeIgnoreCaseAndIdNot(code, currentId);
+                .existsByCurrencyCodeIgnoreCaseAndIdNot(currencyCode, currentId);
 
         if (exists) {
             throw new IllegalArgumentException(
-                    "Currency code already exists: " + code
+                    "Currency code already exists: " + currencyCode
             );
         }
     }

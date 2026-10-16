@@ -13,7 +13,7 @@ import lombok.experimental.SuperBuilder;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_currency_code",
-                        columnNames = "code"
+                        columnNames = "currencyCode"
                 )
         }
 )
@@ -28,10 +28,10 @@ public class Currency extends BaseEntity{
     private Long id;
 
     @Column(nullable = false, length = 3, unique = true)
-    private String code;
+    private String currencyCode;
 
     @Column(nullable = false, length = 100)
-    private String name;
+    private String currencyName;
 
     @Column(nullable = false, length = 10)
     private String symbol;

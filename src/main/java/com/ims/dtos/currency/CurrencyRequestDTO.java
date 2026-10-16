@@ -13,11 +13,11 @@ public class CurrencyRequestDTO {
             regexp = "^[A-Za-z]{3}$",
             message = "Currency code must contain exactly 3 letters"
     )
-    private String code;
+    private String currencyCode;
 
     @NotBlank
     @Size(max = 100)
-    private String name;
+    private String currencyName;
 
     @NotBlank
     @Size(max = 10)

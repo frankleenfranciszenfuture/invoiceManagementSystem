@@ -68,6 +68,8 @@ public class InvoiceItemRequest {
     private BigDecimal unitPrice;
 
 
+    private BigDecimal baseUnitPrice;
+
     // =====================================================
     // DISCOUNT
     // =====================================================

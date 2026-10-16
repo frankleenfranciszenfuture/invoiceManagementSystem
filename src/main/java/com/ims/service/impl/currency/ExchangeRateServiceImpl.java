@@ -148,8 +148,8 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<PageResponse<ExchangeRateResponseDTO>> getAll(
-            String fromCode,
-            String toCode,
+            String fromCurrencyCode,
+            String toCurrencyCode,
             LocalDate fromDate,
             LocalDate toDate,
             Boolean active,
@@ -164,8 +164,8 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
 
         Specification<ExchangeRate> spec =
                 ExchangeRateSpecification.filter(
-                        fromCode,
-                        toCode,
+                        fromCurrencyCode,
+                        toCurrencyCode,
                         fromDate,
                         toDate,
                         active
@@ -224,11 +224,11 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
         }
 
         // 5. Normalize currency codes
-        String from = fromCurrency.getCode()
+        String from = fromCurrency.getCurrencyCode()
                 .trim()
                 .toUpperCase(Locale.ROOT);
 
-        String to = toCurrency.getCode()
+        String to = toCurrency.getCurrencyCode()
                 .trim()
                 .toUpperCase(Locale.ROOT);
 
@@ -316,10 +316,10 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
                             .id(null)
                             .fromCurrencyId(fromCurrency.getId())
                             .fromCurrencyCode(from)
-                            .fromCurrencyName(fromCurrency.getName())
+                            .fromCurrencyName(fromCurrency.getCurrencyName())
                             .toCurrencyId(toCurrency.getId())
                             .toCurrencyCode(to)
-                            .toCurrencyName(toCurrency.getName())
+                            .toCurrencyName(toCurrency.getCurrencyName())
                             .rate(exchangeRate)
                             .effectiveDate(effectiveDate)
                             .active(true)
@@ -356,11 +356,11 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
         return ExchangeRateResponseDTO.builder()
                 .id(rate.getId())
                 .fromCurrencyId(rate.getFromCurrency().getId())
-                .fromCurrencyCode(rate.getFromCurrency().getCode())
-                .fromCurrencyName(rate.getFromCurrency().getName())
+                .fromCurrencyCode(rate.getFromCurrency().getCurrencyCode())
+                .fromCurrencyName(rate.getFromCurrency().getCurrencyName())
                 .toCurrencyId(rate.getToCurrency().getId())
-                .toCurrencyCode(rate.getToCurrency().getCode())
-                .toCurrencyName(rate.getToCurrency().getName())
+                .toCurrencyCode(rate.getToCurrency().getCurrencyCode())
+                .toCurrencyName(rate.getToCurrency().getCurrencyName())
                 .rate(rate.getRate())
                 .effectiveDate(rate.getEffectiveDate())
                 .active(rate.getActive())

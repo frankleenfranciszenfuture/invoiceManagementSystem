@@ -46,8 +46,8 @@ public class ExchangeRateController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<ExchangeRateResponseDTO>>> getAll(
-            @RequestParam(required = false) String fromCode,
-            @RequestParam(required = false) String toCode,
+            @RequestParam(required = false) String fromCurrencyCode,
+            @RequestParam(required = false) String toCurrencyCode,
             @RequestParam(required = false) LocalDate fromDate,
             @RequestParam(required = false) LocalDate toDate,
             @RequestParam(required = false) Boolean active,
@@ -55,8 +55,8 @@ public class ExchangeRateController {
             Pageable pageable) {
 
         return ResponseEntity.ok(exchangeRateService.getAll(
-                fromCode,
-                toCode,
+                fromCurrencyCode,
+                toCurrencyCode,
                 fromDate,
                 toDate,
                 active,

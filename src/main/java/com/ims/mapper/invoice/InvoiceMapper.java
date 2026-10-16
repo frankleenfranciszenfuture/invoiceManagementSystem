@@ -49,7 +49,11 @@ public interface InvoiceMapper {
     )
     @Mapping(
             target = "currencyCode",
-            source = "currency.code"
+            source = "currency.currencyCode"
+    )
+    @Mapping(
+            target = "currencyName",
+            source = "currency.currencyName"
     )
     @Mapping(
             target = "exchangeRate",

@@ -50,7 +50,7 @@ public class CurrencyController {
     public ResponseEntity<ApiResponse<PageResponse<CurrencyResponseDTO>>>getAll(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean active,
-            @PageableDefault(size = 20, sort = "code")
+            @PageableDefault(size = 20, sort = "currencyCode")
             Pageable pageable) {
 
         return ResponseEntity.ok(

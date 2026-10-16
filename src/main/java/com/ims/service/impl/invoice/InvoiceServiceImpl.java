@@ -134,6 +134,8 @@ public class InvoiceServiceImpl implements InvoiceService {
             );
         }
 
+
+
         // =====================================================
         // EXCHANGE RATE
         // =====================================================
@@ -142,34 +144,39 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         if (request.getExchangeRate() != null) {
 
-            // Use the rate supplied by the request
             exchangeRate = request.getExchangeRate();
 
         } else {
 
-            // Replace this with your configured base currency ID.
-            Long baseCurrencyId = 3L;
+            // INR is the configured base currency for this example.
+            Long baseCurrencyId = 1L;
 
-            if (request.getCurrencyId().equals(baseCurrencyId)) {
+            if (currency.getId().equals(baseCurrencyId)) {
 
-                // Same currency: no conversion required
+                // INR -> INR
                 exchangeRate = BigDecimal.ONE;
 
             } else {
 
-                // Fetch the rate automatically
+                LocalDate rateDate =
+                        request.getInvoiceDate() != null
+                                ? request.getInvoiceDate()
+                                : LocalDate.now();
+
                 ApiResponse<ExchangeRateResponseDTO> rateResponse =
                         exchangeRateService.getRate(
                                 baseCurrencyId,
-                                request.getCurrencyId(),
-                                LocalDate.now()
+                                currency.getId(),
+                                rateDate
                         );
 
                 if (rateResponse == null
                         || rateResponse.getData() == null
                         || rateResponse.getData().getRate() == null) {
-                    throw new IllegalStateException(
-                            "Unable to fetch exchange rate."
+
+                    throw new BadRequestException(
+                            "Unable to fetch exchange rate for currency ID: "
+                                    + currency.getId()
                     );
                 }
 
@@ -182,6 +189,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                     "Exchange rate must be greater than zero."
             );
         }
+
+
 
         // =====================================================
         // 3. INVOICE NUMBER
@@ -213,7 +222,19 @@ public class InvoiceServiceImpl implements InvoiceService {
                                         : LocalDate.now()
                         )
                         .dueDate(
-                                request.getDueDate()
+                                calculateDueDate(
+                                        request.getInvoiceDate() != null
+                                                ? request.getInvoiceDate()
+                                                : LocalDate.now(),
+                                        request.getDueDate(),
+                                        request.getTermsAndConditions()
+                                )
+                        )
+                        .termsAndConditions(
+                                request.getTermsAndConditions() != null &&
+                                        !request.getTermsAndConditions().isBlank()
+                                        ? request.getTermsAndConditions()
+                                        : "Due on Receipt"
                         )
                         .shippingAmount(
                                 zeroIfNull(
@@ -247,7 +268,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
                 InvoiceItemEntity item =
                         createInvoiceItem(
-                                itemRequest
+                                itemRequest,exchangeRate
                         );
 
 
@@ -542,6 +563,23 @@ public class InvoiceServiceImpl implements InvoiceService {
             );
         }
 
+        LocalDate invoiceDate =
+                request.getInvoiceDate() != null
+                        ? request.getInvoiceDate()
+                        : invoice.getInvoiceDate();
+
+        String terms =
+                request.getTermsAndConditions() != null &&
+                        !request.getTermsAndConditions().isBlank()
+                        ? request.getTermsAndConditions()
+                        : invoice.getTermsAndConditions();
+
+        LocalDate dueDate = calculateDueDate(
+                invoiceDate,
+                request.getDueDate(),
+                terms
+        );
+
         // =====================================================
         // 5. UPDATE BASIC DETAILS
         // =====================================================
@@ -552,13 +590,14 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         invoice.setCustomer(customer);
 
-        invoice.setInvoiceDate(
-                request.getInvoiceDate()
-        );
 
-        invoice.setDueDate(
-                request.getDueDate()
-        );
+        invoice.setCurrency(currency);
+        invoice.setExchangeRate(exchangeRate);
+
+
+        invoice.setInvoiceDate(invoiceDate);
+        invoice.setTermsAndConditions(terms);
+        invoice.setDueDate(dueDate);
 
         invoice.setShippingAmount(
                 zeroIfNull(
@@ -569,11 +608,6 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setNotes(
                 request.getNotes()
         );
-
-        invoice.setTermsAndConditions(
-                request.getTermsAndConditions()
-        );
-
 
         // =====================================================
         // 6. UPDATE STATUS
@@ -605,7 +639,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
                 InvoiceItemEntity item =
                         createInvoiceItem(
-                                itemRequest
+                                itemRequest, exchangeRate
                         );
 
 
@@ -818,8 +852,8 @@ public class InvoiceServiceImpl implements InvoiceService {
     // =====================================================
 
     private InvoiceItemEntity createInvoiceItem(
-            InvoiceItemRequest request
-    ) {
+            InvoiceItemRequest request,
+            BigDecimal exchangeRate) {
 
         if (request == null) {
 
@@ -917,6 +951,20 @@ public class InvoiceServiceImpl implements InvoiceService {
                 zeroIfNull(
                         request.getUnitPrice()
                 );
+
+
+        BigDecimal safeRate =
+                exchangeRate != null && exchangeRate.compareTo(BigDecimal.ZERO) > 0
+                        ? exchangeRate
+                        : BigDecimal.ONE;
+
+        BigDecimal baseUnitPrice = request.getBaseUnitPrice();
+
+        if (baseUnitPrice == null) {
+            baseUnitPrice = request.getUnitPrice()
+                    .divide(safeRate, 4, java.math.RoundingMode.HALF_UP);
+        }
+
 
         BigDecimal discountAmount =
                 zeroIfNull(
@@ -1276,7 +1324,37 @@ public class InvoiceServiceImpl implements InvoiceService {
         return invoiceNumberService.generateInvoiceNumber();
     }
 
+// =====================================================
+// CALCULATE DUE DATE FROM TERMS
+// =====================================================
 
+    private LocalDate calculateDueDate(
+            LocalDate invoiceDate,
+            LocalDate requestedDueDate,
+            String termsAndConditions
+    ) {
+        // Preserve a manually selected due date.
+        if (requestedDueDate != null) {
+            return requestedDueDate;
+        }
+
+        if (invoiceDate == null) {
+            invoiceDate = LocalDate.now();
+        }
+
+        if (termsAndConditions == null ||
+                termsAndConditions.isBlank()) {
+            // Default terms: Due on Receipt.
+            return invoiceDate;
+        }
+
+        return switch (termsAndConditions.trim()) {
+            case "Net 15" -> invoiceDate.plusDays(15);
+            case "Net 30" -> invoiceDate.plusDays(30);
+            case "Due on Receipt" -> invoiceDate;
+            default -> invoiceDate;
+        };
+    }
     // =====================================================
     // PAGE RESPONSE
     // =====================================================

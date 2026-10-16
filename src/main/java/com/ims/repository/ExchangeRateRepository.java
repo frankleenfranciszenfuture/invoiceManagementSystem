@@ -25,10 +25,12 @@ public interface ExchangeRateRepository
             Long id
     );
 
+
     Optional<ExchangeRate>
-    findFirstByFromCurrency_CodeIgnoreCaseAndToCurrency_CodeIgnoreCaseAndActiveTrueAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
-            String fromCode,
-            String toCode,
-            LocalDate date
+    findFirstByFromCurrency_CurrencyCodeIgnoreCaseAndToCurrency_CurrencyCodeIgnoreCaseAndActiveTrueAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
+            String fromCurrencyCode,
+            String toCurrencyCode,
+            LocalDate effectiveDate
     );
+
 }

@@ -22,8 +22,8 @@ public interface ExchangeRateService {
     ApiResponse<ExchangeRateResponseDTO> getById(Long id);
 
     ApiResponse<PageResponse<ExchangeRateResponseDTO>> getAll(
-            String fromCode,
-            String toCode,
+            String fromCurrencyCode,
+            String toCurrencyCode,
             LocalDate fromDate,
             LocalDate toDate,
             Boolean active,

@@ -12,8 +12,8 @@ import lombok.experimental.SuperBuilder;
 public class CurrencyResponseDTO {
 
     private Long id;
-    private String code;
-    private String name;
+    private String currencyCode;
+    private String currencyName;
     private String symbol;
     private Integer decimalPlaces;
     private CurrencyStatus status;

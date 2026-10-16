@@ -51,6 +51,9 @@ public class InvoiceItemResponse extends BaseResponse {
     private String unitName;
 
 
+    private BigDecimal baseUnitPrice;
+
+
     // =====================================================
     // SIZE
     // =====================================================

@@ -121,7 +121,7 @@ public class ExchangeRateValidation {
         String normalized = normalizeCode(code);
 
         Currency currency = currencyRepository
-                .findByCodeIgnoreCase(normalized)
+                .findByCurrencyCodeIgnoreCase(normalized)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Currency not found: " + normalized
                 ));

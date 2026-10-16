@@ -83,6 +83,7 @@ public class InvoiceResponse extends BaseResponse {
     // =====================================================
 
     private Long currencyId;
+    private String currencyName;
 
     private String currencyCode;
 

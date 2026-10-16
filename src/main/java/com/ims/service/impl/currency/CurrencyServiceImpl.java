@@ -31,13 +31,13 @@ public class CurrencyServiceImpl implements CurrencyService {
     public ApiResponse<CurrencyResponseDTO> create(
             CurrencyRequestDTO dto) {
 
-        String code = validation.normalizeCode(dto.getCode());
+        String code = validation.normalizeCode(dto.getCurrencyCode());
 
         validation.validateUniqueCode(code, null);
 
         Currency currency = Currency.builder()
-                .code(code)
-                .name(dto.getName().trim())
+                .currencyCode(code)
+                .currencyName(dto.getCurrencyName().trim())
                 .symbol(dto.getSymbol().trim())
                 .decimalPlaces(dto.getDecimalPlaces())
                 .status(dto.getStatus())
@@ -59,12 +59,12 @@ public class CurrencyServiceImpl implements CurrencyService {
 
         Currency currency = validation.validateExists(id);
 
-        String code = validation.normalizeCode(dto.getCode());
+        String code = validation.normalizeCode(dto.getCurrencyCode());
 
         validation.validateUniqueCode(code, id);
 
-        currency.setCode(code);
-        currency.setName(dto.getName().trim());
+        currency.setCurrencyCode(code);
+        currency.setCurrencyName(dto.getCurrencyName().trim());
         currency.setSymbol(dto.getSymbol().trim());
         currency.setDecimalPlaces(dto.getDecimalPlaces());
         currency.setStatus(dto.getStatus());
@@ -134,8 +134,8 @@ public class CurrencyServiceImpl implements CurrencyService {
 
         return CurrencyResponseDTO.builder()
                 .id(currency.getId())
-                .code(currency.getCode())
-                .name(currency.getName())
+                .currencyCode(currency.getCurrencyCode())
+                .currencyName(currency.getCurrencyName())
                 .symbol(currency.getSymbol())
                 .decimalPlaces(currency.getDecimalPlaces())
                 .status(currency.getStatus())
