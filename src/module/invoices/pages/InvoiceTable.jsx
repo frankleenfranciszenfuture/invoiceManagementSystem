@@ -374,6 +374,8 @@ export default function InvoiceTable({
         );
     };
 
+
+
     /* =====================================================
        LOADING
     ===================================================== */
@@ -462,6 +464,7 @@ export default function InvoiceTable({
             </div>
         );
     }
+
 
     /* =====================================================
        TABLE
@@ -558,6 +561,58 @@ export default function InvoiceTable({
                                     invoice.status ||
                                     invoice.invoiceStatus ||
                                     "DRAFT";
+
+                                const currencyCode = String(
+                                    invoice?.currency?.code ||
+                                    invoice?.currencyCode ||
+                                    invoice?.currency?.currencyCode ||
+                                    "INR"
+                                ).toUpperCase();
+
+                                const currencySymbol =
+                                    invoice?.currency?.symbol ||
+                                    invoice?.currencySymbol ||
+                                    ({
+                                        INR: "₹",
+                                        USD: "$",
+                                        EUR: "€",
+                                        GBP: "£",
+                                        AED: "د.إ",
+                                        JPY: "¥",
+                                        AUD: "A$",
+                                        CAD: "C$",
+                                    }[currencyCode] || currencyCode);
+
+                                const currencyColor = {
+                                    INR: "text-blue-700",
+                                    "₹": "text-blue-700",
+
+                                    USD: "text-emerald-700",
+                                    "$": "text-emerald-700",
+
+                                    EUR: "text-violet-700",
+                                    "€": "text-violet-700",
+
+                                    GBP: "text-rose-700",
+                                    "£": "text-rose-700",
+
+                                    AED: "text-amber-700",
+                                    "د.إ": "text-amber-700",
+
+                                    JPY: "text-pink-700",
+                                    "¥": "text-pink-700",
+
+                                    AUD: "text-teal-700",
+                                    "A$": "text-teal-700",
+
+                                    CAD: "text-indigo-700",
+                                    "C$": "text-indigo-700",
+                                };
+
+                                const symbolColor =
+                                    currencyColor[currencyCode] ||
+                                    currencyColor[currencySymbol] ||
+                                    "text-gray-600";
 
                                 return (
                                     <tr
@@ -697,16 +752,11 @@ export default function InvoiceTable({
 
                                         {/* TAXABLE */}
 
-                                        <td
-                                            className="
-                            px-3
-                            py-3
-                            align-middle
-                           
-                            whitespace-nowrap
-                        "
-                                        >
-                                            ₹{formatAmount(taxableAmount)}
+                                        <td className="px-3 py-3 align-middle whitespace-nowrap">
+                                            <span className={`font-medium ${symbolColor}`}>
+                                                {currencySymbol}
+                                            </span>{" "}
+                                            {formatAmount(taxableAmount)}
                                         </td>
 
 
@@ -724,7 +774,11 @@ export default function InvoiceTable({
                                             font-medium
                                         "
                                         >
-                                            ₹{formatAmount(totalAmount)}
+
+                                            <span className={`font-medium ${symbolColor}`}>
+                                                {currencySymbol}
+                                            </span>{" "}
+                                            {formatAmount(totalAmount)}
                                         </td>
 
 

@@ -42,7 +42,11 @@ import {
     Package,
     Wrench,
     ShieldCheck,
-    BoxIcon
+    Landmark,
+    Inbox,
+    BoxIcon,
+    Pencil,
+    UserKeyIcon
 } from "lucide-react";
 
 import {
@@ -51,6 +55,7 @@ import {
     addInvoiceItem,
     removeInvoiceItem,
     resetInvoiceForm,
+    setInvoiceItems,
 } from "../slices/invoiceSlice";
 
 import {
@@ -84,10 +89,16 @@ import {
 
 
 import { fetchAllSalesPersons } from "../../salesPerson/thunks/salesPersonThunks";
+import { fetchAllCurrencies, fetchExchangeRate } from "../../currency/thunks/currencyThunks"
 
 import CustomSelect from "../../../common/custom/CustomSelect";
+import CustomStatusSelect from "../../../common/custom/CustomStatusSelect";
+import CustomSUSelect from "../../../common/custom/CustomSUSelect";
 
-
+import {
+    formatDateForInput,
+    calculateDueDate,
+} from "../utils/dateUtils";
 /* =========================================================
    EMPTY ITEM
 ========================================================= */
@@ -99,6 +110,7 @@ const createEmptyItem = () => ({
     sizeId: "",
     quantity: 1,
     unitPrice: 0,
+    baseUnitPrice: 0,
     discountAmount: 0,
     taxMasterId: "",
 });
@@ -133,35 +145,105 @@ const getArray = (value) => {
    COMPONENT
 ========================================================= */
 
-export default function SaleInvoice() {
+export default function ServiceInvoice() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
     const { id } = useParams();
-
-
+    const isEditMode = Boolean(id);
     const location = useLocation();
 
     const [showInvoiceTypeOptions, setShowInvoiceTypeOptions] =
         useState(true);
 
+    // =========================================================
+    // SELECT PRODUCT INVOICE
+    // =========================================================
+
+    // CREATE PRODUCT INVOICE
+    const handleProductInvoice = () => {
+        setShowInvoiceTypeOptions(false);
+        dispatch(closeModal());
+
+        navigate("/invoices/product/new", {
+            state: {
+                invoiceType: "PRODUCT_INVOICE",
+            },
+        });
+    };
+
+    // EDIT PRODUCT INVOICE — skip type selection
+    const handleEditProductInvoice = (invoice) => {
+        setShowInvoiceTypeOptions(false);
+        dispatch(closeModal());
+
+        navigate(`/invoices/product/edit/${invoice.id}`, {
+            state: {
+                invoiceType: "PRODUCT_INVOICE",
+                invoice,
+            },
+        });
+    };
+    // =========================================================
+    // SELECT SERVICE INVOICE
+    // =========================================================
+
+    const handleServiceInvoice = () => {
+        setShowInvoiceTypeOptions(false);
+        dispatch(closeModal());
+
+        navigate("/invoices/service/new", {
+            state: {
+                invoiceType: "SERVICE_INVOICE",
+            },
+        });
+    };
+
+    // =========================================================
+    // GO TO MENU PERMISSION
+    // =========================================================
+
+    const handleInvoiceMenuPermission = () => {
+        setShowInvoiceTypeOptions(false);
+
+        dispatch(closeModal());
+
+        navigate("/menuPermission");
+    };
+
+    // =========================================================
+    // CANCEL
+    // =========================================================
+
+    const handleCancelInvoiceType = () => {
+        setShowInvoiceTypeOptions(false);
+        dispatch(closeModal());
+    };
+
+
     const [showLeaveConfirmation, setShowLeaveConfirmation] =
         useState(false);
 
+    const [showDateTermsModal, setShowDateTermsModal] = useState(false);
+
+    const [dateTermsForm, setDateTermsForm] = useState({
+        invoiceDate: "",
+        termsAndConditions: "Due on Receipt",
+        dueDate: "",
+    });
     // =========================================================
     // CLICK OUTSIDE - ASK BEFORE LEAVING
     // =========================================================
 
-    const handleRequestLeave = () => {
-        setShowLeaveConfirmation(true);
-    };
-
     const handleInvoiceTypeBackdropClick = (event) => {
         if (event.target === event.currentTarget) {
-            handleRequestLeave();
+            setShowLeaveConfirmation(true);
         }
     };
 
+    const handleCancel = () => {
+        setShowLeaveConfirmation(true);
+    };
 
 
     // =========================================================
@@ -170,6 +252,13 @@ export default function SaleInvoice() {
 
     const handleStayOnInvoiceType = () => {
         setShowLeaveConfirmation(false);
+        dispatch(
+            setInvoiceField({
+                field: "invoiceType",
+                value: location.state?.invoiceType || "PRODUCT_INVOICE",
+            })
+        );
+
     };
 
     // =========================================================
@@ -178,9 +267,7 @@ export default function SaleInvoice() {
 
     const handleLeaveInvoiceType = () => {
         setShowLeaveConfirmation(false);
-        setShowInvoiceTypeOptions(false);
 
-        dispatch(closeModal());
         navigate("/invoices");
     };
 
@@ -191,6 +278,7 @@ export default function SaleInvoice() {
 
     const customerDropdownRef = useRef(null);
     const salesPersonDropdownRef = useRef(null);
+    const currencyDropdownRef = useRef(null);
     const itemDropdownRef = useRef(null);
     const saveMenuRef = useRef(null);
 
@@ -285,6 +373,11 @@ export default function SaleInvoice() {
         setSalesPersonSearch,
     ] = useState("");
 
+    const [
+        currencySearch,
+        setCurrencySearch,
+    ] = useState("");
+
 
     const [
         itemSearch,
@@ -301,6 +394,10 @@ export default function SaleInvoice() {
         setOpenSalesPerson,
     ] = useState(false);
 
+    const [
+        openCurrency,
+        setOpenCurrency,
+    ] = useState(false);
 
     const [
         activeItemId,
@@ -339,6 +436,10 @@ export default function SaleInvoice() {
 
     const [dropdownOpen, setDropdownOpen] =
         useState(false);
+
+    const handleRequestLeave = () => {
+        setShowLeaveConfirmation(true);
+    };
 
     /* =======================================================
        INVOICE REDUX
@@ -462,6 +563,47 @@ export default function SaleInvoice() {
     ]);
 
 
+    /* =======================================================
+       Currency REDUX
+    ======================================================= */
+
+    const currencyState = useSelector(
+        (state) => state.currency
+    );
+
+    const currencies = Array.isArray(
+        currencyState?.currencies
+    )
+        ? currencyState.currencies
+        : [];
+
+    const currencyLoading =
+        currencyState?.loading ?? false;
+
+    const currencyError =
+        currencyState?.error ?? null;
+
+    /* =======================================================
+       SELECTED SALESPERSON
+    ======================================================= */
+
+    const selectedcurrency = useMemo(() => {
+        if (!invoice?.currencyId) {
+            return null;
+        }
+
+        return (
+            currencies.find(
+                (currency) =>
+                    String(currency?.id) ===
+                    String(invoice.currencyId)
+            ) || null
+        );
+    }, [
+        currencies,
+        invoice?.currencyId,
+    ]);
+
 
     /* =======================================================
        PRODUCTS
@@ -567,7 +709,8 @@ export default function SaleInvoice() {
         dispatch(fetchAllUnits());
         dispatch(fetchAllSizes());
         dispatch(fetchAllTaxMasters());
-        dispatch(fetchAllSalesPersons())
+        dispatch(fetchAllSalesPersons());
+        dispatch(fetchAllCurrencies());
     }, [dispatch]);
 
 
@@ -581,6 +724,7 @@ export default function SaleInvoice() {
         setItemSearch("");
         setOpenCustomer(false);
         setOpenSalesPerson(false);
+        setOpenCurrency(false);
         setOpenRowItemDropdown(false);
         setActiveItemId(null);
         setShowSummary(true);
@@ -619,6 +763,7 @@ export default function SaleInvoice() {
         setSalesPersonSearch("");
         setItemSearch("");
         setOpenCustomer(false);
+        setOpenCurrency(false);
         setOpenSalesPerson(false);
         setOpenRowItemDropdown(false);
         setActiveItemId(null);
@@ -638,7 +783,7 @@ export default function SaleInvoice() {
         dispatch(
             setInvoiceField({
                 field: "invoiceType",
-                value: location.state?.invoiceType || "SALE_INVOICE",
+                value: location.state?.invoiceType || "PRODUCT_INVOICE",
             })
         );
 
@@ -667,7 +812,10 @@ export default function SaleInvoice() {
             })
         );
 
-
+        dispatch(setInvoiceField({
+            field: "invoiceDate",
+            value: "",
+        }));
         /* ==========================================
            CLEAR CUSTOMER
         ========================================== */
@@ -701,6 +849,26 @@ export default function SaleInvoice() {
         dispatch(
             setInvoiceField({
                 field: "salesPersonName",
+                value: "",
+            })
+        );
+
+
+        /* ==========================================
+         CLEAR CURRENCY
+      ========================================== */
+
+        dispatch(
+            setInvoiceField({
+                field: "currencyId",
+                value: "",
+            })
+
+        );
+
+        dispatch(
+            setInvoiceField({
+                field: "currencyname",
                 value: "",
             })
         );
@@ -870,6 +1038,26 @@ export default function SaleInvoice() {
         invoice?.invoiceNumber,
     ]);
 
+    /* =========================================================
+        LOAD INVOICE DATE
+     ========================================================= */
+
+    useEffect(() => {
+        if (!invoice.invoiceDate) {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, "0");
+            const day = String(today.getDate()).padStart(2, "0");
+
+            dispatch(
+                setInvoiceField({
+                    field: "invoiceDate",
+                    value: `${year}-${month}-${day}`,
+                })
+            );
+        }
+    }, [invoice.invoiceDate, dispatch]);
+
 
     useEffect(() => {
         // ADD MODAL MUST NEVER LOAD AN INVOICE
@@ -982,6 +1170,15 @@ export default function SaleInvoice() {
                 setOpenSalesPerson(false);
             }
 
+            if (
+                currencyDropdownRef.current &&
+                !currencyDropdownRef.current.contains(
+                    event.target
+                )
+            ) {
+                setOpenCurrency(false);
+            }
+
 
             if (
                 itemDropdownRef.current &&
@@ -1051,7 +1248,6 @@ export default function SaleInvoice() {
         handleRequestLeave();
 
     };
-
 
     /* =========================================================
        CUSTOMER NAME
@@ -1141,7 +1337,7 @@ export default function SaleInvoice() {
 
     /* =========================================================
     SALES PERSON NAME
-  ========================================================= */
+    ========================================================= */
 
     const getSalesPersonName = (
         salesPerson
@@ -1218,6 +1414,52 @@ export default function SaleInvoice() {
             salesPersons,
             salesPersonSearch,
         ]);
+
+
+    /* =========================================================
+    CURRENCY NAME
+    ========================================================= */
+
+    const getCurrencyName = (currency) => {
+        return (
+            currency?.currencyName ||
+            currency?.name ||
+            currency?.currencyCode ||
+            currency?.code ||
+            ""
+        );
+    };
+
+
+    /* =========================================================
+       CURRENCY SEARCH
+    ========================================================= */
+
+    /* =========================================================
+     CURRENCY SEARCH
+  ========================================================= */
+
+    const filteredcurrencies = useMemo(() => {
+        const search = currencySearch.trim().toLowerCase();
+
+        if (!search) return currencies;
+
+        return currencies.filter((currency) => {
+            const name = getCurrencyName(currency).toLowerCase();
+
+            const symbol = String(currency?.symbol || "").toLowerCase();
+
+            const code = String(
+                currency?.currencyCode || currency?.code || ""
+            ).toLowerCase();
+
+            return (
+                name.includes(search) ||
+                symbol.includes(search) ||
+                code.includes(search)
+            );
+        });
+    }, [currencies, currencySearch]);
 
     /* =========================================================
        PRODUCT SEARCH
@@ -1574,6 +1816,114 @@ export default function SaleInvoice() {
         setOpenSalesPerson(false);
     };
 
+
+    /* =========================================================
+       CURRENCY SELECT
+    ========================================================= */
+
+
+    const handleCurrencySelect = async (currencyInput) => {
+        const selectedCurrency =
+            currencyInput && typeof currencyInput === "object"
+                ? currencies.find(
+                    (currency) =>
+                        String(currency.id) === String(currencyInput.id),
+                ) || currencyInput
+                : currencies.find(
+                    (currency) =>
+                        String(currency.id) === String(currencyInput),
+                );
+
+        if (
+            !selectedCurrency?.id ||
+            !Number.isFinite(Number(selectedCurrency.id))
+        ) {
+            console.error("Currency input:", currencyInput);
+            console.error("Available currencies:", currencies);
+            toast.error("Please select a valid currency");
+            return false;
+        }
+
+        const targetCurrencyId = Number(selectedCurrency.id);
+        const previousRate = getValidRate(invoice.exchangeRate);
+
+        try {
+            let nextRate = 1;
+
+            if (targetCurrencyId !== BASE_CURRENCY_ID) {
+                const exchangeRateData = await dispatch(
+                    fetchExchangeRate({
+                        fromCurrencyId: BASE_CURRENCY_ID,
+                        toCurrencyId: targetCurrencyId,
+                    }),
+                ).unwrap();
+
+                const parsedRate = Number(exchangeRateData?.rate);
+
+                if (!Number.isFinite(parsedRate) || parsedRate <= 0) {
+                    throw new Error("The API returned an invalid exchange rate");
+                }
+
+                nextRate = parsedRate;
+            }
+
+            const updatedItems = (invoice.invoiceItems || []).map((item) => {
+                const hasBasePrice =
+                    item.baseUnitPrice !== undefined &&
+                    item.baseUnitPrice !== null &&
+                    item.baseUnitPrice !== "";
+
+                const baseUnitPrice = hasBasePrice
+                    ? Number(item.baseUnitPrice)
+                    : Number(item.unitPrice || 0) / previousRate;
+
+                return {
+                    ...item,
+                    baseUnitPrice: Number(baseUnitPrice.toFixed(4)),
+                    unitPrice: Number((baseUnitPrice * nextRate).toFixed(2)),
+                };
+            });
+
+            dispatch(
+                setInvoiceField({
+                    field: "currencyId",
+                    value: selectedCurrency.id,
+                }),
+            );
+
+            dispatch(
+                setInvoiceField({
+                    field: "currencyName",
+                    value:
+                        selectedCurrency.currencyName ||
+                        selectedCurrency.currencyCode ||
+                        "",
+                }),
+            );
+
+            dispatch(
+                setInvoiceField({
+                    field: "exchangeRate",
+                    value: nextRate,
+                }),
+            );
+
+            dispatch(setInvoiceItems(updatedItems));
+
+            return true;
+        } catch (error) {
+            console.error("Currency exchange rate error:", error);
+
+            toast.error(
+                typeof error === "string"
+                    ? error
+                    : error?.message || "Unable to load the exchange rate",
+            );
+
+            return false;
+        }
+    };
+
     /* =========================================================
        INVOICE FIELD
     ========================================================= */
@@ -1630,123 +1980,75 @@ export default function SaleInvoice() {
     };
 
 
-    const handleDueDateChange = (
-        date
-    ) => {
-
+    const handleDueDateChange = (date) => {
         if (!date) {
-
             dispatch(
                 setInvoiceField({
-                    field:
-                        "dueDate",
+                    field: "dueDate",
                     value: "",
                 })
             );
-
             return;
         }
 
-
-        const value =
-            date
-                .toISOString()
-                .split("T")[0];
-
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
 
         dispatch(
             setInvoiceField({
-                field:
-                    "dueDate",
-                value,
+                field: "dueDate",
+                value: `${year}-${month}-${day}`,
             })
         );
     };
-
 
     /* =========================================================
        TERMS
     ========================================================= */
 
-    const handleTermsChange = (
-        value
-    ) => {
-
+    const handleTermsChange = (field, value) => {
+        // Update the selected payment terms
         dispatch(
             setInvoiceField({
-                field:
-                    "termsAndConditions",
+                field,
                 value,
             })
         );
 
+        if (field === "termsAndConditions") {
+            const invoiceDate = invoice.invoiceDate;
 
-        if (
-            !invoice.invoiceDate
-        ) {
-            return;
-        }
+            if (!invoiceDate) return;
 
+            const daysMap = {
+                "Due on Receipt": 0,
+                "Net 15": 15,
+                "Net 30": 30,
+            };
 
-        const invoiceDate =
-            new Date(
-                invoice.invoiceDate
+            const dueDate = new Date(
+                `${invoiceDate.slice(0, 10)}T00:00:00`
             );
 
-
-        if (
-            value ===
-            "Net 15"
-        ) {
-
-            invoiceDate.setDate(
-                invoiceDate.getDate() +
-                15
+            dueDate.setDate(
+                dueDate.getDate() + (daysMap[value] ?? 0)
             );
-        }
 
-
-        if (
-            value ===
-            "Net 30"
-        ) {
-
-            invoiceDate.setDate(
-                invoiceDate.getDate() +
-                30
-            );
-        }
-
-
-        if (
-            value ===
-            "Due on Receipt"
-        ) {
+            const year = dueDate.getFullYear();
+            const month = String(dueDate.getMonth() + 1).padStart(2, "0");
+            const day = String(dueDate.getDate()).padStart(2, "0");
 
             dispatch(
                 setInvoiceField({
-                    field:
-                        "dueDate",
-                    value:
-                        invoice.invoiceDate,
+                    field: "dueDate",
+                    value: `${year}-${month}-${day}`,
                 })
             );
-
-            return;
         }
-
-
-        dispatch(
-            setInvoiceField({
-                field:
-                    "dueDate",
-                value:
-                    invoiceDate
-                        .toISOString()
-                        .split("T")[0],
-            })
-        );
     };
+
+    // const invoiceDate = formatDateForInput(date);
 
 
     /* =========================================================
@@ -1809,113 +2111,99 @@ export default function SaleInvoice() {
     /* =========================================================
        PRODUCT SELECT
     ========================================================= */
+    const roundMoney = (value) => {
+        const number = Number(value || 0);
+        return Number((Math.round((number + Number.EPSILON) * 100) / 100).toFixed(2));
+    };
 
-    const handleProductSelect = (
-        index,
-        product
-    ) => {
+    const handleProductSelect = (index, product) => {
+        if (!product?.id) {
+            toast.error("Please select a valid product");
+            return;
+        }
+
+        const baseUnitPrice = Number(
+            product.sellingPrice ?? product.rate ?? product.price ?? 0,
+        );
+
+        const exchangeRate = getValidRate(invoice.exchangeRate);
+
+        const convertedUnitPrice = Number(
+            (baseUnitPrice * exchangeRate).toFixed(2),
+        );
+
+        const currentRate = getValidRate(invoice.exchangeRate);
+
+        dispatch(setInvoiceItemField({
+            index,
+            field: "baseUnitPrice",
+            value: baseUnitPrice,
+        }));
+
+        dispatch(setInvoiceItemField({
+            index,
+            field: "unitPrice",
+            value: roundMoney(baseUnitPrice * currentRate),
+        }));
 
         const productName =
-            product?.productName ||
-            product?.itemName ||
-            product?.name ||
+            product.productName ||
+            product.itemName ||
+            product.name ||
             "";
 
+        // Set product details.
+        updateItem(index, "productId", product.id);
+        updateItem(index, "description", productName);
 
-        const sellingPrice =
-            product?.sellingPrice ??
-            product?.rate ??
-            product?.price ??
-            0;
-
-
+        // Preserve the original price and apply the selected currency rate.
         updateItem(
             index,
-            "productId",
-            product.id
+            "baseUnitPrice",
+            Number(baseUnitPrice.toFixed(4)),
         );
 
+        updateItem(index, "unitPrice", convertedUnitPrice);
 
-        updateItem(
-            index,
-            "description",
-            productName
-        );
-
-
-        updateItem(
-            index,
-            "unitPrice",
-            Number(
-                sellingPrice
-            )
-        );
-
-
-        if (
-            product?.unitId
-        ) {
-
-            updateItem(
-                index,
-                "unitId",
-                product.unitId
-            );
+        if (product.unitId) {
+            updateItem(index, "unitId", product.unitId);
         }
 
-
-        if (
-            product?.sizeId
-        ) {
-
-            updateItem(
-                index,
-                "sizeId",
-                product.sizeId
-            );
-        }
-
-
-        if (
-            product?.taxId
-        ) {
-
-            updateItem(
-                index,
-                "taxMasterId",
-                product.taxId
-            );
+        if (product.sizeId) {
+            updateItem(index, "sizeId", product.sizeId);
         }
 
 
         setItemSearch("");
-
-        setOpenRowItemDropdown(
-            false
-        );
-
+        setOpenRowItemDropdown(false);
         setActiveItemId(null);
 
-
-        /*
-         * Add next empty row only
-         * when selecting product in
-         * the last row.
-         */
-        if (
-            index ===
-            invoiceItems.length - 1
-        ) {
-
-            dispatch(
-                addInvoiceItem(
-                    createEmptyItem()
-                )
-            );
+        // Add an empty row only when selecting in the last row.
+        if (index === invoiceItems.length - 1) {
+            dispatch(addInvoiceItem(createEmptyItem()));
         }
     };
 
+    const handleUnitPriceChange = (index, value) => {
+        const currentRate = getValidRate(invoice.exchangeRate);
+        const unitPrice = Number(value || 0);
 
+        dispatch(
+            setInvoiceItemField({
+                index,
+                field: "unitPrice",
+                value,
+            }),
+        );
+
+        dispatch(
+            setInvoiceItemField({
+                index,
+                field: "baseUnitPrice",
+                value: Number((unitPrice / currentRate).toFixed(4)),
+            }),
+        );
+    };
     /* =========================================================
        VALIDATION
     ========================================================= */
@@ -1944,6 +2232,16 @@ export default function SaleInvoice() {
             return false;
         }
 
+        if (
+            !invoice.currencyId
+        ) {
+
+            toast.error(
+                "Please select a Currency"
+            );
+
+            return false;
+        }
 
         if (
             !invoice.invoiceDate
@@ -2057,12 +2355,11 @@ export default function SaleInvoice() {
 
 
             if (
+                currencyCode === "INR" &&
                 !item.taxMasterId
             ) {
-
                 toast.error(
-                    `Please select tax for item ${index + 1
-                    }`
+                    `Please select tax for item ${index + 1}`
                 );
 
                 return false;
@@ -2078,230 +2375,105 @@ export default function SaleInvoice() {
        BUILD INVOICE PAYLOAD
     ========================================================= */
 
+
     const buildInvoicePayload = () => {
+        const validItems = invoiceItems.filter(
+            (item) => item.productId || item.description,
+        );
 
-        const validItems =
-            invoiceItems.filter(
-                (item) =>
-                    item.productId ||
-                    item.description
-            );
-
+        const exchangeRate = getValidRate(invoice.exchangeRate);
 
         const commonDiscount =
-            discountMode ===
-                "COMMON"
-                ? Number(
-                    invoice.discountAmount ||
-                    0
-                )
+            discountMode === "COMMON"
+                ? Number(invoice.discountAmount || 0)
                 : 0;
 
+        const totalGrossAmount = validItems.reduce(
+            (total, item) => {
+                const quantity = Number(item?.quantity || 0);
+                const unitPrice = Number(item?.unitPrice || 0);
 
-        const totalGrossAmount =
-            validItems.reduce(
-                (
-                    total,
-                    item
-                ) => {
-
-                    const quantity =
-                        Number(
-                            item?.quantity ||
-                            0
-                        );
-
-
-                    const unitPrice =
-                        Number(
-                            item?.unitPrice ||
-                            0
-                        );
-
-
-                    return (
-                        total +
-                        quantity *
-                        unitPrice
-                    );
-                },
-                0
-            );
-
+                return total + quantity * unitPrice;
+            },
+            0,
+        );
 
         return {
+            invoiceNumber: invoice.invoiceNumber || null,
 
-            invoiceNumber:
-                invoice.invoiceNumber ||
-                null,
-
-            invoiceType:
-                invoice.invoiceType ||
-                "SALE_INVOICE",
-
+            invoiceType: invoice.invoiceType || "PRODUCT_INVOICE",
             invoiceStatus: invoice.invoiceStatus || "DRAFT",
 
-            customerId:
-                Number(
-                    invoice.customerId
-                ),
+            customerId: Number(invoice.customerId),
+            salesPersonId: invoice.salesPersonId
+                ? Number(invoice.salesPersonId)
+                : null,
 
-            salesPersonId:
-                Number(
-                    invoice.salesPersonId
-                ),
+            currencyId: Number(invoice.currencyId),
+            exchangeRate,
 
+            invoiceDate: invoice.invoiceDate,
+            dueDate: invoice.dueDate || null,
 
-            invoiceDate:
-                invoice.invoiceDate,
+            shippingAmount: Number(invoice.shippingAmount || 0),
 
-            dueDate:
-                invoice.dueDate ||
-                null,
-
-            shippingAmount:
-                Number(
-                    invoice.shippingAmount ||
-                    0
-                ),
-
-            notes:
-                invoice.notes?.trim() ||
-                "",
-
+            notes: invoice.notes?.trim() || "",
             termsAndConditions:
-                invoice
-                    .termsAndConditions
-                    ?.trim() ||
-                "",
+                invoice.termsAndConditions?.trim() || "",
 
             discountMode,
 
             discountAmount:
-                discountMode ===
-                    "COMMON"
-                    ? commonDiscount
-                    : 0,
+                discountMode === "COMMON" ? commonDiscount : 0,
 
-            invoiceItems:
-                validItems.map(
-                    (item) => {
+            invoiceItems: validItems.map((item) => {
+                const quantity = Number(item?.quantity || 0);
+                const unitPrice = Number(item?.unitPrice || 0);
 
-                        const quantity =
-                            Number(
-                                item?.quantity ||
-                                0
-                            );
+                const grossAmount = quantity * unitPrice;
 
+                let discountAmount = 0;
 
-                        const unitPrice =
-                            Number(
-                                item?.unitPrice ||
-                                0
-                            );
+                // PRODUCT DISCOUNT
+                if (discountMode === "PRODUCT") {
+                    discountAmount = Number(item?.discountAmount || 0);
+                }
 
+                // COMMON DISCOUNT — distribute proportionally
+                if (discountMode === "COMMON" && totalGrossAmount > 0) {
+                    discountAmount =
+                        commonDiscount * (grossAmount / totalGrossAmount);
+                }
 
-                        const grossAmount =
-                            quantity *
-                            unitPrice;
+                // Preserve original base-currency price.
+                // Fall back for existing items without baseUnitPrice.
+                const baseUnitPrice =
+                    item.baseUnitPrice !== null &&
+                        item.baseUnitPrice !== undefined &&
+                        item.baseUnitPrice !== ""
+                        ? Number(item.baseUnitPrice)
+                        : unitPrice / exchangeRate;
 
+                return {
+                    ...(item.id ? { id: item.id } : {}),
 
-                        let discountAmount =
-                            0;
+                    productId: Number(item.productId),
+                    description: item.description?.trim() || "",
 
+                    unitId: item.unitId ? Number(item.unitId) : null,
+                    sizeId: item.sizeId ? Number(item.sizeId) : null,
 
-                        /*
-                         * PRODUCT DISCOUNT
-                         */
-                        if (
-                            discountMode ===
-                            "PRODUCT"
-                        ) {
+                    quantity,
+                    unitPrice,
+                    baseUnitPrice: Number(baseUnitPrice.toFixed(4)),
 
-                            discountAmount =
-                                Number(
-                                    item?.discountAmount ||
-                                    0
-                                );
-                        }
+                    discountAmount: Number(discountAmount.toFixed(2)),
 
-
-                        /*
-                         * COMMON DISCOUNT
-                         *
-                         * Distributed proportionally
-                         * across invoice items.
-                         */
-                        if (
-                            discountMode ===
-                            "COMMON" &&
-                            totalGrossAmount >
-                            0
-                        ) {
-
-                            discountAmount =
-                                commonDiscount *
-                                (
-                                    grossAmount /
-                                    totalGrossAmount
-                                );
-                        }
-
-
-                        return {
-
-                            /*
-                             * Keep item ID during update.
-                             */
-                            ...(item.id
-                                ? {
-                                    id:
-                                        item.id,
-                                }
-                                : {}),
-
-                            productId:
-                                Number(
-                                    item.productId
-                                ),
-
-                            description:
-                                item.description
-                                    ?.trim() ||
-                                "",
-
-                            unitId:
-                                item.unitId
-                                    ? Number(
-                                        item.unitId
-                                    )
-                                    : null,
-
-                            sizeId:
-                                item.sizeId
-                                    ? Number(
-                                        item.sizeId
-                                    )
-                                    : null,
-
-                            quantity,
-
-                            unitPrice,
-
-                            discountAmount:
-                                Number(
-                                    discountAmount.toFixed(
-                                        2
-                                    )
-                                ),
-
-                            taxMasterId:
-                                Number(
-                                    item.taxMasterId
-                                ),
-                        };
-                    }
-                ),
+                    taxMasterId: item.taxMasterId
+                        ? Number(item.taxMasterId)
+                        : null,
+                };
+            }),
         };
     };
 
@@ -2406,6 +2578,46 @@ export default function SaleInvoice() {
         );
     };
 
+    const BASE_CURRENCY_ID = 1; // INR
+
+    const getValidRate = (rate) => {
+        const parsedRate = Number(rate);
+
+        return Number.isFinite(parsedRate) && parsedRate > 0
+            ? parsedRate
+            : 1;
+    };
+
+    const getBasePrice = (item, exchangeRate) => {
+        if (
+            item.baseUnitPrice !== undefined &&
+            item.baseUnitPrice !== null &&
+            item.baseUnitPrice !== ""
+        ) {
+            return Number(item.baseUnitPrice);
+        }
+
+        return Number(item.unitPrice || 0) / getValidRate(exchangeRate);
+    };
+
+    const selectedCurrency = currencies.find(
+        (currency) =>
+            String(currency.id) === String(invoice.currencyId),
+    );
+
+    const currencyCode =
+        selectedCurrency?.currencyCode ||
+        invoice.currencyCode ||
+        invoice.currencyName ||
+        "INR";
+
+    const currencySymbol =
+        selectedCurrency?.symbol ||
+        (currencyCode === "INR" ? "₹" : currencyCode);
+
+    const formatCurrency = (amount) =>
+        `${currencySymbol} ${fmt(Number(amount || 0))}`;
+
     /* =========================================================
        RENDER
     ========================================================= */
@@ -2433,6 +2645,11 @@ export default function SaleInvoice() {
 
                             <div className="flex items-center gap-3">
 
+                                {/* <div className="w-7 h-7 border-2 border-[#12203F] rounded-sm flex items-center justify-center">
+
+                  <div className="w-3 h-3 border border-[#12203F] rounded-sm" />
+
+                </div> */}
                                 <div
                                     className="w-10 h-10 rounded-lg bg-[#0095FD] border border-blue-100 flex items-center justify-center cursor-pointer"
                                     onClick={() => navigate("/bankAccount")}
@@ -2443,12 +2660,15 @@ export default function SaleInvoice() {
                                     />
                                 </div>
 
-                                <h1 className="text-lg font-semibold text-gray-800">
-
-                                    {isEdit
-                                        ? "Edit Sale Invoice"
-                                        : "Sale Invoice"}
-
+                                <h1 className="text-lg font-semibold text-[#0095FD]">
+                                    {isEdit ? "Edit " : ""}
+                                    {{
+                                        PRODUCT_INVOICE: "Product Invoice",
+                                        SERVICE_INVOICE: "Service Invoice",
+                                        SALE_INVOICE: "Sales Invoice",
+                                        PURCHASE_INVOICE: "Purchase Invoice",
+                                        TAX_INVOICE: "Tax Invoice",
+                                    }[invoice.invoiceType] || ""}
                                 </h1>
 
                             </div>
@@ -2456,16 +2676,14 @@ export default function SaleInvoice() {
 
                             <div className="flex items-center gap-4">
 
-                                <button
+                                <div
                                     type="button"
                                     className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700"
                                 >
 
-                                    <Settings size={15} />
+                                    {invoice.invoiceType || ""}
 
-                                    Customize invoice
-
-                                </button>
+                                </div>
 
 
                                 <button
@@ -2480,6 +2698,7 @@ export default function SaleInvoice() {
 
                                 </button>
 
+
                             </div>
 
                         </div>
@@ -2491,7 +2710,7 @@ export default function SaleInvoice() {
             BODY
         ================================================= */}
 
-                    <div className="flex-1 overflow-y-auto px-5 py-4">
+                    <div className="flex-1 overflow-y-auto px-5 py-6">
 
                         {/* =================================================
               CUSTOMER
@@ -2757,105 +2976,13 @@ export default function SaleInvoice() {
 
                                         </span>
 
-                                        {selectedCustomer?.currency || "INR"}
+                                        {invoice?.currencyName || "INR"}
 
                                     </div>
 
                                 </div>
 
 
-                                {/* ROW 2: ADDRESSES */}
-
-                                {invoice.customerId && (
-
-                                    <div className="flex gap-3 mt-5">
-
-                                        {/* BILLING */}
-
-                                        <div className="w-[240px]">
-
-                                            <p className="text-sm uppercase text-blue-600 mb-3">
-                                                Billing Address
-                                            </p>
-
-
-                                            {formatAddress(
-                                                selectedCustomer?.billingAddress
-                                            ) ? (
-
-                                                <p className="text-sm text-gray-700">
-
-                                                    {formatAddress(
-                                                        selectedCustomer.billingAddress
-                                                    )}
-
-                                                </p>
-
-                                            ) : (
-
-                                                <button
-                                                    type="button"
-                                                    className="text-sm text-blue-600 hover:underline"
-                                                >
-                                                    New Address
-                                                </button>
-
-                                            )}
-
-                                        </div>
-
-
-                                        {/* SHIPPING */}
-
-                                        <div>
-
-                                            <p className="text-sm uppercase text-blue-600 mb-3">
-                                                Shipping Address
-                                            </p>
-
-
-                                            <div className="flex items-center gap-3">
-
-                                                {formatAddress(
-                                                    selectedCustomer?.shippingAddress
-                                                ) ? (
-
-                                                    <p className="text-sm text-gray-700">
-
-                                                        {formatAddress(
-                                                            selectedCustomer.shippingAddress
-                                                        )}
-
-                                                    </p>
-
-                                                ) : (
-
-                                                    <button
-                                                        type="button"
-                                                        className="text-sm text-blue-600 hover:underline"
-                                                    >
-                                                        New Address
-                                                    </button>
-
-                                                )}
-
-
-                                                <span className="h-4 w-px bg-gray-300" />
-
-
-                                                {/* <button
-                        type="button"
-                        className="text-sm text-blue-600 hover:underline"
-                      >
-                        + Dropshipping Address
-                      </button> */}
-
-                                            </div>
-
-                                        </div>
-
-                                    </div>
-                                )}
 
                             </div>
 
@@ -2918,8 +3045,6 @@ export default function SaleInvoice() {
                         </div>
 
 
-
-
                         {/* =================================================
               INVOICE NUMBER
           ================================================= */}
@@ -2976,31 +3101,264 @@ export default function SaleInvoice() {
 
 
                         {/* =================================================
-              INVOICE TYPE
+              CURRENCY
           ================================================= */}
 
-                        <div className="flex items-center mb-4">
+                        <div className="mb-6 flex items-start">
 
-                            <label className="w-44 text-sm font-medium text-gray-700 shrink-0">
-                                Invoice Type
+                            <label className="w-44 pt-2 text-sm font-medium text-red-500 shrink-0">
+                                Currency
                             </label>
 
-                            <CustomSelect
-                                value={invoice.invoiceType || ""}
-                                onChange={(value) =>
-                                    handleInvoiceFieldChange("invoiceType", value)
-                                }
-                                options={[
-                                    { value: "PRODUCT_INVOICE", label: "PRODUCT_INVOICE" },
-                                    { value: "SERVICE_INVOICE", label: "SERVICE_INVOICE" },
-                                    { value: "SALE_INVOICE", label: "SALE_INVOICE" },
-                                    { value: "PURCHASE_INVOICE", label: "PURCHASE_INVOICE" },
-                                    { value: "TAX_INVOICE", label: "TAX_INVOICE" },
-                                ]}
-                            />
 
+                            <div className="flex-1">
+
+                                {/* ROW 1 */}
+
+                                <div className="flex items-center gap-3">
+
+                                    <div
+                                        ref={
+                                            currencyDropdownRef
+                                        }
+                                        className="relative w-[350px]"
+                                    >
+
+                                        <div className="flex">
+
+                                            <div className="relative flex-1">
+
+                                                <input
+                                                    type="text"
+                                                    value={currencySearch || invoice.currencyName || ""}
+                                                    placeholder={
+                                                        currencyLoading
+                                                            ? "Loading currencies..."
+                                                            : "Select or add a currency"
+                                                    }
+                                                    onClick={() =>
+                                                        setOpenCurrency(
+                                                            true
+                                                        )
+                                                    }
+                                                    onChange={(
+                                                        e
+                                                    ) => {
+
+                                                        setCurrencySearch(
+                                                            e.target.value
+                                                        );
+
+                                                        setOpenCurrency(
+                                                            true
+                                                        );
+                                                    }}
+                                                    className="w-full h-10 border border-blue-500 rounded-l-md px-3 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                />
+
+
+                                                <ChevronDown
+                                                    size={14}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                                                />
+
+                                            </div>
+
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setOpenCurrency(
+                                                        true
+                                                    )
+                                                }
+                                                className="h-10 w-10 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-r-md"
+                                            >
+
+                                                <Search
+                                                    size={16}
+                                                />
+
+                                            </button>
+
+                                        </div>
+
+
+                                        {/* CURRENCY DROPDOWN */}
+
+                                        {openCurrency && (
+
+                                            <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-[100]">
+
+                                                <div className="p-2 border-b border-gray-200">
+
+                                                    <div className="relative">
+
+                                                        <Search
+                                                            size={16}
+                                                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                                        />
+
+                                                        <input
+                                                            type="text"
+                                                            autoFocus
+                                                            placeholder="Search currency"
+                                                            value={
+                                                                currencySearch
+                                                            }
+                                                            onChange={(
+                                                                e
+                                                            ) =>
+                                                                setCurrencySearch(
+                                                                    e.target.value
+                                                                )
+                                                            }
+                                                            className="w-full border border-blue-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none"
+                                                        />
+
+                                                    </div>
+
+                                                </div>
+
+
+                                                <div className="max-h-60 overflow-y-auto">
+
+                                                    {currencyLoading ? (
+
+                                                        <div className="px-4 py-5 text-center text-gray-500 text-sm">
+                                                            Loading currencies...
+                                                        </div>
+
+                                                    ) : currencyError ? (
+
+                                                        <div className="px-4 py-5 text-center text-red-500 text-sm">
+                                                            Failed to load currencies
+                                                        </div>
+
+                                                    ) : filteredcurrencies.length ===
+                                                        0 ? (
+
+                                                        <div className="px-4 py-5 text-center text-gray-400 text-sm">
+
+                                                            {currencySearch
+                                                                ? "No currencies found"
+                                                                : "No currencies available"}
+
+                                                        </div>
+
+                                                    ) : (
+
+                                                        filteredcurrencies.map(
+                                                            (
+                                                                currency
+                                                            ) => {
+
+                                                                const name =
+                                                                    getCurrencyName(
+                                                                        currency
+                                                                    );
+
+                                                                return (
+
+                                                                    <button
+                                                                        type="button"
+                                                                        key={
+                                                                            currency.id
+                                                                        }
+                                                                        onClick={async () => {
+                                                                            await handleCurrencySelect(currency.id);
+                                                                            setOpenCurrency(false);
+                                                                            setCurrencySearch("");
+                                                                        }}
+                                                                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white"
+                                                                    >
+
+                                                                        <div className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-medium shrink-0">
+
+                                                                            {name
+                                                                                .charAt(
+                                                                                    0
+                                                                                )
+                                                                                .toUpperCase()}
+
+                                                                        </div>
+
+
+                                                                        <div className="min-w-0">
+
+                                                                            <p className="font-medium truncate">
+                                                                                {name}
+                                                                            </p>
+
+                                                                            <p className="text-xs opacity-70 truncate">
+
+                                                                                {currency.symbol ||
+                                                                                    ""}
+
+                                                                            </p>
+
+                                                                            <p className="text-xs opacity-70 truncate">
+
+                                                                                {currency.currencyCode ||
+                                                                                    ""}
+
+                                                                            </p>
+                                                                        </div>
+
+                                                                    </button>
+                                                                );
+                                                            }
+                                                        )
+                                                    )}
+
+                                                </div>
+
+
+                                                <button
+                                                    type="button"
+                                                    className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
+                                                    // onClick={() => {
+                                                    //   setDropdownOpen(
+                                                    //     false
+                                                    //   );
+                                                    //   dispatch(
+                                                    //     openModal({
+                                                    //       type: "addCustomer",
+                                                    //     })
+                                                    //   );
+
+                                                    // }}
+
+                                                    onClick={() => (navigate("/currencies/new"))}
+                                                >
+
+                                                    <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center"
+                                                    >
+
+                                                        <Plus
+                                                            size={14}
+                                                        />
+
+                                                    </div>
+
+                                                    <span className="font-medium">
+                                                        New Currency
+                                                    </span>
+
+                                                </button>
+
+                                            </div>
+                                        )}
+
+                                    </div>
+
+
+
+                                </div>
+                            </div>
 
                         </div>
+
 
 
 
@@ -3268,168 +3626,83 @@ export default function SaleInvoice() {
                                 </div>
                             </div>
 
-
-
-
-
-                            {/* DETAILS */}
-
-                            {invoice.salesPersonId && (
-
-                                <div className="ml-auto w-60 shrink-0">
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setShowSalesPersonDetails(
-                                                (v) => !v
-                                            )
-                                        }
-                                        className="w-full h-11 px-4 flex items-center justify-between bg-slate-600 hover:bg-slate-700 text-white rounded-md font-semibold text-sm"
-                                    >
-
-                                        <span className="truncate">
-                                            {invoice.salesPersonName}'s Details
-                                        </span>
-
-
-                                        <ChevronRight
-                                            size={16}
-                                            className={`transition-transform ${showSalesPersonDetails
-                                                ? "rotate-90"
-                                                : ""
-                                                }`}
-                                        />
-
-                                    </button>
-
-
-                                    {showSalesPersonDetails && (
-
-                                        <div className="bg-white border border-gray-200 rounded-b-md p-3 text-sm text-gray-600 space-y-1">
-
-                                            <p>
-                                                {selectedSalesPerson?.salesPersonType ||
-                                                    "No email"}
-                                            </p>
-                                            <p>
-                                                {selectedSalesPerson?.email ||
-                                                    "No email"}
-                                            </p>
-
-                                            <p>
-                                                {selectedSalesPerson?.mobile ||
-                                                    selectedCustomer?.phoneNumber ||
-                                                    selectedCustomer?.mobileNumber ||
-                                                    "No phone"}
-                                            </p>
-
-                                        </div>
-
-                                    )}
-
-                                </div>
-                            )}
-
                         </div>
 
 
                         {/* =================================================
-              DATE / TERMS / DUE DATE
+              INVOICE NUMBER
           ================================================= */}
 
-                        <div className="flex items-center mb-6">
-
-                            <label className="w-44 text-sm font-medium text-gray-700 shrink-0">
-                                Invoice Date*
-                            </label>
-
-
-                            <DatePicker
-                                selected={
-                                    invoice.invoiceDate
-                                        ? new Date(
-                                            invoice.invoiceDate
-                                        )
-                                        : null
-                                }
-                                onChange={
-                                    handleInvoiceDateChange
-                                }
-                                dateFormat="dd/MM/yyyy"
-                                placeholderText="Select date"
-                                className="w-[330px] border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-400"
-                            />
-
-
-                            <div className="flex items-center ml-8 gap-3">
-
-                                <label className="text-sm text-gray-700">
-                                    Terms
-                                </label>
-
-                                <CustomSelect
-
-                                    value={invoice.termsAndConditions || "Due on Receipt"}
-                                    onChange={(value) =>
-                                        handleTermsChange("termsAndConditions", value)
-                                    }
-                                    options={[
-                                        { value: "Due on Receipt", label: "Due on Receipt" },
-                                        { value: "Net 15", label: "Net 15" },
-                                        { value: "Net 30", label: "Net 30" },
-                                    ]}
-                                />
-
-
-                            </div>
-
-
-                            <div className="flex items-center ml-8 gap-3">
-
-                                <label className="text-sm text-gray-700">
-                                    Due Date
-                                </label>
-
-
-                                <DatePicker
-                                    selected={
-                                        invoice.dueDate
-                                            ? new Date(
-                                                invoice.dueDate
-                                            )
-                                            : null
-                                    }
-                                    onChange={
-                                        handleDueDateChange
-                                    }
-                                    dateFormat="dd/MM/yyyy"
-                                    placeholderText="Due date"
-                                    className="w-[150px] border border-gray-300 rounded px-3 py-2"
-                                />
-
-                            </div>
-
-                        </div>
-
                         <div className="flex items-center mb-4">
-                            <label className="w-44 text-sm font-medium text-gray-700 shrink-0">
-                                Invoice Status
+                            <label className="w-44 shrink-0 text-sm font-medium text-gray-700">
+                                Invoice Date
                             </label>
 
-                            <CustomSelect
+                            <div className="relative w-[360px]">
+                                <div className="flex h-10 items-center gap-2 rounded-md border border-gray-200 bg-white px-3 pr-10 text-sm text-gray-800">
+                                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500">
+                                        <span className="h-2 w-2 rounded-full border-2 border-white" />
+                                    </span>
 
-                                value={invoice.status || "ACTIVE"}
-                                onChange={(value) =>
-                                    handleChange("status", value)
-                                }
-                                options={[
-                                    { value: "ACTIVE", label: "ACTIVE" },
-                                    { value: "INACTIVE", label: "INACTIVE" },
-                                    { value: "DRAFT", label: "DRAFT" },
-                                ]}
-                            />
+                                    <span className="truncate">
+                                        {invoice?.invoiceDate
+                                            ? new Date(
+                                                `${invoice.invoiceDate.slice(0, 10)}T00:00:00`
+                                            ).toLocaleDateString("en-IN")
+                                            : "--"}
+                                    </span>
 
+                                    <span className="shrink-0 text-gray-400">|</span>
+
+                                    <span className="truncate">
+                                        {invoice?.termsAndConditions || "Due on Receipt"}
+                                    </span>
+
+                                    <span className="shrink-0 text-gray-400">|</span>
+
+                                    <span className="shrink-0">
+                                        {formatDateForInput(invoice?.dueDate) ||
+                                            calculateDueDate(
+                                                invoice?.invoiceDate,
+                                                invoice?.termsAndConditions || "Due on Receipt"
+                                            )
+                                            ? new Date(
+                                                `${(
+                                                    formatDateForInput(invoice?.dueDate) ||
+                                                    calculateDueDate(
+                                                        invoice?.invoiceDate,
+                                                        invoice?.termsAndConditions || "Due on Receipt"
+                                                    )
+                                                )}T00:00:00`
+                                            ).toLocaleDateString("en-IN")
+                                            : "--"}
+                                    </span>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setDateTermsForm({
+                                            invoiceDate: formatDateForInput(invoice?.invoiceDate),
+                                            termsAndConditions:
+                                                invoice?.termsAndConditions || "Due on Receipt",
+                                            dueDate:
+                                                formatDateForInput(invoice?.dueDate) ||
+                                                calculateDueDate(
+                                                    invoice?.invoiceDate,
+                                                    invoice?.termsAndConditions || "Due on Receipt"
+                                                ),
+                                        });
+
+                                        setShowDateTermsModal(true);
+                                    }}
+                                    className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded text-blue-500 transition hover:bg-blue-50 hover:text-blue-600"
+                                    title="Invoice Dates & Terms Settings"
+                                    aria-label="Edit invoice dates and terms"
+                                >
+                                    <Settings size={14} />
+                                </button>
+                            </div>
                         </div>
 
 
@@ -3462,8 +3735,7 @@ export default function SaleInvoice() {
                             </div>
 
 
-                            <div className="overflow-x-auto overflow-y-visible">
-
+                            <div className="w-full max-w-full overflow-x-auto overflow-y-visible">
                                 <table className="w-full min-w-[1250px]">
 
                                     <thead>
@@ -3597,108 +3869,44 @@ export default function SaleInvoice() {
                                                         {/* UNIT */}
 
                                                         <td className="px-3 py-3">
-
-                                                            <select
-                                                                value={
-                                                                    item.unitId ||
-                                                                    ""
+                                                            <CustomSUSelect
+                                                                value={item.unitId || ""}
+                                                                onChange={(value) =>
+                                                                    updateItem(index, "unitId", value)
                                                                 }
-                                                                onChange={(
-                                                                    event
-                                                                ) =>
-                                                                    updateItem(
-                                                                        index,
-                                                                        "unitId",
-                                                                        event.target.value
-                                                                    )
-                                                                }
-                                                                className="w-full border border-gray-200 rounded px-2 py-2 text-sm bg-white focus:outline-none focus:border-blue-400"
-                                                            >
-
-                                                                <option value="">
-                                                                    Select
-                                                                </option>
-
-
-                                                                {units.map(
-                                                                    (
-                                                                        unit
-                                                                    ) => (
-
-                                                                        <option
-                                                                            key={
-                                                                                unit.id
-                                                                            }
-                                                                            value={
-                                                                                unit.id
-                                                                            }
-                                                                        >
-                                                                            {
-                                                                                unit.unitName ||
-                                                                                unit.name ||
-                                                                                unit.unitCode
-                                                                            }
-                                                                        </option>
-
-                                                                    )
-                                                                )}
-
-                                                            </select>
-
+                                                                placeholder="Select"
+                                                                width="w-full"
+                                                                size="sm"
+                                                                options={[
+                                                                    { value: "", label: "Select" },
+                                                                    ...units.map((unit) => ({
+                                                                        value: String(unit.id),
+                                                                        label: unit.unitName || unit.name || unit.unitCode,
+                                                                    })),
+                                                                ]}
+                                                            />
                                                         </td>
 
 
                                                         {/* SIZE */}
 
                                                         <td className="px-3 py-3">
-
-                                                            <select
-                                                                value={
-                                                                    item.sizeId ||
-                                                                    ""
+                                                            <CustomSUSelect
+                                                                value={item.sizeId || ""}
+                                                                onChange={(value) =>
+                                                                    updateItem(index, "sizeId", value)
                                                                 }
-                                                                onChange={(
-                                                                    event
-                                                                ) =>
-                                                                    updateItem(
-                                                                        index,
-                                                                        "sizeId",
-                                                                        event.target.value
-                                                                    )
-                                                                }
-                                                                className="w-full border border-gray-200 rounded px-2 py-2 text-sm bg-white focus:outline-none focus:border-blue-400"
-                                                            >
-
-                                                                <option value="">
-                                                                    Select
-                                                                </option>
-
-
-                                                                {sizes.map(
-                                                                    (
-                                                                        size
-                                                                    ) => (
-
-                                                                        <option
-                                                                            key={
-                                                                                size.id
-                                                                            }
-                                                                            value={
-                                                                                size.id
-                                                                            }
-                                                                        >
-                                                                            {
-                                                                                size.sizeName ||
-                                                                                size.name ||
-                                                                                size.sizeCode
-                                                                            }
-                                                                        </option>
-
-                                                                    )
-                                                                )}
-
-                                                            </select>
-
+                                                                placeholder="Select"
+                                                                width="w-full"
+                                                                size="sm"
+                                                                options={[
+                                                                    { value: "", label: "Select" },
+                                                                    ...sizes.map((size) => ({
+                                                                        value: String(size.id),
+                                                                        label: size.sizeName || size.name || size.sizeCode,
+                                                                    })),
+                                                                ]}
+                                                            />
                                                         </td>
 
 
@@ -3746,72 +3954,39 @@ export default function SaleInvoice() {
                                                         {/* TAX */}
 
                                                         <td className="px-3 py-3">
-
-                                                            <select
-                                                                value={
-                                                                    item.taxMasterId ||
-                                                                    ""
-                                                                }
-                                                                onChange={(
-                                                                    event
-                                                                ) =>
-                                                                    updateItem(
-                                                                        index,
-                                                                        "taxMasterId",
-                                                                        event.target.value
-                                                                    )
-                                                                }
-                                                                className="w-full border border-gray-200 rounded px-2 py-2 text-sm bg-white focus:outline-none focus:border-blue-400"
-                                                            >
-
-                                                                <option value="">
-                                                                    Select
-                                                                </option>
-
-
-                                                                {taxMasters.map(
-                                                                    (
-                                                                        tax
-                                                                    ) => {
-
-                                                                        const rate =
-                                                                            tax.taxPercentage ??
-                                                                            tax.taxRate ??
-                                                                            tax.rate ??
-                                                                            tax.percentage ??
-                                                                            0;
-
-
-                                                                        return (
-
-                                                                            <option
-                                                                                key={
-                                                                                    tax.id
-                                                                                }
-                                                                                value={
-                                                                                    tax.id
-                                                                                }
-                                                                            >
-
-                                                                                {
-                                                                                    tax.taxName ||
-                                                                                    tax.name ||
-                                                                                    tax.taxType ||
-                                                                                    "Tax"
-                                                                                }{" "}
-
-                                                                                ({rate}%)
-
-                                                                            </option>
-
-                                                                        );
+                                                            {currencyCode === "INR" ? (
+                                                                <CustomSUSelect
+                                                                    value={String(item.taxMasterId ?? "")}
+                                                                    onChange={(value) =>
+                                                                        updateItem(index, "taxMasterId", "")
                                                                     }
-                                                                )}
+                                                                    placeholder="Select Tax"
+                                                                    width="w-full"
+                                                                    size="sm"
+                                                                    options={[
+                                                                        {
+                                                                            value: "",
+                                                                            label: "Select Tax",
+                                                                        },
+                                                                        ...taxMasters.map((tax) => {
+                                                                            const rate =
+                                                                                tax.taxPercentage ??
+                                                                                tax.taxRate ??
+                                                                                tax.rate ??
+                                                                                tax.percentage ??
+                                                                                0;
 
-                                                            </select>
-
+                                                                            return {
+                                                                                value: String(tax.id),
+                                                                                label: `${tax.taxName || tax.name || tax.taxType || "Tax"} (${rate}%)`,
+                                                                            };
+                                                                        }),
+                                                                    ]}
+                                                                />
+                                                            ) : (
+                                                                <span className="text-sm text-gray-400">—</span>
+                                                            )}
                                                         </td>
-
 
                                                         {/* QUANTITY */}
 
@@ -3845,29 +4020,22 @@ export default function SaleInvoice() {
                                                         {/* RATE */}
 
                                                         <td className="px-3 py-3">
+                                                            <div className="flex items-center justify-start ">
+                                                                <span className="text-xs text-gray-500 whitespace-nowrap">
+                                                                    ({currencyCode})
+                                                                </span>
 
-                                                            <input
-                                                                type="number"
-                                                                min="0"
-                                                                step="0.01"
-                                                                value={
-                                                                    item.unitPrice ??
-                                                                    0
-                                                                }
-                                                                onChange={(
-                                                                    event
-                                                                ) =>
-                                                                    updateItem(
-                                                                        index,
-                                                                        "unitPrice",
-                                                                        Number(
-                                                                            event.target.value
-                                                                        )
-                                                                    )
-                                                                }
-                                                                className="w-full text-right text-sm border-b border-transparent focus:border-blue-400 focus:outline-none bg-transparent"
-                                                            />
-
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    value={item.unitPrice ?? 0}
+                                                                    onChange={(event) =>
+                                                                        handleUnitPriceChange(index, event.target.value)
+                                                                    }
+                                                                    className="w-full min-w-0 text-right text-sm border-b border-transparent focus:border-blue-400 focus:outline-none bg-transparent"
+                                                                />
+                                                            </div>
                                                         </td>
 
 
@@ -3875,7 +4043,7 @@ export default function SaleInvoice() {
 
                                                         <td className="px-3 py-3 text-right text-sm font-semibold text-gray-800">
 
-                                                            ₹
+                                                            ({currencyCode})
                                                             {fmt(
                                                                 amount
                                                             )}
@@ -4181,16 +4349,13 @@ export default function SaleInvoice() {
                                 <div className="flex justify-between items-center py-3">
 
                                     <span className="text-sm font-semibold text-gray-700">
-                                        Total (₹)
+                                        Total ({currencyCode})
                                     </span>
 
 
                                     <span className="text-sm font-semibold text-gray-700">
 
-                                        ₹
-                                        {fmt(
-                                            totals.grandTotal
-                                        )}
+                                        {formatCurrency(totals.grandTotal)}
 
                                     </span>
 
@@ -4230,15 +4395,12 @@ export default function SaleInvoice() {
                                         <div className="flex justify-between">
 
                                             <span>
-                                                Sub Total
+                                                Sub Total ({currencyCode})
                                             </span>
 
 
                                             <span>
-                                                ₹
-                                                {fmt(
-                                                    totals.subtotal
-                                                )}
+                                                {formatCurrency(totals.subtotal)}
                                             </span>
 
                                         </div>
@@ -4340,9 +4502,7 @@ export default function SaleInvoice() {
 
                                             <div className="flex items-center gap-1">
 
-                                                <span>
-                                                    ₹
-                                                </span>
+                                                <span>{currencySymbol}</span>
 
 
                                                 {discountMode ===
@@ -4395,15 +4555,12 @@ export default function SaleInvoice() {
                                         <div className="flex justify-between">
 
                                             <span>
-                                                Tax
+                                                Tax ({currencyCode})
                                             </span>
 
 
                                             <span>
-                                                ₹
-                                                {fmt(
-                                                    totals.tax
-                                                )}
+                                                {formatCurrency(totals.tax)}
                                             </span>
 
                                         </div>
@@ -4420,9 +4577,7 @@ export default function SaleInvoice() {
 
                                             <div className="flex items-center gap-1">
 
-                                                <span>
-                                                    ₹
-                                                </span>
+                                                <span>{currencySymbol}</span>
 
 
                                                 <input
@@ -4460,15 +4615,12 @@ export default function SaleInvoice() {
                                         <div className="flex justify-between font-semibold border-t pt-2">
 
                                             <span>
-                                                Grand Total
+                                                Grand Total ({currencyCode})
                                             </span>
 
 
                                             <span>
-                                                ₹
-                                                {fmt(
-                                                    totals.grandTotal
-                                                )}
+                                                {formatCurrency(totals.grandTotal)}
                                             </span>
 
                                         </div>
@@ -4796,6 +4948,193 @@ export default function SaleInvoice() {
                     </div>
                 </div>
             )}
+
+
+
+            {/* Invoice Dates & Terms Modal */}
+            {showDateTermsModal && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4">
+                    <div className="w-full max-w-xl rounded-xl bg-white shadow-xl">
+                        {/* Header */}
+                        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                            <div className="flex items-center gap-3">
+                                <UserKeyIcon
+                                    size={22}
+                                    strokeWidth={2}
+                                    className="text-blue-500"
+                                />
+
+                                <h2 className="text-lg font-semibold text-blue-500">
+                                    Invoice Dates & Terms
+                                </h2>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setShowDateTermsModal(false)}
+                                className="text-2xl text-gray-500 transition hover:text-red-500"
+                                aria-label="Close modal"
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        {/* Form */}
+                        <div className="space-y-5 p-6">
+                            {/* Invoice Date */}
+                            <div className="grid grid-cols-[130px_minmax(0,1fr)] items-center gap-4">
+                                <label className="text-sm font-medium text-red-500">
+                                    Invoice Date*
+                                </label>
+
+                                <DatePicker
+                                    selected={
+                                        dateTermsForm.invoiceDate
+                                            ? new Date(`${dateTermsForm.invoiceDate.slice(0, 10)}T00:00:00`)
+                                            : null
+                                    }
+                                    onChange={(date) => {
+                                        const invoiceDate = date ? formatDateForInput(date) : "";
+
+                                        setDateTermsForm((prev) => {
+                                            const termsAndConditions =
+                                                prev.termsAndConditions || "Due on Receipt";
+
+                                            return {
+                                                ...prev,
+                                                invoiceDate,
+                                                dueDate: invoiceDate
+                                                    ? calculateDueDate(invoiceDate, termsAndConditions)
+                                                    : "",
+                                            };
+                                        });
+                                    }}
+                                    dateFormat="dd/MM/yyyy"
+                                    placeholderText="Select invoice date"
+                                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                                    isClearable
+                                    showPopperArrow={false}
+                                />
+                            </div>
+
+                            {/* Terms */}
+                            <div className="grid grid-cols-[130px_minmax(0,1fr)] items-center gap-4">
+                                <label className="text-sm font-medium text-red-500">
+                                    Terms*
+                                </label>
+
+                                <CustomSelect
+                                    value={dateTermsForm.termsAndConditions || "Due on Receipt"}
+                                    onChange={(value) => {
+                                        setDateTermsForm((prev) => ({
+                                            ...prev,
+                                            termsAndConditions: value,
+                                            dueDate: calculateDueDate(prev.invoiceDate, value),
+                                        }));
+                                    }}
+                                    width="w-full"
+                                    size="lg"
+                                    options={[
+                                        { value: "Due on Receipt", label: "Due on Receipt" },
+                                        { value: "Net 15", label: "Net 15" },
+                                        { value: "Net 30", label: "Net 30" },
+                                    ]}
+                                />
+                            </div>
+
+                            {/* Due Date */}
+                            <div className="grid grid-cols-[130px_minmax(0,1fr)] items-center gap-4">
+                                <label className="text-sm font-medium text-gray-700">
+                                    Due Date
+                                </label>
+
+                                <DatePicker
+                                    selected={
+                                        dateTermsForm.dueDate
+                                            ? new Date(`${dateTermsForm.dueDate.slice(0, 10)}T00:00:00`)
+                                            : null
+                                    }
+                                    onChange={(date) => {
+                                        const dueDate = date ? formatDateForInput(date) : "";
+
+                                        setDateTermsForm((prev) => ({
+                                            ...prev,
+                                            dueDate,
+                                        }));
+                                    }}
+                                    dateFormat="dd/MM/yyyy"
+                                    placeholderText="Select due date"
+                                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                                    isClearable
+                                    showPopperArrow={false}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+                            <button
+                                type="button"
+                                onClick={() => setShowDateTermsModal(false)}
+                                className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (!dateTermsForm.invoiceDate) {
+                                        toast.error("Please select an invoice date");
+                                        return;
+                                    }
+
+                                    const terms =
+                                        dateTermsForm.termsAndConditions || "Due on Receipt";
+
+                                    const values = {
+                                        invoiceDate: dateTermsForm.invoiceDate,
+                                        termsAndConditions: terms,
+                                        dueDate:
+                                            dateTermsForm.dueDate ||
+                                            calculateDueDate(dateTermsForm.invoiceDate, terms),
+                                    };
+
+                                    dispatch(
+                                        setInvoiceField({
+                                            field: "invoiceDate",
+                                            value: values.invoiceDate,
+                                        })
+                                    );
+
+                                    dispatch(
+                                        setInvoiceField({
+                                            field: "termsAndConditions",
+                                            value: values.termsAndConditions,
+                                        })
+                                    );
+
+                                    dispatch(
+                                        setInvoiceField({
+                                            field: "dueDate",
+                                            value: values.dueDate,
+                                        })
+                                    );
+
+                                    setDateTermsForm(values);
+                                    setShowDateTermsModal(false);
+
+                                    toast.success("Invoice dates and terms updated");
+                                }}
+                                className="rounded-md bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </>
     );
 }

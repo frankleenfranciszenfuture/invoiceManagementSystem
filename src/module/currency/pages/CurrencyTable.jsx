@@ -669,7 +669,7 @@ export default function CurrencyTable({ currency = [] }) {
 
                             {[
                                 "CurrencyName",
-                                "Code",
+                                "CurrencyCode",
                                 "symbol",
                                 "decimalPlaces",
                                 "Status",
@@ -779,13 +779,13 @@ export default function CurrencyTable({ currency = [] }) {
                                                     text-md
                                                     font-bold
                                                     ${getAvatarColor(
-                                                        currency.name
+                                                        currency.currencyName
                                                     )}
                                                 `}
                                                 >
 
                                                     {initials(
-                                                        currency.name
+                                                        currency.currencyName
                                                     )}
 
                                                 </div>
@@ -800,7 +800,7 @@ export default function CurrencyTable({ currency = [] }) {
                                                     "
                                                     >
                                                         {
-                                                            currency.name ||
+                                                            currency.currencyName ||
                                                             "—"
                                                         }
                                                     </p>
@@ -836,7 +836,7 @@ export default function CurrencyTable({ currency = [] }) {
                                         "
                                         >
                                             {
-                                                currency.code ||
+                                                currency.currencyCode ||
                                                 "—"
                                             }
                                         </td>

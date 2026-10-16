@@ -14,8 +14,8 @@ import {
 
 const emptyCurrency = {
   id: null,
-  code: "",
-  name: "",
+  currencyCode: "",
+  currencyName: "",
   symbol: "",
   decimalPlaces: "",
   status: "ACTIVE",

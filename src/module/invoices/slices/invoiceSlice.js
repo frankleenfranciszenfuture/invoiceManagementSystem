@@ -19,7 +19,13 @@ const emptyInvoiceItem = {
   unitId: "",
   sizeId: "",
   quantity: 1,
+
+  // Price in the selected invoice currency
   unitPrice: 0,
+
+  // Original price in the base currency (INR)
+  baseUnitPrice: 0,
+
   discountAmount: 0,
   taxMasterId: "",
 };
@@ -49,6 +55,7 @@ const emptyInvoice = {
   salesPersonName: "",
 
   currencyId: "",
+  currencyName: "",
   exchangeRate: "",
 
   invoiceDate: getTodayDate(),

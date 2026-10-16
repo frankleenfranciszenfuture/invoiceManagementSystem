@@ -82,3 +82,39 @@ export const deleteCurrency = createAsyncThunk(
     }
   },
 );
+
+export const fetchExchangeRate = createAsyncThunk(
+  "currency/fetchExchangeRate",
+  async ({ fromCurrencyId, toCurrencyId }, { rejectWithValue }) => {
+    try {
+      const res = await api.get("/exchange-rates/lookup", {
+        params: {
+          fromCurrencyId,
+          toCurrencyId,
+        },
+      });
+
+      const result = res.data?.data;
+
+      if (!res.data?.success || result?.rate == null) {
+        return rejectWithValue(
+          res.data?.message || "Exchange rate was not found",
+        );
+      }
+
+      const rate = Number(result.rate);
+
+      if (!Number.isFinite(rate) || rate <= 0) {
+        return rejectWithValue("Invalid exchange rate received");
+      }
+
+      return result;
+    } catch (error) {
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error.message ||
+          "Unable to fetch exchange rate",
+      );
+    }
+  },
+);

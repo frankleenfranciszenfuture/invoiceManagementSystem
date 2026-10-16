@@ -493,7 +493,7 @@ function AppContent() {
         />
         {/* =================================================
                     INVOICES
-            ================================================= */}
+          ================================================= */}
 
         <Route
           path="/invoices/product/new"
@@ -503,6 +503,11 @@ function AppContent() {
         <Route
           path="/invoices/service/new"
           element={<ServiceInvoice />}
+        />
+
+        <Route
+          path="/invoices/sale/new"
+          element={<SaleInvoice />}
         />
 
         <Route

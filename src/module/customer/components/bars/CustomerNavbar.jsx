@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { Menu, Plus, Bell, Edit } from "lucide-react";
+import { Menu, Plus, Bell, Edit, Home } from "lucide-react";
 import { toggleSidebar, openModal } from "../../../ui/uiSlice";
 import {
     setCurrentPage
@@ -77,65 +77,164 @@ export default function CustomerNavbar({ title }) {
 
 
     return (
-        <div className="h-[52px] border border-gray-100 rounded-md flex items-center justify-between bg-white px-2 py-1">
+        <div
+            className="
+                h-[60px]
+                border
+                border-gray-100
+                rounded-md
+                flex
+                items-center
+                justify-between
+                bg-white
+                px-2
+                py-2
+            "
+        >
 
-            {/* Left - View Dropdown */}
-            <div ref={dropdownOpenRef} className="relative">
-                <button
-                    type="button"
-                    onClick={() => setDropdownOpen(!dropdownOpen)}
-                    className="flex items-center gap-1 rounded-md bg-[#088178] hover:bg-[#088178]/80 hover:text-white px-3 py-2 cursor-pointer"
+            {/* =====================================================
+    LEFT - HOME + ALL CUSTOMERS + CUSTOMER STATUS FILTER
+====================================================== */}
+
+            <div className="flex items-center gap-2">
+
+                {/* HOME + ALL CUSTOMERS */}
+                <div className="flex items-center gap-2">
+
+                    <button
+                        type="button"
+                        onClick={() => navigate("/")}
+                        className="
+                flex
+                items-center
+                justify-center
+                rounded-md
+                border
+                border-gray-200
+                bg-[white]
+                p-2
+                text-[#0F4659]
+                hover:bg-[#0F4659]/20
+                transition
+            "
+                        title="Home"
+                    >
+                        <Home size={18} />
+                    </button>
+
+
+
+                </div>
+
+                {/* EXISTING ROLE STATUS FILTER */}
+                <div
+                    ref={dropdownOpenRef}
+                    className="relative"
                 >
-                    <span className="text-sm font-semibold text-white ">
-                        {selectedView}
-                    </span>
 
-                    <ChevronDown
-                        size={14}
-                        className={`text-white transition-transform ${dropdownOpen ? "rotate-180" : ""
-                            }`}
-                    />
-                </button>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setDropdownOpen((prev) => !prev)
+                        }
+                        className="
+                flex
+                items-center
+                gap-1
+                rounded-md
+                bg-[#0095FD]
+                px-3
+                py-2
+                cursor-pointer
+                hover:bg-[#0095FD]/90
+            "
+                    >
+                        <h2 className="font-semibold text-gray-100">
+                            {selectedView || "All Customers"}
+                        </h2>
 
-                {dropdownOpen && (
-                    <div className="absolute left-0 mt-2 w-72 rounded-md border border-gray-200 bg-white shadow-lg z-50">
+                        <ChevronDown
+                            size={14}
+                            className={`
+                    text-gray-100
+                    transition
+                    ${dropdownOpen ? "rotate-180" : ""}
+                `}
+                        />
+                    </button>
 
-                        {/* Views */}
-                        <div className="max-h-72 overflow-y-auto rounded-md">
-                            {filteredViews.map((view) => (
-                                <button
-                                    key={view.value}
-                                    type="button"
-                                    onClick={() => {
-                                        dispatch(setCurrentPage(0));
-                                        dispatch(setSelectedView(view.label));
-                                        dispatch(setStatus(view.value));
-
-                                        navigate(`/customers?status=${view.value}`);
-                                        setDropdownOpen(false);
-                                    }}
-                                    className="w-full px-5 py-3 border-b border-gray-100 text-left text-sm hover:bg-[#088178]/60 hover:text-white rounded-md"
-                                >
-                                    {view.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* New View */}
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                navigate("/customers/new");
-                                setDropdownOpen(false);
-                            }}
-                            className="w-full border-t border-gray-200 px-4 py-3 text-left text-sm font-medium text-[#088178] hover:bg-[#088178]/20"
+                    {dropdownOpen && (
+                        <div
+                            className="
+                    absolute
+                    left-0
+                    mt-2
+                    w-72
+                    rounded-md
+                    border
+                    border-gray-200
+                    bg-white
+                    shadow-lg
+                    z-50
+                "
                         >
-                            + New View
-                        </button>
-                    </div>
-                )}
+                            <div className="max-h-72 overflow-y-auto">
+                                {views.map((view) => (
+                                    <button
+                                        type="button"
+                                        key={view.value}
+                                        onClick={() => handleViewChange(view)}
+                                        className="
+                                w-full
+                                px-5
+                                py-4
+                                border-b
+                                border-gray-50
+                                text-left
+                                text-sm
+                                hover:bg-[#0095FD]/90
+                                hover:text-white
+                                rounded-md
+                            "
+                                    >
+                                        {view.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button
+                                type="button"
+                                className="
+                        w-full
+                        border-t
+                        border-gray-200
+                        px-4
+                        py-3
+                        text-left
+                        text-gray-500
+                        bg-[#0095FD]/20
+                        hover:text-white
+                        hover:bg-[#0095FD]/80
+                        rounded-md
+                    "
+                                onClick={() => {
+                                    setDropdownOpen(false);
+
+                                    dispatch(
+                                        openModal({
+                                            type: "addCustomer",
+                                        })
+                                    );
+                                }}
+                            >
+                                + New View
+                            </button>
+                        </div>
+                    )}
+                </div>
+
             </div>
+
 
             {/* Right */}
             <div className="flex items-center gap-2">
@@ -148,7 +247,7 @@ export default function CustomerNavbar({ title }) {
                             e.stopPropagation();
                             navigate("/customers/new");
                         }}
-                        className="flex items-center gap-1 bg-[#088178] px-3 py-2 text-sm font-medium text-white hover:bg-[#088178]/80 cursor-pointer"
+                        className="flex items-center gap-1 bg-[#0095FD] px-3 py-2 text-sm font-medium text-white hover:bg-[#0095FD]/90 cursor-pointer"
                     >
                         <Plus size={14} />
                         New Customer

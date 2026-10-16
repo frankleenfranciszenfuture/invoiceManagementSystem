@@ -113,7 +113,7 @@ export default function CustomerTable() {
         <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
             <div className="overflow-x-auto overflow-y-visible">
                 <table className="w-full">
-                    <thead className="bg-[#088178]/70 border-b border-gray-300">
+                    <thead className="bg-[#FCF7F8]/70 border-b border-gray-300">
                         <tr>
                             {[
                                 "Display Name",
@@ -129,8 +129,18 @@ export default function CustomerTable() {
                             ].map((h) => (
                                 <th
                                     key={h}
-                                    className={`px-4 py-3 font-medium text-sm text-white uppercase ${h === "Actions" ? "text-Center" : "text-left"
-                                        }`}
+                                    className={`
+                                    px-4
+                                    py-3
+                                    font-medium
+                                    text-sm
+                                    text-[#0F4659]/90
+                                    uppercase
+                                    ${h === "Actions"
+                                            ? "text-center"
+                                            : "text-left"
+                                        }
+                                `}
                                 >
                                     {h}
                                 </th>
