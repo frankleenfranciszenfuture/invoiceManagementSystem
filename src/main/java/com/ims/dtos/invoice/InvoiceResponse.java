@@ -78,6 +78,18 @@ public class InvoiceResponse extends BaseResponse {
     private Long salesPersonId;
     private String salesPersonName;
 
+
+    private Long companyId;
+    private String companyName;
+    private String companyCode;
+
+
+    private Long bankAccountId;
+    private String accountNumber;
+    private String bankName;
+    private String ifsc;
+
+
     // =====================================================
     // CURRENCY
     // =====================================================

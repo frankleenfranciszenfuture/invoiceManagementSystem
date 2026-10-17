@@ -44,6 +44,34 @@ public interface InvoiceMapper {
             source = "salesPerson.salesPersonName")
 
     @Mapping(
+            target = "companyId",
+            source = "companyDetails.id"
+    )
+    @Mapping(
+            target = "companyName",
+            source = "companyDetails.companyName")
+
+    @Mapping(
+            target = "companyCode",
+            source = "companyDetails.companyCode"
+    )
+
+    @Mapping(
+            target = "bankAccountId",
+            source = "bankAccount.id"
+    )
+    @Mapping(
+            target = "bankName",
+            source = "bankAccount.bankName")
+    @Mapping(
+            target = "accountNumber",
+            source = "bankAccount.accountNumber")
+
+    @Mapping(
+            target = "ifsc",
+            source = "bankAccount.ifsc"
+    )
+    @Mapping(
             target = "currencyId",
             source = "currency.id"
     )

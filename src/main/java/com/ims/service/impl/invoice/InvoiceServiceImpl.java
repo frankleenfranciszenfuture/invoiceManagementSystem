@@ -67,6 +67,10 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final ExchangeRateRepository exchangeRateRepository;
 
     private final ExchangeRateService exchangeRateService;
+
+    private final CompanyRepository companyRepository;
+
+    private final BankAccountRepository bankAccountRepository;
     // =====================================================
     // CREATE INVOICE
     // =====================================================
@@ -134,6 +138,41 @@ public class InvoiceServiceImpl implements InvoiceService {
             );
         }
 
+
+        // =====================================================
+        // FIND Company (OPTIONAL)
+        // =====================================================
+
+        CompanyDetails companyDetails = null;
+
+        if (request.getCompanyId() != null) {
+            companyDetails = companyRepository.findById(
+                    request.getCompanyId()
+            ).orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "Company not found with id: "
+                                    + request.getCompanyId()
+                    )
+            );
+        }
+
+
+// =====================================================
+        // FIND Company (OPTIONAL)
+        // =====================================================
+
+        BankAccount bankAccount = null;
+
+        if (request.getBankAccountId() != null) {
+            bankAccount = bankAccountRepository.findById(
+                    request.getBankAccountId()
+            ).orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "BankAccount not found with id: "
+                                    + request.getBankAccountId()
+                    )
+            );
+        }
 
 
         // =====================================================
@@ -216,6 +255,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                         .currency(currency)
                         .exchangeRate(exchangeRate)
                         .salesPerson(salesPerson)
+                        .companyDetails(companyDetails)
+                        .bankAccount(bankAccount)
                         .invoiceDate(
                                 request.getInvoiceDate() != null
                                         ? request.getInvoiceDate()
@@ -547,6 +588,42 @@ public class InvoiceServiceImpl implements InvoiceService {
             );
         }
 
+
+        // =====================================================
+        // FIND Company (OPTIONAL)
+        // =====================================================
+
+        CompanyDetails companyDetails = null;
+
+        if (request.getCompanyId() != null) {
+            companyDetails = companyRepository.findById(
+                    request.getCompanyId()
+            ).orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "Company not found with id: "
+                                    + request.getCompanyId()
+                    )
+            );
+        }
+
+
+        // =====================================================
+        // FIND  BankAccount (OPTIONAL)
+        // =====================================================
+
+        BankAccount bankAccount = null;
+
+        if (request.getBankAccountId() != null) {
+            bankAccount = bankAccountRepository.findById(
+                    request.getBankAccountId()
+            ).orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "BankAccount not found with id: "
+                                    + request.getBankAccountId()
+                    )
+            );
+        }
+
 // =====================================================
 // EXCHANGE RATE
 // =====================================================
@@ -590,7 +667,9 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         invoice.setCustomer(customer);
 
-
+        invoice.setSalesPerson(salesPerson);
+        invoice.setCompanyDetails(companyDetails);
+        invoice.setBankAccount(bankAccount);
         invoice.setCurrency(currency);
         invoice.setExchangeRate(exchangeRate);
 

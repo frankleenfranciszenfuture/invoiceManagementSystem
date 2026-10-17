@@ -166,6 +166,17 @@ public class InvoiceEntity extends BaseEntity {
     @JoinColumn(name = "sales_person_id")
     private SalesPersonEntity salesPerson;
 
+
+    // Company
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id")
+    private CompanyDetails companyDetails;
+
+    // BankAccount
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bankAccount_id")
+    private BankAccount bankAccount;
+
     // =====================================================
 // CURRENCY & EXCHANGE RATE
 // =====================================================
