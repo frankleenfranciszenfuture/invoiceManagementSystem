@@ -472,8 +472,8 @@ export default function InvoiceTable({
 
     return (
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
-            <div className="overflow-x-auto overflow-y-visible">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-auto">
+            <div className="overflow-x-auto overflow-y-auto">
 
 
                 <table className="w-full min-w-[1200px] border-collapse table-fixed">

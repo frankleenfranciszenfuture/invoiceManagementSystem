@@ -16,6 +16,7 @@ import {
     ChevronDown,
     MoreHorizontal,
     Settings,
+    Home,
 } from "lucide-react";
 
 import {
@@ -166,211 +167,172 @@ export default function NavbarInvoice() {
         >
 
             {/* =====================================================
-                LEFT - INVOICE STATUS FILTER
-            ====================================================== */}
+    LEFT - HOME + ALL INVOICES + INVOICES STATUS FILTER
+====================================================== */}
 
-            <div
-                ref={dropdownOpenRef}
-                className="relative"
-            >
+            <div className="flex items-center gap-2">
 
-                <button
-                    type="button"
-                    onClick={() =>
-                        setDropdownOpen(
-                            (prev) => !prev
-                        )
-                    }
-                    className="
-                        flex
-                        items-center
-                        gap-1
-                        rounded-md
-                         bg-[#0096FF]
-                       px-3
-                        py-2
-                        cursor-pointer
-                        hover:bg-[#0096FF]/90
-                    "
+                {/* HOME + ALL INVOICES */}
+                <div className="flex items-center gap-2">
+
+                    <button
+                        type="button"
+                        onClick={() => navigate("/")}
+                        className="
+                flex
+                items-center
+                justify-center
+                rounded-md
+                border
+                border-gray-200
+                bg-[white]
+                p-2
+                text-[#0F4659]
+                hover:bg-[#0F4659]/20
+                transition
+            "
+                        title="Home"
+                    >
+                        <Home size={18} />
+                    </button>
+
+
+
+                </div>
+
+                {/* EXISTING ROLE STATUS FILTER */}
+                <div
+                    ref={dropdownOpenRef}
+                    className="relative"
                 >
 
-                    <h2
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setDropdownOpen((prev) => !prev)
+                        }
                         className="
-                            font-semibold
-                           text-[#FCF7F8]
-                        "
+                flex
+                items-center
+                gap-1
+                rounded-md
+                bg-[#0095FD]
+                px-3
+                py-2
+                cursor-pointer
+                hover:bg-[#0095FD]/90
+            "
                     >
-                        {selectedInvoiceView ||
-                            "All Invoices"}
-                    </h2>
+                        <h2 className="font-semibold text-gray-100">
+                            {selectedInvoiceView || "All Invoices"}
+                        </h2>
 
-                    <ChevronDown
-                        size={14}
-                        className={`
-                            text-gray-100
-                            transition
-                            ${dropdownOpen
-                                ? "rotate-180"
-                                : ""
-                            }
-                        `}
-                    />
+                        <ChevronDown
+                            size={14}
+                            className={`
+                    text-gray-100
+                    transition
+                    ${dropdownOpen ? "rotate-180" : ""}
+                `}
+                        />
+                    </button>
 
-                </button>
-
-                {/* =================================================
-                    STATUS DROPDOWN
-                ================================================== */}
-
-                {dropdownOpen && (
-
-                    <div
-                        className="
-                            absolute
-                            left-0
-                            mt-2
-                            w-72
-                            rounded-md
-                            border
-                            border-gray-200
-                            bg-white
-                            shadow-lg
-                            z-50
-                        "
-                    >
-
+                    {dropdownOpen && (
                         <div
                             className="
-                                max-h-72
-                                overflow-y-auto
-                            "
+                    absolute
+                    left-0
+                    mt-2
+                    w-72
+                    rounded-md
+                    border
+                    border-gray-200
+                    bg-white
+                    shadow-lg
+                    z-50
+                "
                         >
-
-                            {views.map(
-                                (view) => (
-
+                            <div className="max-h-72 overflow-y-auto">
+                                {views.map((view) => (
                                     <button
                                         type="button"
                                         key={view.value}
-                                        onClick={() =>
-                                            handleViewChange(
-                                                view
-                                            )
-                                        }
-                                        className={`
-                                            w-full
-                                            px-5
-                                            py-4
-                                            border-b
-                                            border-gray-50
-                                            rounded-lg
-                                            text-left
-                                           text-sm
-                                            hover:bg-[#0095FD]/90
-                                            hover:text-white
-                                            rounded-md
-                                        `}
+                                        onClick={() => handleViewChange(view)}
+                                        className="
+                                w-full
+                                px-5
+                                py-4
+                                border-b
+                                border-gray-50
+                                text-left
+                                text-sm
+                                hover:bg-[#0095FD]/90
+                                hover:text-white
+                                rounded-md
+                            "
                                     >
-
                                         {view.label}
-
                                     </button>
+                                ))}
+                            </div>
 
-                                )
-                            )}
+                            <button
+                                type="button"
+                                className="
+                        w-full
+                        border-t
+                        border-gray-200
+                        px-4
+                        py-3
+                        text-left
+                        text-gray-500
+                        bg-[#0095FD]/20
+                        hover:text-white
+                        hover:bg-[#0095FD]/80
+                        rounded-md
+                    "
+                                onClick={() => {
+                                    setDropdownOpen(false);
 
+                                    dispatch(
+                                        openModal({
+                                            type: "addInvoices",
+                                        })
+                                    );
+                                }}
+                            >
+                                + New View
+                            </button>
                         </div>
-
-                        {/* =================================================
-                            NEW VIEW
-                        ================================================== */}
-
-                        <button
-                            type="button"
-                            className="
-                                    w-full
-                                    border-t
-                                    border-gray-200
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-[#0F4659] 
-                                    hover:text-white
-                                    hover:bg-[#0095FD]/80
-                                    rounded-lg
-                                "
-                            onClick={() => {
-                                dispatch(setExistingInvoice(null));
-                                navigate("/invoices/product/new")
-                            }}
-                        >
-                            + New View
-                        </button>
-
-
-                    </div>
-
-                )}
+                    )}
+                </div>
 
             </div>
+
 
 
             {/* =====================================================
                 RIGHT
             ====================================================== */}
 
-            <div
-                className="
-                    flex
-                    items-center
-                    gap-2
-                "
-            >
+            <div className="flex items-center gap-2">
 
-                {/* =================================================
-                    NEW INVOICE
-                ================================================== */}
-
-                <div
-                    className="
-                        flex
-                        overflow-hidden
-                        rounded-md
-                        border
-                        border-blue-600
-                        shadow-sm
-                    "
-                >
-
+                {/* New Button */}
+                <div className="flex overflow-hidden rounded-md border border-[#088178]/70">
                     <button
                         type="button"
                         onClick={(e) => {
                             e.stopPropagation();
                             navigate("/invoices/product/new");
                         }}
-                        className="
-                            flex
-                            items-center
-                            gap-1
-                            bg-[#0095FD]
-                            px-3
-                            py-2
-                            text-sm
-                            font-medium
-                            text-white
-                            hover:bg-[#0095FD]/90
-                        "
+                        className="flex items-center gap-1 bg-[#0095FD] px-3 py-2 text-sm font-medium text-white hover:bg-[#0095FD]/90 cursor-pointer"
                     >
-
                         <Plus size={14} />
-
-                        New Invoice
-
+                        New Invoices
                     </button>
 
+
                 </div>
-
-
                 {/* =================================================
                     MORE
                 ================================================== */}
@@ -399,7 +361,6 @@ export default function NavbarInvoice() {
                             hover:bg-gray-50
                         "
                         title="More"
-
                     >
 
                         <Settings
@@ -408,61 +369,10 @@ export default function NavbarInvoice() {
 
                     </button>
 
-                    {moreOpen && (
 
-                        <div
-                            className="
-                                absolute
-                                right-0
-                                mt-2
-                                w-35
-                                rounded-md
-                                border
-                                border-gray-200
-                                bg-white
-                                shadow-lg
-                                z-50
-                                overflow-hidden
-                                
-                            "
-                        >
-
-                            {/* Settings */}
-
-                            <button
-                                type="button"
-
-                                className="
-                                    w-full
-                                    flex
-                                    items-center justify-left gap-1.5
-                                    px-3
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-[#0F4659]
-                                    hover:bg-[#0F4659]/90
-                                    hover:text-white
-                                "
-                            >
-
-                                <Plus size={13} />
-                                Settings
-                            </button>
-
-
-
-
-
-
-                        </div>
-
-                    )}
 
                 </div>
-
             </div>
-
-        </div >
+        </div>
     );
 }

@@ -36,6 +36,8 @@ export default function CustomerNavbar({ title }) {
 
     const dropdownOpenRef = useRef(null);
 
+    const moreDropdownRef =
+        useRef(null);
     const initials = (name) =>
         name
             ?.split(" ")
@@ -252,23 +254,48 @@ export default function CustomerNavbar({ title }) {
                         <Plus size={14} />
                         New Customer
                     </button>
-                    {/* 
-                    <button
-                        type="button"
-                        className="border-l border-blue-500 bg-blue-600 px-2 text-white hover:bg-blue-700"
-                    >
-                        <ChevronDown size={14} />
-                    </button> */}
+
                 </div>
 
-                {/* More */}
-                {/* <button
-                    type="button"
-                    className="rounded-md border border-gray-300 p-1.5 text-gray-700 hover:bg-gray-50"
-                >
-                    <MoreHorizontal size={15} />
-                </button> */}
+                {/* =================================================
+                                   MORE
+                               ================================================== */}
 
+                <div
+                    ref={moreDropdownRef}
+                    className="relative"
+                >
+
+                    <button
+                        type="button"
+                        // onClick={() =>
+                        //     setMoreOpen(
+                        //         (prev) => !prev
+                        //     )
+                        // }
+
+                        onClick={() =>
+                            navigate("/settings")
+                        }
+                        className="
+                                           rounded-md
+                                           border
+                                           border-gray-300
+                                           p-2
+                                           hover:bg-gray-50
+                                       "
+                        title="More"
+                    >
+
+                        <Settings
+                            size={18}
+                        />
+
+                    </button>
+
+
+
+                </div>
             </div>
         </div>
     );

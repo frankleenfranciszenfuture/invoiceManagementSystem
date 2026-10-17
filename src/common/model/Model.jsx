@@ -14,7 +14,7 @@ import CategoryCreate from "../../module/category/pages/CategoryCreate";
 import ProductCreate from "../../module/items/pages/ProductCreate"
 import InvoiceCreate from "../../module/invoices/pages/InvoiceCreate"
 import InvoiceNumberSetting from "../../module/invoices/pages/InvoiceNumberSetting";
-import ChangeTemplateModal from "../../module/invoices/overviewCard/template/ChangeTemplateModal";
+import ChangeTemplateModal from "../../module/invoices/overview/template/ChangeTemplateModal";
 import RoleCreate from "../../module/role/pages/RoleCreate";
 import BankAccountCreate from "../../module/bankAccount/pages/BankAccountCreate";
 import CompanyCreate from "../../module/company/pages/CompanyCreate";

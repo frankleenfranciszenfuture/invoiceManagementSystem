@@ -474,7 +474,7 @@ const Sidebar = ({ onLogout }) => {
             <aside
                 className={`
                     fixed bottom-3 left-3 top-3 z-30 flex flex-col
-                    rounded-xl border border-white/5 bg-[#12203F]
+                    rounded-xl border border-white/5  bg-gradient-to-br from-[#20366B] to-[#088178]
                     shadow-2xl shadow-black/30
                     transition-[width] duration-300
                     ${open ? "w-54" : "w-[72px]"}

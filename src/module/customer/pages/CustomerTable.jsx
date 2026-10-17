@@ -113,7 +113,7 @@ export default function CustomerTable() {
         <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
             <div className="overflow-x-auto overflow-y-visible">
                 <table className="w-full">
-                    <thead className="bg-[#FCF7F8]/70 border-b border-gray-300">
+                    <thead className="bg-[#8F9287]/20 border-b border-gray-300">
                         <tr>
                             {[
                                 "Display Name",
@@ -122,8 +122,6 @@ export default function CustomerTable() {
                                 "Email",
                                 "Mobile",
                                 "PAN",
-                                "Receivables",
-                                "UnUsedCredits",
                                 "Status",
                                 "Actions",
                             ].map((h) => (
@@ -134,7 +132,7 @@ export default function CustomerTable() {
                                     py-3
                                     font-medium
                                     text-sm
-                                    text-[#0F4659]/90
+                                    text-gray-400
                                     uppercase
                                     ${h === "Actions"
                                             ? "text-center"
@@ -199,11 +197,7 @@ export default function CustomerTable() {
                                         {/* PAN */}
                                         <td className="px-4 py-3">{c.pan || "—"}</td>
 
-                                        {/* Receivables */}
-                                        <td className="px-4 py-3">{c.receivable || "—"}</td>
 
-                                        {/* UnUsed credits */}
-                                        <td className="px-4 py-3">{c.unusedCredits || "—"}</td>
 
                                         {/* Status */}
                                         <td className="px-5 py-3 font-semibold">
@@ -313,12 +307,12 @@ export default function CustomerTable() {
                         <button
                             disabled={page <= 0}
                             onClick={() => dispatch(setCurrentPage(Math.max(0, page - 1)))}
-                            className="text-sm text-[#088178] hover:text-[#088178]/60 disabled:opacity-50"
+                            className="text-sm text-[#0076BF] hover:text-[#0076BF]/90 disabled:opacity-50"
                         >
                             Previous
                         </button>
 
-                        <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#088178] text-white text-sm font-medium">
+                        <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#6D3279] text-white text-sm font-medium">
                             {(Number(page) || 0) + 1}
                         </span>
 
@@ -329,7 +323,7 @@ export default function CustomerTable() {
                             onClick={() =>
                                 dispatch(setCurrentPage((Number(page) || 0) + 1))
                             }
-                            className="text-sm text-[#088178] hover:text-[#088178]/60 disabled:opacity-50"
+                            className="text-sm text-[#0076BF] hover:text-[#0076BF]/90 disabled:opacity-50"
                         >
                             Next
                         </button>

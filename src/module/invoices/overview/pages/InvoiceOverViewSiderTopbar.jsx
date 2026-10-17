@@ -17,19 +17,14 @@ import {
 } from "lucide-react";
 
 import {
-    setSelectedInvoiceView,
     setInvoiceStatus,
-} from "../slices/invoiceViewSlice";
+    setSelectedInvoiceView,
+} from "../../slices/invoiceViewSlice";
+import { setExistingInvoice } from "../../slices/invoiceSlice";
 
-import {
-    setExistingInvoice
-}
-    from "../slices/invoiceSlice"
-
-import { openModal } from "../../../module/ui/uiSlice";
+import { openModal } from "../../../ui/uiSlice";
 
 export default function InvoiceOverViewSiderTopbar() {
-
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
@@ -39,8 +34,8 @@ export default function InvoiceOverViewSiderTopbar() {
     const dropdownRef = useRef(null);
 
     /* =========================================================
-       INVOICE VIEW STATE
-    ========================================================= */
+       PRODUCT VIEW STATE
+       ========================================================= */
 
     const selectedInvoiceView = useSelector(
         (state) =>
@@ -55,12 +50,10 @@ export default function InvoiceOverViewSiderTopbar() {
 
     /* =========================================================
        CLOSE DROPDOWN WHEN CLICKING OUTSIDE
-    ========================================================= */
+       ========================================================= */
 
     useEffect(() => {
-
         const handleClickOutside = (event) => {
-
             if (
                 dropdownRef.current &&
                 !dropdownRef.current.contains(
@@ -77,84 +70,66 @@ export default function InvoiceOverViewSiderTopbar() {
         );
 
         return () => {
-
             document.removeEventListener(
                 "mousedown",
                 handleClickOutside
             );
-
         };
-
     }, []);
 
     /* =========================================================
-       CHANGE INVOICE VIEW
-    ========================================================= */
+       CHANGE PRODUCT VIEW
+       ========================================================= */
 
     const handleViewChange = (view) => {
-
         if (!view) {
             return;
         }
 
         dispatch(
-            setSelectedInvoiceView(
-                view.label
-            )
+            setSelectedInvoiceView(view.label)
         );
 
         dispatch(
-            setInvoiceStatus(
-                view.value
-            )
+            setInvoiceStatus(view.value)
         );
 
         setDropdownOpen(false);
     };
 
     /* =========================================================
-       CREATE NEW INVOICE
-    ========================================================= */
+       CREATE NEW PRODUCT
+       ========================================================= */
 
     const handleNewInvoice = () => {
         setDropdownOpen(false);
 
         dispatch(setExistingInvoice(null));
 
-        navigate(
-            `/invoices/new`
-        );
+        navigate("/invoices/newSimple")
+        // dispatch(
+        //     openModal({
+        //         type: "addProduct",
+        //         data: null,
+        //     })
+        // )
     };
 
-    const handleEdit = (invoice) => {
-        try {
-            dispatch(
-                openModal({
-                    type: "editInvoice",
-                    data: invoice,
-                })
-            );
-        } catch (error) {
-            toast.error("Failed to open invoice");
-        }
-    };
     /* =========================================================
        RENDER
-    ========================================================= */
+       ========================================================= */
 
     return (
-
         <div className="flex items-center justify-between border-b border-gray-200 bg-white px-2 py-3">
 
             {/* =====================================================
-                LEFT - INVOICE VIEW DROPDOWN
+                LEFT - PRODUCT VIEW DROPDOWN
             ===================================================== */}
 
             <div
                 ref={dropdownRef}
                 className="relative"
             >
-
                 <button
                     type="button"
                     onClick={() =>
@@ -163,9 +138,8 @@ export default function InvoiceOverViewSiderTopbar() {
                                 !previous
                         )
                     }
-                    className="flex cursor-pointer select-none items-center gap-1 rounded-md bg-blue-500 px-3 py-1.5 hover:bg-blue-400"
+                    className="flex cursor-pointer select-none items-center gap-1 rounded-md bg-[#0095FD] px-3 py-1.5 hover:bg-[#0095FD]/90"
                 >
-
                     <h2 className="text-sm font-medium text-white">
                         {selectedInvoiceView}
                     </h2>
@@ -177,7 +151,6 @@ export default function InvoiceOverViewSiderTopbar() {
                             : ""
                             }`}
                     />
-
                 </button>
 
                 {/* =================================================
@@ -185,13 +158,11 @@ export default function InvoiceOverViewSiderTopbar() {
                 ================================================= */}
 
                 {dropdownOpen && (
-
                     <div className="absolute left-0 top-9 z-50 w-60 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
 
                         <div className="max-h-72 overflow-y-auto">
 
                             {views.map((view) => (
-
                                 <button
                                     key={view.value}
                                     type="button"
@@ -200,56 +171,51 @@ export default function InvoiceOverViewSiderTopbar() {
                                             view
                                         )
                                     }
-                                    className={`w-full border-b border-gray-100 px-2 py-2.5 text-left text-sm transition-colors ${selectedInvoiceView ===
+                                    className={`w-full border-b border-gray-100 px-4 py-2.5 text-left text-sm transition-colors ${selectedInvoiceView ===
                                         view.label
-                                        ? "bg-blue-500 text-white"
-                                        : "text-gray-700 hover:bg-blue-500 hover:text-white"
+                                        ? "bg-[#0095FD]/90 text-white"
+                                        : "text-gray-700 hover:bg-[#0095FD]/90 hover:text-white"
                                         }`}
                                 >
                                     {view.label}
                                 </button>
-
                             ))}
 
                         </div>
 
                         {/* =================================================
-                            NEW INVOICE
+                            NEW PRODUCT
                         ================================================= */}
 
                         <button
                             type="button"
                             onClick={handleNewInvoice}
-                            className="w-full border-t border-gray-200 px-4 py-2.5 text-left text-sm font-medium text-blue-600 hover:bg-gray-50"
+                            className="w-full border-t border-[#0F4659] px-4 py-2.5 text-left text-sm font-medium
+                             text-[#0F4659] hover:text-[white] bg-[#0095FD]/50 hover:bg-[#0095FD]/90"
                         >
-                            + New Invoice
+                            + New Product
                         </button>
 
                     </div>
-
                 )}
-
             </div>
 
             {/* =====================================================
                 RIGHT - NEW BUTTON
             ===================================================== */}
 
-            <div className="flex items-center gap-2">
+            {/* <div className="flex items-center gap-2">
 
                 <button
                     type="button"
-                    onClick={handleNewInvoice}
-                    className="flex items-center gap-1 rounded-md bg-blue-500 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-400"
+                    onClick={handleNewProduct}
+                    className="flex items-center gap-1 rounded-md bg-[#088178] px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#088178]/70"
                 >
-
                     <Plus size={13} />
-
                     New
-
                 </button>
 
-            </div>
+            </div> */}
 
         </div>
     );

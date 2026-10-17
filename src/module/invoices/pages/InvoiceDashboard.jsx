@@ -226,9 +226,9 @@ export default function InvoiceDashboard() {
     // ============================================================
 
     return (
-        <div className="flex h-screen bg-gray-50 font-sans text-[13px] overflow-hidden">
+        <div className="flex h-screen bg-gray-50 font-sans text-[13px] overflow-y-atuo">
 
-            <div className="flex-1 min-h-0 bg-white overflow-y-auto">
+            <div className="flex-1 min-h-0 bg-white ">
 
                 <div className="px-2 py-5 max-w-30xl w-full">
 

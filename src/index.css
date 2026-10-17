@@ -111,3 +111,73 @@
 .animate-modal-dropdown {
   animation: modalDropdown 240ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+
+/* Compact typography for the entire invoice profile */
+.invoice-profile-compact {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* Headings */
+.invoice-profile-compact h1 {
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.invoice-profile-compact h2 {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.invoice-profile-compact h3 {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Paragraphs, labels, and general content */
+.invoice-profile-compact p,
+.invoice-profile-compact label,
+.invoice-profile-compact span {
+  line-height: 1.45;
+}
+
+/* Inputs and textareas */
+.invoice-profile-compact input,
+.invoice-profile-compact textarea,
+.invoice-profile-compact select {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Buttons */
+.invoice-profile-compact button {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Tables */
+.invoice-profile-compact table {
+  font-size: 12px;
+}
+
+.invoice-profile-compact th {
+  font-size: 10px;
+}
+
+.invoice-profile-compact td {
+  font-size: 12px;
+}
+
+/* Smaller secondary text */
+.invoice-profile-compact .text-sm {
+  font-size: 12px;
+}
+
+.invoice-profile-compact .text-xs {
+  font-size: 10px;
+}
+
+/* Important totals and summary values */
+.invoice-profile-compact .text-xl {
+  font-size: 18px;
+}

@@ -28,7 +28,7 @@ import CustomerDashboard from "./module/customer/pages/CustomerDashboard";
 import CustomerTable from "./module/customer/pages/CustomerTable";
 import CreateCustomer from "./module/customer/pages/CreateCustomer";
 import EditCustomer from "./module/customer/pages/EditCustomer";
-import CustomerOverViewDashboard from "./module/customer/overviewCard/CustomerOverViewDashboard";
+
 
 // =====================================================
 // PRODUCTS / ITEMS
@@ -61,7 +61,6 @@ import CategoryDashboard from "./module/category/pages/CategoryDashboard";
 
 import InvoiceCreate from "./module/invoices/pages/InvoiceCreate";
 import InvoiceDashboard from "./module/invoices/pages/InvoiceDashboard";
-import InvoiceOverViewDashboard from "./module/invoices/overviewCard/InvoiceOverViewDashboard";
 
 import ServiceInvoice from "./module/invoices/pages/ServiceInvoice";
 // =====================================================
@@ -89,8 +88,6 @@ import BankAccountDashboard from "./module/bankAccount/pages/BankAccountDashboar
 // =====================================================
 
 import CompanyDashboard from "./module/company/pages/CompanyDashboard";
-import CompanyOverViewDashboard from "./module/company/overviewCard/CompanyOverViewDashboard";
-
 
 // =====================================================
 // MENU PERMISSION
@@ -118,6 +115,10 @@ import SalesPersonOverView from "./module/salesPerson/pages/SalesPersonOverView"
 import CurrencyDashboard from "./module/currency/pages/CurrencyDashboard";
 import CurrencyCreateSimple from "./module/currency/pages/CurrencyCreateSimple";
 import SaleInvoice from "./module/invoices/pages/SaleInvoice";
+import InvoiceOverViewDashboard1 from "./module/invoices/overview/pages/InvoiceOverViewDashboard1";
+import InvoiceprofileOverview from "./module/invoices/overview/pages/InvoiceprofileOverview";
+import InvoicePreviewCard from "./module/invoices/overview/pages/InvoicePreviewCard";
+import InvoiceOverViewPreviewDashboard from "./module/invoices/overview/pages/InvoiceOverViewPreviewDashboard";
 
 
 
@@ -530,11 +531,25 @@ function AppContent() {
           element={<InvoiceDashboard />}
         />
 
-        <Route
+        {/* <Route
           path="/invoices/view/:id"
           element={<InvoiceOverViewDashboard />}
+        /> */}
+
+        {/* <Route
+          path="/invoices/view/:id"
+          element={<InvoiceprofileOverview />}
+        /> */}
+
+        <Route
+          path="/invoices/view/:id"
+          element={<InvoiceOverViewDashboard1 />}
         />
 
+        <Route
+          path="/invoices/preview/:id"
+          element={<InvoiceOverViewPreviewDashboard />}
+        />
 
         {/* =================================================
                     SALES PERSON

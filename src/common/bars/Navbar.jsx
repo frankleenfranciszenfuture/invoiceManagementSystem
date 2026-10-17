@@ -70,15 +70,15 @@ export default function Navbar({ title }) {
                 <div
                     className="
                         flex h-10 w-10 shrink-0 items-center justify-center
-                        rounded-xl bg-[#0D7169]-to-br from-[green]-500/25 to-green-500/5
+                        rounded-xl bg-[#CF230F]-to-br from-[green]-500/25 to-green-500/5
                         ring-1 ring-blue-400/20
                     "
                 >
-                    <FileText className="h-5 w-5 text-[#059C69]" />
+                    <FileText className="h-5 w-5 text-[#0076BF]" />
                 </div>
 
                 <div className="min-w-0 leading-tight">
-                    <h1 className="truncate text-xl font-semibold text-[#0D7169]">
+                    <h1 className="truncate text-xl font-semibold text-[#0076BF]">
                         {`Hello, ${firstName} 👋`}
                     </h1>
 
