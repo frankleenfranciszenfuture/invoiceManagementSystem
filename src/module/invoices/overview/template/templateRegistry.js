@@ -1,6 +1,7 @@
 import InvoiceTemplate1 from "./InvoiceTemplate1";
 import InvoiceTemplate2 from "./InvoiceTemplate2";
 import InvoiceTemplate3 from "./InvoiceTemplate3";
+import InvoiceTemplate4 from "./Invoicetemplate4";
 
 const invoiceTemplates = [
   {
@@ -18,6 +19,12 @@ const invoiceTemplates = [
     id: "InvoiceTemplate3",
     name: "Invoice Template 3",
     component: InvoiceTemplate3,
+  },
+
+  {
+    id: "InvoiceTemplate4",
+    name: "Invoice Template 4",
+    component: InvoiceTemplate4,
   },
 ];
 

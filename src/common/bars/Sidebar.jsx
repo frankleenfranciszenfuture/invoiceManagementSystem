@@ -232,7 +232,7 @@ const ChildRow = ({ child, active, onClick }) => (
 
 /* Round initials avatar used in the bottom user card */
 const AvatarCircle = ({ src, name }) => (
-    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#CF230F] text-sm font-semibold text-[#FCF7F8] ring-2 ring-white/10">
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-orange-600 text-sm font-semibold text-[#FCF7F8] ring-2 ring-white/10">
         {src ? (
             <img src={assets.zenfutureLogo} alt={name} className="h-full w-full object-cover" />
         ) : (
@@ -449,7 +449,7 @@ const Sidebar = ({ onLogout }) => {
     const canCreateInvoice = hasPermission("Invoices", "CREATE");
 
     const Avatar = (
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#FCF7F8] text-sm font-semibold text-[#0F4659] ring-1 ring-white/10">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#F23C17] text-lg font-semibold text-[#F5F5F5] ring-1 ring-white/10">
             {avatarSrc ? (
                 <img src={avatarSrc} alt={displayName} className="h-full w-full object-cover" />
             ) : (
@@ -474,10 +474,9 @@ const Sidebar = ({ onLogout }) => {
             <aside
                 className={`
                     fixed bottom-3 left-3 top-3 z-30 flex flex-col
-                    rounded-xl border border-white/5  bg-gradient-to-br from-[#20366B] to-[#088178]
-                    shadow-2xl shadow-black/30
+                    rounded-xl border border-[#F5F5F5]/60  bg-gradient-to-br from-[#3F5774] to-[#21263C]
                     transition-[width] duration-300
-                    ${open ? "w-54" : "w-[72px]"}
+                    ${open ? "w-55" : "w-[72px]"}
                 `}
             >
 
@@ -501,13 +500,13 @@ const Sidebar = ({ onLogout }) => {
                 {/* ================= USER HEADER ================= */}
 
                 <div className={`px-4 pb-4 pt-5 ${open ? "" : "flex justify-center px-0"}`}>
-                    <div className={`flex items-center gap-3 ${open ? "border-b border-white/10 pb-4" : ""}`}>
-                        {Avatar}
+                    <div className={`flex items-center gap-3 ${open ? "border-b border-[#F5F5F5]/50 pb-4" : ""}`}>
+                        {/* {Avatar} */} <FileText className="h-12 w-12 px-3 rounded-full bg-[#F5F5F5] text-[#0D618B]" />
 
                         {open && (
                             <div className="min-w-0 leading-tight">
-                                <p className="text-[12px] text-white">InvoicePro</p>
-                                <p className="truncate text-base font-semibold text-white">
+                                <p className="text-[12px] text-[#F5F5F5]">InvoicePro</p>
+                                <p className="truncate text-base font-semibold text-[#F5F5F5]">
                                     {displayName}
                                 </p>
                             </div>
@@ -535,7 +534,7 @@ const Sidebar = ({ onLogout }) => {
 
                                 {/* active marker on the panel edge */}
                                 {active && (
-                                    <span className="absolute -left-3 top-1/2 h-9 w-1.5 -translate-y-1/2 rounded-r-full bg-lime-400" />
+                                    <span className="absolute -left-3 top-1/2 h-9 w-1.5 -translate-y-1/2 rounded-r-full bg-orange-600" />
                                 )}
 
                                 {/* ---------- MAIN ROW ---------- */}
@@ -548,15 +547,15 @@ const Sidebar = ({ onLogout }) => {
                                             : goTo(item.to)
                                     }
                                     className={`
-        flex items-center rounded-xl text-sm font-medium
+        flex items-center rounded-lg text-sm font-medium
         transition-colors duration-150
         ${open
                                             ? "w-full gap-3 px-5 py-2.5"
                                             : "mx-auto h-11 w-11 justify-center"
                                         }
         ${active
-                                            ? "bg-[#FCF7F8]/40 text-[#FCF7F8]"
-                                            : "text-[#FCF7F8] hover:bg-[#FCF7F8] hover:text-[#00464F]"
+                                            ? "bg-[#B3E848]/80 text-[#F5F5F5]"
+                                            : "text-[#F5F5F5] hover:bg-[#F5F5F5]/20 hover:text-[#F5F5F5]"
                                         }
     `}
                                 >

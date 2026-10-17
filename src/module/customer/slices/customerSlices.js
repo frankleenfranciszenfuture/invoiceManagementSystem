@@ -156,21 +156,6 @@ const customerSlice = createSlice({
       }
 
       state.customerForm[addressType][field] = value;
-
-      state.isDirty = true;
-    },
-
-    setSelectedCustomerAddressField(state, action) {
-      const { addressType, field, value } = action.payload;
-
-      if (!state.selectedCustomer) return;
-
-      if (!state.selectedCustomer[addressType]) {
-        state.selectedCustomer[addressType] = {};
-      }
-
-      state.selectedCustomer[addressType][field] = value;
-
       state.isDirty = true;
     },
 
@@ -222,15 +207,21 @@ const customerSlice = createSlice({
     },
 
     toggleEnablePortal: (state) => {
-      state.enablePortal = !state.enablePortal;
-    },
+      if (!state.selectedCustomer) return;
 
-    setCurrentPage: (state, action) => {
-      state.page = action.payload;
+      state.selectedCustomer.enablePortal =
+        !state.selectedCustomer.enablePortal;
+
+      state.isDirty = true;
     },
 
     setCurrency: (state, action) => {
       state.customerForm.currency = action.payload;
+      state.isDirty = true;
+    },
+
+    setCurrentPage: (state, action) => {
+      state.page = action.payload;
     },
 
     setCustomerLanguageSearch: (state, action) => {
@@ -282,19 +273,25 @@ const customerSlice = createSlice({
     },
 
     setSelectedCustomer: (state, action) => {
-      state.selectedCustomer = action.payload;
+      const customer = action.payload;
+
+      state.selectedCustomer = customer;
 
       state.customerForm = {
-        ...action.payload,
+        ...structuredClone(emptyCustomer),
+        ...structuredClone(customer),
         billingAddress: {
-          ...emptyAddress,
-          ...action.payload.billingAddress,
+          ...structuredClone(emptyAddress),
+          ...(customer?.billingAddress || {}),
         },
         shippingAddress: {
-          ...emptyAddress,
-          ...action.payload.shippingAddress,
+          ...structuredClone(emptyAddress),
+          ...(customer?.shippingAddress || {}),
         },
       };
+
+      state.isDirty = false;
+      state.errors = {};
     },
 
     resetForm: () => ({

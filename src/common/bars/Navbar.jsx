@@ -78,7 +78,7 @@ export default function Navbar({ title }) {
                 </div>
 
                 <div className="min-w-0 leading-tight">
-                    <h1 className="truncate text-xl font-semibold text-[#0076BF]">
+                    <h1 className="truncate text-xl font-semibold text-[#2E63B8]">
                         {`Hello, ${firstName} 👋`}
                     </h1>
 
@@ -104,7 +104,7 @@ export default function Navbar({ title }) {
                     className="
                         flex items-center gap-1 rounded-xl
                         bg-white/[0.05] p-1 ring-1 ring-white/5
-                        [&_button_svg]:text-[#0097FF]
+                        [&_button_svg]:text-[#2E63B8]
                         [&_button:hover_svg]:text-white
                     "
                 >

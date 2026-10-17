@@ -16,6 +16,7 @@ import {
     ChevronDown,
     MoreHorizontal,
     Settings,
+    Home,
 } from "lucide-react";
 
 import {
@@ -28,6 +29,7 @@ import {
 } from "../../../slices/productViewSlice";
 
 import { openModal } from "../../../../ui/uiSlice";
+import Tooltip from "../../../../../common/toolTip/Tooltip";
 
 // ============================================================
 // STABLE EMPTY ARRAY
@@ -170,144 +172,144 @@ export default function NavbarProduct() {
         >
 
             {/* =====================================================
-                LEFT - PRODUCT STATUS FILTER
-            ====================================================== */}
+    LEFT - HOME + ALL CUSTOMERS + CUSTOMER STATUS FILTER
+====================================================== */}
 
-            <div
-                ref={dropdownOpenRef}
-                className="relative"
-            >
+            <div className="flex items-center gap-2">
 
-                <button
-                    type="button"
-                    onClick={() =>
-                        setDropdownOpen(
-                            (prev) => !prev
-                        )
-                    }
-                    className="
-                        flex
-                        items-center
-                        gap-1
-                        rounded-md
-                        bg-[#0096FF]
-                        px-3
-                        py-2
-                        cursor-pointer
-                        hover:bg-[#0096FF]/90
-                    "
+                {/* HOME + ALL CUSTOMERS */}
+                <div className="flex items-center gap-2">
+
+                    <button
+                        type="button"
+                        onClick={() => navigate("/")}
+                        className="
+                flex
+                items-center
+                justify-center
+                rounded-md
+                border
+                border-gray-200
+                bg-[white]
+                p-2
+                text-[#0F4659]
+                hover:bg-[#408DFB]/20
+                transition
+            "
+                        title="Home"
+                    >
+                        <Home size={18} />
+                    </button>
+
+
+
+                </div>
+
+                {/* EXISTING ROLE STATUS FILTER */}
+                <div
+                    ref={dropdownOpenRef}
+                    className="relative"
                 >
 
-                    <h2
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setDropdownOpen((prev) => !prev)
+                        }
                         className="
-                            font-semibold
-                            text-[#FCF7F8]
-                        "
+                flex
+                items-center
+                gap-1
+                rounded-md
+                bg-[#408DFB]
+                px-3
+                py-2
+                cursor-pointer
+                hover:bg-[#408DFB]/90
+            "
                     >
-                        {selectedProductView ||
-                            "All Products"}
-                    </h2>
+                        <h2 className="font-semibold text-gray-100">
+                            {selectedProductView || "All Products"}
+                        </h2>
 
-                    <ChevronDown
-                        size={14}
-                        className={`
-                            text-gray-100
-                            transition
-                            ${dropdownOpen
-                                ? "rotate-180"
-                                : ""
-                            }
-                        `}
-                    />
+                        <ChevronDown
+                            size={14}
+                            className={`
+                    text-gray-100
+                    transition
+                    ${dropdownOpen ? "rotate-180" : ""}
+                `}
+                        />
+                    </button>
 
-                </button>
-
-                {/* =================================================
-                    PRODUCT STATUS DROPDOWN
-                ================================================== */}
-
-                {dropdownOpen && (
-
-                    <div
-                        className="
-                           absolute left-0 mt-2 w-72 rounded-md border border-gray-200 bg-white shadow-lg z-50
-                        "
-                    >
-
+                    {dropdownOpen && (
                         <div
                             className="
-                                max-h-72
-                                overflow-y-auto
-                            "
+                    absolute
+                    left-0
+                    mt-2
+                    w-72
+                    rounded-md
+                    border
+                    border-gray-200
+                    bg-white
+                    shadow-lg
+                    z-50
+                "
                         >
-
-                            {views.map(
-                                (view) => (
-
+                            <div className="max-h-72 overflow-y-auto">
+                                {views.map((view) => (
                                     <button
                                         type="button"
-                                        key={
-                                            view.value
-                                        }
-                                        onClick={() =>
-                                            handleViewChange(
-                                                view
-                                            )
-                                        }
-                                        className={`
-                                            w-full
-                                            px-5
-                                            py-4
-                                            border-b
-                                            border-gray-50
-                                            rounded-lg
-                                            text-left
-                                            text-sm
-                                            hover:bg-[#0095FD]/90
-                                            hover:text-white
-                                            rounded-md
-                                           
-                                        `}
-                                    >
-
-                                        {view.label}
-
-                                    </button>
-
-                                )
-                            )}
-
-                        </div>
-
-                        {/* =================================================
-                            NEW VIEW
-                        ================================================== */}
-
-                        <button
-                            type="button"
-                            className="
+                                        key={view.value}
+                                        onClick={() => handleViewChange(view)}
+                                        className="
                                 w-full
-                                border-t
-                                border-gray-200
-                                px-4
-                                py-3
+                                px-5
+                                py-4
+                                border-b
+                                border-gray-50
                                 text-left
-                               text-[#0F4659] 
-                               hover:text-white
-                               hover:bg-[#0F4659]/80
-                               rounded-lg
+                                text-sm
+                                hover:bg-[#0095FD]/90
+                                hover:text-white
+                                rounded-md
                             "
-                            onClick={() => {
-                                dispatch(setExsistingProduct(null));
-                                navigate("/items/newSimple")
-                            }}
-                        >
-                            + New View
-                        </button>
+                                    >
+                                        {view.label}
+                                    </button>
+                                ))}
+                            </div>
 
-                    </div>
+                            <button
+                                type="button"
+                                className="
+                        w-full
+                        border-t
+                        border-gray-200
+                        px-4
+                        py-3
+                        text-left
+                        text-gray-500
+                        bg-[#0095FD]/20
+                        hover:text-white
+                        hover:bg-[#0095FD]/80
+                        rounded-md
+                    "
+                                onClick={() => {
+                                    setDropdownOpen(false);
 
-                )}
+                                    dispatch(
+                                        setExsistingProduct(null)
+                                    );
+                                    navigate("/items/newSimple")
+                                }}
+                            >
+                                + New View
+                            </button>
+                        </div>
+                    )}
+                </div>
 
             </div>
 
@@ -328,134 +330,61 @@ export default function NavbarProduct() {
                     NEW PRODUCT
                 ================================================== */}
 
-                <div
-                    className="
-                        flex
-                        overflow-hidden
-                        rounded-md
-                        border-blue-100
-                        shadow-sm
-                    "
-                >
-
+                {/* NEW PRODUCT */}
+                <div className="relative flex rounded-md border border-blue-100 shadow-sm">
                     <button
                         type="button"
                         onClick={handleNewProduct}
                         className="
-                            flex
-                            items-center
-                            gap-1
-                            bg-[#0094FF]
-                            px-3
-                            py-2
-                            text-sm
-                            font-medium
-                            text-white
-                            hover:bg-[#0094FF]/90
-                        "
+            group
+            relative
+            flex
+            items-center
+            gap-1
+            rounded-md
+            bg-[#408DFB]
+            px-3
+            py-2
+            text-sm
+            font-medium
+            text-white
+            transition-colors
+            hover:bg-[#408DFB]/90
+        "
+                        aria-label="New product"
                     >
-
                         <Plus size={14} />
-
-                        New Product
-
+                        <Tooltip text="New product" position="top" />
                     </button>
-
                 </div>
+
 
 
                 {/* =================================================
                     MORE
                 ================================================== */}
 
-                <div
-                    ref={moreDropdownRef}
-                    className="relative"
-                >
-
+                <div className="relative">
                     <button
                         type="button"
-                        // onClick={() =>
-                        //     setMoreOpen(
-                        //         (prev) => !prev
-                        //     )
-                        // }
-
-                        onClick={() =>
-                            navigate("/settings")
-                        }
+                        onClick={() => navigate("/settings")}
                         className="
-                            rounded-md
-                            border
-                            border-gray-300
-                            p-2
-                            hover:bg-gray-50
-                        "
-                        title="More"
-
+            group
+            relative
+            rounded-md
+            border
+            border-gray-300
+            p-2
+            hover:bg-gray-50
+        "
+                        aria-label="Settings"
                     >
-
-                        <Settings
-                            size={18}
-                        />
-
+                        <Settings size={18} />
+                        <Tooltip text="Settings" position="top" />
                     </button>
-
-                    {moreOpen && (
-
-                        <div
-                            className="
-                                absolute
-                                right-0
-                                mt-2
-                                w-35
-                                rounded-md
-                                border
-                                border-gray-200
-                                bg-white
-                                shadow-lg
-                                z-50
-                                overflow-hidden
-                                
-                            "
-                        >
-
-                            {/* Settings */}
-
-                            <button
-                                type="button"
-
-                                className="
-                                    w-full
-                                    flex
-                                    items-center justify-left gap-1.5
-                                    px-3
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-[#0F4659]
-                                    hover:bg-[#0F4659]/90
-                                    hover:text-white
-                                "
-                            >
-
-                                <Plus size={13} />
-                                Settings
-                            </button>
-
-
-
-
-
-
-                        </div>
-
-                    )}
-
                 </div>
-
             </div>
 
-        </div>
+        </div >
     );
 }

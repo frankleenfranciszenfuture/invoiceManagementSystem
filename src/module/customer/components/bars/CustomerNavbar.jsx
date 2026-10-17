@@ -19,6 +19,7 @@ import {
     FileText,
     MoreHorizontal,
 } from "lucide-react";
+import Tooltip from "../../../../common/toolTip/Tooltip";
 
 
 export default function CustomerNavbar({ title }) {
@@ -116,7 +117,7 @@ export default function CustomerNavbar({ title }) {
                 bg-[white]
                 p-2
                 text-[#0F4659]
-                hover:bg-[#0F4659]/20
+                hover:bg-[#408DFB]/20
                 transition
             "
                         title="Home"
@@ -144,11 +145,11 @@ export default function CustomerNavbar({ title }) {
                 items-center
                 gap-1
                 rounded-md
-                bg-[#0095FD]
+                bg-[#408DFB]
                 px-3
                 py-2
                 cursor-pointer
-                hover:bg-[#0095FD]/90
+                hover:bg-[#408DFB]/90
             "
                     >
                         <h2 className="font-semibold text-gray-100">
@@ -242,61 +243,63 @@ export default function CustomerNavbar({ title }) {
             <div className="flex items-center gap-2">
 
                 {/* New Button */}
-                <div className="flex overflow-hidden rounded-md border border-[#088178]/70">
+                <div className="relative flex rounded-md border border-blue-100 shadow-sm">
                     <button
                         type="button"
                         onClick={(e) => {
                             e.stopPropagation();
-                            navigate("/customers/new");
+                            navigate("/customers/new")
                         }}
-                        className="flex items-center gap-1 bg-[#0095FD] px-3 py-2 text-sm font-medium text-white hover:bg-[#0095FD]/90 cursor-pointer"
+                        className="
+                           group
+                           relative
+                           flex
+                           items-center
+                           gap-1
+                           rounded-md
+                           bg-[#408DFB]
+                           px-3
+                           py-2
+                           text-sm
+                           font-medium
+                           text-white
+                           transition-colors
+                           hover:bg-[#408DFB]/90
+                       "
+                        aria-label="New product"
                     >
                         <Plus size={14} />
-                        New Customer
+                        <Tooltip text="New product" position="top" />
                     </button>
-
                 </div>
+
+
 
                 {/* =================================================
                                    MORE
                                ================================================== */}
 
-                <div
-                    ref={moreDropdownRef}
-                    className="relative"
-                >
-
+                <div className="relative">
                     <button
                         type="button"
-                        // onClick={() =>
-                        //     setMoreOpen(
-                        //         (prev) => !prev
-                        //     )
-                        // }
-
-                        onClick={() =>
-                            navigate("/settings")
-                        }
+                        onClick={() => navigate("/settings")}
                         className="
-                                           rounded-md
-                                           border
-                                           border-gray-300
-                                           p-2
-                                           hover:bg-gray-50
-                                       "
-                        title="More"
+                           group
+                           relative
+                           rounded-md
+                           border
+                           border-gray-300
+                           p-2
+                           hover:bg-gray-50
+                       "
+                        aria-label="Settings"
                     >
-
-                        <Settings
-                            size={18}
-                        />
-
+                        <Settings size={18} />
+                        <Tooltip text="Settings" position="top" />
                     </button>
-
-
-
                 </div>
             </div>
-        </div>
+
+        </div >
     );
 }

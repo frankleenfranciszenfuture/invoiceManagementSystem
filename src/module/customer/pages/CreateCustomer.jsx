@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useSelector, useDispatch } from "react-redux";
 import CustomerBottomActionBar from '../components/bars/CustomerBottomActionBar';
 import { useEffect } from 'react';
@@ -277,11 +277,17 @@ export default function CreateCustomer({
 
     const errors = useSelector((state) => state.customers.errors);
 
-    const isDirty = useSelector((state) => state.customers.isDirty);
+    const isDirty = useSelector(
+        (state) => state.customers?.isDirty ?? false
+    );
+
+    const [showLeaveConfirmation, setShowLeaveConfirmation] =
+        useState(false);
 
     useEffect(() => {
         console.log("isDirty:", isDirty);
     }, [isDirty]);
+
 
 
     const changeTab = (tab) => {
@@ -504,16 +510,6 @@ export default function CreateCustomer({
         }
     };
 
-    const handleCancel = () => {
-        dispatch(resetDirty());
-
-        if (mode === "modal") {
-            dispatch(closeCustomerModal());
-        } else {
-            dispatch(closeModal());
-            navigate("/customers");
-        }
-    };
 
     const handleDelete = async (id) => {
         try {
@@ -526,564 +522,630 @@ export default function CreateCustomer({
     };
 
 
+    const handleCancel = () => {
+        setShowLeaveConfirmation(true);
+    };
+
+    const handleStayOnCustomer = () => {
+        setShowLeaveConfirmation(false);
+    };
+
+    const handleLeaveCustomer = () => {
+        setShowLeaveConfirmation(false);
+
+        dispatch(resetDirty());
+        dispatch(resetSelectedCustomer());
+
+        if (mode === "modal") {
+            dispatch(closeCustomerModal());
+            dispatch(closeModal());
+            return;
+        }
+
+        navigate("/customers");
+    };
+
     return (
-        <div className="min-h-screen bg-gray-50 font-sans text-[13px] mt-4 p-3">
-            {/* Form Container Wrapper allowing separate inner scrolling */}
-            <div className="flex-1 min-h-0 bg-white rounded-lg">
-                <div className="px-3 py-3 max-w-30xl w-full ">
-                    <h1 className="flex items-center gap-2 text-xl font-medium text-[#088178] mb-4">
-                        <Users2Icon className="w-6 h-6" />
-                        <span>New Customer</span>
-                    </h1>
-                    {/* GST Profile banner */}
-                    <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded px-3 py-2 mb-6 text-sm">
-                        <FileSpreadsheet className="w-4 h-4 text-blue-500" />
-                        <span className="text-gray-600">
-                            Profill Customer details from the GST portal using the Customer's
-                            GSTIN.
-                        </span>
-                        <a href="#" className="text-blue-600 font-medium hover:underline">
-                            Profill &gt;
-                        </a>
-                    </div>
-
-                    <div className="space-y-4">
-                        {/* Customer Type */}
-                        <div className="grid grid-cols-[160px_1fr] items-center">
-                            <Label>
-                                Customer Type <InfoIcon />
-                            </Label>
-                            <div className="flex items-center gap-6">
-                                <label className="flex items-center gap-1.5 cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="customerType"
-                                        value="Business"
-                                        checked={customer.customerType === "Business"}
-                                        onChange={handleChange("customerType")}
-                                        className="w-4 h-4 text-blue-600 accent-blue-600"
-                                    />
-                                    <span>Business</span>
-                                </label>
-                                <label className="flex items-center gap-1.5 cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="customerType"
-                                        value="Individual"
-                                        checked={customer.customerType === "Individual"}
-                                        onChange={handleChange("customerType")}
-                                        className="w-4 h-4 text-blue-600 accent-blue-600"
-                                    />
-                                    <span>Individual</span>
-                                </label>
-                            </div>
+        <>
+            <div className="min-h-screen bg-gray-50 font-sans text-[13px] mt-4 p-3">
+                {/* Form Container Wrapper allowing separate inner scrolling */}
+                <div className="flex-1 min-h-0 bg-white rounded-lg">
+                    <div className="px-3 py-3 max-w-30xl w-full ">
+                        <h1 className="flex items-center gap-2 text-xl font-medium text-[#088178] mb-4">
+                            <Users2Icon className="w-6 h-6" />
+                            <span>New Customer</span>
+                        </h1>
+                        {/* GST Profile banner */}
+                        <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded px-3 py-2 mb-6 text-sm">
+                            <FileSpreadsheet className="w-4 h-4 text-blue-500" />
+                            <span className="text-gray-600">
+                                Profill Customer details from the GST portal using the Customer's
+                                GSTIN.
+                            </span>
+                            <a href="#" className="text-blue-600 font-medium hover:underline">
+                                Profill &gt;
+                            </a>
                         </div>
 
-                        {/* Primary Contact */}
-                        <div className="grid grid-cols-[160px_1fr] items-start">
-                            <Label>
-                                Primary Contact <InfoIcon />
-                            </Label>
-                            <div className="flex gap-2 max-w-md">
-                                <div className="relative w-32 flex-shrink-0">
-                                    <select
-                                        value={customer.salutation}
-                                        onChange={handleChange("salutation")}
-                                        className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-500 appearance-none bg-white outline-none focus:border-blue-400"
-                                    >
-                                        <option value="">Salutation</option>
-                                        <option value="Mr.">Mr.</option>
-                                        <option value="Mrs.">Mrs.</option>
-                                        <option value="Ms.">Ms.</option>
-                                        <option value="Dr.">Dr.</option>
-                                    </select>
-                                    <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                </div>
-                                <div className="flex-1">
-                                    <input
-                                        value={customer.firstName}
-                                        placeholder="FirstName"
-                                        onChange={handleChange("firstName")}
-                                        className={`w-full rounded px-3 py-2 border  ${errors.firstName
-                                            ? "border-red-500 bg-red-50"
-                                            : "border-gray-400"
-                                            }`}
-                                    />
-
-                                    {errors.firstName && (
-                                        <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
-                                            <span>⚠</span>
-                                            {errors.firstName}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div className="flex-1">
-                                    <input
-                                        value={customer.lastName}
-                                        placeholder="LastName"
-                                        onChange={handleChange("lastName")}
-                                        className={`w-full rounded px-3 py-2 border  ${errors.lastName
-                                            ? "border-red-500 bg-red-50"
-                                            : "border-gray-400"
-                                            }`}
-                                    />
-
-                                    {errors.lastName && (
-                                        <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
-                                            <span>⚠</span>
-                                            {errors.lastName}
-                                        </p>
-                                    )}
+                        <div className="space-y-4">
+                            {/* Customer Type */}
+                            <div className="grid grid-cols-[160px_1fr] items-center">
+                                <Label>
+                                    Customer Type <InfoIcon />
+                                </Label>
+                                <div className="flex items-center gap-6">
+                                    <label className="flex items-center gap-1.5 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="customerType"
+                                            value="Business"
+                                            checked={customer.customerType === "Business"}
+                                            onChange={handleChange("customerType")}
+                                            className="w-4 h-4 text-blue-600 accent-blue-600"
+                                        />
+                                        <span>Business</span>
+                                    </label>
+                                    <label className="flex items-center gap-1.5 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="customerType"
+                                            value="Individual"
+                                            checked={customer.customerType === "Individual"}
+                                            onChange={handleChange("customerType")}
+                                            className="w-4 h-4 text-blue-600 accent-blue-600"
+                                        />
+                                        <span>Individual</span>
+                                    </label>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Company Name */}
-                        <div className="grid grid-cols-[160px_1fr] items-start">
-                            <Label>Company Name</Label>
+                            {/* Primary Contact */}
+                            <div className="grid grid-cols-[160px_1fr] items-start">
+                                <Label>
+                                    Primary Contact <InfoIcon />
+                                </Label>
+                                <div className="flex gap-2 max-w-md">
+                                    <div className="relative w-32 flex-shrink-0">
+                                        <select
+                                            value={customer.salutation}
+                                            onChange={handleChange("salutation")}
+                                            className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-500 appearance-none bg-white outline-none focus:border-blue-400"
+                                        >
+                                            <option value="">Salutation</option>
+                                            <option value="Mr.">Mr.</option>
+                                            <option value="Mrs.">Mrs.</option>
+                                            <option value="Ms.">Ms.</option>
+                                            <option value="Dr.">Dr.</option>
+                                        </select>
+                                        <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <input
+                                            value={customer.firstName}
+                                            placeholder="FirstName"
+                                            onChange={handleChange("firstName")}
+                                            className={`w-full rounded px-3 py-2 border  ${errors.firstName
+                                                ? "border-red-500 bg-red-50"
+                                                : "border-gray-400"
+                                                }`}
+                                        />
 
-                            <div className="max-w-md w-full">
-                                <input
-                                    value={customer.companyName}
-                                    onChange={handleChange("companyName")}
-                                    className={`w-full rounded px-3 py-2 border outline-none
+                                        {errors.firstName && (
+                                            <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                                                <span>⚠</span>
+                                                {errors.firstName}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="flex-1">
+                                        <input
+                                            value={customer.lastName}
+                                            placeholder="LastName"
+                                            onChange={handleChange("lastName")}
+                                            className={`w-full rounded px-3 py-2 border  ${errors.lastName
+                                                ? "border-red-500 bg-red-50"
+                                                : "border-gray-400"
+                                                }`}
+                                        />
+
+                                        {errors.lastName && (
+                                            <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                                                <span>⚠</span>
+                                                {errors.lastName}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Company Name */}
+                            <div className="grid grid-cols-[160px_1fr] items-start">
+                                <Label>Company Name</Label>
+
+                                <div className="max-w-md w-full">
+                                    <input
+                                        value={customer.companyName}
+                                        onChange={handleChange("companyName")}
+                                        className={`w-full rounded px-3 py-2 border outline-none
                  ${errors.companyName
+                                                ? "border-red-500 bg-red-50"
+                                                : "border-gray-300 focus:border-blue-500"
+                                            }`}
+                                    />
+
+                                    {errors.companyName && (
+                                        <p className="mt-1 flex items-center gap-1 text-xs text-red-500">
+                                            <span>⚠</span>
+                                            <span>{errors.companyName}</span>
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Display Name */}
+                            <div className="grid grid-cols-[160px_1fr] items-center">
+                                <Label required>
+                                    Display Name <InfoIcon />
+                                </Label>
+                                <div className="relative max-w-md w-full">
+                                    <input
+                                        value={customer.displayName}
+                                        onChange={handleChange("displayName")}
+                                        className={`w-full rounded px-3 py-2 border ${errors.displayName
                                             ? "border-red-500 bg-red-50"
-                                            : "border-gray-300 focus:border-blue-500"
-                                        }`}
-                                />
+                                            : "border-gray-300"
+                                            }`}
+                                    />
 
-                                {errors.companyName && (
-                                    <p className="mt-1 flex items-center gap-1 text-xs text-red-500">
-                                        <span>⚠</span>
-                                        <span>{errors.companyName}</span>
-                                    </p>
-                                )}
+                                    {errors.displayName && (
+                                        <p className="mt-1 text-xs text-red-500">
+                                            ⚠ {errors.displayName}
+                                        </p>
+                                    )}
+                                    {/* <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" /> */}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Display Name */}
-                        <div className="grid grid-cols-[160px_1fr] items-center">
-                            <Label required>
-                                Display Name <InfoIcon />
-                            </Label>
-                            <div className="relative max-w-md w-full">
-                                <input
-                                    value={customer.displayName}
-                                    onChange={handleChange("displayName")}
-                                    className={`w-full rounded px-3 py-2 border ${errors.displayName
-                                        ? "border-red-500 bg-red-50"
-                                        : "border-gray-300"
-                                        }`}
-                                />
+                            {/* Currency */}
+                            <div className="grid grid-cols-[160px_1fr] items-start">
+                                <Label>
+                                    Currency <InfoIcon />
+                                </Label>
+                                <div className="max-w-md w-full">
+                                    <div className="relative">
+                                        <select
+                                            value={currency}
+                                            onChange={(e) => {
+                                                dispatch(setCurrency(e.target.value));
+                                                dispatch(clearFieldError("currency"));
+                                            }}
+                                            className={`w-full rounded px-3 py-2 border border-gray-200 text-gray-500 ${errors.currency
+                                                ? "border-red-500 bg-red-50"
+                                                : "border-gray-300"
+                                                }`}
+                                        >
+                                            <option value="">Select Currency</option>
 
-                                {errors.displayName && (
-                                    <p className="mt-1 text-xs text-red-500">
-                                        ⚠ {errors.displayName}
-                                    </p>
-                                )}
-                                {/* <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" /> */}
+                                            {currencies.map((code) => (
+                                                <option key={code} value={code}>
+                                                    {getCurrencySymbol(code)} {code} -{" "}
+                                                    {currencyNames.of(code)}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    {/* <p className="text-xs text-gray-400 mt-1">
+                    Currency cannot be edited as multi-currency handling is
+                    unavailable in Zoho Invoice. <InfoIcon />
+                  </p> */}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Currency */}
-                        <div className="grid grid-cols-[160px_1fr] items-start">
-                            <Label>
-                                Currency <InfoIcon />
-                            </Label>
-                            <div className="max-w-md w-full">
-                                <div className="relative">
+                            {/* Email Address */}
+                            <div className="grid grid-cols-[160px_1fr] items-center">
+                                <Label>
+                                    Email Address <InfoIcon />
+                                </Label>
+
+                                <div className="relative max-w-md w-full">
+                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+
+                                    <input
+                                        type="email"
+                                        value={customer.email}
+                                        onChange={handleChange("email")}
+                                        className={`w-full rounded border py-2 pl-10 pr-3 ${errors.email
+                                            ? "border-red-500 bg-red-50"
+                                            : "border-gray-300"
+                                            }`}
+                                        placeholder="Enter email address"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Phone */}
+                            <div className="grid grid-cols-[160px_1fr] items-center">
+                                <Label>
+                                    Phone <InfoIcon />
+                                </Label>
+                                <div className="flex gap-4 max-w-md w-full">
+                                    <div className="flex flex-1 border border-gray-300 rounded overflow-hidden focus-within:border-blue-400">
+                                        <div className="relative">
+                                            <select
+                                                value={customer.workPhoneCode}
+                                                onChange={handleChange("workPhoneCode")}
+                                                className="appearance-none bg-gray-50 border-r border-gray-300 pl-2 pr-5 py-1.5 text-sm outline-none"
+                                            >
+                                                <option value="+91">+91</option>
+                                                <option value="+1">+1</option>
+                                                <option value="+44">+44</option>
+                                            </select>
+                                            <ChevronDown className="w-3 h-3 text-gray-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        </div>
+                                        <input
+                                            value={customer.workPhone}
+                                            onChange={handleChange("workPhone")}
+                                            className={`flex-1 px-2 py-2 ${errors.workPhone ? "bg-red-50" : ""
+                                                }`}
+                                        />
+                                    </div>
+                                    <div className="flex flex-1 border border-gray-300 rounded overflow-hidden focus-within:border-blue-400">
+                                        <div className="relative">
+                                            <select
+                                                value={customer.mobileCode}
+                                                onChange={handleChange("mobileCode")}
+                                                className="appearance-none bg-gray-50 border-r border-gray-300 pl-2 pr-5 py-1.5 text-sm outline-none"
+                                            >
+                                                <option value="+91">+91</option>
+                                                <option value="+1">+1</option>
+                                                <option value="+44">+44</option>
+                                            </select>
+                                            <ChevronDown className="w-3 h-3 text-gray-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        </div>
+                                        <input
+                                            value={customer.mobile}
+                                            onChange={handleChange("mobile")}
+                                            className={`flex-1 px-2 py-2 ${errors.mobile ? "bg-red-50" : ""
+                                                }`}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Customer Language */}
+                            <div className="grid grid-cols-[160px_1fr] items-center">
+                                <Label>
+                                    Customer Language <InfoIcon />
+                                </Label>
+                                <div className="relative max-w-md w-full">
                                     <select
-                                        value={currency}
+                                        value={customer.customerLanguage}
                                         onChange={(e) => {
-                                            dispatch(setCurrency(e.target.value));
-                                            dispatch(clearFieldError("currency"));
+                                            dispatch(
+                                                setField({
+                                                    field: "customerLanguage",
+                                                    value: e.target.value,
+                                                }),
+                                            );
+                                            dispatch(clearFieldError("customerLanguage"));
                                         }}
-                                        className={`w-full rounded px-3 py-2 border border-gray-200 text-gray-500 ${errors.currency
+                                        className={`w-full rounded px-3 py-2 border text-gray-500 ${errors.customerLanguage
                                             ? "border-red-500 bg-red-50"
                                             : "border-gray-300"
                                             }`}
                                     >
-                                        <option value="">Select Currency</option>
+                                        <option value="">Select Language</option>
 
-                                        {currencies.map((code) => (
-                                            <option key={code} value={code}>
-                                                {getCurrencySymbol(code)} {code} -{" "}
-                                                {currencyNames.of(code)}
+
+                                        {languages.map((lang) => (
+                                            <option key={lang} value={lang}>
+                                                {lang}
                                             </option>
                                         ))}
                                     </select>
+
                                 </div>
-                                {/* <p className="text-xs text-gray-400 mt-1">
-                    Currency cannot be edited as multi-currency handling is
-                    unavailable in Zoho Invoice. <InfoIcon />
-                  </p> */}
                             </div>
                         </div>
 
-                        {/* Email Address */}
-                        <div className="grid grid-cols-[160px_1fr] items-center">
-                            <Label>
-                                Email Address <InfoIcon />
-                            </Label>
-
-                            <div className="relative max-w-md w-full">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-
-                                <input
-                                    type="email"
-                                    value={customer.email}
-                                    onChange={handleChange("email")}
-                                    className={`w-full rounded border py-2 pl-10 pr-3 ${errors.email
-                                        ? "border-red-500 bg-red-50"
-                                        : "border-gray-300"
-                                        }`}
-                                    placeholder="Enter email address"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Phone */}
-                        <div className="grid grid-cols-[160px_1fr] items-center">
-                            <Label>
-                                Phone <InfoIcon />
-                            </Label>
-                            <div className="flex gap-4 max-w-md w-full">
-                                <div className="flex flex-1 border border-gray-300 rounded overflow-hidden focus-within:border-blue-400">
-                                    <div className="relative">
-                                        <select
-                                            value={customer.workPhoneCode}
-                                            onChange={handleChange("workPhoneCode")}
-                                            className="appearance-none bg-gray-50 border-r border-gray-300 pl-2 pr-5 py-1.5 text-sm outline-none"
-                                        >
-                                            <option value="+91">+91</option>
-                                            <option value="+1">+1</option>
-                                            <option value="+44">+44</option>
-                                        </select>
-                                        <ChevronDown className="w-3 h-3 text-gray-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                    </div>
-                                    <input
-                                        value={customer.workPhone}
-                                        onChange={handleChange("workPhone")}
-                                        className={`flex-1 px-2 py-2 ${errors.workPhone ? "bg-red-50" : ""
+                        {/* Tabs */}
+                        <div className="mt-8 border-b border-gray-200">
+                            <div className="flex gap-8">
+                                {tabs.map((tab) => (
+                                    <button
+                                        key={tab}
+                                        type="button"
+                                        onClick={() => changeTab(tab)}
+                                        className={`pb-2.5 text-sm transition-colors relative ${activeTab === tab
+                                            ? "text-blue-600 font-medium"
+                                            : "text-gray-500 hover:text-gray-700"
                                             }`}
-                                    />
-                                </div>
-                                <div className="flex flex-1 border border-gray-300 rounded overflow-hidden focus-within:border-blue-400">
-                                    <div className="relative">
-                                        <select
-                                            value={customer.mobileCode}
-                                            onChange={handleChange("mobileCode")}
-                                            className="appearance-none bg-gray-50 border-r border-gray-300 pl-2 pr-5 py-1.5 text-sm outline-none"
-                                        >
-                                            <option value="+91">+91</option>
-                                            <option value="+1">+1</option>
-                                            <option value="+44">+44</option>
-                                        </select>
-                                        <ChevronDown className="w-3 h-3 text-gray-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                    </div>
-                                    <input
-                                        value={customer.mobile}
-                                        onChange={handleChange("mobile")}
-                                        className={`flex-1 px-2 py-2 ${errors.mobile ? "bg-red-50" : ""
-                                            }`}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Customer Language */}
-                        <div className="grid grid-cols-[160px_1fr] items-center">
-                            <Label>
-                                Customer Language <InfoIcon />
-                            </Label>
-                            <div className="relative max-w-md w-full">
-                                <select
-                                    value={customer.customerLanguage}
-                                    onChange={(e) => {
-                                        dispatch(
-                                            setField({
-                                                field: "customerLanguage",
-                                                value: e.target.value,
-                                            }),
-                                        );
-                                        dispatch(clearFieldError("customerLanguage"));
-                                    }}
-                                    className={`w-full rounded px-3 py-2 border text-gray-500 ${errors.customerLanguage
-                                        ? "border-red-500 bg-red-50"
-                                        : "border-gray-300"
-                                        }`}
-                                >
-                                    <option value="">Select Language</option>
-
-
-                                    {languages.map((lang) => (
-                                        <option key={lang} value={lang}>
-                                            {lang}
-                                        </option>
-                                    ))}
-                                </select>
-
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Tabs */}
-                    <div className="mt-8 border-b border-gray-200">
-                        <div className="flex gap-8">
-                            {tabs.map((tab) => (
-                                <button
-                                    key={tab}
-                                    type="button"
-                                    onClick={() => changeTab(tab)}
-                                    className={`pb-2.5 text-sm transition-colors relative ${activeTab === tab
-                                        ? "text-blue-600 font-medium"
-                                        : "text-gray-500 hover:text-gray-700"
-                                        }`}
-                                >
-                                    {tab}
-                                    {activeTab === tab && (
-                                        <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-blue-600 rounded-t" />
-                                    )}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Tab content */}
-                    {activeTab === "Other Details" && (
-                        <div className="space-y-4 mt-6">
-                            {/* PAN */}
-                            <div className="grid grid-cols-[160px_1fr] items-center border-gray-100">
-                                <Label>
-                                    PAN <InfoIcon />
-                                </Label>
-                                <input
-                                    type="text"
-                                    value={customer.pan}
-                                    onChange={handleChange("pan")}
-                                    className="max-w-md w-full border border-gray-300 rounded px-2 py-1.5 text-sm outline-none focus:border-blue-400"
-                                />
-                            </div>
-
-                            {/* Payment Terms */}
-                            <div className="grid grid-cols-[160px_1fr] items-center">
-                                <Label>Payment Terms</Label>
-                                <div className="relative max-w-md w-full">
-                                    <select
-                                        value={customer.paymentTerms}
-                                        onChange={handleChange("paymentTerms")}
-                                        className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-700 appearance-none bg-white outline-none focus:border-blue-400"
                                     >
-                                        <option value="Due on Receipt">Due on Receipt</option>
-                                        <option value="Net 15">Net 15</option>
-                                        <option value="Net 30">Net 30</option>
-                                        <option value="Net 45">Net 45</option>
-                                    </select>
-                                    <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                </div>
+                                        {tab}
+                                        {activeTab === tab && (
+                                            <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-blue-600 rounded-t" />
+                                        )}
+                                    </button>
+                                ))}
                             </div>
+                        </div>
 
-                            {/* Enable Portal */}
-                            <div className="grid grid-cols-[160px_1fr] items-center">
-                                <Label>
-                                    Enable Portal? <InfoIcon />
-                                </Label>
-                                <label className="flex items-center gap-2 cursor-pointer">
+                        {/* Tab content */}
+                        {activeTab === "Other Details" && (
+                            <div className="space-y-4 mt-6">
+                                {/* PAN */}
+                                <div className="grid grid-cols-[160px_1fr] items-center border-gray-100">
+                                    <Label>
+                                        PAN <InfoIcon />
+                                    </Label>
                                     <input
-                                        type="checkbox"
-                                        checked={customer.enablePortal}
-                                        onChange={() => dispatch(toggleEnablePortal())}
-                                        className="w-4 h-4 rounded border-gray-300 text-blue-600 accent-blue-600"
+                                        type="text"
+                                        value={customer.pan}
+                                        onChange={handleChange("pan")}
+                                        className="max-w-md w-full border border-gray-300 rounded px-2 py-1.5 text-sm outline-none focus:border-blue-400"
                                     />
-                                    <span className="text-gray-700">
-                                        Allow portal access for this customer
-                                    </span>
-                                </label>
-                            </div>
+                                </div>
 
-                            {/* Documents */}
-                            <div className="grid grid-cols-[160px_1fr] items-start">
-                                <Label>Documents</Label>
-                                <div>
-                                    <div className="flex w-fit border border-gray-300 rounded overflow-hidden">
-                                        <button
-                                            type="button"
-                                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 border-r border-gray-300"
+                                {/* Payment Terms */}
+                                <div className="grid grid-cols-[160px_1fr] items-center">
+                                    <Label>Payment Terms</Label>
+                                    <div className="relative max-w-md w-full">
+                                        <select
+                                            value={customer.paymentTerms}
+                                            onChange={handleChange("paymentTerms")}
+                                            className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-700 appearance-none bg-white outline-none focus:border-blue-400"
                                         >
-                                            <UploadCloud className="w-4 h-4 text-gray-500" />
-                                            Upload File
-                                        </button>
-                                        <button type="button" className="px-2 hover:bg-gray-50">
-                                            <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
-                                        </button>
+                                            <option value="Due on Receipt">Due on Receipt</option>
+                                            <option value="Net 15">Net 15</option>
+                                            <option value="Net 30">Net 30</option>
+                                            <option value="Net 45">Net 45</option>
+                                        </select>
+                                        <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                                     </div>
-                                    <p className="text-xs text-gray-400 mt-1">
-                                        You can upload a maximum of 3 files, 10MB each
-                                    </p>
                                 </div>
-                            </div>
 
-                            {/* Website URL */}
-                            <div className="grid grid-cols-[160px_1fr] items-center">
-                                <Label>Website URL</Label>
-                                <div className="relative max-w-md w-full">
-                                    <Globe className="w-4 h-4 text-gray-400 absolute left-2 top-1/2 -translate-y-1/2" />
+                                {/* Enable Portal */}
+                                <div className="grid grid-cols-[160px_1fr] items-center">
+                                    <Label>
+                                        Enable Portal? <InfoIcon />
+                                    </Label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={customer.enablePortal}
+                                            onChange={() => dispatch(toggleEnablePortal())}
+                                            className="w-4 h-4 rounded border-gray-300 text-blue-600 accent-blue-600"
+                                        />
+                                        <span className="text-gray-700">
+                                            Allow portal access for this customer
+                                        </span>
+                                    </label>
+                                </div>
+
+                                {/* Documents */}
+                                <div className="grid grid-cols-[160px_1fr] items-start">
+                                    <Label>Documents</Label>
+                                    <div>
+                                        <div className="flex w-fit border border-gray-300 rounded overflow-hidden">
+                                            <button
+                                                type="button"
+                                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 border-r border-gray-300"
+                                            >
+                                                <UploadCloud className="w-4 h-4 text-gray-500" />
+                                                Upload File
+                                            </button>
+                                            <button type="button" className="px-2 hover:bg-gray-50">
+                                                <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            You can upload a maximum of 3 files, 10MB each
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Website URL */}
+                                <div className="grid grid-cols-[160px_1fr] items-center">
+                                    <Label>Website URL</Label>
+                                    <div className="relative max-w-md w-full">
+                                        <Globe className="w-4 h-4 text-gray-400 absolute left-2 top-1/2 -translate-y-1/2" />
+                                        <input
+                                            type="text"
+                                            placeholder="ex: www.zylker.com"
+                                            value={customer.websiteUrl}
+                                            onChange={handleChange("websiteUrl")}
+                                            className="w-full border border-gray-300 rounded pl-8 pr-2 py-1.5 text-sm outline-none focus:border-blue-400 placeholder-gray-400"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Department */}
+                                <div className="grid grid-cols-[160px_1fr] items-center">
+                                    <Label>Department</Label>
                                     <input
                                         type="text"
-                                        placeholder="ex: www.zylker.com"
-                                        value={customer.websiteUrl}
-                                        onChange={handleChange("websiteUrl")}
-                                        className="w-full border border-gray-300 rounded pl-8 pr-2 py-1.5 text-sm outline-none focus:border-blue-400 placeholder-gray-400"
+                                        value={customer.department}
+                                        onChange={handleChange("department")}
+                                        className="max-w-md w-full border border-gray-300 rounded px-2 py-1.5 text-sm outline-none focus:border-blue-400"
                                     />
                                 </div>
-                            </div>
 
-                            {/* Department */}
-                            <div className="grid grid-cols-[160px_1fr] items-center">
-                                <Label>Department</Label>
-                                <input
-                                    type="text"
-                                    value={customer.department}
-                                    onChange={handleChange("department")}
-                                    className="max-w-md w-full border border-gray-300 rounded px-2 py-1.5 text-sm outline-none focus:border-blue-400"
-                                />
-                            </div>
+                                {/* Designation */}
+                                <div className="grid grid-cols-[160px_1fr] items-center">
+                                    <Label>Designation</Label>
+                                    <input
+                                        type="text"
+                                        value={customer.designation}
+                                        onChange={handleChange("designation")}
+                                        className="max-w-md w-full border border-gray-300 rounded px-2 py-1.5 text-sm outline-none focus:border-blue-400"
+                                    />
+                                </div>
 
-                            {/* Designation */}
-                            <div className="grid grid-cols-[160px_1fr] items-center">
-                                <Label>Designation</Label>
-                                <input
-                                    type="text"
-                                    value={customer.designation}
-                                    onChange={handleChange("designation")}
-                                    className="max-w-md w-full border border-gray-300 rounded px-2 py-1.5 text-sm outline-none focus:border-blue-400"
-                                />
-                            </div>
+                                {/* X (Twitter) */}
+                                <div className="grid grid-cols-[160px_1fr] items-start">
+                                    <Label>X</Label>
+                                    <div className="max-w-md w-full">
+                                        <div className="flex border border-gray-300 rounded overflow-hidden focus-within:border-blue-400">
+                                            <div className="flex items-center justify-center w-9 bg-black flex-shrink-0">
+                                                <TwitterIcon className="w-4 h-4 text-white" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={customer.twitter}
+                                                onChange={handleChange("twitter")}
+                                                className="flex-1 px-2 py-1.5 text-sm outline-none w-0"
+                                            />
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-1">https://x.com/</p>
+                                    </div>
+                                </div>
 
-                            {/* X (Twitter) */}
-                            <div className="grid grid-cols-[160px_1fr] items-start">
-                                <Label>X</Label>
-                                <div className="max-w-md w-full">
-                                    <div className="flex border border-gray-300 rounded overflow-hidden focus-within:border-blue-400">
-                                        <div className="flex items-center justify-center w-9 bg-black flex-shrink-0">
-                                            <TwitterIcon className="w-4 h-4 text-white" />
+                                {/* Skype */}
+                                <div className="grid grid-cols-[160px_1fr] items-center">
+                                    <Label>Skype Name/Number</Label>
+                                    <div className="flex max-w-md w-full border border-gray-300 rounded overflow-hidden focus-within:border-blue-400">
+                                        <div className="flex items-center justify-center w-9 bg-sky-400 flex-shrink-0">
+                                            <MessageCircle className="w-4 h-4 text-white" />
                                         </div>
                                         <input
                                             type="text"
-                                            value={customer.twitter}
-                                            onChange={handleChange("twitter")}
+                                            value={customer.skype}
+                                            onChange={handleChange("skype")}
                                             className="flex-1 px-2 py-1.5 text-sm outline-none w-0"
                                         />
                                     </div>
-                                    <p className="text-xs text-gray-400 mt-1">https://x.com/</p>
+                                </div>
+
+                                {/* Facebook */}
+                                <div className="grid grid-cols-[160px_1fr] items-start">
+                                    <Label>Facebook</Label>
+                                    <div className="max-w-md w-full">
+                                        <div className="flex border border-gray-300 rounded overflow-hidden focus-within:border-blue-400">
+                                            <div className="flex items-center justify-center w-9 bg-blue-600 flex-shrink-0">
+                                                <Facebook className="w-4 h-4 text-white" fill="white" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={customer.facebook}
+                                                onChange={handleChange("facebook")}
+                                                className="flex-1 px-2 py-1.5 text-sm outline-none w-0"
+                                            />
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            http://www.facebook.com/
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
+                        )}
 
-                            {/* Skype */}
-                            <div className="grid grid-cols-[160px_1fr] items-center">
-                                <Label>Skype Name/Number</Label>
-                                <div className="flex max-w-md w-full border border-gray-300 rounded overflow-hidden focus-within:border-blue-400">
-                                    <div className="flex items-center justify-center w-9 bg-sky-400 flex-shrink-0">
-                                        <MessageCircle className="w-4 h-4 text-white" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        value={customer.skype}
-                                        onChange={handleChange("skype")}
-                                        className="flex-1 px-2 py-1.5 text-sm outline-none w-0"
+                        {activeTab === "Address" && (
+                            <div className="mt-6">
+                                <div className="flex flex-wrap gap-10 lg:gap-20">
+                                    <AddressColumn
+                                        title="Billing Address"
+                                        address={customer.billingAddress}
+                                        addressType="billingAddress"
+                                        dispatch={dispatch}
+                                    />
+                                    <AddressColumn
+                                        title="Shipping Address"
+                                        address={customer.shippingAddress}
+                                        addressType="shippingAddress"
+                                        dispatch={dispatch}
+                                        showCopyLink
                                     />
                                 </div>
-                            </div>
 
-                            {/* Facebook */}
-                            <div className="grid grid-cols-[160px_1fr] items-start">
-                                <Label>Facebook</Label>
-                                <div className="max-w-md w-full">
-                                    <div className="flex border border-gray-300 rounded overflow-hidden focus-within:border-blue-400">
-                                        <div className="flex items-center justify-center w-9 bg-blue-600 flex-shrink-0">
-                                            <Facebook className="w-4 h-4 text-white" fill="white" />
-                                        </div>
-                                        <input
-                                            type="text"
-                                            value={customer.facebook}
-                                            onChange={handleChange("facebook")}
-                                            className="flex-1 px-2 py-1.5 text-sm outline-none w-0"
-                                        />
-                                    </div>
-                                    <p className="text-xs text-gray-400 mt-1">
-                                        http://www.facebook.com/
-                                    </p>
+                                <div className="mt-8 border-l-4 border-amber-400 bg-amber-50/40 pl-4 py-2 max-w-3xl">
+                                    <p className="font-medium text-gray-800 mb-1">Note:</p>
+                                    <ul className="list-disc pl-4 text-gray-600 text-sm leading-relaxed">
+                                        <li>
+                                            You can customise how customers' addresses are displayed in
+                                            transaction PDFs. To do this, go to Settings &gt;
+                                            Preferences &gt; Customers, and navigate to the Address
+                                            Format sections.
+                                        </li>
+                                    </ul>
                                 </div>
                             </div>
-                        </div>
-                    )}
-
-                    {activeTab === "Address" && (
-                        <div className="mt-6">
-                            <div className="flex flex-wrap gap-10 lg:gap-20">
-                                <AddressColumn
-                                    title="Billing Address"
-                                    address={customer.billingAddress}
-                                    addressType="billingAddress"
-                                    dispatch={dispatch}
-                                />
-                                <AddressColumn
-                                    title="Shipping Address"
-                                    address={customer.shippingAddress}
-                                    addressType="shippingAddress"
-                                    dispatch={dispatch}
-                                    showCopyLink
-                                />
+                        )}
+                        {activeTab === "Contact Persons" && (
+                            <div className="mt-6 text-gray-400 text-sm">
+                                Contact persons go here.
                             </div>
-
-                            <div className="mt-8 border-l-4 border-amber-400 bg-amber-50/40 pl-4 py-2 max-w-3xl">
-                                <p className="font-medium text-gray-800 mb-1">Note:</p>
-                                <ul className="list-disc pl-4 text-gray-600 text-sm leading-relaxed">
-                                    <li>
-                                        You can customise how customers' addresses are displayed in
-                                        transaction PDFs. To do this, go to Settings &gt;
-                                        Preferences &gt; Customers, and navigate to the Address
-                                        Format sections.
-                                    </li>
-                                </ul>
+                        )}
+                        {activeTab === "Custom Fields" && (
+                            <div className="mt-6 text-gray-400 text-sm">
+                                Custom fields go here.
                             </div>
-                        </div>
-                    )}
-                    {activeTab === "Contact Persons" && (
-                        <div className="mt-6 text-gray-400 text-sm">
-                            Contact persons go here.
-                        </div>
-                    )}
-                    {activeTab === "Custom Fields" && (
-                        <div className="mt-6 text-gray-400 text-sm">
-                            Custom fields go here.
-                        </div>
-                    )}
-                    {activeTab === "Remarks" && (
-                        <div className="mt-6 text-gray-400 text-sm">Remarks go here.</div>
-                    )}
+                        )}
+                        {activeTab === "Remarks" && (
+                            <div className="mt-6 text-gray-400 text-sm">Remarks go here.</div>
+                        )}
 
-                    {/* Customer Owner */}
-                    <div className="mt-8 text-sm text-gray-600">
-                        <span className="font-medium text-gray-700">Customer Owner:</span>{" "}
-                        Assign a user as the customer owner to provide access only to the
-                        data of this customer.{" "}
-                        <a href="#" className="text-blue-600 hover:underline">
-                            Learn More
-                        </a>
-                    </div>
-                    {/* Action buttons */}
-                    <div className="mt-8 pb-10">
-                        <CustomerBottomActionBar
-                            onSave={() => handleSave("ACTIVE")}
-                            onCancel={handleCancel}
-                            onSubmit={() => handleSaveDraft("DRAFT")}
-                        />
+                        {/* Customer Owner */}
+                        <div className="mt-8 text-sm text-gray-600">
+                            <span className="font-medium text-gray-700">Customer Owner:</span>{" "}
+                            Assign a user as the customer owner to provide access only to the
+                            data of this customer.{" "}
+                            <a href="#" className="text-blue-600 hover:underline">
+                                Learn More
+                            </a>
+                        </div>
+                        {/* Action buttons */}
+                        <div className="mt-8 pb-10">
+                            <CustomerBottomActionBar
+                                onSave={() => handleSave("ACTIVE")}
+                                onCancel={handleCancel}
+                                onSubmit={() => handleSaveDraft("DRAFT")}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+
+            {showLeaveConfirmation && (
+                <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/40 p-4">
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="leave-customer-title"
+                        className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl"
+                    >
+                        <h2
+                            id="leave-customer-title"
+                            className="text-lg font-semibold text-gray-900"
+                        >
+                            Leave Customer Form?
+                        </h2>
+
+                        <p className="mt-2 text-sm text-gray-600">
+                            You have unsaved changes. Are you sure you want to leave this page?
+                        </p>
+
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={handleStayOnCustomer}
+                                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                Stay Here
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleLeaveCustomer}
+                                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                            >
+                                Leave
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+        </>
     );
 }

@@ -32,7 +32,7 @@ export default function QuickCreateButton() {
         <div ref={wrapperRef} className="relative group">
             <button
                 onClick={() => dispatch(toggleQuickCreate())}
-                className="w-9 h-9 rounded bg-[#FCF7F8]/90 hover:bg-[#1B7FE0]/70 flex items-center justify-center text-[#FCF7F8]"
+                className="w-9 h-9 rounded bg-[#FCF7F8]/90 hover:bg-[#1B7FE0]/70 flex items-center justify-center text-[#2E63B8]"
             >
                 <Plus size={16} />
             </button>
