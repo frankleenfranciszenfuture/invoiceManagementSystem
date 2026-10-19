@@ -173,9 +173,11 @@ export default function Modal() {
 
 
     const modalSizeClass = {
+        addInvoice: "w-[1050px] max-w-[92vw] h-[90vh] max-h-[90vh]",
+        editInvoice: "w-[1050px] max-w-[92vw] h-[90vh] max-h-[90vh]",
 
-        addInvoice: "w-[1050px] max-w-[92vw] max-h-[90vh]",
-        editInvoice: "w-[1050px] max-w-[92vw] max-h-[90vh]",
+        addEmailSignature: "w-[950px] max-w-[92vw] h-[85vh] max-h-[85vh]",
+        editEmailSignature: "w-[950px] max-w-[92vw] h-[85vh] max-h-[85vh]",
 
         addBankAccount: "w-[950px] max-w-[92vw] max-h-[90vh]",
         editBankAccount: "w-[950px] max-w-[92vw] max-h-[90vh]",
@@ -183,11 +185,9 @@ export default function Modal() {
         addProduct: "w-[950px] max-w-[92vw] max-h-[90vh]",
         editProduct: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
-        // Category
         addCategory: "w-[950px] max-w-[92vw] max-h-[90vh]",
         editCategory: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
-        // subCategory
         addSubCategory: "w-[950px] max-w-[92vw] max-h-[90vh]",
         editSubCategory: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
@@ -203,12 +203,9 @@ export default function Modal() {
         addRole: "w-[950px] max-w-[92vw] max-h-[90vh]",
         editRole: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
-
-        // USER
         addUser: "w-[950px] max-w-[92vw] max-h-[90vh]",
         editUser: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
-        //TaxMaster
         addTaxMaster: "w-[950px] max-w-[92vw] max-h-[90vh]",
         editTaxMaster: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
@@ -219,7 +216,6 @@ export default function Modal() {
         editUserPermission: "w-[950px] max-w-[92vw] max-h-[90vh]",
 
         changeTemplate: "w-[950px] max-w-[92vw] max-h-[90vh]",
-
         addContactPerson: "w-[950px] max-w-[92vw] max-h-[90vh]",
     };
     /* =========================================================
@@ -461,22 +457,28 @@ export default function Modal() {
 
                     <div
                         className={`
-            min-h-0
-            w-full
+        min-h-0
+        w-full
+        flex-1
+        overflow-y-auto
+        overflow-x-hidden
 
-            ${type === "addInvoice" ||
+        ${type === "addInvoice" ||
                                 type === "editInvoice" ||
-                                type === "invoiceNumberSetting"
-                                ? "flex-1 overflow-y-auto overflow-x-hidden"
+                                type === "invoiceNumberSetting" ||
+                                type === "addEmailSignature" ||
+                                type === "editEmailSignature"
+                                ? "overscroll-contain"
                                 : ""
                             }
-        `}
+    `}
                     >
                         <ModalComponent data={data} />
+
                     </div>
                 </div>
 
-            </div>
+            </div >
         </>
     );
 }

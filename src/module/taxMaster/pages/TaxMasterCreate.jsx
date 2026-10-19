@@ -657,13 +657,12 @@ export default function TaxMasterCreate() {
 
         if (
             form.taxRate === "" ||
-            Number(form.taxRate) <= 0
+            form.taxRate === null ||
+            form.taxRate === undefined ||
+            !Number.isFinite(Number(form.taxRate)) ||
+            Number(form.taxRate) < 0
         ) {
-
-            toast.error(
-                "Tax rate is required"
-            );
-
+            toast.error("Enter a valid tax rate");
             return;
         }
 
@@ -671,47 +670,31 @@ export default function TaxMasterCreate() {
         // CGST + SGST
         // =====================================================
 
-        if (
-            form.taxType === "CGST_SGST"
-        ) {
+        if (form.taxType === "CGST_SGST") {
+            const cgst = Number(form.cgstRate);
+            const sgst = Number(form.sgstRate);
+            const taxRate = Number(form.taxRate);
 
             if (
                 form.cgstRate === "" ||
-                Number(form.cgstRate) <= 0
+                !Number.isFinite(cgst) ||
+                cgst < 0
             ) {
-
-                toast.error(
-                    "CGST rate is required"
-                );
-
+                toast.error("Enter a valid CGST rate");
                 return;
             }
 
             if (
                 form.sgstRate === "" ||
-                Number(form.sgstRate) <= 0
+                !Number.isFinite(sgst) ||
+                sgst < 0
             ) {
-
-                toast.error(
-                    "SGST rate is required"
-                );
-
+                toast.error("Enter a valid SGST rate");
                 return;
             }
 
-            const combinedRate =
-                Number(form.cgstRate || 0) +
-                Number(form.sgstRate || 0);
-
-            if (
-                combinedRate !==
-                Number(form.taxRate)
-            ) {
-
-                toast.error(
-                    "CGST + SGST rate must equal Tax Rate"
-                );
-
+            if (Math.abs(cgst + sgst - taxRate) > 0.000001) {
+                toast.error("CGST + SGST rate must equal Tax Rate");
                 return;
             }
         }
@@ -720,35 +703,24 @@ export default function TaxMasterCreate() {
         // IGST
         // =====================================================
 
-        if (
-            form.taxType === "IGST"
-        ) {
+        if (form.taxType === "IGST") {
+            const igst = Number(form.igstRate);
+            const taxRate = Number(form.taxRate);
 
             if (
                 form.igstRate === "" ||
-                Number(form.igstRate) <= 0
+                !Number.isFinite(igst) ||
+                igst < 0
             ) {
-
-                toast.error(
-                    "IGST rate is required"
-                );
-
+                toast.error("Enter a valid IGST rate");
                 return;
             }
 
-            if (
-                Number(form.igstRate) !==
-                Number(form.taxRate)
-            ) {
-
-                toast.error(
-                    "IGST rate must equal Tax Rate"
-                );
-
+            if (Math.abs(igst - taxRate) > 0.000001) {
+                toast.error("IGST rate must equal Tax Rate");
                 return;
             }
         }
-
         // =====================================================
         // PAYLOAD
         // =====================================================
@@ -1785,31 +1757,23 @@ export default function TaxMasterCreate() {
                                     </label>
 
                                     <select
-                                        value={
-                                            form.taxType ??
-                                            ""
-                                        }
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "taxType",
-                                                e.target.value
-                                            )
-                                        }
+                                        value={form.taxType ?? ""}
+                                        onChange={(e) => {
+                                            const taxType = e.target.value;
+
+                                            handleChange("taxType", taxType);
+
+                                            // Reset rates when changing the tax type.
+                                            handleChange("cgstRate", "");
+                                            handleChange("sgstRate", "");
+                                            handleChange("igstRate", "");
+                                        }}
                                         className={inputClass}
                                     >
-
-                                        <option value="">
-                                            Select Tax Type
-                                        </option>
-
-                                        <option value="CGST_SGST">
-                                            CGST + SGST
-                                        </option>
-
-                                        <option value="IGST">
-                                            IGST
-                                        </option>
-
+                                        <option value="">Select Tax Type</option>
+                                        <option value="GST">GST</option>
+                                        <option value="CGST_SGST">CGST + SGST</option>
+                                        <option value="IGST">IGST</option>
                                     </select>
 
                                     {errors?.taxType && (

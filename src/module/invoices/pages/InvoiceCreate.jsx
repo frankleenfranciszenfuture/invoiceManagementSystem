@@ -46,7 +46,13 @@ import {
   Inbox,
   BoxIcon,
   Pencil,
-  UserKeyIcon
+  UserKeyIcon,
+  BanknoteIcon,
+  CreditCard,
+  LucideCreditCard,
+  CreditCardIcon,
+  SignatureIcon,
+  ClipboardPenIcon
 } from "lucide-react";
 
 import {
@@ -1573,18 +1579,14 @@ export default function InvoiceCreate() {
   SALES PERSON NAME
   ========================================================= */
 
-  const getSalesPersonName = (
-    salesPerson
-  ) => {
-    return (
-      salesPerson?.salesPersonName ||
-      salesPerson?.name ||
-      ""
-        .filter(Boolean)
-        .join(" ") ||
-      ""
-    );
-  };
+  const getSalesPersonName = (salesPerson) =>
+    salesPerson?.salesPersonName ||
+    salesPerson?.name ||
+    [
+      salesPerson?.firstName,
+      salesPerson?.lastName,
+    ].filter(Boolean).join(" ") ||
+    "";
 
 
   /* =========================================================
@@ -2140,65 +2142,73 @@ BANKACCOUNT NAME
   ========================================================= */
 
 
+
   const handleCurrencySelect = async (currencyInput) => {
     const selectedCurrency =
       currencyInput && typeof currencyInput === "object"
         ? currencies.find(
           (currency) =>
-            String(currency.id) === String(currencyInput.id),
+            String(currency.id) === String(currencyInput.id)
         ) || currencyInput
         : currencies.find(
           (currency) =>
-            String(currency.id) === String(currencyInput),
+            String(currency.id) === String(currencyInput)
         );
 
-    if (
-      !selectedCurrency?.id ||
-      !Number.isFinite(Number(selectedCurrency.id))
-    ) {
-      console.error("Currency input:", currencyInput);
-      console.error("Available currencies:", currencies);
+    if (!selectedCurrency?.id) {
       toast.error("Please select a valid currency");
       return false;
     }
 
-    const targetCurrencyId = Number(selectedCurrency.id);
-    const previousRate = getValidRate(invoice.exchangeRate);
+    const inrCurrency = getINRCurrency();
+
+    if (!inrCurrency?.id) {
+      toast.error("INR currency was not found. Please check currency settings.");
+      return false;
+    }
+
+    const targetCode = getCurrencyCode(selectedCurrency);
+    const isINR = targetCode === "INR";
+
+    if (!isINR && String(selectedCurrency.id) === String(inrCurrency.id)) {
+      toast.error("Currency configuration is inconsistent");
+      return false;
+    }
 
     try {
       let nextRate = 1;
 
-      if (targetCurrencyId !== BASE_CURRENCY_ID) {
-        const exchangeRateData = await dispatch(
+      if (!isINR) {
+        // Rate convention: 1 selected currency unit = X INR.
+        const rateResponse = await dispatch(
           fetchExchangeRate({
-            fromCurrencyId: BASE_CURRENCY_ID,
-            toCurrencyId: targetCurrencyId,
-          }),
+            fromCurrencyId: selectedCurrency.id,
+            toCurrencyId: inrCurrency.id,
+          })
         ).unwrap();
 
-        const parsedRate = Number(exchangeRateData?.rate);
+        const parsedRate = Number(
+          rateResponse?.data?.rate ??
+          rateResponse?.rate
+        );
 
         if (!Number.isFinite(parsedRate) || parsedRate <= 0) {
-          throw new Error("The API returned an invalid exchange rate");
+          throw new Error("The exchange-rate API returned an invalid rate");
         }
 
         nextRate = parsedRate;
       }
 
       const updatedItems = (invoice.invoiceItems || []).map((item) => {
-        const hasBasePrice =
-          item.baseUnitPrice !== undefined &&
-          item.baseUnitPrice !== null &&
-          item.baseUnitPrice !== "";
-
-        const baseUnitPrice = hasBasePrice
-          ? Number(item.baseUnitPrice)
-          : Number(item.unitPrice || 0) / previousRate;
+        const baseUnitPrice = getBasePrice(
+          item,
+          invoice.exchangeRate
+        );
 
         return {
           ...item,
           baseUnitPrice: Number(baseUnitPrice.toFixed(4)),
-          unitPrice: Number((baseUnitPrice * nextRate).toFixed(2)),
+          unitPrice: roundMoney(baseUnitPrice / nextRate),
         };
       });
 
@@ -2206,27 +2216,34 @@ BANKACCOUNT NAME
         setInvoiceField({
           field: "currencyId",
           value: selectedCurrency.id,
-        }),
+        })
       );
 
       dispatch(
         setInvoiceField({
           field: "currencyName",
-          value:
-            selectedCurrency.currencyName ||
-            selectedCurrency.currencyCode ||
-            "",
-        }),
+          value: selectedCurrency.currencyName || targetCode,
+        })
+      );
+
+      dispatch(
+        setInvoiceField({
+          field: "currencyCode",
+          value: targetCode,
+        })
       );
 
       dispatch(
         setInvoiceField({
           field: "exchangeRate",
           value: nextRate,
-        }),
+        })
       );
 
       dispatch(setInvoiceItems(updatedItems));
+
+      setCurrencySearch("");
+      setOpenCurrency(false);
 
       return true;
     } catch (error) {
@@ -2235,7 +2252,7 @@ BANKACCOUNT NAME
       toast.error(
         typeof error === "string"
           ? error
-          : error?.message || "Unable to load the exchange rate",
+          : error?.message || "Unable to load the exchange rate"
       );
 
       return false;
@@ -2490,10 +2507,8 @@ BANKACCOUNT NAME
   /* =========================================================
      PRODUCT SELECT
   ========================================================= */
-  const roundMoney = (value) => {
-    const number = Number(value || 0);
-    return Number((Math.round((number + Number.EPSILON) * 100) / 100).toFixed(2));
-  };
+
+
 
   const handleProductSelect = (index, product) => {
     if (!product?.id) {
@@ -2502,28 +2517,19 @@ BANKACCOUNT NAME
     }
 
     const baseUnitPrice = Number(
-      product.sellingPrice ?? product.rate ?? product.price ?? 0,
+      product.sellingPrice ??
+      product.rate ??
+      product.price ??
+      0
     );
+
+    if (!Number.isFinite(baseUnitPrice) || baseUnitPrice < 0) {
+      toast.error("Product price is invalid");
+      return;
+    }
 
     const exchangeRate = getValidRate(invoice.exchangeRate);
-
-    const convertedUnitPrice = Number(
-      (baseUnitPrice * exchangeRate).toFixed(2),
-    );
-
-    const currentRate = getValidRate(invoice.exchangeRate);
-
-    dispatch(setInvoiceItemField({
-      index,
-      field: "baseUnitPrice",
-      value: baseUnitPrice,
-    }));
-
-    dispatch(setInvoiceItemField({
-      index,
-      field: "unitPrice",
-      value: roundMoney(baseUnitPrice * currentRate),
-    }));
+    const unitPrice = roundMoney(baseUnitPrice / exchangeRate);
 
     const productName =
       product.productName ||
@@ -2531,18 +2537,10 @@ BANKACCOUNT NAME
       product.name ||
       "";
 
-    // Set product details.
     updateItem(index, "productId", product.id);
     updateItem(index, "description", productName);
-
-    // Preserve the original price and apply the selected currency rate.
-    updateItem(
-      index,
-      "baseUnitPrice",
-      Number(baseUnitPrice.toFixed(4)),
-    );
-
-    updateItem(index, "unitPrice", convertedUnitPrice);
+    updateItem(index, "baseUnitPrice", Number(baseUnitPrice.toFixed(4)));
+    updateItem(index, "unitPrice", unitPrice);
 
     if (product.unitId) {
       updateItem(index, "unitId", product.unitId);
@@ -2552,37 +2550,29 @@ BANKACCOUNT NAME
       updateItem(index, "sizeId", product.sizeId);
     }
 
-
     setItemSearch("");
     setOpenRowItemDropdown(false);
     setActiveItemId(null);
 
-    // Add an empty row only when selecting in the last row.
     if (index === invoiceItems.length - 1) {
       dispatch(addInvoiceItem(createEmptyItem()));
     }
   };
 
+
+
   const handleUnitPriceChange = (index, value) => {
-    const currentRate = getValidRate(invoice.exchangeRate);
     const unitPrice = Number(value || 0);
+    const exchangeRate = getValidRate(invoice.exchangeRate);
 
-    dispatch(
-      setInvoiceItemField({
-        index,
-        field: "unitPrice",
-        value,
-      }),
-    );
-
-    dispatch(
-      setInvoiceItemField({
-        index,
-        field: "baseUnitPrice",
-        value: Number((unitPrice / currentRate).toFixed(4)),
-      }),
+    updateItem(index, "unitPrice", value);
+    updateItem(
+      index,
+      "baseUnitPrice",
+      Number((unitPrice * exchangeRate).toFixed(4))
     );
   };
+
   /* =========================================================
      VALIDATION
   ========================================================= */
@@ -2860,7 +2850,7 @@ BANKACCOUNT NAME
             item.baseUnitPrice !== undefined &&
             item.baseUnitPrice !== ""
             ? Number(item.baseUnitPrice)
-            : unitPrice / exchangeRate;
+            : unitPrice * exchangeRate;
 
         return {
           ...(item.id ? { id: item.id } : {}),
@@ -2986,7 +2976,20 @@ BANKACCOUNT NAME
     );
   };
 
-  const BASE_CURRENCY_ID = 1; // INR
+
+
+
+  const getCurrencyCode = (currency) =>
+    String(
+      currency?.currencyCode ||
+      currency?.code ||
+      ""
+    ).trim().toUpperCase();
+
+  const getINRCurrency = () =>
+    currencies.find(
+      (currency) => getCurrencyCode(currency) === "INR"
+    ) || null;
 
   const getValidRate = (rate) => {
     const parsedRate = Number(rate);
@@ -2996,17 +2999,22 @@ BANKACCOUNT NAME
       : 1;
   };
 
-  const getBasePrice = (item, exchangeRate) => {
+  const roundMoney = (value) =>
+    Number((Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100).toFixed(2));
+
+  const getBasePrice = (item, exchangeRate = invoice.exchangeRate) => {
     if (
-      item.baseUnitPrice !== undefined &&
-      item.baseUnitPrice !== null &&
-      item.baseUnitPrice !== ""
+      item?.baseUnitPrice !== undefined &&
+      item?.baseUnitPrice !== null &&
+      item?.baseUnitPrice !== ""
     ) {
       return Number(item.baseUnitPrice);
     }
 
-    return Number(item.unitPrice || 0) / getValidRate(exchangeRate);
+    // Exchange rate = INR per selected currency unit.
+    return Number(item?.unitPrice || 0) * getValidRate(exchangeRate);
   };
+
 
   const selectedCurrency = currencies.find(
     (currency) =>
@@ -4279,11 +4287,13 @@ BANKACCOUNT NAME
                             <td className="px-3 py-3">
                               <CustomSUSelect
                                 value={item.unitId || ""}
-                                onChange={(value) =>
-                                  updateItem(index, "unitId", value)
-                                }
-                                placeholder="Select"
-                                width="w-full"
+                                onChange={(value) => updateItem(index, "unitId", value)}
+                                placeholder="Select Unit"
+                                searchPlaceholder="Search units..."
+                                searchable
+                                addNewLabel="Unit"
+                                addNewModalType="addUnit"
+                                width="w-[130px]"
                                 size="sm"
                                 options={[
                                   { value: "", label: "Select" },
@@ -4301,11 +4311,13 @@ BANKACCOUNT NAME
                             <td className="px-3 py-3">
                               <CustomSUSelect
                                 value={item.sizeId || ""}
-                                onChange={(value) =>
-                                  updateItem(index, "sizeId", value)
-                                }
-                                placeholder="Select"
-                                width="w-full"
+                                onChange={(value) => updateItem(index, "sizeId", value)}
+                                placeholder="Select Size"
+                                searchPlaceholder="Search sizes..."
+                                searchable
+                                addNewLabel="Size"
+                                addNewModalType="addSize"
+                                width="w-[130px]"
                                 size="sm"
                                 options={[
                                   { value: "", label: "Select" },
@@ -4350,7 +4362,7 @@ BANKACCOUNT NAME
 
                               ) : (
 
-                                <span className="block text-right text-sm text-gray-400">
+                                <span className="block text-center text-sm text-gray-400">
                                   —
                                 </span>
 
@@ -4362,38 +4374,40 @@ BANKACCOUNT NAME
                             {/* TAX */}
 
                             <td className="px-3 py-3">
-                              {currencyCode === "INR" ? (
-                                <CustomSUSelect
-                                  value={String(item.taxMasterId ?? "")}
-                                  onChange={(value) =>
-                                    updateItem(index, "taxMasterId", "")
-                                  }
-                                  placeholder="Select Tax"
-                                  width="w-full"
-                                  size="sm"
-                                  options={[
-                                    {
-                                      value: "",
-                                      label: "Select Tax",
-                                    },
-                                    ...taxMasters.map((tax) => {
-                                      const rate =
-                                        tax.taxPercentage ??
-                                        tax.taxRate ??
-                                        tax.rate ??
-                                        tax.percentage ??
-                                        0;
 
-                                      return {
-                                        value: String(tax.id),
-                                        label: `${tax.taxName || tax.name || tax.taxType || "Tax"} (${rate}%)`,
-                                      };
-                                    }),
-                                  ]}
-                                />
-                              ) : (
-                                <span className="text-sm text-gray-400">—</span>
-                              )}
+                              <CustomSUSelect
+                                value={String(item.taxMasterId ?? "")}
+                                onChange={(value) =>
+                                  updateItem(index, "taxMasterId", value)
+                                }
+                                placeholder="Select Tax"
+                                searchPlaceholder="Search taxes..."
+                                searchable
+                                addNewLabel="Tax"
+                                addNewModalType="addTaxMaster"
+                                width="w-[130px]"
+                                size="sm"
+                                options={[
+                                  {
+                                    value: "",
+                                    label: "Select Tax",
+                                  },
+                                  ...taxMasters.map((tax) => {
+                                    const rate =
+                                      tax.taxPercentage ??
+                                      tax.taxRate ??
+                                      tax.rate ??
+                                      tax.percentage ??
+                                      0;
+
+                                    return {
+                                      value: String(tax.id),
+                                      label: `${tax.taxName || tax.name || tax.taxType || "Tax"} (${rate}%)`,
+                                    };
+                                  }),
+                                ]}
+                              />
+
                             </td>
 
                             {/* QUANTITY */}
@@ -4444,6 +4458,7 @@ BANKACCOUNT NAME
                                   className="w-full min-w-0 text-right text-sm border-b border-transparent focus:border-blue-400 focus:outline-none bg-transparent"
                                 />
                               </div>
+
                             </td>
 
 
@@ -5045,16 +5060,14 @@ BANKACCOUNT NAME
 
             <div className="flex-1 max-w-sm ml-auto">
 
-              <div className="flex justify-between items-center py-3">
+              <div className="flex justify-between items-center py-3 border-b border-gray-300 mb-4">
 
-                <span className="px-1 w-full text-xl font-semibold text-gray-700 border-b border-gray-200 rounded ">
+                {/* <span className="px-1 w-full text-xl font-semibold text-[#2B7FFF]  rounded ">
                   Add BankAccount
-                </span>
 
-
-
-
+                </span> */}
               </div>
+
               {/* =================================================
               BankAccount 
           ================================================= */}
@@ -5067,19 +5080,19 @@ BANKACCOUNT NAME
                       true
                     )
                   }
-                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+                  className="flex items-center gap-2 text-xl text-blue-500 hover:text-blue-500"
                 >
 
-                  <div className="w-5 h-5 rounded-full border-2 border-blue-500 flex items-center justify-center">
+                  <div className="w-8 h-8 px-1 text-blue-400 rounded-full border-2 border-blue-400 flex items-center justify-center">
 
-                    <Plus
-                      size={12}
+                    <Landmark
+                      size={40}
                     />
 
                   </div>
 
 
-                  Add or Select BankAccount
+                  Select BankAccount
 
                 </button>
 
@@ -5087,9 +5100,9 @@ BANKACCOUNT NAME
 
                 <div>
 
-                  {/* <label className="text-sm font-medium text-gray-700 block mb-1">
-                    Signature
-                  </label> */}
+                  <label className="text-xl font-medium text-blue-500 block mb-1">
+                    Bank Account
+                  </label>
 
 
                   <div className="flex-1">
@@ -5102,7 +5115,7 @@ BANKACCOUNT NAME
                         ref={
                           bankAccountDropdownRef
                         }
-                        className="relative w-[350px]"
+                        className="relative w-[650px]"
                       >
 
                         <div className="flex">
@@ -5149,7 +5162,7 @@ BANKACCOUNT NAME
                                 true
                               )
                             }
-                            className="h-10 w-10 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-r-md"
+                            className="h-10 w-10 flex items-center justify-center bg-blue-500 hover:bg-emerald-600 text-white rounded-r-md"
                           >
 
                             <Search
@@ -5343,16 +5356,18 @@ BANKACCOUNT NAME
 
             <div className="flex-1 max-w-sm ml-auto">
 
-              <div className="flex justify-between items-center py-3">
+              <div className="flex justify-between items-center py-3 border-b border-gray-300 mb-4">
 
-                <span className="px-1 w-full text-xl font-semibold text-gray-700 border-b border-gray-200 rounded ">
-                  Add Signature
-                </span>
+                <div >
 
+                  {/* <span className="px-1 w-full text-xl font-semibold text-[#2B7FFF] rounded ">
+                    Add Signature
+                  </span> */}
 
-
-
+                </div>
               </div>
+
+
               {/* =================================================
               Signatures
           ================================================= */}
@@ -5365,19 +5380,19 @@ BANKACCOUNT NAME
                       true
                     )
                   }
-                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+                  className="flex items-center gap-2 text-xl text-blue-500 hover:text-blue-500"
                 >
 
-                  <div className="w-5 h-5 rounded-full border-2 border-blue-500 flex items-center justify-center">
-
-                    <Plus
-                      size={12}
+                  <div className="w-8 h-8 px-1 text-blue-400 rounded-full border-2 border-blue-400 flex items-center justify-center">
+                    <ClipboardPenIcon
+                      size={40}
                     />
+
 
                   </div>
 
 
-                  Add Signature
+                  Select Signature
 
                 </button>
 
@@ -5385,9 +5400,9 @@ BANKACCOUNT NAME
 
                 <div>
 
-                  {/* <label className="text-sm font-medium text-gray-700 block mb-1">
+                  <label className="text-xl font-medium text-blue-500 block mb-1">
                     Signature
-                  </label> */}
+                  </label>
 
 
                   <div className="flex-1">
@@ -5400,7 +5415,7 @@ BANKACCOUNT NAME
                         ref={
                           emailSignatureDropdownRef
                         }
-                        className="relative w-[350px]"
+                        className="relative w-[650px]"
                       >
 
                         <div className="flex">
@@ -5444,7 +5459,7 @@ BANKACCOUNT NAME
                                 true
                               )
                             }
-                            className="h-10 w-10 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-r-md"
+                            className="h-10 w-10 flex items-center justify-center bg-blue-500 hover:bg-emerald-600 text-white rounded-r-md"
                           >
 
                             <Search
@@ -5564,24 +5579,22 @@ BANKACCOUNT NAME
                             <button
                               type="button"
                               className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
-
                               onClick={() =>
-                                (navigate("/emailSignatures/newSimple"))}
+                                dispatch(
+                                  openModal({
+                                    type: "addEmailSignature",
+                                    data: null,
+                                  })
+                                )
+                              }
                             >
-
-                              <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center"
-                              >
-
-                                <Plus
-                                  size={14}
-                                />
-
+                              <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center">
+                                <Plus size={14} />
                               </div>
 
                               <span className="font-medium">
-                                New EmailSignature
+                                New Email Signature
                               </span>
-
                             </button>
 
                           </div>
@@ -5873,339 +5886,345 @@ BANKACCOUNT NAME
 
       {/* INVOICE TYPE SELECTION */}
 
-      {showInvoiceTypeOptions && !isEditMode && (
-        <div
-          onClick={handleInvoiceTypeBackdropClick}
-          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 p-4">
+      {
+        showInvoiceTypeOptions && !isEditMode && (
           <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="invoice-type-title"
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
-          >
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-50">
-              <Package className="text-[#0F4659]" size={26} />
-            </div>
-
-            <h2
-              id="invoice-type-title"
-              className="text-xl font-semibold text-gray-900"
+            onClick={handleInvoiceTypeBackdropClick}
+            className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="invoice-type-title"
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
             >
-              Create Invoice
-            </h2>
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-50">
+                <Package className="text-[#0F4659]" size={26} />
+              </div>
 
-            <p className="mt-2 text-sm text-gray-500">
-              Choose the type of invoice you want to create.
-            </p>
-
-            <div className="mt-6 flex flex-col gap-3">
-              {/* PRODUCT INVOICE */}
-              <button
-                type="button"
-                onClick={handleProductInvoice}
-                className="flex items-center gap-3 rounded-xl border border-gray-200 p-4 text-left transition hover:border-blue-400 hover:bg-blue-50"
+              <h2
+                id="invoice-type-title"
+                className="text-xl font-semibold text-gray-900"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                  <Package className="text-blue-600" size={21} />
-                </div>
+                Create Invoice
+              </h2>
 
-                <div>
-                  <p className="font-semibold text-gray-800">
-                    Product Invoice
-                  </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Create invoices for products and inventory.
-                  </p>
-                </div>
-              </button>
+              <p className="mt-2 text-sm text-gray-500">
+                Choose the type of invoice you want to create.
+              </p>
 
-              {/* SERVICE INVOICE */}
-              <button
-                type="button"
-                onClick={handleServiceInvoice}
-                className="flex items-center gap-3 rounded-xl border border-gray-200 p-4 text-left transition hover:border-emerald-400 hover:bg-emerald-50"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
-                  <Wrench className="text-emerald-600" size={21} />
-                </div>
+              <div className="mt-6 flex flex-col gap-3">
+                {/* PRODUCT INVOICE */}
+                <button
+                  type="button"
+                  onClick={handleProductInvoice}
+                  className="flex items-center gap-3 rounded-xl border border-gray-200 p-4 text-left transition hover:border-blue-400 hover:bg-blue-50"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+                    <Package className="text-blue-600" size={21} />
+                  </div>
 
-                <div>
-                  <p className="font-semibold text-gray-800">
-                    Service Invoice
-                  </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Create invoices for services.
-                  </p>
-                </div>
-              </button>
+                  <div>
+                    <p className="font-semibold text-gray-800">
+                      Product Invoice
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Create invoices for products and inventory.
+                    </p>
+                  </div>
+                </button>
 
-              {/* SALE INVOICE */}
-              <button
-                type="button"
-                onClick={handleSaleInvoice}
-                className="flex items-center gap-3 rounded-xl border border-gray-200 p-4 text-left transition hover:border-blue-400 hover:bg-blue-50"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                  <Package className="text-blue-600" size={21} />
-                </div>
+                {/* SERVICE INVOICE */}
+                <button
+                  type="button"
+                  onClick={handleServiceInvoice}
+                  className="flex items-center gap-3 rounded-xl border border-gray-200 p-4 text-left transition hover:border-emerald-400 hover:bg-emerald-50"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
+                    <Wrench className="text-emerald-600" size={21} />
+                  </div>
 
-                <div>
-                  <p className="font-semibold text-gray-800">
-                    Sale Invoice
-                  </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Create invoices for products and inventory.
-                  </p>
-                </div>
-              </button>
+                  <div>
+                    <p className="font-semibold text-gray-800">
+                      Service Invoice
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Create invoices for services.
+                    </p>
+                  </div>
+                </button>
 
-            </div>
+                {/* SALE INVOICE */}
+                <button
+                  type="button"
+                  onClick={handleSaleInvoice}
+                  className="flex items-center gap-3 rounded-xl border border-gray-200 p-4 text-left transition hover:border-blue-400 hover:bg-blue-50"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+                    <Package className="text-blue-600" size={21} />
+                  </div>
 
-            <div className="mt-6 flex justify-end">
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
+                  <div>
+                    <p className="font-semibold text-gray-800">
+                      Sale Invoice
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Create invoices for products and inventory.
+                    </p>
+                  </div>
+                </button>
+
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {showLeaveConfirmation && (
-        <div
-          className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/50 p-4"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              handleStayOnInvoiceType();
-            }
-          }}
-        >
+      {
+        showLeaveConfirmation && (
           <div
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="leave-invoice-title"
-            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+            className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/50 p-4"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) {
+                handleStayOnInvoiceType();
+              }
+            }}
           >
-            <h2
-              id="leave-invoice-title"
-              className="text-lg font-semibold text-gray-900"
+            <div
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="leave-invoice-title"
+              className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
             >
-              Leave Invoice Creation?
-            </h2>
-
-            <p className="mt-2 text-sm text-gray-500">
-              Do you want to leave this page or stay and choose an invoice type?
-            </p>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={handleStayOnInvoiceType}
-                className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              <h2
+                id="leave-invoice-title"
+                className="text-lg font-semibold text-gray-900"
               >
-                Stay Here
-              </button>
+                Leave Invoice Creation?
+              </h2>
 
-              <button
-                type="button"
-                onClick={handleLeaveInvoiceType}
-                className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700"
-              >
-                Leave
-              </button>
+              <p className="mt-2 text-sm text-gray-500">
+                Do you want to leave this page or stay and choose an invoice type?
+              </p>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={handleStayOnInvoiceType}
+                  className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Stay Here
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLeaveInvoiceType}
+                  className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700"
+                >
+                  Leave
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
 
 
       {/* Invoice Dates & Terms Modal */}
-      {showDateTermsModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl rounded-xl bg-white shadow-xl">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <div className="flex items-center gap-3">
-                <UserKeyIcon
-                  size={22}
-                  strokeWidth={2}
-                  className="text-blue-500"
-                />
+      {
+        showDateTermsModal && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-xl rounded-xl bg-white shadow-xl">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <UserKeyIcon
+                    size={22}
+                    strokeWidth={2}
+                    className="text-blue-500"
+                  />
 
-                <h2 className="text-lg font-semibold text-blue-500">
-                  Invoice Dates & Terms
-                </h2>
+                  <h2 className="text-lg font-semibold text-blue-500">
+                    Invoice Dates & Terms
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowDateTermsModal(false)}
+                  className="text-2xl text-gray-500 transition hover:text-red-500"
+                  aria-label="Close modal"
+                >
+                  &times;
+                </button>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowDateTermsModal(false)}
-                className="text-2xl text-gray-500 transition hover:text-red-500"
-                aria-label="Close modal"
-              >
-                &times;
-              </button>
-            </div>
+              {/* Form */}
+              <div className="space-y-5 p-6">
+                {/* Invoice Date */}
+                <div className="grid grid-cols-[130px_minmax(0,1fr)] items-center gap-4">
+                  <label className="text-sm font-medium text-red-500">
+                    Invoice Date*
+                  </label>
 
-            {/* Form */}
-            <div className="space-y-5 p-6">
-              {/* Invoice Date */}
-              <div className="grid grid-cols-[130px_minmax(0,1fr)] items-center gap-4">
-                <label className="text-sm font-medium text-red-500">
-                  Invoice Date*
-                </label>
+                  <DatePicker
+                    selected={
+                      dateTermsForm.invoiceDate
+                        ? new Date(`${dateTermsForm.invoiceDate.slice(0, 10)}T00:00:00`)
+                        : null
+                    }
+                    onChange={(date) => {
+                      const invoiceDate = date ? formatDateForInput(date) : "";
 
-                <DatePicker
-                  selected={
-                    dateTermsForm.invoiceDate
-                      ? new Date(`${dateTermsForm.invoiceDate.slice(0, 10)}T00:00:00`)
-                      : null
-                  }
-                  onChange={(date) => {
-                    const invoiceDate = date ? formatDateForInput(date) : "";
+                      setDateTermsForm((prev) => {
+                        const termsAndConditions =
+                          prev.termsAndConditions || "Due on Receipt";
 
-                    setDateTermsForm((prev) => {
-                      const termsAndConditions =
-                        prev.termsAndConditions || "Due on Receipt";
+                        return {
+                          ...prev,
+                          invoiceDate,
+                          dueDate: invoiceDate
+                            ? calculateDueDate(invoiceDate, termsAndConditions)
+                            : "",
+                        };
+                      });
+                    }}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Select invoice date"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                    isClearable
+                    showPopperArrow={false}
+                  />
+                </div>
 
-                      return {
+                {/* Terms */}
+                <div className="grid grid-cols-[130px_minmax(0,1fr)] items-center gap-4">
+                  <label className="text-sm font-medium text-red-500">
+                    Terms*
+                  </label>
+
+                  <CustomSelect
+                    value={dateTermsForm.termsAndConditions || "Due on Receipt"}
+                    onChange={(value) => {
+                      setDateTermsForm((prev) => ({
                         ...prev,
-                        invoiceDate,
-                        dueDate: invoiceDate
-                          ? calculateDueDate(invoiceDate, termsAndConditions)
-                          : "",
-                      };
-                    });
-                  }}
-                  dateFormat="dd/MM/yyyy"
-                  placeholderText="Select invoice date"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
-                  isClearable
-                  showPopperArrow={false}
-                />
+                        termsAndConditions: value,
+                        dueDate: calculateDueDate(prev.invoiceDate, value),
+                      }));
+                    }}
+                    width="w-full"
+                    size="lg"
+                    options={[
+                      { value: "Due on Receipt", label: "Due on Receipt" },
+                      { value: "Net 15", label: "Net 15" },
+                      { value: "Net 30", label: "Net 30" },
+                    ]}
+                  />
+                </div>
+
+                {/* Due Date */}
+                <div className="grid grid-cols-[130px_minmax(0,1fr)] items-center gap-4">
+                  <label className="text-sm font-medium text-gray-700">
+                    Due Date
+                  </label>
+
+                  <DatePicker
+                    selected={
+                      dateTermsForm.dueDate
+                        ? new Date(`${dateTermsForm.dueDate.slice(0, 10)}T00:00:00`)
+                        : null
+                    }
+                    onChange={(date) => {
+                      const dueDate = date ? formatDateForInput(date) : "";
+
+                      setDateTermsForm((prev) => ({
+                        ...prev,
+                        dueDate,
+                      }));
+                    }}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Select due date"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                    isClearable
+                    showPopperArrow={false}
+                  />
+                </div>
               </div>
 
-              {/* Terms */}
-              <div className="grid grid-cols-[130px_minmax(0,1fr)] items-center gap-4">
-                <label className="text-sm font-medium text-red-500">
-                  Terms*
-                </label>
+              {/* Footer */}
+              <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+                <button
+                  type="button"
+                  onClick={() => setShowDateTermsModal(false)}
+                  className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
 
-                <CustomSelect
-                  value={dateTermsForm.termsAndConditions || "Due on Receipt"}
-                  onChange={(value) => {
-                    setDateTermsForm((prev) => ({
-                      ...prev,
-                      termsAndConditions: value,
-                      dueDate: calculateDueDate(prev.invoiceDate, value),
-                    }));
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!dateTermsForm.invoiceDate) {
+                      toast.error("Please select an invoice date");
+                      return;
+                    }
+
+                    const terms =
+                      dateTermsForm.termsAndConditions || "Due on Receipt";
+
+                    const values = {
+                      invoiceDate: dateTermsForm.invoiceDate,
+                      termsAndConditions: terms,
+                      dueDate:
+                        dateTermsForm.dueDate ||
+                        calculateDueDate(dateTermsForm.invoiceDate, terms),
+                    };
+
+                    dispatch(
+                      setInvoiceField({
+                        field: "invoiceDate",
+                        value: values.invoiceDate,
+                      })
+                    );
+
+                    dispatch(
+                      setInvoiceField({
+                        field: "termsAndConditions",
+                        value: values.termsAndConditions,
+                      })
+                    );
+
+                    dispatch(
+                      setInvoiceField({
+                        field: "dueDate",
+                        value: values.dueDate,
+                      })
+                    );
+
+                    setDateTermsForm(values);
+                    setShowDateTermsModal(false);
+
+                    toast.success("Invoice dates and terms updated");
                   }}
-                  width="w-full"
-                  size="lg"
-                  options={[
-                    { value: "Due on Receipt", label: "Due on Receipt" },
-                    { value: "Net 15", label: "Net 15" },
-                    { value: "Net 30", label: "Net 30" },
-                  ]}
-                />
+                  className="rounded-md bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                >
+                  Save
+                </button>
               </div>
-
-              {/* Due Date */}
-              <div className="grid grid-cols-[130px_minmax(0,1fr)] items-center gap-4">
-                <label className="text-sm font-medium text-gray-700">
-                  Due Date
-                </label>
-
-                <DatePicker
-                  selected={
-                    dateTermsForm.dueDate
-                      ? new Date(`${dateTermsForm.dueDate.slice(0, 10)}T00:00:00`)
-                      : null
-                  }
-                  onChange={(date) => {
-                    const dueDate = date ? formatDateForInput(date) : "";
-
-                    setDateTermsForm((prev) => ({
-                      ...prev,
-                      dueDate,
-                    }));
-                  }}
-                  dateFormat="dd/MM/yyyy"
-                  placeholderText="Select due date"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
-                  isClearable
-                  showPopperArrow={false}
-                />
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
-              <button
-                type="button"
-                onClick={() => setShowDateTermsModal(false)}
-                className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (!dateTermsForm.invoiceDate) {
-                    toast.error("Please select an invoice date");
-                    return;
-                  }
-
-                  const terms =
-                    dateTermsForm.termsAndConditions || "Due on Receipt";
-
-                  const values = {
-                    invoiceDate: dateTermsForm.invoiceDate,
-                    termsAndConditions: terms,
-                    dueDate:
-                      dateTermsForm.dueDate ||
-                      calculateDueDate(dateTermsForm.invoiceDate, terms),
-                  };
-
-                  dispatch(
-                    setInvoiceField({
-                      field: "invoiceDate",
-                      value: values.invoiceDate,
-                    })
-                  );
-
-                  dispatch(
-                    setInvoiceField({
-                      field: "termsAndConditions",
-                      value: values.termsAndConditions,
-                    })
-                  );
-
-                  dispatch(
-                    setInvoiceField({
-                      field: "dueDate",
-                      value: values.dueDate,
-                    })
-                  );
-
-                  setDateTermsForm(values);
-                  setShowDateTermsModal(false);
-
-                  toast.success("Invoice dates and terms updated");
-                }}
-                className="rounded-md bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
-              >
-                Save
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
     </>
   );

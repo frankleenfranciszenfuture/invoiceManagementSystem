@@ -505,10 +505,12 @@ const Sidebar = ({ onLogout }) => {
 
                         {open && (
                             <div className="min-w-0 leading-tight">
-                                <p className="text-[12px] text-[#F5F5F5]">InvoicePro</p>
+
                                 <p className="truncate text-base font-semibold text-[#F5F5F5]">
-                                    {displayName}
+                                    {/* {displayName} */}
+                                    Zenfuture Tech
                                 </p>
+                                <p className="text-base text-[#F5F5F5]">InvoicePro</p>
                             </div>
                         )}
                     </div>
