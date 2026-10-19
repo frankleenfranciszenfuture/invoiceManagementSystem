@@ -109,21 +109,16 @@ public class TaxMasterValidation {
             );
         }
 
+        // Allow 0% tax, but reject negative rates.
         if (request.getTaxRate().compareTo(BigDecimal.ZERO) < 0) {
             throw new ValidationException(
                     "Tax rate cannot be negative."
             );
         }
 
-        // -------------------------------------------------
-        // GST RATE VALIDATION
-        // -------------------------------------------------
-
         switch (request.getTaxType()) {
 
-            case GST -> validateGstRates(request);
-
-            case IGST -> validateIgstRates(request);
+           case IGST -> validateIgstRates(request);
 
             case CGST_SGST -> validateCgstSgstRates(request);
 
@@ -133,49 +128,49 @@ public class TaxMasterValidation {
         }
     }
 
-    private void validateGstRates(
-            TaxMasterRequest request) {
-
-        if (request.getCgstRate() == null) {
-            throw new ValidationException(
-                    "CGST rate is required."
-            );
-        }
-
-        if (request.getSgstRate() == null) {
-            throw new ValidationException(
-                    "SGST rate is required."
-            );
-        }
-
-        if (request.getIgstRate() == null) {
-            throw new ValidationException(
-                    "IGST rate is required."
-            );
-        }
-
-        validateNonNegative(request.getCgstRate(), "CGST rate");
-        validateNonNegative(request.getSgstRate(), "SGST rate");
-        validateNonNegative(request.getIgstRate(), "IGST rate");
-
-        BigDecimal combinedRate =
-                request.getCgstRate()
-                        .add(request.getSgstRate());
-
-        if (combinedRate.compareTo(request.getTaxRate()) != 0) {
-            throw new ValidationException(
-                    "CGST + SGST must equal total tax rate."
-            );
-        }
-
-        if (request.getIgstRate()
-                .compareTo(request.getTaxRate()) != 0) {
-
-            throw new ValidationException(
-                    "IGST must equal total tax rate."
-            );
-        }
-    }
+//    private void validateGstRates(
+//            TaxMasterRequest request) {
+//
+//        if (request.getCgstRate() == null) {
+//            throw new ValidationException(
+//                    "CGST rate is required."
+//            );
+//        }
+//
+//        if (request.getSgstRate() == null) {
+//            throw new ValidationException(
+//                    "SGST rate is required."
+//            );
+//        }
+//
+//        if (request.getIgstRate() == null) {
+//            throw new ValidationException(
+//                    "IGST rate is required."
+//            );
+//        }
+//
+//        validateNonNegative(request.getCgstRate(), "CGST rate");
+//        validateNonNegative(request.getSgstRate(), "SGST rate");
+//        validateNonNegative(request.getIgstRate(), "IGST rate");
+//
+//        BigDecimal combinedRate =
+//                request.getCgstRate()
+//                        .add(request.getSgstRate());
+//
+//        if (combinedRate.compareTo(request.getTaxRate()) != 0) {
+//            throw new ValidationException(
+//                    "CGST + SGST must equal total tax rate."
+//            );
+//        }
+//
+//        if (request.getIgstRate()
+//                .compareTo(request.getTaxRate()) != 0) {
+//
+//            throw new ValidationException(
+//                    "IGST must equal total tax rate."
+//            );
+//        }
+//    }
 
     private void validateNonNegative(
             BigDecimal value,

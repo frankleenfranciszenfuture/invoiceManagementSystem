@@ -72,7 +72,8 @@ public class InvoiceItemEntity extends BaseEntity {
     )
     private String description;
 
-
+    @Column(name = "base_unit_price", precision = 19, scale = 4)
+    private BigDecimal baseUnitPrice;
     // =====================================================
     // UNIT
     // =====================================================

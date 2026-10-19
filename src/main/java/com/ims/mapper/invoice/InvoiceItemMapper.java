@@ -57,6 +57,7 @@ public interface InvoiceItemMapper {
             target = "taxName",
             source = "taxMaster.taxName"
     )
+    @Mapping(target = "baseUnitPrice", source = "baseUnitPrice")
 
     @Mapping(
             target = "audit",

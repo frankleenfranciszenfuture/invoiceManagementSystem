@@ -193,52 +193,49 @@ public class InvoiceServiceImpl implements InvoiceService {
             );
         }
 
-        // =====================================================
-        // EXCHANGE RATE
-        // =====================================================
+
+
+/* =====================================================
+   EXCHANGE RATE
+   Convention: INR per 1 unit of selected currency
+===================================================== */
+
+        Currency baseCurrency = currencyRepository
+                .findByCurrencyCodeIgnoreCase("INR")
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Base currency INR is not configured"
+                        )
+                );
 
         BigDecimal exchangeRate;
 
-        if (request.getExchangeRate() != null) {
-
+        if (currency.getCurrencyCode().equalsIgnoreCase("INR")) {
+            exchangeRate = BigDecimal.ONE;
+        } else if (request.getExchangeRate() != null) {
             exchangeRate = request.getExchangeRate();
-
         } else {
+            LocalDate rateDate = request.getInvoiceDate() != null
+                    ? request.getInvoiceDate()
+                    : LocalDate.now();
 
-            // INR is the configured base currency for this example.
-            Long baseCurrencyId = 1L;
-
-            if (currency.getId().equals(baseCurrencyId)) {
-
-                // INR -> INR
-                exchangeRate = BigDecimal.ONE;
-
-            } else {
-
-                LocalDate rateDate =
-                        request.getInvoiceDate() != null
-                                ? request.getInvoiceDate()
-                                : LocalDate.now();
-
-                ApiResponse<ExchangeRateResponseDTO> rateResponse =
-                        exchangeRateService.getRate(
-                                baseCurrencyId,
-                                currency.getId(),
-                                rateDate
-                        );
-
-                if (rateResponse == null
-                        || rateResponse.getData() == null
-                        || rateResponse.getData().getRate() == null) {
-
-                    throw new BadRequestException(
-                            "Unable to fetch exchange rate for currency ID: "
-                                    + currency.getId()
+            ApiResponse<ExchangeRateResponseDTO> rateResponse =
+                    exchangeRateService.getRate(
+                            currency.getId(),       // AED
+                            baseCurrency.getId(),    // INR
+                            rateDate
                     );
-                }
 
-                exchangeRate = rateResponse.getData().getRate();
+            if (rateResponse == null
+                    || rateResponse.getData() == null
+                    || rateResponse.getData().getRate() == null) {
+                throw new BadRequestException(
+                        "Unable to fetch exchange rate from "
+                                + currency.getCurrencyCode() + " to INR"
+                );
             }
+
+            exchangeRate = rateResponse.getData().getRate();
         }
 
         if (exchangeRate.signum() <= 0) {
@@ -297,9 +294,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                                         : "Due on Receipt"
                         )
                         .shippingAmount(
-                                zeroIfNull(
-                                        request.getShippingAmount()
-                                )
+                                zeroIfNull(request.getShippingAmount())
+                                        .setScale(2, RoundingMode.HALF_UP)
                         )
                         .notes(
                                 request.getNotes()
@@ -967,45 +963,27 @@ public class InvoiceServiceImpl implements InvoiceService {
     // CREATE INVOICE ITEM
     // =====================================================
 
+
     private InvoiceItemEntity createInvoiceItem(
             InvoiceItemRequest request,
             BigDecimal exchangeRate) {
 
         if (request == null) {
-
-            throw new BadRequestException(
-                    "Invoice item is required."
-            );
+            throw new BadRequestException("Invoice item is required.");
         }
 
-
-        // =====================================================
-        // PRODUCT
-        // =====================================================
-
-        ProductEntity product =
-                productRepository.findById(
-                        request.getProductId()
-                ).orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Product not found with id: "
-                                        + request.getProductId()
-                        )
-                );
-
-
-        // =====================================================
-        // UNIT
-        // =====================================================
+        ProductEntity product = productRepository.findById(
+                request.getProductId()
+        ).orElseThrow(() ->
+                new ResourceNotFoundException(
+                        "Product not found with id: " + request.getProductId()
+                )
+        );
 
         UnitEntity unit = null;
-
         if (request.getUnitId() != null) {
-
-            unit =
-                    unitRepository.findById(
-                            request.getUnitId()
-                    ).orElseThrow(() ->
+            unit = unitRepository.findById(request.getUnitId())
+                    .orElseThrow(() ->
                             new ResourceNotFoundException(
                                     "Product unit not found with id: "
                                             + request.getUnitId()
@@ -1013,19 +991,10 @@ public class InvoiceServiceImpl implements InvoiceService {
                     );
         }
 
-
-        // =====================================================
-        // SIZE
-        // =====================================================
-
         SizeEntity size = null;
-
         if (request.getSizeId() != null) {
-
-            size =
-                    sizeRepository.findById(
-                            request.getSizeId()
-                    ).orElseThrow(() ->
+            size = sizeRepository.findById(request.getSizeId())
+                    .orElseThrow(() ->
                             new ResourceNotFoundException(
                                     "Product size not found with id: "
                                             + request.getSizeId()
@@ -1033,99 +1002,82 @@ public class InvoiceServiceImpl implements InvoiceService {
                     );
         }
 
-
-        // =====================================================
-        // TAX
-        // =====================================================
-
         TaxMasterEntity taxMaster = null;
-
         if (request.getTaxMasterId() != null) {
-
-            taxMaster =
-                    taxMasterRepository.findById(
-                            request.getTaxMasterId()
-                    ).orElseThrow(() ->
-                            new ResourceNotFoundException(
-                                    "Tax master not found with id: "
-                                            + request.getTaxMasterId()
-                            )
-                    );
+            taxMaster = taxMasterRepository.findById(
+                    request.getTaxMasterId()
+            ).orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "Tax master not found with id: "
+                                    + request.getTaxMasterId()
+                    )
+            );
         }
 
+        BigDecimal quantity = zeroIfNull(request.getQuantity());
 
-        // =====================================================
-        // BASIC VALUES
-        // =====================================================
+        if (quantity.signum() <= 0) {
+            throw new BadRequestException(
+                    "Item quantity must be greater than zero."
+            );
+        }
 
-        BigDecimal quantity =
-                zeroIfNull(
-                        request.getQuantity()
-                );
+        if (exchangeRate == null || exchangeRate.signum() <= 0) {
+            throw new BadRequestException(
+                    "Exchange rate must be greater than zero."
+            );
+        }
 
-        BigDecimal unitPrice =
-                zeroIfNull(
-                        request.getUnitPrice()
-                );
-
-
-        BigDecimal safeRate =
-                exchangeRate != null && exchangeRate.compareTo(BigDecimal.ZERO) > 0
-                        ? exchangeRate
-                        : BigDecimal.ONE;
-
+        // Original price in INR.
+        // When baseUnitPrice is supplied, never convert the
+        // already-converted unitPrice back into INR.
+        // Original product price in INR.
         BigDecimal baseUnitPrice = request.getBaseUnitPrice();
 
         if (baseUnitPrice == null) {
-            baseUnitPrice = request.getUnitPrice()
-                    .divide(safeRate, 4, java.math.RoundingMode.HALF_UP);
+            throw new BadRequestException(
+                    "Base unit price in INR is required."
+            );
         }
 
+        if (baseUnitPrice.signum() < 0) {
+            throw new BadRequestException(
+                    "Unit price cannot be negative."
+            );
+        }
 
-        BigDecimal discountAmount =
-                zeroIfNull(
-                        request.getDiscountAmount()
-                );
+// Convert the base INR price to the selected currency.
+// exchangeRate = INR per one unit of selected currency.
+        BigDecimal unitPrice = baseUnitPrice.divide(
+                exchangeRate,
+                2,
+                RoundingMode.HALF_UP
+        );
 
+// The frontend supplies the discount in the selected currency.
+        BigDecimal discountAmount = zeroIfNull(
+                request.getDiscountAmount()
+        ).setScale(2, RoundingMode.HALF_UP);
 
-        // =====================================================
-        // GROSS
-        // =====================================================
+        if (discountAmount.signum() < 0) {
+            throw new BadRequestException(
+                    "Discount cannot be negative."
+            );
+        }
 
-        BigDecimal grossAmount =
-                quantity
-                        .multiply(unitPrice)
-                        .setScale(
-                                2,
-                                RoundingMode.HALF_UP
-                        );
+        BigDecimal grossAmount = quantity
+                .multiply(unitPrice)
+                .setScale(2, RoundingMode.HALF_UP);
 
+        BigDecimal taxableAmount = grossAmount
+                .subtract(discountAmount)
+                .max(BigDecimal.ZERO)
+                .setScale(2, RoundingMode.HALF_UP);
 
-        // =====================================================
-        // TAXABLE
-        // =====================================================
-
-        BigDecimal taxableAmount =
-                grossAmount
-                        .subtract(discountAmount)
-                        .max(BigDecimal.ZERO)
-                        .setScale(
-                                2,
-                                RoundingMode.HALF_UP
-                        );
-
-
-        // =====================================================
-        // TAX RATES
-        // =====================================================
-
-        BigDecimal taxPercentage =
-                getTaxPercentage(taxMaster);
-
+        BigDecimal taxPercentage = getTaxPercentage(taxMaster);
 
         BigDecimal cgstPercentage =
-                taxMaster != null &&
-                        taxMaster.getCgstRate() != null
+                taxMaster != null && taxMaster.getCgstRate() != null
                         ? taxMaster.getCgstRate()
                         : taxPercentage.divide(
                         BigDecimal.valueOf(2),
@@ -1133,10 +1085,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                         RoundingMode.HALF_UP
                 );
 
-
         BigDecimal sgstPercentage =
-                taxMaster != null &&
-                        taxMaster.getSgstRate() != null
+                taxMaster != null && taxMaster.getSgstRate() != null
                         ? taxMaster.getSgstRate()
                         : taxPercentage.divide(
                         BigDecimal.valueOf(2),
@@ -1144,112 +1094,55 @@ public class InvoiceServiceImpl implements InvoiceService {
                         RoundingMode.HALF_UP
                 );
 
-
         BigDecimal igstPercentage =
-                taxMaster != null &&
-                        taxMaster.getIgstRate() != null
+                taxMaster != null && taxMaster.getIgstRate() != null
                         ? taxMaster.getIgstRate()
                         : BigDecimal.ZERO;
 
+        BigDecimal cgstAmount = calculatePercentage(
+                taxableAmount, cgstPercentage
+        );
 
-        // =====================================================
-        // TAX AMOUNTS
-        // =====================================================
+        BigDecimal sgstAmount = calculatePercentage(
+                taxableAmount, sgstPercentage
+        );
 
-        BigDecimal cgstAmount =
-                calculatePercentage(
-                        taxableAmount,
-                        cgstPercentage
-                );
+        BigDecimal igstAmount = calculatePercentage(
+                taxableAmount, igstPercentage
+        );
 
+        BigDecimal taxAmount = cgstAmount
+                .add(sgstAmount)
+                .add(igstAmount)
+                .setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal sgstAmount =
-                calculatePercentage(
-                        taxableAmount,
-                        sgstPercentage
-                );
-
-
-        BigDecimal igstAmount =
-                calculatePercentage(
-                        taxableAmount,
-                        igstPercentage
-                );
-
-
-        // =====================================================
-        // TOTAL TAX
-        // =====================================================
-
-        BigDecimal taxAmount =
-                cgstAmount
-                        .add(sgstAmount)
-                        .add(igstAmount)
-                        .setScale(
-                                2,
-                                RoundingMode.HALF_UP
-                        );
-
-
-        // =====================================================
-        // TOTAL
-        // =====================================================
-
-        BigDecimal totalAmount =
-                taxableAmount
-                        .add(taxAmount)
-                        .setScale(
-                                2,
-                                RoundingMode.HALF_UP
-                        );
-
-
-        // =====================================================
-        // BUILD
-        // =====================================================
+        BigDecimal totalAmount = taxableAmount
+                .add(taxAmount)
+                .setScale(2, RoundingMode.HALF_UP);
 
         return InvoiceItemEntity.builder()
-
                 .product(product)
-
-                .description(
-                        request.getDescription()
-                )
-
+                .description(request.getDescription())
                 .unit(unit)
-
                 .size(size)
-
                 .quantity(quantity)
-
+                .baseUnitPrice(baseUnitPrice.setScale(
+                        2, RoundingMode.HALF_UP
+                ))
                 .unitPrice(unitPrice)
-
                 .grossAmount(grossAmount)
-
                 .discountAmount(discountAmount)
-
                 .taxableAmount(taxableAmount)
-
                 .taxMaster(taxMaster)
-
                 .taxPercentage(taxPercentage)
-
                 .cgstPercentage(cgstPercentage)
-
                 .sgstPercentage(sgstPercentage)
-
                 .igstPercentage(igstPercentage)
-
                 .cgstAmount(cgstAmount)
-
                 .sgstAmount(sgstAmount)
-
                 .igstAmount(igstAmount)
-
                 .taxAmount(taxAmount)
-
                 .totalAmount(totalAmount)
-
                 .build();
     }
 

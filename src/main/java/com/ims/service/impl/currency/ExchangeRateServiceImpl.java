@@ -183,6 +183,7 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
         );
     }
 
+
     @Override
     @Transactional(readOnly = true)
     public ApiResponse<ExchangeRateResponseDTO> getRate(
@@ -234,7 +235,7 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
 
         // 6. Validate requested date
         LocalDate today = LocalDate.now();
-        LocalDate requestedDate = date == null ? today : date;
+        LocalDate requestedDate = date != null ? date : today;
 
         if (requestedDate.isAfter(today)) {
             throw new IllegalArgumentException(
@@ -242,12 +243,17 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
             );
         }
 
-        // 7. Same-currency conversion
+        // 7. Same currency: no conversion required
         if (from.equals(to)) {
             ExchangeRateResponseDTO dto =
                     ExchangeRateResponseDTO.builder()
+                            .id(null)
+                            .fromCurrencyId(fromCurrency.getId())
                             .fromCurrencyCode(from)
+                            .fromCurrencyName(fromCurrency.getCurrencyName())
+                            .toCurrencyId(toCurrency.getId())
                             .toCurrencyCode(to)
+                            .toCurrencyName(toCurrency.getCurrencyName())
                             .rate(BigDecimal.ONE)
                             .effectiveDate(requestedDate)
                             .active(true)
@@ -259,23 +265,16 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
             );
         }
 
-        // 8. External API currently supports today's rates only
-        if (!requestedDate.equals(today)) {
-            throw new IllegalArgumentException(
-                    "Historical exchange rates are not supported by this API"
-            );
-        }
-
+        // 8. Fetch the latest available rate.
+        // This provider does not support historical lookup.
         String url = String.format(
                 "https://open.er-api.com/v6/latest/%s",
                 from
         );
 
         try {
-            Map<String, Object> response = restTemplate.getForObject(
-                    url,
-                    Map.class
-            );
+            Map<String, Object> response =
+                    restTemplate.getForObject(url, Map.class);
 
             if (response == null
                     || !"success".equals(response.get("result"))
@@ -285,32 +284,43 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
                 );
             }
 
+            // 9. Find the requested target currency rate
             Object rateValue = rates.get(to);
 
             if (rateValue == null) {
                 throw new IllegalArgumentException(
-                        "Exchange rate not available for " + from + " to " + to
+                        "Exchange rate not available for "
+                                + from + " to " + to
                 );
             }
 
             BigDecimal exchangeRate =
                     new BigDecimal(rateValue.toString());
 
-            LocalDate effectiveDate = requestedDate;
+            if (exchangeRate.signum() <= 0) {
+                throw new IllegalStateException(
+                        "The exchange rate returned by the provider is invalid"
+                );
+            }
+
+            // 10. Get the actual rate update date from the provider
+            LocalDate effectiveDate = today;
 
             Object lastUpdate = response.get("time_last_update_utc");
 
             if (lastUpdate != null) {
                 try {
                     effectiveDate = ZonedDateTime.parse(
-                            lastUpdate.toString(),
-                            DateTimeFormatter.RFC_1123_DATE_TIME
-                    ).withZoneSameInstant(ZoneOffset.UTC).toLocalDate();
+                                    lastUpdate.toString(),
+                                    DateTimeFormatter.RFC_1123_DATE_TIME
+                            ).withZoneSameInstant(ZoneOffset.UTC)
+                            .toLocalDate();
                 } catch (DateTimeParseException ignored) {
-                    // Retain requested date if timestamp parsing fails.
+                    // Keep today's date if parsing fails.
                 }
             }
 
+            // 11. Build response
             ExchangeRateResponseDTO dto =
                     ExchangeRateResponseDTO.builder()
                             .id(null)
@@ -327,7 +337,7 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
 
             return ApiResponse.success(
                     dto,
-                    "Exchange rate fetched successfully"
+                    "Latest exchange rate fetched successfully"
             );
 
         } catch (RestClientException ex) {
@@ -337,6 +347,7 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
             );
         }
     }
+
 
     @Override
     public ApiResponse<Void> delete(Long id) {
