@@ -83,8 +83,8 @@ export default function CustomerNavbar({ title }) {
         <div
             className="
                 h-[60px]
-                border
-                border-gray-100
+               border-t 
+               border-lime-300
                 rounded-md
                 flex
                 items-center

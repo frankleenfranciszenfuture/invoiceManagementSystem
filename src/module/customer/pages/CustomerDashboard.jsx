@@ -57,7 +57,7 @@ export default function CustomerDashboard() {
     }
 
     return (
-        <div className="flex h-screen bg-gray-50 font-sans text-[13px] overflow-hidden">
+        <div className="flex h-screen bg-gray-50 rounded-lg font-sans text-[13px] overflow-hidden mt-2">
             <div className="flex-1 min-h-0 bg-white overflow-y-auto">
                 <div className="px-2 py-5 max-w-30xl w-full">
                     <CustomerNavbar />

@@ -26,6 +26,10 @@ import subCategoryReducer from "../module/subCategory/slices/subCategorySlice";
 import categoryReducer from "../module/category/slices/categorySlice";
 import invoiceReducer from "../module/invoices/slices/invoiceSlice";
 import invoiceViewReducer from "../module/invoices/slices/invoiceViewSlice";
+
+import emailSignatureReducer from "../module/emailSignature/slices/emailSignatureSlice";
+import emailSignatureViewReducer from "../module/emailSignature/slices/emailSignatureViewSlice";
+
 import roleReducer from "../module/role/slices/roleSlice";
 import roleViewReducer from "../module/role/slices/roleViewSlice";
 import userReducer from "../module/users/slices/userSlice";
@@ -99,6 +103,9 @@ export const store = configureStore({
     invoice: invoiceReducer,
     invoiceView: invoiceViewReducer,
 
+    //emailSignature
+    emailSignatures: emailSignatureReducer,
+    emailSignatureView: emailSignatureViewReducer,
     //bankAccount
 
     bankAccount: bankAccountReducer,

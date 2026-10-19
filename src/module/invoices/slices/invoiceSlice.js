@@ -58,6 +58,13 @@ const emptyInvoice = {
   currencyName: "",
   exchangeRate: "",
 
+  bankAccountId: "",
+  bankName: "",
+  ifsc: "",
+
+  emailSignatureId: "",
+  signatureName: "",
+
   invoiceDate: getTodayDate(),
   dueDate: "",
 

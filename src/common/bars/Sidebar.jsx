@@ -474,7 +474,7 @@ const Sidebar = ({ onLogout }) => {
             <aside
                 className={`
                     fixed bottom-3 left-3 top-3 z-30 flex flex-col
-                    rounded-xl border border-[#F5F5F5]/60  bg-gradient-to-br from-[#3F5774] to-[#21263C]
+                    rounded-xl border-l border-r border-lime-400  bg-gradient-to-br from-[#3F5774] to-[#21263C]
                     transition-[width] duration-300
                     ${open ? "w-55" : "w-[72px]"}
                 `}
@@ -488,9 +488,9 @@ const Sidebar = ({ onLogout }) => {
                     aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
                     className="
                         absolute -right-3 top-[34px] z-40 flex h-6 w-6
-                        items-center justify-center rounded-full
+                        items-center justify-center rounded-full border-l border-red-900
                         bg-[#FCF7F8] text-[#0F4659] hover:text-[#FCF7F8] shadow-lg shadow-blue-500/30
-                        transition hover:bg-[#0F4659]
+                        transition hover:bg-[#B3E848]
                     "
                 >
                     {open ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
@@ -554,8 +554,8 @@ const Sidebar = ({ onLogout }) => {
                                             : "mx-auto h-11 w-11 justify-center"
                                         }
         ${active
-                                            ? "bg-[#B3E848]/80 text-[#F5F5F5]"
-                                            : "text-[#F5F5F5] hover:bg-[#F5F5F5]/20 hover:text-[#F5F5F5]"
+                                            ? "bg-[#FCF7F8]/20 text-[#FCF7F8]  border-r border-lime-400 "
+                                            : "text-[#F5F5F5] hover:bg-[#B3E848]/70 hover:text-[#F5F5F5]"
                                         }
     `}
                                 >

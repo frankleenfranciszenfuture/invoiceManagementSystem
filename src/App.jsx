@@ -119,6 +119,9 @@ import InvoiceOverViewDashboard1 from "./module/invoices/overview/pages/InvoiceO
 import InvoiceprofileOverview from "./module/invoices/overview/pages/InvoiceprofileOverview";
 import InvoicePreviewCard from "./module/invoices/overview/pages/InvoicePreviewCard";
 import InvoiceOverViewPreviewDashboard from "./module/invoices/overview/pages/InvoiceOverViewPreviewDashboard";
+import EmailSignatureCreateSimple from "./module/emailSignature/pages/EmailSignatureCreateSimple";
+import EmailSignatureDashboard from "./module/emailSignature/pages/EmailSignatureDashboard";
+import EmailSignatureTable from "./module/emailSignature/pages/EmailSignatureTable";
 
 
 
@@ -550,6 +553,30 @@ function AppContent() {
           path="/invoices/preview/:id"
           element={<InvoiceOverViewPreviewDashboard />}
         />
+
+        {/* =================================================
+                    SALES PERSON
+            ================================================= */}
+
+        <Route
+          path="/emailSignatures"
+          element={<EmailSignatureDashboard />}
+        />
+
+        <Route
+          path="/emailSignatures/newSimple"
+          element={<EmailSignatureCreateSimple />}
+        />
+        <Route
+          path="/emailSignatures/edit/:id"
+          element={<EmailSignatureCreateSimple />}
+        />
+
+        <Route
+          path="/emailSignatures/table"
+          element={<EmailSignatureTable />}
+        />
+
 
         {/* =================================================
                     SALES PERSON

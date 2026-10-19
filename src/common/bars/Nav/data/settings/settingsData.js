@@ -414,6 +414,12 @@ export const settings = [
         path: "/currencies",
         component: ComingSoon,
       },
+
+      {
+        label: "EmailSignatures",
+        path: "/emailSignatures",
+        component: ComingSoon,
+      },
     ],
   },
 

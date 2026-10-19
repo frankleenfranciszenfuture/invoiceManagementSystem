@@ -19,7 +19,7 @@ import RoleCreate from "../../module/role/pages/RoleCreate";
 import BankAccountCreate from "../../module/bankAccount/pages/BankAccountCreate";
 import CompanyCreate from "../../module/company/pages/CompanyCreate";
 import UserCreate from "../../module/users/pages/UserCreate";
-
+import EmailSignatureCreate from "../../module/emailSignature/pages/EmailSignatureCreateSimple";
 
 export default function Modal() {
 
@@ -90,7 +90,10 @@ export default function Modal() {
         editCompany: CompanyCreate,
 
 
+        //EmailSignature
 
+        addEmailSignature: EmailSignatureCreate,
+        editEmailSignature: EmailSignatureCreate,
 
     };
 

@@ -87,6 +87,15 @@ import {
   fetchAllTaxMasters,
 } from "../../taxMaster/thunks/taxMasterThunks";
 
+import {
+  fetchAllEmailSignatures,
+} from "../../emailSignature/thunks/emailSignatureThunks";
+
+
+import {
+  fetchAllBankAccounts,
+} from "../../bankAccount/thunks/bankAccountThunks";
+
 
 import { fetchAllSalesPersons } from "../../salesPerson/thunks/salesPersonThunks";
 import { fetchAllCurrencies, fetchExchangeRate } from "../../currency/thunks/currencyThunks"
@@ -232,6 +241,10 @@ export default function InvoiceCreate() {
     termsAndConditions: "Due on Receipt",
     dueDate: "",
   });
+
+  const [signatures, setSignatures] = useState({
+    signatureName: "",
+  })
   // =========================================================
   // CLICK OUTSIDE - ASK BEFORE LEAVING
   // =========================================================
@@ -281,6 +294,8 @@ export default function InvoiceCreate() {
   const salesPersonDropdownRef = useRef(null);
   const currencyDropdownRef = useRef(null);
   const itemDropdownRef = useRef(null);
+  const emailSignatureDropdownRef = useRef(null);
+  const bankAccountDropdownRef = useRef(null);
   const saveMenuRef = useRef(null);
 
 
@@ -386,6 +401,17 @@ export default function InvoiceCreate() {
   ] = useState("");
 
   const [
+    emailSignatureSearch,
+    setEmailSignatureSearch,
+  ] = useState("");
+
+
+  const [
+    bankAccountSearch,
+    setBankAccountSearch,
+  ] = useState("");
+
+  const [
     openCustomer,
     setOpenCustomer,
   ] = useState(false);
@@ -399,6 +425,17 @@ export default function InvoiceCreate() {
     openCurrency,
     setOpenCurrency,
   ] = useState(false);
+
+  const [
+    openEmailSignature,
+    setOpenEmailSignature,
+  ] = useState(false);
+
+  const [
+    openbankAccount,
+    setOpenBankAccount,
+  ] = useState(false);
+
 
   const [
     activeItemId,
@@ -426,6 +463,17 @@ export default function InvoiceCreate() {
   ] = useState(false);
 
   const [
+    showSignature,
+    setShowSignature,
+  ] = useState(false);
+
+  const [
+    showbankAccount,
+    setShowBankAccount,
+  ] = useState(false);
+
+
+  const [
     showSaveMenu,
     setShowSaveMenu,
   ] = useState(false);
@@ -441,6 +489,8 @@ export default function InvoiceCreate() {
   const handleRequestLeave = () => {
     setShowLeaveConfirmation(true);
   };
+
+  const user = useSelector((state) => state.auth?.user);
 
   /* =======================================================
      INVOICE REDUX
@@ -585,7 +635,7 @@ export default function InvoiceCreate() {
     currencyState?.error ?? null;
 
   /* =======================================================
-     SELECTED SALESPERSON
+     SELECTED CURRENCY
   ======================================================= */
 
   const selectedcurrency = useMemo(() => {
@@ -603,6 +653,95 @@ export default function InvoiceCreate() {
   }, [
     currencies,
     invoice?.currencyId,
+  ]);
+
+
+
+
+  /* =======================================================
+     EMAIL SIGNATURE REDUX
+  ======================================================= */
+
+  const emailSignatureState = useSelector(
+    (state) => state.emailSignatures
+  );
+
+  const emailSignatures = getArray(
+    emailSignatureState?.emailSignatures ??
+    emailSignatureState?.emailSignature ??
+    emailSignatureState?.signatures ??
+    emailSignatureState?.content ??
+    []
+  );
+
+  const emailSignaturesLoading =
+    emailSignatureState?.loading ?? false;
+
+  const emailSignatureError =
+    emailSignatureState?.error ?? null;
+
+  /* =======================================================
+     SELECTED EMAIL SIGNATURE
+  ======================================================= */
+
+  const selectedSignature = useMemo(() => {
+    if (!invoice?.emailSignatureId) {
+      return null;
+    }
+
+    return (
+      emailSignatures.find(
+        (emailSignature) =>
+          String(emailSignature?.id) ===
+          String(invoice.emailSignatureId)
+      ) || null
+    );
+  }, [
+    emailSignatures,
+    invoice?.emailSignatureId,
+  ]);
+
+
+  /* =======================================================
+    BANKACCOUNT REDUX
+  ======================================================= */
+
+  const bankAccountState = useSelector(
+    (state) => state.bankAccount
+  );
+
+  const bankAccounts = getArray(
+    bankAccountState?.bankAccounts ??
+    emailSignatureState?.bankAccount ??
+
+    []
+  );
+
+  const bankAccountLoading =
+    bankAccountState?.loading ?? false;
+
+  const bankAccountError =
+    bankAccountState?.error ?? null;
+
+  /* =======================================================
+     SELECTED EMAIL SIGNATURE
+  ======================================================= */
+
+  const selectedBankAccount = useMemo(() => {
+    if (!invoice?.bankAccountId) {
+      return null;
+    }
+
+    return (
+      bankAccounts.find(
+        (bankAccount) =>
+          String(bankAccount?.id) ===
+          String(invoice.bankAccountId)
+      ) || null
+    );
+  }, [
+    bankAccounts,
+    invoice?.bankAccountId,
   ]);
 
 
@@ -662,6 +801,8 @@ export default function InvoiceCreate() {
   );
 
 
+
+
   /* =======================================================
      SAFE INVOICE ITEMS
   ======================================================= */
@@ -712,7 +853,11 @@ export default function InvoiceCreate() {
     dispatch(fetchAllTaxMasters());
     dispatch(fetchAllSalesPersons());
     dispatch(fetchAllCurrencies());
-  }, [dispatch]);
+    if (user?.id != null) {
+      dispatch(fetchAllEmailSignatures(user.id));
+    }
+    dispatch(fetchAllBankAccounts());
+  }, [dispatch, user?.id]);
 
 
   /* =========================================================
@@ -723,14 +868,23 @@ export default function InvoiceCreate() {
     setCustomerSearch("");
     setSalesPersonSearch("");
     setItemSearch("");
+    setCurrencySearch("");
+    setEmailSignatureSearch("");
+    setBankAccountSearch("");
+
     setOpenCustomer(false);
     setOpenSalesPerson(false);
     setOpenCurrency(false);
+    setOpenEmailSignature(false);
+    setOpenBankAccount(false);
     setOpenRowItemDropdown(false);
+
     setActiveItemId(null);
     setShowSummary(true);
     setShowTerms(false);
     setShowGateway(false);
+    setShowSignature(false);
+    setShowBankAccount(false);
     setShowSaveMenu(false);
     setShowCustomerDetails(false);
     setShowSalesPersonDetails(false);
@@ -763,14 +917,23 @@ export default function InvoiceCreate() {
     setCustomerSearch("");
     setSalesPersonSearch("");
     setItemSearch("");
+    setCurrencySearch("");
+    setEmailSignatureSearch("");
+    setBankAccountSearch("");
+
     setOpenCustomer(false);
     setOpenCurrency(false);
     setOpenSalesPerson(false);
+    setOpenEmailSignature(false);
+    setOpenBankAccount(false);
     setOpenRowItemDropdown(false);
+
     setActiveItemId(null);
     setShowSummary(true);
     setShowTerms(false);
     setShowGateway(false);
+    setShowSignature(false);
+    setShowBankAccount(false);
     setShowSaveMenu(false);
     setShowCustomerDetails(false);
     setShowSalesPersonDetails(false);
@@ -869,10 +1032,61 @@ export default function InvoiceCreate() {
 
     dispatch(
       setInvoiceField({
-        field: "currencyname",
+        field: "currencyName",
         value: "",
       })
     );
+
+
+
+    /* ==========================================
+   CLEAR EMAILSIGNATURE
+========================================== */
+
+    dispatch(
+      setInvoiceField({
+        field: "emailSignatureId",
+        value: "",
+      })
+
+    );
+
+    dispatch(
+      setInvoiceField({
+        field: "emailSignatureName",
+        value: "",
+      })
+    );
+
+
+
+    /* ==========================================
+  CLEAR BankAccount
+========================================== */
+
+    dispatch(
+      setInvoiceField({
+        field: "bankAccountId",
+        value: "",
+      })
+
+    );
+
+    dispatch(
+      setInvoiceField({
+        field: "bankName",
+        value: "",
+      })
+    );
+
+    dispatch(
+      setInvoiceField({
+        field: "ifsc",
+        value: "",
+      })
+    );
+
+
     /* ==========================================
        IMPORTANT:
        CLEAR PREVIOUS DATE
@@ -1196,6 +1410,25 @@ export default function InvoiceCreate() {
       }
 
 
+      // Email Signature dropdown
+      if (
+        emailSignatureDropdownRef.current &&
+        !emailSignatureDropdownRef.current.contains(event.target)
+      ) {
+        setOpenEmailSignature(false);
+        setEmailSignatureSearch("");
+      }
+
+      // Bank Account dropdown
+      if (
+        bankAccountDropdownRef.current &&
+        !bankAccountDropdownRef.current.contains(event.target)
+      ) {
+        setOpenBankAccount(false);
+        setBankAccountSearch("");
+      }
+
+
       if (
         saveMenuRef.current &&
         !saveMenuRef.current.contains(
@@ -1433,10 +1666,6 @@ export default function InvoiceCreate() {
 
 
   /* =========================================================
-     CURRENCY SEARCH
-  ========================================================= */
-
-  /* =========================================================
    CURRENCY SEARCH
 ========================================================= */
 
@@ -1461,6 +1690,94 @@ export default function InvoiceCreate() {
       );
     });
   }, [currencies, currencySearch]);
+
+
+
+  /* =========================================================
+ EMAILSIGNATURE NAME
+ ========================================================= */
+
+  const getEmailSignatureName = (emailSignature) => {
+    return (
+      emailSignature?.signatureName ||
+      emailSignature?.name ||
+      emailSignature?.userId ||
+      emailSignature?.id ||
+      ""
+    );
+  };
+
+
+
+  /* =========================================================
+     EMAIL SIGNATURE SEARCH
+  ========================================================= */
+
+  const filteredEmailSignatures = useMemo(() => {
+    const search = emailSignatureSearch.trim().toLowerCase();
+
+    if (!search) {
+      return emailSignatures;
+    }
+
+    return emailSignatures.filter((emailSignature) => {
+      const name = String(
+        getEmailSignatureName(emailSignature)
+      ).toLowerCase();
+
+      const userId = String(
+        emailSignature?.userId ?? ""
+      ).toLowerCase();
+
+      return (
+        name.includes(search) ||
+        userId.includes(search)
+      );
+    });
+  }, [emailSignatures, emailSignatureSearch]);
+
+
+
+
+  /* =========================================================
+BANKACCOUNT NAME
+========================================================= */
+
+  const getBankAccountName = (bankAccount) => {
+    return (
+      bankAccount?.bankName ||
+      bankAccount?.name ||
+      bankAccount?.bankAccountId ||
+      bankAccount?.id ||
+      ""
+    );
+  };
+
+
+
+  /* =========================================================
+     EMAIL SIGNATURE SEARCH
+  ========================================================= */
+
+  const filteredBankAccounts = useMemo(() => {
+    const search = bankAccountSearch.trim().toLowerCase();
+
+    if (!search) {
+      return bankAccounts;
+    }
+
+    return bankAccounts.filter((bankAccount) => {
+      const name = String(
+        getBankAccountName(bankAccount)
+      ).toLowerCase();
+
+      return (
+        name.includes(search) ||
+        ""
+      );
+    });
+  }, [bankAccounts, bankAccountSearch]);
+
 
   /* =========================================================
      PRODUCT SEARCH
@@ -1925,6 +2242,67 @@ export default function InvoiceCreate() {
     }
   };
 
+
+
+  /* =========================================================
+     EMAIL SIGNATURE SELECT
+  ========================================================= */
+
+
+  const handleEmailSignatureSelect = (emailSignature) => {
+    if (!emailSignature?.id) return;
+
+    const name = getEmailSignatureName(emailSignature);
+
+    dispatch(
+      setInvoiceField({
+        field: "emailSignatureId",
+        value: emailSignature.id,
+      })
+    );
+
+    dispatch(
+      setInvoiceField({
+        field: "signatureName",
+        value: name,
+      })
+    );
+
+    setEmailSignatureSearch("");
+    setOpenEmailSignature(false);
+  };
+
+
+  /* =========================================================
+     BankAccount SELECT
+  ========================================================= */
+
+
+  const handleBankAccountSelect = (bankAccount) => {
+    if (!bankAccount) return;
+
+    const name = getBankAccountName(bankAccount);
+
+    dispatch(
+      setInvoiceField({
+        field: "bankAccountId",
+        value: bankAccount.id,
+      })
+    );
+
+    dispatch(
+      setInvoiceField({
+        field: "bankAccountName",
+        value: name,
+      })
+    );
+
+    // Clear bank account search and close its dropdown
+    setBankAccountSearch("");
+    setOpenBankAccount(false);
+  };
+
+
   /* =========================================================
      INVOICE FIELD
   ========================================================= */
@@ -2244,6 +2622,31 @@ export default function InvoiceCreate() {
       return false;
     }
 
+
+    if (
+      !invoice.emailSignatureId
+    ) {
+
+      toast.error(
+        "Please select a EmailSignature"
+      );
+
+      return false;
+    }
+
+
+    if (
+      !invoice.bankAccountId
+    ) {
+
+      toast.error(
+        "Please select a bankAcoount"
+      );
+
+      return false;
+    }
+
+
     if (
       !invoice.invoiceDate
     ) {
@@ -2409,6 +2812,10 @@ export default function InvoiceCreate() {
       salesPersonId: invoice.salesPersonId
         ? Number(invoice.salesPersonId)
         : null,
+
+      emailSignatureId: Number(invoice.emailSignatureId),
+
+      bankAccountId: Number(invoice.bankAccountId),
 
       currencyId: Number(invoice.currencyId),
       exchangeRate,
@@ -4631,14 +5038,576 @@ export default function InvoiceCreate() {
 
               </div>
 
+
+            </div>
+
+            {/* Add BankAccount */}
+
+            <div className="flex-1 max-w-sm ml-auto">
+
+              <div className="flex justify-between items-center py-3">
+
+                <span className="px-1 w-full text-xl font-semibold text-gray-700 border-b border-gray-200 rounded ">
+                  Add BankAccount
+                </span>
+
+
+
+
+              </div>
+              {/* =================================================
+              BankAccount 
+          ================================================= */}
+              {!showbankAccount ? (
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowBankAccount(
+                      true
+                    )
+                  }
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+                >
+
+                  <div className="w-5 h-5 rounded-full border-2 border-blue-500 flex items-center justify-center">
+
+                    <Plus
+                      size={12}
+                    />
+
+                  </div>
+
+
+                  Add or Select BankAccount
+
+                </button>
+
+              ) : (
+
+                <div>
+
+                  {/* <label className="text-sm font-medium text-gray-700 block mb-1">
+                    Signature
+                  </label> */}
+
+
+                  <div className="flex-1">
+
+                    {/* ROW 1 */}
+
+                    <div className="flex items-center gap-3">
+
+                      <div
+                        ref={
+                          bankAccountDropdownRef
+                        }
+                        className="relative w-[350px]"
+                      >
+
+                        <div className="flex">
+
+                          <div className="relative flex-1">
+
+                            <input
+                              type="text"
+                              value={
+                                bankAccountSearch ||
+                                invoice.bankAccountName ||
+                                selectedBankAccount?.bankName ||
+                                ""
+                              }
+                              placeholder={
+                                bankAccountLoading
+                                  ? "Loading bankAccounts..."
+                                  : "Select an bankAccount"
+                              }
+                              onClick={() => {
+                                setOpenBankAccount(true);
+                                setBankAccountSearch("");
+                              }}
+                              onChange={(e) => {
+                                setBankAccountSearch(e.target.value);
+                                setOpenBankAccount(true);
+                              }}
+                              className="w-full h-10 border border-blue-500 rounded-l-md px-3 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            />
+
+
+                            <ChevronDown
+                              size={14}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                            />
+
+                          </div>
+
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenBankAccount(
+                                true
+                              )
+                            }
+                            className="h-10 w-10 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-r-md"
+                          >
+
+                            <Search
+                              size={16}
+                            />
+
+                          </button>
+
+                        </div>
+
+
+                        {/* BANKACCOUNT DROPDOWN */}
+
+                        {openbankAccount && (
+
+                          <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-[100]">
+
+                            <div className="p-2 border-b border-gray-200">
+
+                              <div className="relative">
+
+                                <Search
+                                  size={16}
+                                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                />
+
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  placeholder="Search sales person"
+                                  value={
+                                    bankAccountSearch
+                                  }
+                                  onChange={(
+                                    e
+                                  ) =>
+                                    setBankAccountSearch(
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full border border-blue-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none"
+                                />
+
+                              </div>
+
+                            </div>
+
+
+                            <div className="max-h-60 overflow-y-auto">
+
+                              {bankAccountLoading ? (
+
+                                <div className="px-4 py-5 text-center text-gray-500 text-sm">
+                                  Loading bankAccounts...
+                                </div>
+
+                              ) : bankAccountError ? (
+
+                                <div className="px-4 py-5 text-center text-red-500 text-sm">
+                                  Failed to load bankAccounts
+                                </div>
+
+                              ) : filteredBankAccounts.length ===
+                                0 ? (
+
+                                <div className="px-4 py-5 text-center text-gray-400 text-sm">
+
+                                  {bankAccountSearch
+                                    ? "No bankAccounts found"
+                                    : "No bankAccounts available"}
+
+                                </div>
+
+                              ) : (
+
+                                filteredBankAccounts.map(
+                                  (
+                                    bankAccount
+                                  ) => {
+
+                                    const name =
+                                      getBankAccountName(
+                                        bankAccount
+                                      );
+
+                                    return (
+
+                                      <button
+                                        type="button"
+                                        key={
+                                          bankAccount.id
+                                        }
+                                        onClick={() =>
+                                          handleBankAccountSelect(
+                                            bankAccount
+                                          )
+                                        }
+                                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white"
+                                      >
+
+                                        <div className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-medium shrink-0">
+
+                                          {name
+                                            .charAt(
+                                              0
+                                            )
+                                            .toUpperCase()}
+
+                                        </div>
+
+
+                                        <div className="min-w-0">
+
+                                          <p className="font-medium truncate">
+                                            {name}
+                                          </p>
+
+                                          <p className="text-xs opacity-70 truncate">
+
+                                            {bankAccount.bankName ||
+                                              bankAccount.id ||
+
+                                              ""}
+
+                                          </p>
+
+                                          <p className="text-xs opacity-70 truncate">
+
+                                            {bankAccount.accountNumber ||
+                                              ""}
+
+                                          </p>
+                                          <p className="text-xs opacity-70 truncate">
+
+                                            {bankAccount.ifsc ||
+
+                                              ""}
+
+                                          </p>
+                                        </div>
+
+                                      </button>
+                                    );
+                                  }
+                                )
+                              )}
+
+                            </div>
+
+
+                            <button
+                              type="button"
+                              className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
+
+                              onClick={() =>
+                                (navigate("/bankAccount/newSimple"))}
+                            >
+
+                              <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center"
+                              >
+
+                                <Plus
+                                  size={14}
+                                />
+
+                              </div>
+
+                              <span className="font-medium">
+                                New BankAccount
+                              </span>
+
+                            </button>
+
+                          </div>
+                        )}
+
+                      </div>
+
+
+
+                    </div>
+                  </div>
+
+                </div>
+
+              )}
             </div>
 
 
-            {/* =================================================
+            {/* Add Signature */}
+
+            <div className="flex-1 max-w-sm ml-auto">
+
+              <div className="flex justify-between items-center py-3">
+
+                <span className="px-1 w-full text-xl font-semibold text-gray-700 border-b border-gray-200 rounded ">
+                  Add Signature
+                </span>
+
+
+
+
+              </div>
+              {/* =================================================
+              Signatures
+          ================================================= */}
+              {!showSignature ? (
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowSignature(
+                      true
+                    )
+                  }
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+                >
+
+                  <div className="w-5 h-5 rounded-full border-2 border-blue-500 flex items-center justify-center">
+
+                    <Plus
+                      size={12}
+                    />
+
+                  </div>
+
+
+                  Add Signature
+
+                </button>
+
+              ) : (
+
+                <div>
+
+                  {/* <label className="text-sm font-medium text-gray-700 block mb-1">
+                    Signature
+                  </label> */}
+
+
+                  <div className="flex-1">
+
+                    {/* ROW 1 */}
+
+                    <div className="flex items-center gap-3">
+
+                      <div
+                        ref={
+                          emailSignatureDropdownRef
+                        }
+                        className="relative w-[350px]"
+                      >
+
+                        <div className="flex">
+
+                          <div className="relative flex-1">
+
+
+                            <input
+                              type="text"
+                              value={
+                                emailSignatureSearch ||
+                                invoice.signatureName ||
+                                getEmailSignatureName(selectedSignature) ||
+                                ""
+                              }
+                              placeholder="Select an email signature"
+                              onClick={() => {
+                                setEmailSignatureSearch("");
+                                setOpenEmailSignature(true);
+                              }}
+                              onChange={(e) => {
+                                setEmailSignatureSearch(e.target.value);
+                                setOpenEmailSignature(true);
+                              }}
+                              className="w-full h-10 border border-blue-500 rounded-l-md px-3 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            />
+
+
+                            <ChevronDown
+                              size={14}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                            />
+
+                          </div>
+
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenEmailSignature(
+                                true
+                              )
+                            }
+                            className="h-10 w-10 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-r-md"
+                          >
+
+                            <Search
+                              size={16}
+                            />
+
+                          </button>
+
+                        </div>
+
+
+                        {/* SALES PERSON DROPDOWN */}
+
+                        {openEmailSignature && (
+
+                          <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-[100]">
+
+                            <div className="p-2 border-b border-gray-200">
+
+                              <div className="relative">
+
+                                <Search
+                                  size={16}
+                                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                />
+
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  placeholder="Search sales person"
+                                  value={
+                                    emailSignatureSearch
+                                  }
+                                  onChange={(
+                                    e
+                                  ) =>
+                                    setEmailSignatureSearch(
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full border border-blue-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none"
+                                />
+
+                              </div>
+
+                            </div>
+
+
+                            <div className="max-h-60 overflow-y-auto">
+
+                              {emailSignaturesLoading ? (
+
+                                <div className="px-4 py-5 text-center text-gray-500 text-sm">
+                                  Loading emailSignatures...
+                                </div>
+
+                              ) : emailSignatureError ? (
+
+                                <div className="px-4 py-5 text-center text-red-500 text-sm">
+                                  Failed to load emailSignatures
+                                </div>
+
+                              ) : filteredEmailSignatures.length ===
+                                0 ? (
+
+                                <div className="px-4 py-5 text-center text-gray-400 text-sm">
+
+                                  {emailSignatureSearch
+                                    ? "No emailSignatures found"
+                                    : "No emailSignatures available"}
+
+                                </div>
+
+                              ) : (
+
+                                filteredEmailSignatures.map(
+                                  (
+                                    emailSignature
+                                  ) => {
+
+                                    const name =
+                                      getEmailSignatureName(
+                                        emailSignature
+                                      );
+
+                                    return (
+
+                                      <button
+                                        type="button"
+                                        key={emailSignature.id}
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEmailSignatureSelect(emailSignature);
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white"
+                                      >
+                                        <div className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-medium shrink-0">
+                                          {name.charAt(0).toUpperCase()}
+                                        </div>
+
+                                        <div className="min-w-0">
+                                          <p className="font-medium truncate">{name}</p>
+                                          <p className="text-xs opacity-70 truncate">
+                                            {emailSignature.userId ?? ""}
+                                          </p>
+                                        </div>
+                                      </button>
+                                    );
+                                  }
+                                )
+                              )}
+
+                            </div>
+
+
+                            <button
+                              type="button"
+                              className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
+
+                              onClick={() =>
+                                (navigate("/emailSignatures/newSimple"))}
+                            >
+
+                              <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center"
+                              >
+
+                                <Plus
+                                  size={14}
+                                />
+
+                              </div>
+
+                              <span className="font-medium">
+                                New EmailSignature
+                              </span>
+
+                            </button>
+
+                          </div>
+                        )}
+
+                      </div>
+
+
+
+                    </div>
+                  </div>
+
+                </div>
+
+              )}
+            </div>
+
+
+
+
+            {/* Add Other Details */}
+            <div className="space-y-3 mb-8 ">
+
+              {/* =================================================
               TERMS
           ================================================= */}
-
-            <div className="space-y-3 mb-8">
 
               {!showTerms ? (
 
@@ -4699,6 +5668,9 @@ export default function InvoiceCreate() {
                 </div>
 
               )}
+
+
+
 
 
               {/* PAYMENT GATEWAY */}

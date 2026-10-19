@@ -11,7 +11,7 @@ export default function RightTooltip({ text }) {
                 -translate-y-1/2
                 whitespace-nowrap
                 rounded-md
-                bg-gray-900
+                bg-[#3F5774]
                 px-3
                 py-1.5
                 text-xs
@@ -38,7 +38,7 @@ export default function RightTooltip({ text }) {
                     w-2
                     -translate-y-1/2
                     rotate-45
-                    bg-gray-900
+                   bg-[#3F5774]
                 "
             />
         </div>
