@@ -1,5 +1,8 @@
 package com.ims.dtos.emailSignature;
 
+import com.ims.enums.CurrencyStatus;
+import com.ims.enums.EmailSignatureStatus;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -17,7 +20,9 @@ public class EmailSignatureResponse {
     private String signatureContent;
     private boolean defaultForNewMessages;
     private boolean defaultForReplies;
-    private String status;
+
+    private EmailSignatureStatus status;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -6,6 +6,7 @@ import com.ims.dtos.emailSignature.EmailSignatureCreateRequest;
 import com.ims.dtos.emailSignature.EmailSignatureResponse;
 import com.ims.dtos.emailSignature.EmailSignatureUpdateRequest;
 import com.ims.entity.EmailSignatureEntity;
+import com.ims.enums.EmailSignatureStatus;
 import com.ims.repository.EmailSignatureRepository;
 import com.ims.service.serviceInterface.emailSignatureService.EmailSignatureService;
 import com.ims.utils.validation.EmailSignatureValidation;
@@ -278,7 +279,7 @@ public class EmailSignatureServiceImpl implements EmailSignatureService {
                 .defaultForReplies(
                         entity.isDefaultForReplies()
                 )
-                .status(entity.getStatus())
+                .status(EmailSignatureStatus.ACTIVE)
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();

@@ -1,7 +1,10 @@
 package com.ims.dtos.emailSignature;
 
 
+import com.ims.enums.CurrencyStatus;
+import com.ims.enums.EmailSignatureStatus;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
@@ -22,4 +25,12 @@ public class EmailSignatureCreateRequest {
     private Boolean defaultForNewMessages;
 
     private Boolean defaultForReplies;
+
+    // =====================================================
+    // STATUS
+    // =====================================================
+
+
+    private EmailSignatureStatus status;
+
 }

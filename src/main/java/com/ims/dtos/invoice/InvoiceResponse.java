@@ -89,6 +89,12 @@ public class InvoiceResponse extends BaseResponse {
     private String bankName;
     private String ifsc;
 
+    private Long emailSignatureId;
+    private Long userId;
+    private String signatureName;
+    private String signatureContent;
+    private boolean defaultForNewMessages;
+    private boolean defaultForReplies;
 
     // =====================================================
     // CURRENCY

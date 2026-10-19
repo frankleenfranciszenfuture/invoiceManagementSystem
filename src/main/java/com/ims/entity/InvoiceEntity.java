@@ -177,6 +177,12 @@ public class InvoiceEntity extends BaseEntity {
     @JoinColumn(name = "bankAccount_id")
     private BankAccount bankAccount;
 
+
+    // BankAccount
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "emailSignature_id")
+    private EmailSignatureEntity emailSignature;
+
     // =====================================================
 // CURRENCY & EXCHANGE RATE
 // =====================================================

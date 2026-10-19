@@ -71,6 +71,32 @@ public interface InvoiceMapper {
             target = "ifsc",
             source = "bankAccount.ifsc"
     )
+
+    @Mapping(
+            target = "emailSignatureId",
+            source = "emailSignature.id"
+    )
+    @Mapping(
+            target = "userId",
+            source = "emailSignature.userId"
+    )
+    @Mapping(
+            target = "signatureName",
+            source = "emailSignature.signatureName"
+    )
+    @Mapping(
+            target = "signatureContent",
+            source = "emailSignature.signatureContent"
+    )
+    @Mapping(
+            target = "defaultForNewMessages",
+            source = "emailSignature.defaultForNewMessages"
+    )
+    @Mapping(
+            target = "defaultForReplies",
+            source = "emailSignature.defaultForReplies"
+    )
+
     @Mapping(
             target = "currencyId",
             source = "currency.id"

@@ -18,4 +18,5 @@ public class EmailSignatureUpdateRequest {
 
     @NotBlank(message = "Signature content is required")
     private String signatureContent;
+
 }

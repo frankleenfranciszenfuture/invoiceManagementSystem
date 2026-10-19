@@ -66,6 +66,8 @@ public class DataInitializer implements CommandLineRunner {
 
                 "Currency Detail",
 
+                "Email Signature",
+
                 "Staffs",
 
                 "Loan",
@@ -497,6 +499,11 @@ public class DataInitializer implements CommandLineRunner {
         addModuleAction("Currency Detail", "EDIT");
         addModuleAction("Currency Detail", "DELETE");
 
+
+        addModuleAction("Email Signature", "CREATE");
+        addModuleAction("Email Signature", "VIEW");
+        addModuleAction("Email Signature", "EDIT");
+        addModuleAction("Email Signature", "DELETE");
         // =====================================================
         // CATEGORY
         // =====================================================

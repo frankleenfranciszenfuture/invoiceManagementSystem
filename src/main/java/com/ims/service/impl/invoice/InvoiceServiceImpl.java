@@ -71,6 +71,8 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final CompanyRepository companyRepository;
 
     private final BankAccountRepository bankAccountRepository;
+
+    private final EmailSignatureRepository emailSignatureRepository;
     // =====================================================
     // CREATE INVOICE
     // =====================================================
@@ -158,7 +160,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
 
 // =====================================================
-        // FIND Company (OPTIONAL)
+        // FIND BankAccount (OPTIONAL)
         // =====================================================
 
         BankAccount bankAccount = null;
@@ -174,6 +176,22 @@ public class InvoiceServiceImpl implements InvoiceService {
             );
         }
 
+        // =====================================================
+        // FIND EmailSignature (OPTIONAL)
+        // =====================================================
+
+        EmailSignatureEntity emailSignature = null;
+
+        if (request.getEmailSignatureId() != null) {
+            emailSignature = emailSignatureRepository.findById(
+                    request.getEmailSignatureId()
+            ).orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "EmailSignature not found with id: "
+                                    + request.getEmailSignatureId()
+                    )
+            );
+        }
 
         // =====================================================
         // EXCHANGE RATE
@@ -257,6 +275,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                         .salesPerson(salesPerson)
                         .companyDetails(companyDetails)
                         .bankAccount(bankAccount)
+                        .emailSignature(emailSignature)
                         .invoiceDate(
                                 request.getInvoiceDate() != null
                                         ? request.getInvoiceDate()
@@ -624,6 +643,23 @@ public class InvoiceServiceImpl implements InvoiceService {
             );
         }
 
+        // =====================================================
+        // FIND  EmailSignature (OPTIONAL)
+        // =====================================================
+
+        EmailSignatureEntity emailSignature = null;
+
+        if (request.getEmailSignatureId() != null) {
+            emailSignature = emailSignatureRepository.findById(
+                    request.getEmailSignatureId()
+            ).orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "EmailSignature not found with id: "
+                                    + request.getEmailSignatureId()
+                    )
+            );
+        }
+
 // =====================================================
 // EXCHANGE RATE
 // =====================================================
@@ -670,6 +706,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setSalesPerson(salesPerson);
         invoice.setCompanyDetails(companyDetails);
         invoice.setBankAccount(bankAccount);
+        invoice.setEmailSignature(emailSignature);
         invoice.setCurrency(currency);
         invoice.setExchangeRate(exchangeRate);
 
