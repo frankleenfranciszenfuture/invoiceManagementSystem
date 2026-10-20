@@ -122,6 +122,11 @@ import InvoiceOverViewPreviewDashboard from "./module/invoices/overview/pages/In
 import EmailSignatureCreateSimple from "./module/emailSignature/pages/EmailSignatureCreateSimple";
 import EmailSignatureDashboard from "./module/emailSignature/pages/EmailSignatureDashboard";
 import EmailSignatureTable from "./module/emailSignature/pages/EmailSignatureTable";
+import PartyDashboard from "./module/parties/pages/PartyDashboard";
+import PartyCreateSimple from "./module/parties/pages/PartyCreateSimple";
+import PartyProfileView from "./module/parties/pages/PartyProfileView";
+import ClearanceCreateSimple from "./module/clearnaceOutStandingParties/pages/ClearanceCreateSimple";
+import ClearanceDashboard from "./module/clearnaceOutStandingParties/pages/ClearanceDashboard";
 
 
 
@@ -625,9 +630,60 @@ function AppContent() {
         // element={<CurrencyOverView />}
         />
 
+
+        {/* =================================================
+                    PARTY
+            ================================================= */}
+
+        <Route
+          path="/parties"
+          element={<PartyDashboard />}
+        />
+
+        <Route
+          path="/parties/view/:id"
+          element={<PartyProfileView />}
+        />
+
+        <Route
+          path="/parties/newSimple"
+          element={<PartyCreateSimple />}
+
+        />
+
+
+        <Route
+          path="/parties/editSimple/:id"
+          element={<PartyCreateSimple />}
+        />
+
+
+        {/* =================================================
+                    CLEARANCE
+            ================================================= */}
+
+
+        <Route
+          path="/clearances"
+          element={<ClearanceDashboard />}
+
+        />
+
+        <Route
+          path="/clearances/newSimple"
+          element={<ClearanceCreateSimple />}
+
+        />
+
+        <Route
+          path="/clearances/editSimple/:id"
+          element={<ClearanceCreateSimple />}
+        />
+
         {/* =================================================
                     MENU PERMISSION
             ================================================= */}
+
 
         <Route
           path="/menuPermission"

@@ -420,6 +420,12 @@ export const settings = [
         path: "/emailSignatures",
         component: ComingSoon,
       },
+
+      {
+        label: "Party",
+        path: "/parties",
+        component: ComingSoon,
+      },
     ],
   },
 

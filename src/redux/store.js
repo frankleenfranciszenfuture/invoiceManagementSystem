@@ -46,6 +46,12 @@ import companyViewReducer from "../module/company/slices/companyViewSlice";
 import currencyReducer from "../module/currency/slices/currencySlice";
 import currencyViewReducer from "../module/currency/slices/currencyViewSlice";
 
+import partyReducer from "../module/parties/slices/partySlice";
+import partyViewReducer from "../module/parties/slices/partyViewSlice";
+
+import clearanceReducer from "../module/clearnaceOutStandingParties/slices/clearanceSlice";
+import clearanceViewReducer from "../module/clearnaceOutStandingParties/slices/clearanceViewSlice";
+
 import menuPermissionReducer from "../module/menuPermission/slices/menuPermissionSlice";
 
 export const store = configureStore({
@@ -120,6 +126,15 @@ export const store = configureStore({
 
     currency: currencyReducer,
     currencyView: currencyViewReducer,
+
+    //party
+
+    party: partyReducer,
+    partyView: partyViewReducer,
+
+    //clearance
+    clearance: clearanceReducer,
+    clearanceView: clearanceViewReducer,
 
     //menuPermission
 

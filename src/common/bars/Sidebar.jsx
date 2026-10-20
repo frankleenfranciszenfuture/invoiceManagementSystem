@@ -41,16 +41,16 @@ const NAV = [
         moduleName: "Customers",
         icon: Users,
         to: "/customers",
-        addTo: "/customers/new",
+        addTo: "/customers",
         queryKey: "status",
         dropdown: true,
 
-        // children: [
-        //     {
-        //         label: "Create",
-        //         to: "/customers/new",
-        //     },
-        // ],
+        children: [
+            {
+                label: "Create",
+                to: "/customers/new",
+            },
+        ],
     },
 
     {
@@ -60,6 +60,19 @@ const NAV = [
         to: "/items",
         addTo: "/items/newSimple",
         basePath: "/items",
+        dropdown: true,
+
+
+    },
+
+
+    {
+        label: "Parties",
+        moduleName: "Parties",
+        icon: Package,
+        to: "/parties",
+        addTo: "/parties/newSimple",
+        basePath: "/parties",
         dropdown: true,
 
 
@@ -397,13 +410,11 @@ const Sidebar = ({ onLogout }) => {
     }, [location.pathname]);
 
     const handleParentClick = (item) => {
-        if (!open) {
-            // collapsed: icon goes straight to the module
-            goTo(item.to);
-            return;
-        }
+        goTo(item.to);
 
-        setOpenMenu((prev) => (prev === item.label ? null : item.label));
+        if (open) {
+            setOpenMenu(item.label);
+        }
     };
 
     const handleLogout = () => {
@@ -543,11 +554,14 @@ const Sidebar = ({ onLogout }) => {
                                 <button
                                     type="button"
                                     title={!open ? item.label : undefined}
-                                    onClick={() =>
-                                        hasChildren
-                                            ? handleParentClick(item)
-                                            : goTo(item.to)
-                                    }
+                                    onClick={() => {
+                                        if (hasChildren) {
+                                            handleParentClick(item);
+                                        } else {
+                                            setOpenMenu(null);
+                                            goTo(item.to);
+                                        }
+                                    }}
                                     className={`
         flex items-center rounded-lg text-sm font-medium
         transition-colors duration-150
