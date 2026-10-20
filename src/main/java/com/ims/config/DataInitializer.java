@@ -96,6 +96,8 @@ public class DataInitializer implements CommandLineRunner {
 
                 "Parties",
 
+                "Clearances",
+
                 "Warehouse",
 
                 "Inventory",
@@ -579,6 +581,11 @@ public class DataInitializer implements CommandLineRunner {
         addModuleAction("Parties", "VIEW");
         addModuleAction("Parties", "EDIT");
         addModuleAction("Parties", "DELETE");
+
+        addModuleAction("Clearances", "CREATE");
+        addModuleAction("Clearances", "VIEW");
+        addModuleAction("Clearances", "EDIT");
+        addModuleAction("Clearances", "DELETE");
 
         // =====================================================
         // WAREHOUSE

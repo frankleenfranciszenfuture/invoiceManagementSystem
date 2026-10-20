@@ -5,9 +5,12 @@ import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
 import com.ims.dtos.party.PartyRequest;
 import com.ims.dtos.party.PartyResponse;
+import com.ims.entity.PartyEntity;
 import com.ims.enums.PartyType;
 import com.ims.enums.Status;
 import org.springframework.data.domain.Pageable;
+
+import java.math.BigDecimal;
 
 public interface PartyService {
 
@@ -74,5 +77,10 @@ public interface PartyService {
 
     String generatePartyNumber(
             PartyType partyType
+    );
+
+    void reversePartyCredit(
+            PartyEntity party,
+            BigDecimal creditAmount
     );
 }

@@ -163,6 +163,21 @@ public class PartyEntity extends BaseEntity {
 
 
     // =====================================================
+// OUTSTANDING CREDIT
+// Amount currently owed by the business to this party
+// Applicable mainly for SUPPLIER parties
+// =====================================================
+
+    @Column(
+            name = "outstanding_credit",
+            precision = 15,
+            scale = 2,
+            nullable = false
+    )
+    @Builder.Default
+    private BigDecimal outstandingCredit = BigDecimal.ZERO;
+
+    // =====================================================
     // PAYMENT TERMS
     // =====================================================
 
@@ -225,5 +240,23 @@ public class PartyEntity extends BaseEntity {
 
         addresses.remove(address);
         address.setParty(null);
+    }
+
+    public BigDecimal getSafeOutstandingCredit() {
+        return outstandingCredit == null
+                ? BigDecimal.ZERO
+                : outstandingCredit;
+    }
+
+    public BigDecimal getSafeCreditLimit() {
+        return creditLimit == null
+                ? BigDecimal.ZERO
+                : creditLimit;
+    }
+
+    public BigDecimal getAvailableCredit() {
+        return getSafeCreditLimit()
+                .subtract(getSafeOutstandingCredit())
+                .max(BigDecimal.ZERO);
     }
 }

@@ -63,7 +63,7 @@ public interface PartyMapper {
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "addresses", ignore = true)
     @Mapping(target = "bankAccounts", ignore = true)
-
+    @Mapping(target = "outstandingCredit", ignore = true)
     @Mapping(target = "active", ignore = true)
 
     @Mapping(target = "createdAt", ignore = true)

@@ -11,6 +11,7 @@ import com.ims.entity.PartyEntity;
 import com.ims.enums.PartyType;
 import com.ims.enums.Status;
 import com.ims.exception.DuplicateResourceException;
+import com.ims.exception.ValidationException;
 import com.ims.mapper.party.PartyBankAccountMapper;
 import com.ims.mapper.party.PartyMapper;
 import com.ims.repository.PartyRepository;
@@ -19,12 +20,15 @@ import com.ims.utils.base.BaseEntityUtil;
 import com.ims.utils.specification.PartySpecification;
 import com.ims.utils.validation.PartyValidation;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +38,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class PartyServiceImpl implements PartyService {
 
     private final PartyRepository partyRepository;
@@ -66,7 +71,9 @@ public class PartyServiceImpl implements PartyService {
                         request
                 );
 
-
+        if (party.getOutstandingCredit() == null) {
+            party.setOutstandingCredit(BigDecimal.ZERO);
+        }
         party.setContactPerson(
                 emptyToNull(
                         request.getContactPerson()
@@ -221,12 +228,23 @@ public class PartyServiceImpl implements PartyService {
         //=================================================
         // UPDATE PARTY DETAILS
         //=================================================
+        partyValidation.validateUpdate(
+                id,
+                request
+        );
+
+        BigDecimal existingOutstandingCredit =
+                party.getOutstandingCredit() == null
+                        ? BigDecimal.ZERO
+                        : party.getOutstandingCredit();
+
 
         partyMapper.updateEntity(
                 request,
                 party
         );
 
+        party.setOutstandingCredit(existingOutstandingCredit);
 
         party.setContactPerson(
                 emptyToNull(
@@ -435,8 +453,6 @@ public class PartyServiceImpl implements PartyService {
                 "Party deleted successfully."
         );
     }
-
-
     //=====================================================
     // PARTY NUMBER GENERATION
     //=====================================================
@@ -504,6 +520,76 @@ public class PartyServiceImpl implements PartyService {
                 + String.format(
                 "%06d",
                 nextNumber
+        );
+
+    }
+    @Override
+    @Transactional
+    public void reversePartyCredit(
+            PartyEntity party,
+            BigDecimal creditAmount) {
+
+        if (party == null) {
+            throw new ValidationException(
+                    "Party is required for credit reversal."
+            );
+        }
+
+        if (creditAmount == null
+                || creditAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        BigDecimal currentOutstanding =
+                party.getOutstandingCredit() == null
+                        ? BigDecimal.ZERO
+                        : party.getOutstandingCredit();
+
+        currentOutstanding = currentOutstanding.setScale(
+                2,
+                RoundingMode.HALF_UP
+        );
+
+        creditAmount = creditAmount.setScale(
+                2,
+                RoundingMode.HALF_UP
+        );
+
+        if (creditAmount.compareTo(currentOutstanding) > 0) {
+            throw new ValidationException(
+                    "Cannot reverse party credit of "
+                            + creditAmount
+                            + ". Current outstanding credit is only "
+                            + currentOutstanding
+            );
+        }
+
+        BigDecimal newOutstanding = currentOutstanding
+                .subtract(creditAmount)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        log.info(
+                "PARTY CREDIT REVERSAL -> " +
+                        "PartyId={}, PartyType={}, Before={}, " +
+                        "Reversed={}, After={}",
+                party.getId(),
+                party.getPartyType(),
+                currentOutstanding,
+                creditAmount,
+                newOutstanding
+        );
+
+        party.setOutstandingCredit(newOutstanding);
+
+        baseEntityUtil.prepareForUpdate(party);
+
+        // If the party is managed by the current transaction,
+        // JPA dirty checking persists this change at flush/commit.
+        log.info(
+                "PARTY CREDIT UPDATED IN TRANSACTION -> " +
+                        "PartyId={}, OutstandingCredit={}",
+                party.getId(),
+                party.getOutstandingCredit()
         );
     }
 
