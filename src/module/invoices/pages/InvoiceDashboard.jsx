@@ -1,7 +1,7 @@
 
 import React, { useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Plus, Download } from "lucide-react";
+import { Plus, Download, UserCircle } from "lucide-react";
 
 import InvoiceTable from "./InvoiceTable";
 import NavbarInvoice from "../components/bars/nav/NavbarInvoice";
@@ -213,6 +213,7 @@ export default function InvoiceDashboard() {
 
     };
 
+
     // ============================================================
     // LOADING
     // ============================================================
@@ -225,17 +226,12 @@ export default function InvoiceDashboard() {
     // PAGE
     // ============================================================
 
+
+
     return (
-        <div className="flex h-screen bg-gray-50 font-sans text-[13px] overflow-y-atuo">
-
-            <div className="flex-1 min-h-0 bg-white ">
-
+        <div className="flex h-[full] bg-gray-50 rounded-lg font-sans text-[13px] overflow-x-auto mt-2">
+            <div className="flex-1 min-h-0 bg-white">
                 <div className="px-2 py-5 max-w-30xl w-full">
-
-                    {/* =================================================
-                        INVOICE NAVBAR
-                    ================================================= */}
-
                     <NavbarInvoice />
 
                     {/* =================================================

@@ -873,7 +873,7 @@ export default function BankAccountCreateSimple() {
         block
         text-xs
         font-medium
-        ${required ? "text-red-500" : "text-[#0F4659]"}
+        ${required ? "text-red-500" : "text-gray-400"}
         mb-1.5
     `;
 
@@ -885,11 +885,11 @@ export default function BankAccountCreateSimple() {
         <div className="w-full max-w-7xl">
             <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Account Information
                     </h2>
 
-                    <p className="text-sm text-[#0F4659]/70 mt-1">
+                    <p className="text-sm text-gray-400 mt-1">
                         Configure the basic bank account information.
                     </p>
                 </div>
@@ -979,27 +979,27 @@ export default function BankAccountCreateSimple() {
                         <div className="flex items-center gap-2 mb-4">
                             <Landmark
                                 size={18}
-                                className="text-[#0F4659]"
+                                className="text-[#408DFB]"
                             />
 
-                            <h3 className="text-sm font-semibold text-[#0F4659]">
+                            <h3 className="text-sm font-semibold text-[#408DFB]">
                                 Account Summary
                             </h3>
                         </div>
 
                         <div className="space-y-4">
                             <div>
-                                <p className="text-xs text-[#0F4659]/70">
+                                <p className="text-xs text-gray-400">
                                     Account Type
                                 </p>
 
-                                <p className="text-sm font-medium text-[#0F4659] mt-1">
+                                <p className="text-sm font-medium text-[#F59E0B] mt-1">
                                     {form.accountType || "CURRENT"}
                                 </p>
                             </div>
 
                             <div>
-                                <p className="text-xs text-[#0F4659]/70">
+                                <p className="text-xs text-gray-400">
                                     Currency
                                 </p>
 
@@ -1009,7 +1009,7 @@ export default function BankAccountCreateSimple() {
                             </div>
 
                             <div>
-                                <p className="text-xs text-[#0F4659]/70">
+                                <p className="text-xs text-gray-400">
                                     Status
                                 </p>
 
@@ -1032,11 +1032,11 @@ export default function BankAccountCreateSimple() {
         <div className="w-full max-w-7xl">
             <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Bank Information
                     </h2>
 
-                    <p className="text-sm text-[#0F4659]/70 mt-1">
+                    <p className="text-sm text-gray-400 mt-1">
                         Enter the bank and account identification details.
                     </p>
                 </div>
@@ -1123,24 +1123,24 @@ export default function BankAccountCreateSimple() {
                                         e.target.checked
                                     )
                                 }
-                                className="h-4 w-4 accent-[#0F4659]"
+                                className="h-4 w-4 accent-[#408DFB]"
                             />
 
-                            <span className="text-sm text-[#0F4659]/70">
+                            <span className="text-sm text-gray-500">
                                 Set as primary bank account
                             </span>
                         </label>
                     </div>
                 </div>
 
-                <div className="mt-7 p-4 rounded-lg bg-[#0F4659]/20 border border-[#0F4659] max-w-5xl">
-                    <p className="text-sm font-medium text-[#0F4659]">
+                <div className="mt-7 p-4 rounded-lg bg-[#408DFB] border border-[#408DFB] max-w-5xl">
+                    <p className="text-sm font-medium text-[#FCF7F8]">
                         Bank Account
                     </p>
 
-                    <p className="text-xs text-[#0F4659] mt-1">
+                    <p className="text-xs text-[#FCF7F8] mt-1">
                         {form.bankName || "Bank name"}
-                        {" • "}
+                        {" | "}
                         {form.accountNumber
                             ? `•••• ${form.accountNumber.slice(-4)}`
                             : "Account number"}
@@ -1158,11 +1158,11 @@ export default function BankAccountCreateSimple() {
         <div className="w-full max-w-7xl">
             <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Access & Notes
                     </h2>
 
-                    <p className="text-sm text-[#0F4659]/70 mt-1">
+                    <p className="text-sm text-gray-400 mt-1">
                         Manage users associated with this account and add internal notes.
                     </p>
                 </div>
@@ -1199,7 +1199,7 @@ export default function BankAccountCreateSimple() {
                             className={inputClass}
                         />
 
-                        <p className="text-xs text-[#0F4659] mt-1">
+                        <p className="text-xs text-gray-400 mt-1">
                             Example: 1, 2, 5
                         </p>
                     </div>
@@ -1235,11 +1235,11 @@ export default function BankAccountCreateSimple() {
         <div className="w-full max-w-7xl">
             <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Account Settings
                     </h2>
 
-                    <p className="text-sm text-[#0F4659]/70 mt-1">
+                    <p className="text-sm text-gray-400 mt-1">
                         Configure the account availability and status.
                     </p>
                 </div>
@@ -1307,21 +1307,21 @@ export default function BankAccountCreateSimple() {
         <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-5">
             {/* HEADER */}
 
-            <div className="shrink-0 px-6 py-4 bg-white border-b border-gray-200 flex items-center justify-between">
+            <div className="shrink-0 px-6 py-4 bg-[#408DFB] rounded-lg border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div
-                        className="w-10 h-10 rounded-lg bg-[#0F4659]/20 border border-blue-100 flex items-center justify-center cursor-pointer"
+                        className="w-10 h-10 rounded-lg bg-[#FCF7F8]/20 border border-blue-100 flex items-center justify-center cursor-pointer"
                         onClick={() => navigate("/bankAccount")}
                     >
                         <Landmark
                             size={20}
-                            className="text-[#0F4659]"
+                            className="text-[#FCF7F8]"
                         />
                     </div>
 
                     <div>
                         <h1
-                            className="text-lg font-semibold text-[#0F4659] cursor-pointer"
+                            className="text-lg font-semibold text-[#FCF7F8] cursor-pointer"
                             onClick={() => navigate("/bankAccount")}
                         >
                             {isEdit
@@ -1329,7 +1329,7 @@ export default function BankAccountCreateSimple() {
                                 : "New Bank Account"}
                         </h1>
 
-                        <p className="text-xs text-[#0F4659] mt-0.5">
+                        <p className="text-xs text-[#FCF7F8] mt-0.5">
                             {isEdit
                                 ? `Update bank account details${form.accountName ? ` — ${form.accountName}` : ""}`
                                 : "Create a new bank account"}
@@ -1341,7 +1341,7 @@ export default function BankAccountCreateSimple() {
                     type="button"
                     disabled={loading || editLoading}
                     onClick={handleClose}
-                    className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                    className="px-1 text-gray-100 hover:bg-red-500 hover:text-[#FCF7F8] rounded disabled:opacity-50"
                 >
                     <X size={20} />
                 </button>
@@ -1349,15 +1349,15 @@ export default function BankAccountCreateSimple() {
 
             {/* TABS */}
 
-            <div className="shrink-0 px-6 bg-white border-b border-gray-200 flex items-center gap-7 overflow-x-auto">
+            <div className="mt-2 shrink-0 px-6 bg-white border-b border-gray-200 flex items-center gap-7 overflow-x-auto">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
                         type="button"
                         onClick={() => setActiveTab(tab.id)}
                         className={`py-3 text-sm font-medium border-b-2 whitespace-nowrap transition ${activeTab === tab.id
-                            ? "text-[#0F4659] border-[#0F4659]"
-                            : "text-gray-500 border-transparent hover:text-gray-700"
+                            ? "text-[#408DFB] border-[#408DFB]"
+                            : "text-gray-400 border-transparent hover:text-blue-500"
                             }`}
                     >
                         {tab.label}
@@ -1380,7 +1380,7 @@ export default function BankAccountCreateSimple() {
             {/* FOOTER */}
 
             <div className="shrink-0 border-t border-gray-200 bg-white px-6 py-2 flex items-center justify-end gap-3 mr-13">
-                <div className="text-xs text-[#0F4659]">
+                <div className="text-xs text-[#1267EB]">
                     <span className="text-red-500">*</span>
                     {" "}Required fields
                 </div>
@@ -1407,7 +1407,7 @@ export default function BankAccountCreateSimple() {
                                     saveAndClose: true,
                                 })
                             }
-                            className="h-10 px-5 bg-[#0F4659] hover:bg-[#0F4659]/90 text-white text-sm font-medium rounded-l-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="h-10 px-5 bg-[#408DFB] hover:bg-[#408DFB]/90 text-white text-sm font-medium rounded-l-md disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading
                                 ? isEdit
@@ -1426,7 +1426,7 @@ export default function BankAccountCreateSimple() {
                             onClick={() =>
                                 setShowSaveMenu((previous) => !previous)
                             }
-                            className="h-10 w-10 bg-[#0F4659] hover:bg-[#0F4659]/90 text-white rounded-r-md border-l border-white flex items-center justify-center disabled:opacity-50"
+                            className="h-10 w-10 bg-[#408DFB] hover:bg-[#408DFB]/90 text-white rounded-r-md border-l border-white flex items-center justify-center disabled:opacity-50"
                         >
                             <ChevronDown
                                 size={16}

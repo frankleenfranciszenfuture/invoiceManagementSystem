@@ -285,13 +285,13 @@ function SearchSelect({
                     ${error
                         ? "border-red-400"
                         : open
-                            ? "border-[#0F4659] ring-1 ring-[#0F4659]/70"
-                            : "border-[#0F4659]/70"
+                            ? "border-[#0095FD] ring-1 ring-[#0095FD]/70"
+                            : "border-[#0095FD]/70"
                     }
 
                     ${disabled
-                        ? "bg-gray-100 text-[#0F4659]/40 cursor-not-allowed"
-                        : "hover:border-[#0F4659]"
+                        ? "bg-gray-100 text-[#0095FD]/40 cursor-not-allowed"
+                        : "hover:border-[#0095FD] "
                     }
                 `}
             >
@@ -299,8 +299,8 @@ function SearchSelect({
                 <span
                     className={
                         selectedOption
-                            ? "truncate text-gray-700"
-                            : "truncate text-[#0F4659]/70"
+                            ? "truncate text-gray-500"
+                            : "truncate text-gray-400"
                     }
                 >
 
@@ -399,9 +399,9 @@ function SearchSelect({
                                     rounded-md
                                     text-sm
                                     outline-none
-                                    focus:border-[#0F4659]/70
+                                    focus:border-[#0095FD]/70
                                     focus:ring-1
-                                    focus:ring-[#0F4659]
+                                    focus:ring-[#0095FD]
                                     
                                 "
                             />
@@ -458,7 +458,7 @@ function SearchSelect({
                                                 gap-2
                                                 text-left
                                                 text-sm
-                                                text-blue-600
+                                                text-gray-100
                                                 hover:bg-blue-50
                                             "
                                         >
@@ -535,8 +535,8 @@ function SearchSelect({
                                                 text-sm
 
                                                 ${selected
-                                                    ? "bg-blue-50 text-blue-700"
-                                                    : "text-gray-700 hover:bg-gray-50"
+                                                    ? "bg-blue-50 text-gray-400"
+                                                    : "text-gray-400 hover:bg-[#0095FD] hover:text-gray-100"
                                                 }
                                             `}
                                         >
@@ -550,7 +550,7 @@ function SearchSelect({
                                             {selected && (
                                                 <Check
                                                     size={16}
-                                                    className="text-blue-600"
+                                                    className="text-gray-400"
                                                 />
                                             )}
 
@@ -784,9 +784,9 @@ function SearchMultiSelect({
                         : "border-gray-300"
                     }
 
-                    focus-within:border-[#0F4659]
+                    focus-within:border-[#0095FD]
                     focus-within:ring-1
-                    focus-within:ring-[#0F4659]
+                    focus-within:ring-[#0095FD]
                 `}
                 onClick={() =>
                     setOpen(true)
@@ -839,11 +839,11 @@ function SearchMultiSelect({
                                     px-2.5
                                     py-1
                                     rounded-full
-                                    bg-[#0F4659]/20
+                                    bg-[#0095FD]
                                     border
-                                    border-[#0F4659]
+                                    border-[#0095FD]
                                     text-xs
-                                    text-[#0F4659]
+                                    text-[#FAF9F7]
                                 "
                             >
 
@@ -870,9 +870,9 @@ function SearchMultiSelect({
                                         items-center
                                         justify-center
                                         rounded-full
-                                        text-[#0F4659]
-                                        hover:bg-[#0F4659]/20
-                                        hover:text-[#0F4659]
+                                        text-[#FAF9F7]
+                                        hover:bg-[#0095FD]
+                                        hover:text-red-400
                                     "
                                 >
                                     ×
@@ -1001,13 +1001,14 @@ function SearchMultiSelect({
                                                 py-2.5
                                                 text-left
                                                 text-sm
+                                                text-gray-400
                                                 flex
                                                 items-center
                                                 justify-between
 
                                                 ${selectedOption
-                                                    ? "bg-gray-50 text-[#0F4659] cursor-not-allowed"
-                                                    : "text-gray-700 hover:bg-[#0F4659]/20"
+                                                    ? "bg-gray-50 text-gray-100 cursor-not-allowed"
+                                                    : "text-gray-100 hover:bg-[#0095FD] hover:text-gray-100"
                                                 }
                                             `}
                                         >
@@ -1019,7 +1020,7 @@ function SearchMultiSelect({
 
                                             {selectedOption && (
 
-                                                <span className="text-xs text-[#0F4659]">
+                                                <span className="text-xs text-gray-400">
                                                     Selected
                                                 </span>
 
@@ -1526,13 +1527,13 @@ export default function ProductCreateSimple() {
         border-gray-300
         rounded-md
         text-sm
-        text-gray-700
+        text-gray-400
         bg-white
         outline-none
         transition
-        focus:border-[#0F4659]
+        focus:border-[#0095FD]
         focus:ring-1
-        focus:ring-[#0F4659]
+        focus:ring-[#0095FD]
         disabled:bg-gray-100
         disabled:text-gray-500
         disabled:cursor-not-allowed
@@ -1550,7 +1551,7 @@ export default function ProductCreateSimple() {
     block
     text-xs
     font-medium
-    ${required ? "text-red-500" : "text-[#0F4659]"}
+    ${required ? "text-red-500" : "text-gray-400"}
     mb-1.5
 `;
 
@@ -2986,16 +2987,16 @@ export default function ProductCreateSimple() {
                 border
                 border-gray-200
                 rounded-lg
-                p-6
+                p-4
             "
             >
                 {/* HEADER */}
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Product Information
                     </h2>
 
-                    <p className="text-sm text-[#0F4659] mt-1">
+                    <p className="text-sm text-gray-400 mt-1">
                         Enter the basic information of the product.
                     </p>
                 </div>
@@ -3215,7 +3216,7 @@ export default function ProductCreateSimple() {
                                         Status
                                     </p>
 
-                                    <p className="text-xs text-[#0F4659] mt-1">
+                                    <p className="text-xs text-gray-400 mt-1">
                                         Current product status
                                     </p>
                                 </div>
@@ -3418,14 +3419,14 @@ export default function ProductCreateSimple() {
                         <h2 className="
                             text-base
                             font-semibold
-                            text-[#0F4659]
+                            text-gray-500
                         ">
                             Pricing & Tax
                         </h2>
 
                         <p className="
                             text-sm
-                            text-[#0F4659]
+                            text-gray-400
                             mt-1
                         ">
                             Configure purchase price,
@@ -3633,14 +3634,14 @@ export default function ProductCreateSimple() {
                         <h2 className="
                             text-base
                             font-semibold
-                            text-[#0F4659]
+                            text-gray-500
                         ">
                             Inventory Information
                         </h2>
 
                         <p className="
                             text-sm
-                            text-[#0F4659]
+                            text-gray-400
                             mt-1
                         ">
                             Configure stock levels,
@@ -3931,7 +3932,7 @@ export default function ProductCreateSimple() {
                         className="
                         text-base
                         font-semibold
-                        text-[#0F4659]
+                        text-gray-500
                     "
                     >
                         Product Settings
@@ -3940,7 +3941,7 @@ export default function ProductCreateSimple() {
                     <p
                         className="
                         text-sm
-                        text-[#0F4659]
+                        text-gray-400
                         mt-1
                     "
                     >
@@ -4002,7 +4003,7 @@ export default function ProductCreateSimple() {
                                 className="
                                 text-sm
                                 font-medium
-                                text-[#0F4659]
+                                text-gray-500
                             "
                             >
                                 Product Status
@@ -4076,10 +4077,10 @@ export default function ProductCreateSimple() {
         <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-5">
             {/* HEADER */}
 
-            <div className="shrink-0 px-6 py-4 bg-white border-b border-gray-200 flex items-center justify-between">
+            <div className="shrink-0 px-6 py-4 bg-[#408DFB] rounded-md border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div
-                        className="w-10 h-10 rounded-lg bg-[#0095FD]/20 border border-blue-100 flex items-center justify-center cursor-pointer"
+                        className="w-10 h-10 rounded-lg bg-[#FCF7F8] border border-blue-100 flex items-center justify-center cursor-pointer"
 
                         onClick={() => (navigate("/items"))}
                     >
@@ -4094,7 +4095,7 @@ export default function ProductCreateSimple() {
 
                     <div>
 
-                        <h1 className="text-lg font-semibold text-[#0095FD]"
+                        <h1 className="text-xl font-semibold text-[#FCF7F8]"
                             onClick={() => (navigate("/items"))}
                         >
                             {isEdit
@@ -4102,7 +4103,7 @@ export default function ProductCreateSimple() {
                                 : "New Product"}
                         </h1>
 
-                        <p className="mt-0.5 text-xs text-[#0095FD]">
+                        <p className="mt-0.5 text-xs text-[#FCF7F8]">
                             {isEdit
                                 ? "Update product information"
                                 : "Create a new product"}
@@ -4128,9 +4129,9 @@ export default function ProductCreateSimple() {
                         items-center
                         justify-center
                         rounded-md
-                        text-gray-400
-                        hover:bg-gray-100
-                        hover:text-gray-600
+                        text-[#FCF7F8]
+                        hover:bg-red-400
+                        hover:text-gray-100
                         disabled:opacity-50
                     "
                 >
@@ -4176,17 +4177,18 @@ export default function ProductCreateSimple() {
                                 )
                             }
                             className={`
-                                py-3
+                                py-2
                                 text-sm
                                 font-medium
                                 border-b-2
                                 whitespace-nowrap
                                 transition
+                                mt-3
 
                                 ${activeTab ===
                                     tab.id
-                                    ? "text-[#0F4659] border-[#0F4659]"
-                                    : "text-[#0F4659]/70 border-transparent hover:text-[#0F4659]"
+                                    ? "text-[#408DFB] border-[#408DFB]"
+                                    : "text-gray-400 border-transparent hover:text-[#408DFB]"
                                 }
                             `}
                         >

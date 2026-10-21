@@ -151,12 +151,11 @@ export default function NavbarInvoice() {
     // ============================================================
 
     return (
-
         <div
             className="
                 h-[60px]
-                border
-                border-gray-100
+               border-t 
+               border-lime-300
                 rounded-md
                 flex
                 items-center
@@ -168,12 +167,12 @@ export default function NavbarInvoice() {
         >
 
             {/* =====================================================
-    LEFT - HOME + ALL INVOICES + INVOICES STATUS FILTER
+    LEFT - HOME + ALL CUSTOMERS + CUSTOMER STATUS FILTER
 ====================================================== */}
 
             <div className="flex items-center gap-2">
 
-                {/* HOME + ALL INVOICES */}
+                {/* HOME + ALL CUSTOMERS */}
                 <div className="flex items-center gap-2">
 
                     <button
@@ -189,7 +188,7 @@ export default function NavbarInvoice() {
                 bg-[white]
                 p-2
                 text-[#0F4659]
-                hover:bg-[#0F4659]/20
+                hover:bg-[#408DFB]/20
                 transition
             "
                         title="Home"
@@ -311,11 +310,7 @@ export default function NavbarInvoice() {
             </div>
 
 
-
-            {/* =====================================================
-                RIGHT
-            ====================================================== */}
-
+            {/* Right */}
             <div className="flex items-center gap-2">
 
                 {/* New Button */}
@@ -324,7 +319,7 @@ export default function NavbarInvoice() {
                         type="button"
                         onClick={(e) => {
                             e.stopPropagation();
-                            navigate("/invoices/product/new");
+                            navigate("/invoices/product/new")
                         }}
                         className="
                            group

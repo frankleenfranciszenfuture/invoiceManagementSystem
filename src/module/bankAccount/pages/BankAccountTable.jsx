@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 
 import toast from "react-hot-toast";
+import Pagination from "../../../common/pagination/table/Pagination";
 
 
 export default function BankAccountTable({
@@ -46,11 +47,11 @@ export default function BankAccountTable({
     const {
         loading,
         error,
-    } = useSelector(
-        (state) =>
-            state.bankAccount || {}
-    );
-
+        pageNumber = 0,
+        pageSize = 10,
+        totalPages = 0,
+        totalElements = 0,
+    } = useSelector((state) => state.bankAccount || {});
 
     const currentBankAccounts =
         bankAccounts || [];
@@ -704,8 +705,10 @@ export default function BankAccountTable({
 
         <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
             <div className="overflow-x-auto overflow-y-visible">
-                <table className="w-full">
-                    <thead className="bg-[#F3F4F6] border-b border-gray-300">
+                <table className="w-full ">
+
+
+                    <thead className="bg-[#FAF9F7]/20 border-b border-gray-300">
 
                         <tr>
 
@@ -724,8 +727,8 @@ export default function BankAccountTable({
                                     px-5
                                     py-3
                                     font-medium
-                                    text-sm
-                                    text-[#0F4659]/90
+                                    text-md
+                                    text-gray-400
                                     uppercase
                                     ${header === "Actions"
                                             ? "text-right"
@@ -778,7 +781,7 @@ export default function BankAccountTable({
                                             border-b
                                             border-gray-100
                                             hover:bg-gray-50
-                                            text-sm
+                                            text-xs
                                             cursor-pointer
                                             transition-colors
                                         "
@@ -1169,104 +1172,30 @@ export default function BankAccountTable({
                     PAGINATION
                 ===================================================== */}
 
-                <div
-                    className="
-                        p-4
-                        border-t
-                        border-gray-100
-                        flex
-                        items-center
-                        justify-between
-                    "
-                >
-
-                    <p
-                        className="
-                            text-sm
-                            text-gray-500
-                        "
-                    >
-
-                        Showing{" "}
-
-                        {
-                            currentBankAccounts.length
-                        }
-
-                        {" "}of{" "}
-
-                        {
-                            currentBankAccounts.length
-                        }
-
-                        {" "}bank accounts
-
-                    </p>
-
-
-                    <div
-                        className="
-                            flex
-                            items-center
-                            gap-3
-                        "
-                    >
-
-                        {/* PREVIOUS */}
-
-                        <button
-                            type="button"
-                            disabled={true}
-                            className="
-                            text-sm
-                           text-[#0F4659] 
-                           hover:text-[#0F4659]/90
-                          disabled:cursor-not-allowed
-                          disabled:opacity-50"
-                        >
-                            Previous
-                        </button>
-
-
-                        {/* CURRENT PAGE */}
-
-                        <span
-                            className="
-                            w-8
-                            h-8
-                            flex
-                            items-center
-                            justify-center
-                            rounded-lg
-                            bg-[#0F4659]
-                            text-white
-                            text-sm
-                            font-medium
-                            "
-                        >
-                            1
-                        </span>
-
-
-                        {/* NEXT */}
-
-                        <button
-                            type="button"
-                            disabled={true}
-                            className="
-                            text-sm
-                            text-[#0F4659]
-                            hover:text-[#0F4659]/90
-                             disabled:cursor-not-allowed
-                                disabled:opacity-50
-                            "
-                        >
-                            Next
-                        </button>
-
-                    </div>
-
-                </div>
+                <Pagination
+                    page={Number(pageNumber) || 0}
+                    size={Number(pageSize) || 10}
+                    totalElements={Number(totalElements) || 0}
+                    totalPages={Number(totalPages) || 0}
+                    loading={loading}
+                    label="bankAccounts"
+                    onPageChange={(nextPage) => {
+                        dispatch(
+                            fetchAllBankAccounts({
+                                page: nextPage,
+                                size: Number(pageSize) || 10,
+                            })
+                        );
+                    }}
+                    onPageSizeChange={(nextSize) => {
+                        dispatch(
+                            fetchAllBankAccounts({
+                                page: 0,
+                                size: nextSize,
+                            })
+                        );
+                    }}
+                />
 
             </div>
 

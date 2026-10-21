@@ -23,6 +23,9 @@ import {
 } from "lucide-react";
 
 import toast from "react-hot-toast";
+import Pagination from "../../../common/pagination/table/Pagination";
+
+
 
 export default function InvoiceTable({
     invoices = [],
@@ -471,15 +474,12 @@ export default function InvoiceTable({
     ===================================================== */
 
     return (
-
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-auto">
-            <div className="overflow-x-auto overflow-y-auto">
-
-
-                <table className="w-full min-w-[1200px] border-collapse table-fixed">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
+            <div className="overflow-x-auto overflow-y-visible">
+                <table className="w-full">
 
 
-                    <thead className="bg-[#E5DFD6]/20 border-b border-gray-300">
+                    <thead className="bg-[#FAF9F7]/20 border-b border-gray-300">
 
                         <tr>
 
@@ -500,8 +500,8 @@ export default function InvoiceTable({
                                     px-5
                                     py-3
                                     font-medium
-                                    text-sm
-                                    text-[#0F4659]/90
+                                    text-md
+                                    text-gray-400
                                     uppercase
                                     ${header === "Actions"
                                             ? "text-right"
@@ -625,7 +625,7 @@ export default function InvoiceTable({
                                                 border-b
                                                 border-gray-100
                                                 hover:bg-gray-50
-                                                text-sm
+                                                text-xs
                                                 cursor-pointer
                                                 transition-colors
                                             "
@@ -905,151 +905,30 @@ export default function InvoiceTable({
                     PAGINATION
                 ===================================================== */}
 
-                <div
-                    className="
-                        p-4
-                        border-t
-                        border-gray-100
-                        flex
-                        items-center
-                        justify-between
-                    "
-                >
-
-                    <p
-                        className="
-                            text-sm
-                            text-gray-500
-                        "
-                    >
-
-                        Showing{" "}
-
-                        {currentInvoices.length}
-
-                        {" "}of{" "}
-
-                        {totalElements || 0}
-
-                        {" "}invoices
-
-                    </p>
-
-
-                    <div
-                        className="
-                            flex
-                            items-center
-                            gap-3
-                        "
-                    >
-
-                        {/* PREVIOUS */}
-
-                        <button
-                            type="button"
-                            disabled={
-                                Number(pageNumber) <= 0
-                            }
-                            onClick={() => {
-
-                                const nextPage =
-                                    Math.max(
-                                        0,
-                                        (
-                                            Number(
-                                                pageNumber
-                                            ) || 0
-                                        ) - 1
-                                    );
-
-                                dispatch(
-                                    fetchInvoices({
-                                        page: nextPage,
-                                        size:
-                                            Number(
-                                                pageSize
-                                            ) || 20,
-                                    })
-                                );
-
-                            }}
-                            className="
-                                text-sm
-                                text-gray-400
-                                hover:text-gray-600
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
-                            "
-                        >
-                            Previous
-                        </button>
-
-
-                        {/* CURRENT PAGE */}
-
-                        <span
-                            className="
-                                w-8
-                                h-8
-                                flex
-                                items-center
-                                justify-center
-                                rounded-lg
-                               bg-[#754DD2]
-                                text-white
-                                text-sm
-                                font-medium
-                            "
-                        >
-
-                            {(Number(pageNumber) || 0) + 1}
-
-                        </span>
-
-
-                        {/* NEXT */}
-
-                        <button
-                            type="button"
-                            disabled={
-                                (Number(pageNumber) || 0) >=
-                                (Number(totalPages) || 1) - 1
-                            }
-                            onClick={() => {
-
-                                const nextPage =
-                                    (
-                                        Number(
-                                            pageNumber
-                                        ) || 0
-                                    ) + 1;
-
-                                dispatch(
-                                    fetchInvoices({
-                                        page: nextPage,
-                                        size:
-                                            Number(
-                                                pageSize
-                                            ) || 20,
-                                    })
-                                );
-
-                            }}
-                            className="
-                                text-sm
-                                text-gray-400
-                                hover:text-gray-600
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
-                            "
-                        >
-                            Next
-                        </button>
-
-                    </div>
-
-                </div>
+                <Pagination
+                    page={Number(pageNumber) || 0}
+                    size={Number(pageSize) || 10}
+                    totalElements={Number(totalElements) || 0}
+                    totalPages={Number(totalPages) || 0}
+                    loading={loading}
+                    label="invoices"
+                    onPageChange={(nextPage) => {
+                        dispatch(
+                            fetchInvoices({
+                                page: nextPage,
+                                size: Number(pageSize) || 10,
+                            })
+                        );
+                    }}
+                    onPageSizeChange={(nextSize) => {
+                        dispatch(
+                            fetchInvoices({
+                                page: 0,
+                                size: nextSize,
+                            })
+                        );
+                    }}
+                />
 
             </div>
 

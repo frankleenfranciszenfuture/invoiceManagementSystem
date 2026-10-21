@@ -52,6 +52,7 @@ import partyViewReducer from "../module/parties/slices/partyViewSlice";
 import clearanceReducer from "../module/clearnaceOutStandingParties/slices/clearanceSlice";
 import clearanceViewReducer from "../module/clearnaceOutStandingParties/slices/clearanceViewSlice";
 
+import paginationReducer from "../common/pagination/slices/paginationSlice";
 import menuPermissionReducer from "../module/menuPermission/slices/menuPermissionSlice";
 
 export const store = configureStore({
@@ -135,6 +136,9 @@ export const store = configureStore({
     //clearance
     clearance: clearanceReducer,
     clearanceView: clearanceViewReducer,
+
+    //pagniation
+    pagination: paginationReducer,
 
     //menuPermission
 

@@ -199,6 +199,7 @@ export default function NavbarProduct() {
                         title="Home"
                     >
                         <Home size={18} />
+                        <Tooltip text="Home" position="top" />
                     </button>
 
 
@@ -228,6 +229,7 @@ export default function NavbarProduct() {
                 hover:bg-[#408DFB]/90
             "
                     >
+
                         <h2 className="font-semibold text-gray-100">
                             {selectedProductView || "All Products"}
                         </h2>

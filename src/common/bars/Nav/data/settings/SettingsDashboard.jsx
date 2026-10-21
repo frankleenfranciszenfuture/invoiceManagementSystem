@@ -162,14 +162,14 @@ export default function SettingsDashboard() {
                         <div className="flex h-full items-center px-6">
                             <div className="flex items-center gap-3">
                                 <div className="flex h-10 w-10 items-center justify-center">
-                                    <Settings size={26} className="text-[#0F4659]" />
+                                    <Settings size={26} className="text-[#408DFB]" />
                                 </div>
 
                                 <div className="border-l border-gray-200 pl-3">
-                                    <h1 className="text-[18px] font-medium leading-tight text-[#0F4659]">
+                                    <h1 className="text-[18px] font-medium leading-tight text-gray-500">
                                         All Settings
                                     </h1>
-                                    <p className="text-xs text-[#0F4659]">WXYZ</p>
+                                    <p className="text-xs text-gray-400">WXYZ</p>
                                 </div>
                             </div>
 
@@ -193,10 +193,10 @@ export default function SettingsDashboard() {
                             <button
                                 type="button"
                                 onClick={() => navigate(-1)}
-                                className="flex items-center gap-1.5 rounded-lg bg-[#0F4659]/20 px-4 py-2 text-sm text-gray-700 transition hover:bg-[#0F4659]/50"
+                                className="flex items-center gap-1.5 rounded-lg bg-[#408DFB]/90 px-4 py-2 text-sm text-gray-100 transition hover:bg-red-400 hover:text-gray-100"
                             >
                                 Close Settings
-                                <X size={14} className="text-red-500" />
+                                <X size={14} className="text-gray-100 hover:text-gray-100" />
                             </button>
                         </div>
                     </header>
@@ -205,9 +205,9 @@ export default function SettingsDashboard() {
                     <main className="px-6 py-7">
                         {/* Promo banner */}
                         {showBanner && (
-                            <div className="mb-10 flex items-center gap-4 rounded-xl bg-[#0F4659]/20 px-4 py-3.5">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#0F4659]/70 shadow-sm">
-                                    <Settings size={20} className="text-white" />
+                            <div className="mb-10 flex items-center gap-4 rounded-xl bg-[#408DFB] px-4 py-3.5">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 shadow-sm">
+                                    <Settings size={20} className="text-[#408DFB]" />
                                 </div>
 
                                 <p className="flex-1 text-[13px] text-gray-700">
@@ -218,7 +218,7 @@ export default function SettingsDashboard() {
                                     type="button"
                                     onClick={() => setShowBanner(false)}
                                     aria-label="Dismiss banner"
-                                    className="shrink-0 rounded p-1 text-red-500 transition hover:bg-red-50"
+                                    className="shrink-0 rounded p-1 text-gray-100 transition hover:bg-red-500"
                                 >
                                     <X size={16} />
                                 </button>
@@ -245,7 +245,7 @@ export default function SettingsDashboard() {
                                         {orgColumns.map((sections, i) => (
                                             <div
                                                 key={i}
-                                                className="flex min-h-[370px] flex-col gap-3 rounded-xl border border-gray-200 bg-white p-1"
+                                                className="flex min-h-[370px] flex-col gap-3 rounded-xl text-gray-500 border border-gray-200 bg-white p-1"
                                             >
                                                 {sections.map((section) => (
                                                     <SectionBlock

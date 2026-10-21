@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import toast from "react-hot-toast";
+import Pagination from "../../../common/pagination/table/Pagination";
 
 export default function PartyTable({
     parties = [],
@@ -40,9 +41,17 @@ export default function PartyTable({
     const {
         loading,
         error,
+        pagination,
     } = useSelector(
         (state) => state.party || {}
     );
+
+    const {
+        pageNumber,
+        pageSize,
+        totalPages,
+        totalElements,
+    } = pagination || {};
 
     const currentParties = parties || [];
 
@@ -654,100 +663,30 @@ export default function PartyTable({
                     PAGINATION
                 ===================================================== */}
 
-                <div
-                    className="
-                        p-4
-                        border-t
-                        border-gray-100
-                        flex
-                        items-center
-                        justify-between
-                    "
-                >
-
-                    <p
-                        className="
-                            text-sm
-                            text-gray-500
-                        "
-                    >
-
-                        Showing{" "}
-
-                        {currentParties.length}
-
-                        {" "}of{" "}
-
-                        {currentParties.length}
-
-                        {" "}parties
-
-                    </p>
-
-                    <div
-                        className="
-                            flex
-                            items-center
-                            gap-3
-                        "
-                    >
-
-                        {/* PREVIOUS */}
-
-                        <button
-                            type="button"
-                            disabled={true}
-                            className="
-                                text-sm
-                               text-[#0F4659] 
-                                hover:text-[#0F4659]/90
-                                disabled:cursor-not-allowed
-                                disabled:opacity-50
-                            "
-                        >
-                            Previous
-                        </button>
-
-                        {/* CURRENT PAGE */}
-
-                        <span
-                            className="
-                                w-8
-                                h-8
-                                flex
-                                items-center
-                                 justify-center
-                                rounded-lg
-                                bg-[#0F4659]
-                                text-sm
-                                font-medium
-                                text-white
-                            "
-                        >
-                            1
-                        </span>
-
-                        {/* NEXT */}
-
-                        <button
-                            type="button"
-                            disabled={true}
-                            className="
-                               text-sm
-                                text-gray-500
-                                transition-colors
-                                 text-[#0F4659]
-                            hover:text-[#0F4659]/90
-                                disabled:cursor-not-allowed
-                                disabled:opacity-50
-                            "
-                        >
-                            Next
-                        </button>
-
-                    </div>
-
-                </div>
+                <Pagination
+                    page={Number(pageNumber) || 0}
+                    size={Number(pageSize) || 10}
+                    totalElements={Number(totalElements) || 0}
+                    totalPages={Number(totalPages) || 0}
+                    loading={loading}
+                    label="parties"
+                    onPageChange={(nextPage) => {
+                        dispatch(
+                            fetchAllParties({
+                                page: nextPage,
+                                size: Number(pageSize) || 10,
+                            })
+                        );
+                    }}
+                    onPageSizeChange={(nextSize) => {
+                        dispatch(
+                            fetchAllParties({
+                                page: 0,
+                                size: nextSize,
+                            })
+                        );
+                    }}
+                />
 
             </div>
 

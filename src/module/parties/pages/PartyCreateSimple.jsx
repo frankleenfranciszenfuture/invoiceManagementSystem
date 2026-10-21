@@ -1762,7 +1762,7 @@ export default function PartyCreateSimple() {
     return (
         <div className="flex  min-h-0 flex-col overflow-hidden bg-gray-50 mt-5">
             {/* HEADER */}
-            <header className="shrink-0 border-b border-gray-200 bg-white">
+            <header className="shrink-0 border-b border-gray-200 bg-[#0095FD] rounded">
                 <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-7">
                     <div className="flex min-w-0 items-center gap-3">
                         {/* <button
@@ -1782,11 +1782,11 @@ export default function PartyCreateSimple() {
                         </div>
 
                         <div className="min-w-0">
-                            <h1 className="truncate text-lg font-semibold text-gray-900">
+                            <h1 className="truncate text-lg font-semibold text-[#FAF9F7]">
                                 {isEdit ? "Edit Party" : "Create Party"}
                             </h1>
 
-                            <p className="mt-0.5 text-sm text-gray-500">
+                            <p className="mt-0.5 text-sm text-[#FAF9F7]">
                                 {isEdit
                                     ? "Update party information and account details."
                                     : "Add a new supplier or customer to your records."}
@@ -1799,39 +1799,41 @@ export default function PartyCreateSimple() {
                         onClick={handleClose}
                         disabled={submitting}
                         title="Close"
-                        className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-[#FAF9F7] transition hover:bg-red-400 hover:text-gray-100 disabled:opacity-50"
                     >
                         <X size={20} />
                     </button>
                 </div>
-
-                {/* TABS */}
-                <div className="overflow-x-auto px-5 lg:px-7">
-                    <div className="flex min-w-max gap-6">
-                        {TABS.map((tab) => {
-                            const Icon = tab.icon;
-                            const active = activeTab === tab.id;
-
-                            return (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    onClick={() =>
-                                        setActiveTab(tab.id)
-                                    }
-                                    className={`relative inline-flex items-center gap-2 border-b-2 px-1 pb-3 pt-1 text-sm font-medium transition ${active
-                                        ? "border-blue-600 text-blue-600"
-                                        : "border-transparent text-gray-500 hover:text-gray-800"
-                                        }`}
-                                >
-                                    <Icon size={16} />
-                                    {tab.label}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
             </header>
+
+
+            {/* TABS */}
+            <div className="overflow-x-auto px-5 lg:px-7 mt-3 border-b border-gray-300 rounded">
+                <div className="flex min-w-max gap-6">
+                    {TABS.map((tab) => {
+                        const Icon = tab.icon;
+                        const active = activeTab === tab.id;
+
+                        return (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() =>
+                                    setActiveTab(tab.id)
+                                }
+                                className={`relative inline-flex items-center gap-2 border-b-2 px-1 pb-3 pt-1 text-sm font-medium transition ${active
+                                    ? "border-blue-600 text-blue-600"
+                                    : "border-transparent text-gray-500 hover:text-gray-800"
+                                    }`}
+                            >
+                                <Icon size={16} />
+                                {tab.label}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
 
 
             {/* CONTENT */}

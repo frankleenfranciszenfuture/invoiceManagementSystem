@@ -194,11 +194,11 @@ export default function NavbarBankAccount() {
                 justify-center
                 rounded-md
                 border
-                border-gray-200
+                border-blue-300
                  bg-[white]
                 p-2
-                text-[#0F4659]
-                hover:bg-[#0F4659]/20
+                text-[#0095FD]
+                hover:bg-[#0095FD]/20
                 transition
             "
                         title="Home"
@@ -226,11 +226,11 @@ export default function NavbarBankAccount() {
                 items-center
                 gap-1
                 rounded-md
-                bg-[#0F4659]
+                bg-[#0095FD]
                 px-3
                 py-2
                 cursor-pointer
-                hover:bg-[#0F4659]/90
+                hover:bg-[#0095FD]/90
             "
                     >
                         <h2 className="font-semibold text-gray-100">
@@ -276,7 +276,7 @@ export default function NavbarBankAccount() {
                                 border-gray-50
                                 text-left
                                 text-sm
-                                hover:bg-[#0F4659]/90
+                                hover:bg-[#0095FD]/90
                                 hover:text-white
                                 rounded-md
                             "
@@ -295,10 +295,10 @@ export default function NavbarBankAccount() {
                         px-4
                         py-3
                         text-left
-                        text-[#0F4659]
-                        bg-[#0F4659]/20
+                        text-gray-500
+                        bg-[#0095FD]/20
                         hover:text-white
-                        hover:bg-[#0F4659]/80
+                        hover:bg-[#0095FD]/80
                         rounded-md
                     "
                                 onClick={() => {
@@ -356,19 +356,18 @@ export default function NavbarBankAccount() {
                             flex
                             items-center
                             gap-1
-                            bg-[#0F4659]
+                            bg-[#0095FD]
                             px-3
                             py-2
                             text-sm
                             font-medium
                             text-white
-                            hover:bg-[#0F4659]/90
+                            hover:bg-[#0095FD]/90
                         "
                     >
 
                         <Plus size={14} />
 
-                        New Bank Account
 
                     </button>
 
@@ -399,7 +398,8 @@ export default function NavbarBankAccount() {
                             border
                             border-gray-300
                             p-2
-                            hover:bg-gray-50
+                            text-[#0095FD]
+                            hover:bg-[#0095FD]/20
                         "
                         title="More"
                     >

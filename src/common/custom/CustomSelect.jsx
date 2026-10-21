@@ -159,8 +159,8 @@ export default function CustomSelect({
                     rounded-md border border-gray-300 bg-white
                     text-left text-[#0F4659] text-sm
                     outline-none transition
-                    focus:border-[#0F4659]
-                    focus:ring-1 focus:ring-[#0F4659]
+                    focus:border-[#0095FD]
+                    focus:ring-1 focus:ring-[#0095FD]
                     disabled:cursor-not-allowed
                     disabled:bg-gray-100 disabled:opacity-60
                     
@@ -216,8 +216,8 @@ export default function CustomSelect({
                                     gap-2 rounded-sm px-3 py-2 text-sm transition-colors
                                   
                                     ${active
-                                        ? "bg-[#1A2444] text-white"
-                                        : "text-[#0F4659] hover:bg-[#0F4659] hover:text-white"
+                                        ? "bg-[#0095FD] text-white"
+                                        : "text-[#0F4659] hover:bg-[#0095FD] hover:text-white"
                                     }
                                 `}
                             >

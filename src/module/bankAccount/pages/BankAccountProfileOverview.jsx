@@ -52,6 +52,13 @@ const ACCOUNT_FIELDS = [
         type: "currency",
         required: true,
     },
+
+    {
+        key: "description",
+        label: "Description",
+        type: "description",
+        required: false,
+    },
 ];
 
 const BANK_FIELDS = [
@@ -166,9 +173,9 @@ function SectionCard({
     children,
 }) {
     return (
-        <div className="flex h-full min-w-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex h-full min-w-0 flex-col rounded-xl  border border-[#166534]/40 bg-white shadow-sm">
             <div className="flex items-center justify-between gap-3 px-4 pt-4">
-                <h3 className="text-[14px] font-semibold text-slate-900">
+                <h3 className="text-[14px] font-semibold text-slate-500">
                     {title}
                 </h3>
 
@@ -510,7 +517,7 @@ function FieldsSection({
                     className={`py-2.5 ${index > 0 ? "border-t border-slate-100" : ""
                         }`}
                 >
-                    <p className="text-[12px] font-medium text-slate-700">
+                    <p className="text-[12px] font-medium text-slate-500">
                         {field.label}
 
                         {editing && field.required && (
@@ -529,7 +536,7 @@ function FieldsSection({
                             )}
                         </div>
                     ) : (
-                        <p className="mt-1 break-words text-[12.5px] leading-5 text-slate-800">
+                        <p className="mt-1 break-words text-[12.5px] leading-5 text-slate-600 ">
                             {renderValue(field, values[field.key])}
                         </p>
                     )}
@@ -543,11 +550,37 @@ function FieldsSection({
    STAT TILE
 ========================================================= */
 
-function StatTile({ icon: Icon, label, value }) {
+function StatTile({
+    icon: Icon,
+    label,
+    value,
+    bgColor = "bg-[#166534]/80",
+    onClick,
+}) {
     return (
-        <div className="min-w-0 rounded-lg border border-slate-200 bg-[#0F4659] px-3 py-2.5">
+        <div
+            onClick={onClick}
+            role={onClick ? "button" : undefined}
+            tabIndex={onClick ? 0 : undefined}
+            onKeyDown={(e) => {
+                if (onClick && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    onClick();
+                }
+            }}
+            className={`
+                group min-w-0 rounded-lg border border-white/20
+                ${bgColor} px-3 py-2.5
+                transition-all duration-300 ease-in-out
+                hover:-translate-y-1 hover:shadow-lg
+                ${onClick ? "cursor-pointer" : ""}
+            `}
+        >
             <div className="flex items-center gap-1.5 text-gray-100">
-                <Icon size={14} className="shrink-0 text-gray-100" />
+                <Icon
+                    size={14}
+                    className="shrink-0 transition-all duration-300 group-hover:animate-pulse group-hover:text-cyan-200"
+                />
                 <span className="truncate text-[10.5px]">{label}</span>
             </div>
 
@@ -566,6 +599,7 @@ export default function BankAccountProfileOverview({ bankAccountId }) {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { id: paramId } = useParams();
+    const bankInformationRef = useRef(null);
 
     const id = bankAccountId ?? paramId;
 
@@ -748,53 +782,58 @@ export default function BankAccountProfileOverview({ bankAccountId }) {
             {/* PROFILE HEADER */}
 
             <div className="w-full space-y-4">
-                <div className="rounded-xl border border-slate-100 bg-white p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-4 px-2 py-3 pb-5">
-                        <div className="flex items-start gap-4">
+                <div className="rounded-xl bg-[#166534]/90 p-2 shadow shadow-md border-t border-b border-[#F59E0B]/50">
+                    <div className="flex flex-wrap items-start justify-between gap-4 px-2 py-3 pb-4">
+                        <div className="flex items-start gap-4 py-2">
                             {/* AVATAR */}
 
                             <div
-                                className="-mt-[15px] flex h-[86px] w-[86px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-[4px] border-white bg-gradient-to-br from-[#0F4659]/70 to-[#0F4659] shadow-md"
+                                className=" flex h-[86px] w-[86px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full 
+                                border-[2px] border-slate-300
+                                bg-gradient-to-br from-[#9AE600] to-[#166534] shadow-md hover:bg-[#FF8904]/20"
                                 onClick={() => navigate("/bankAccount")}
                                 title="Back to Bank Accounts"
                             >
-                                <Landmark size={32} className="text-white" />
+                                <Landmark size={40} className="px-1 text-slate-100  " />
                             </div>
 
                             {/* ACCOUNT DETAILS */}
 
                             <div className="pt-1">
-                                <h2 className="text-[24px] font-semibold leading-tight text-[#0F4659]">
+                                <h2 className="text-[34px] font-semibold leading-tight text-slate-100">
                                     {current.accountName || "Bank Account"}
                                 </h2>
 
-                                <p className="mt-0.5 text-[12px] text-[#0F4659]">
-                                    Account Code: {current.accountCode || "-"}
+                                <p className="mt-0.5 text-[12px] text-gray-100">
+                                    ACCOUNT NO : {current.accountNumber || "-"} |   IFSC : {current.ifsc || "-"}
                                 </p>
+                                <p className="mt-0.5 text-[12px] text-gray-100">
 
+                                </p>
                                 <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-slate-500">
-                                    <span className="flex items-center gap-1 text-slate-700">
+
+                                    <span className="flex items-center gap-1 text-slate-100">
                                         <Building2 size={13} />
                                         {current.bankName || "-"}
                                     </span>
 
-                                    <span className="flex items-center gap-1 text-slate-700">
+                                    <span className="flex items-center gap-1 text-slate-100">
                                         <CreditCard size={13} />
                                         {current.accountType || "-"}
                                     </span>
 
-                                    <span className="flex items-center gap-1 text-slate-700">
+                                    <span className="flex items-center gap-1 text-slate-100">
                                         <CircleDollarSign size={13} />
                                         {current.currency || "INR"}
                                     </span>
 
-                                    <span>
+                                    <span className="flex items-center gap-1 text-slate-100">
                                         Status:{" "}
                                         <b
                                             className={
                                                 isActive
-                                                    ? "font-semibold text-emerald-600"
-                                                    : "font-semibold text-slate-500"
+                                                    ? "px-3 font-semibold text-gray-100 bg-emerald-400 rounded-full"
+                                                    : "px-3 font-semibold text-slate-100 bg-gray-400 rounded-full"
                                             }
                                         >
                                             {current.status || "ACTIVE"}
@@ -832,7 +871,7 @@ export default function BankAccountProfileOverview({ bankAccountId }) {
                 {/* ACCOUNT OVERVIEW */}
 
                 <div className="grid grid-cols-1 items-stretch gap-4">
-                    <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                    <div className="flex h-full flex-col rounded-xl border border-[#166534]/40 bg-white p-3 shadow-sm">
                         <h3 className="text-[14px] font-semibold text-slate-900">
                             Account Overview
                         </h3>
@@ -842,24 +881,34 @@ export default function BankAccountProfileOverview({ bankAccountId }) {
                                 icon={Landmark}
                                 label="Bank"
                                 value={current.bankName}
+                                bgColor="bg-[#0B57D0]"
+                                onClick={() =>
+                                    bankInformationRef.current?.scrollIntoView({
+                                        behavior: "smooth",
+                                        block: "start",
+                                    })
+                                }
                             />
 
                             <StatTile
                                 icon={Wallet}
                                 label="Account Type"
                                 value={current.accountType}
+                                bgColor="bg-[#FF8904]"
                             />
 
                             <StatTile
                                 icon={BadgeCheck}
                                 label="Primary Account"
                                 value={isPrimary ? "Yes" : "No"}
+                                bgColor="bg-[#166534]"
                             />
 
                             <StatTile
                                 icon={CircleDollarSign}
                                 label="Currency"
                                 value={current.currency}
+                                bgColor="bg-[#92400E]"
                             />
                         </div>
 
@@ -913,10 +962,10 @@ export default function BankAccountProfileOverview({ bankAccountId }) {
 
                 {/* ROW 1 — EDITABLE BANK INFORMATION + ACTIVITY */}
 
-                <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+                <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-1">
                     {/* LEFT — BANK ACCOUNT INFORMATION */}
 
-                    <div className="grid grid-cols-1 content-start gap-4">
+                    <div ref={bankInformationRef} id="Account Information" className="grid grid-cols-1 content-start gap-4 ">
                         <FieldsSection
                             title="Account Information"
                             fields={ACCOUNT_FIELDS}

@@ -17,6 +17,8 @@ import {
 import { openModal } from "../../ui/uiSlice";
 import { ChevronDown, Edit, Pencil, User, Eye, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
+import Pagination from "../../../common/pagination/table/Pagination";
+import { fetchCustomers } from "../../../api/customer/CustomerApi";
 
 export default function CustomerTable() {
 
@@ -28,7 +30,7 @@ export default function CustomerTable() {
         customers,
         loading,
         error,
-        page,
+        pageNumber,
         pageSize,
         totalPages,
         totalElements,
@@ -113,7 +115,7 @@ export default function CustomerTable() {
         <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
             <div className="overflow-x-auto overflow-y-visible">
                 <table className="w-full">
-                    <thead className="bg-[#8F9287]/20 border-b border-gray-300">
+                    <thead className="bg-[#FAF9F7]/20 border-b border-gray-300">
                         <tr>
                             {[
                                 "Display Name",
@@ -131,7 +133,7 @@ export default function CustomerTable() {
                                     px-4
                                     py-3
                                     font-medium
-                                    text-sm
+                                    text-md
                                     text-gray-400
                                     uppercase
                                     ${h === "Actions"
@@ -157,7 +159,7 @@ export default function CustomerTable() {
                                             dispatch(setSelectedCustomer(c));
                                             navigate(`/customers/view/${c.id}`);
                                         }}
-                                        className="border-b border-gray-100 hover:bg-gray-50 text-md cursor-pointer transition-colors"
+                                        className="border-b border-gray-100 hover:bg-gray-50 text-xs cursor-pointer transition-colors"
                                     >
                                         {/* Customer Info */}
                                         <td className="px-2 py-3">
@@ -298,37 +300,34 @@ export default function CustomerTable() {
                 </table>
 
 
-                <div className="p-5 border-t border-gray-100 flex items-center justify-between">
-                    <p className="text-sm text-gray-500">
-                        Showing {currentCustomers.length} of {totalElements || 0} customers
-                    </p>
+                {/* =====================================================
+                                   PAGINATION
+                               ===================================================== */}
 
-                    <div className="flex items-center gap-3">
-                        <button
-                            disabled={page <= 0}
-                            onClick={() => dispatch(setCurrentPage(Math.max(0, page - 1)))}
-                            className="text-sm text-[#0076BF] hover:text-[#0076BF]/90 disabled:opacity-50"
-                        >
-                            Previous
-                        </button>
-
-                        <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#6D3279] text-white text-sm font-medium">
-                            {(Number(page) || 0) + 1}
-                        </span>
-
-                        <button
-                            disabled={
-                                (Number(page) || 0) >= (Number(totalPages) || 1) - 1
-                            }
-                            onClick={() =>
-                                dispatch(setCurrentPage((Number(page) || 0) + 1))
-                            }
-                            className="text-sm text-[#0076BF] hover:text-[#0076BF]/90 disabled:opacity-50"
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
+                <Pagination
+                    page={Number(pageNumber) || 0}
+                    size={Number(pageSize) || 10}
+                    totalElements={Number(totalElements) || 0}
+                    totalPages={Number(totalPages) || 0}
+                    loading={loading}
+                    label="customers"
+                    onPageChange={(nextPage) => {
+                        dispatch(
+                            fetchCustomers({
+                                page: nextPage,
+                                size: Number(pageSize) || 10,
+                            })
+                        );
+                    }}
+                    onPageSizeChange={(nextSize) => {
+                        dispatch(
+                            fetchCustomers({
+                                page: 0,
+                                size: nextSize,
+                            })
+                        );
+                    }}
+                />
             </div >
         </div>
     );
