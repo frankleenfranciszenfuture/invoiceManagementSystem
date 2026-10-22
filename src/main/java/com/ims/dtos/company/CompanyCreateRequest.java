@@ -172,6 +172,7 @@ public class CompanyCreateRequest {
     )
     private String financialYearStart;
 
+    private Boolean isDefault = false;
 
     // =====================================================
     // STATUS

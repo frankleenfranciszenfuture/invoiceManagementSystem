@@ -2,10 +2,8 @@ package com.ims.entity;
 
 import com.ims.enums.CompanyStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @AllArgsConstructor
@@ -50,6 +48,9 @@ public class CompanyDetails extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private CompanyStatus status;
+
+    @Column(name = "is_default", nullable = false)
+    private Boolean isDefault = false;
 
     private Boolean active = true;
 }

@@ -57,6 +57,11 @@ public interface InvoiceMapper {
     )
 
     @Mapping(
+            target = "logo",
+            source = "companyDetails.logo"
+    )
+
+    @Mapping(
             target = "bankAccountId",
             source = "bankAccount.id"
     )

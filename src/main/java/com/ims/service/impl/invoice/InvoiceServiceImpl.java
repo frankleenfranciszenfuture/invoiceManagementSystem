@@ -16,6 +16,7 @@ import com.ims.exception.ValidationException;
 import com.ims.mapper.invoice.InvoiceMapper;
 import com.ims.repository.*;
 import com.ims.service.serviceInterface.currency.ExchangeRateService;
+import com.ims.service.serviceInterface.fileStorage.FileStorageService;
 import com.ims.service.serviceInterface.invoice.InvoiceNumberService;
 import com.ims.service.serviceInterface.invoice.InvoiceService;
 import com.ims.utils.base.BaseEntityUtil;
@@ -73,6 +74,8 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final BankAccountRepository bankAccountRepository;
 
     private final EmailSignatureRepository emailSignatureRepository;
+
+    private final FileStorageService fileStorageService;
     // =====================================================
     // CREATE INVOICE
     // =====================================================
@@ -142,22 +145,12 @@ public class InvoiceServiceImpl implements InvoiceService {
 
 
         // =====================================================
-        // FIND Company (OPTIONAL)
-        // =====================================================
+// FIND COMPANY
+// Use selected company or default company
+// =====================================================
 
-        CompanyDetails companyDetails = null;
-
-        if (request.getCompanyId() != null) {
-            companyDetails = companyRepository.findById(
-                    request.getCompanyId()
-            ).orElseThrow(() ->
-                    new ResourceNotFoundException(
-                            "Company not found with id: "
-                                    + request.getCompanyId()
-                    )
-            );
-        }
-
+        CompanyDetails companyDetails =
+                resolveCompanyDetails(request.getCompanyId());
 
 // =====================================================
         // FIND BankAccount (OPTIONAL)
@@ -369,9 +362,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         // =====================================================
 
         InvoiceResponse response =
-                invoiceMapper.toResponse(
-                        savedInvoice
-                );
+                toResponseWithFileUrls(savedInvoice);
 
 
         log.info(
@@ -432,7 +423,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         // =====================================================
 
         InvoiceResponse response =
-                invoiceMapper.toResponse(invoice);
+                toResponseWithFileUrls(invoice);
 
 
         return ApiResponse.success(
@@ -605,19 +596,13 @@ public class InvoiceServiceImpl implements InvoiceService {
 
 
         // =====================================================
-        // FIND Company (OPTIONAL)
-        // =====================================================
-
-        CompanyDetails companyDetails = null;
+// UPDATE COMPANY (OPTIONAL)
+// Change only when a company is explicitly selected
+// =====================================================
 
         if (request.getCompanyId() != null) {
-            companyDetails = companyRepository.findById(
-                    request.getCompanyId()
-            ).orElseThrow(() ->
-                    new ResourceNotFoundException(
-                            "Company not found with id: "
-                                    + request.getCompanyId()
-                    )
+            invoice.setCompanyDetails(
+                    resolveCompanyDetails(request.getCompanyId())
             );
         }
 
@@ -700,7 +685,6 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setCustomer(customer);
 
         invoice.setSalesPerson(salesPerson);
-        invoice.setCompanyDetails(companyDetails);
         invoice.setBankAccount(bankAccount);
         invoice.setEmailSignature(emailSignature);
         invoice.setCurrency(currency);
@@ -793,9 +777,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         // =====================================================
 
         InvoiceResponse response =
-                invoiceMapper.toResponse(
-                        savedInvoice
-                );
+                toResponseWithFileUrls(savedInvoice);
 
 
         return ApiResponse.success(
@@ -887,7 +869,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         // =====================================================
 
         InvoiceResponse response =
-                invoiceMapper.toResponse(savedInvoice);
+                toResponseWithFileUrls(savedInvoice);
 
 
         return ApiResponse.success(
@@ -1364,6 +1346,52 @@ public class InvoiceServiceImpl implements InvoiceService {
             default -> invoiceDate;
         };
     }
+
+
+    private CompanyDetails resolveCompanyDetails(Long companyId) {
+
+        // Use the company selected on the invoice form.
+        if (companyId != null) {
+            return companyRepository.findById(companyId)
+                    .filter(company ->
+                            Boolean.TRUE.equals(company.getActive()))
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException(
+                                    "Company not found or inactive: "
+                                            + companyId
+                            )
+                    );
+        }
+
+        // Otherwise, use the configured default company.
+        return companyRepository.findByIsDefaultTrue()
+                .filter(company ->
+                        Boolean.TRUE.equals(company.getActive()))
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "No active default company is configured."
+                        )
+                );
+    }
+
+    private InvoiceResponse toResponseWithFileUrls(
+            InvoiceEntity invoice
+    ) {
+        InvoiceResponse response =
+                invoiceMapper.toResponse(invoice);
+
+        if (response.getLogo() != null
+                && !response.getLogo().isBlank()) {
+
+            response.setLogo(
+                    fileStorageService.getFileUrl(
+                            response.getLogo()
+                    )
+            );
+        }
+
+        return response;
+    }
     // =====================================================
     // PAGE RESPONSE
     // =====================================================
@@ -1376,7 +1404,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                 invoices.getContent()
                         .stream()
                         .map(invoice ->
-                                invoiceMapper.toResponse(invoice)
+                                toResponseWithFileUrls(invoice)
                         )
                         .toList();
 

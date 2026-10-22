@@ -180,6 +180,7 @@ public class CompanyUpdateRequest {
     @NotNull(message = "Company status is required")
     private CompanyStatus status;
 
+    private Boolean isDefault = false;
 
     private Boolean active;
 }

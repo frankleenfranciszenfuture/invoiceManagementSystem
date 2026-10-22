@@ -105,6 +105,8 @@ public class InvoiceResponse extends BaseResponse {
 
     private String currencyCode;
 
+    private String logo;
+
     // =====================================================
     // EXCHANGE RATE
     // =====================================================

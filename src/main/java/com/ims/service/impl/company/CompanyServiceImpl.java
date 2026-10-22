@@ -199,6 +199,11 @@ public class CompanyServiceImpl implements CompanyService {
                 signature
         );
 
+        applyDefaultCompany(
+                company,
+                request.getIsDefault()
+        );
+
         baseEntityUtil.prepareForCreate(company);
 
         // =================================================
@@ -440,9 +445,6 @@ public class CompanyServiceImpl implements CompanyService {
                 request.getStatus()
         );
 
-        company.setActive(
-                request.getActive()
-        );
 
         // =================================================
         // 9. LOGO
@@ -460,6 +462,11 @@ public class CompanyServiceImpl implements CompanyService {
         uploadSignature(
                 company,
                 signature
+        );
+
+        applyDefaultCompany(
+                company,
+                request.getIsDefault()
         );
 
         baseEntityUtil.prepareForCreate(company);
@@ -667,7 +674,22 @@ public class CompanyServiceImpl implements CompanyService {
         return response;
     }
 
+    private void applyDefaultCompany(
+            CompanyDetails company,
+            Boolean makeDefault
+    ) {
+        boolean shouldBeDefault =
+                Boolean.TRUE.equals(makeDefault);
 
+        if (shouldBeDefault) {
+            // Unset the previous default, if any.
+            companyRepository.clearDefaultCompany(
+                    company.getId()
+            );
+        }
+
+        company.setIsDefault(shouldBeDefault);
+    }
     // =====================================================
     // PAGE RESPONSE
     // =====================================================

@@ -48,5 +48,6 @@ public class CompanyResponse extends BaseResponse {
     private String financialYearStart;
 
     private CompanyStatus status;
+    private Boolean isDefault;
     private Boolean active;
 }
