@@ -14,13 +14,11 @@ const invoiceTemplates = [
     name: "Invoice Template 2",
     component: InvoiceTemplate2,
   },
-
   {
     id: "InvoiceTemplate3",
     name: "Invoice Template 3",
     component: InvoiceTemplate3,
   },
-
   {
     id: "InvoiceTemplate4",
     name: "Invoice Template 4",

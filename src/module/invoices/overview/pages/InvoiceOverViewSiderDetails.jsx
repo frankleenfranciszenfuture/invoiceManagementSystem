@@ -217,14 +217,14 @@ export default function InvoiceOverViewSiderDetails() {
                                         </div>
                                     </div>
 
-                                    <div className="shrink-0 text-right">
+                                    {/* <div className="shrink-0 text-right">
                                         <p className="text-sm font-semibold text-gray-800">
                                             ₹
                                             {Number(
                                                 invoice.grandTotal || 0
                                             ).toFixed(2)}
                                         </p>
-                                    </div>
+                                    </div> */}
                                 </div>
                             </div>
                         );

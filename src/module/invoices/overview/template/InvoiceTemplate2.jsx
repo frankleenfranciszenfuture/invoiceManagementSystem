@@ -274,7 +274,7 @@ const getItemTaxBreakdown = (
  * ============================================================
  */
 
-export default function InvoiceTemplate2({
+export default function InvoiceTemplate3({
     invoice,
     taxMasters = [],
     preview = false,

@@ -73,6 +73,8 @@ const INITIAL_FORM = {
     status: "ACTIVE",
     logo: null,
     signature: null,
+
+    isDefault: false,
 };
 
 const TABS = [
@@ -100,7 +102,7 @@ const CURRENCY_OPTIONS = [
 ========================================================= */
 
 const labelClass =
-    "mb-1.5 block text-xs font-medium text-[#0F4659]";
+    "mb-1.5 block text-xs font-medium text-gray-400";
 
 
 
@@ -1034,7 +1036,7 @@ export default function CompanyCreateSimpleNew() {
         field,
         label,
         options,
-        required = false,
+        required = true,
     }) => (
         <div>
             <label className={required ? getLabelClass(true) : labelClass}>
@@ -1066,11 +1068,11 @@ export default function CompanyCreateSimpleNew() {
         <div className="w-full max-w-7xl">
             <div className="rounded-lg border border-gray-200 bg-white p-6">
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Company Information
                     </h2>
 
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-400">
                         Enter the basic information of the company.
                     </p>
                 </div>
@@ -1112,31 +1114,49 @@ export default function CompanyCreateSimpleNew() {
                         <div className="mb-4 flex items-center gap-2">
                             <Building2
                                 size={18}
-                                className="text-[#0F4659]"
+                                className="text-gray-500"
                             />
 
-                            <h3 className="text-sm font-semibold text-gray-800">
-                                Company Status
+                            <h3 className="text-sm font-semibold text-gray-500">
+                                Default Company
                             </h3>
                         </div>
 
-                        {renderSelect({
-                            field: "status",
-                            label: "Status",
-                            options: STATUS_OPTIONS,
-                            required: true,
-                        })}
 
                         <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-3">
-                            <p className="text-xs text-gray-500">
+                            {/* <p className="text-xs text-gray-500">
                                 Company status controls whether this
                                 company is available for normal transactions.
-                            </p>
+                            </p> */}
+                            {/* DEFAULT COMPANY CHECKBOX */}
+
+                            <label className="flex cursor-pointer items-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(form.isDefault)}
+                                    onChange={(event) =>
+                                        handleChange("isDefault", event.target.checked)
+                                    }
+                                    className="mt-0.5 h-4 w-4 cursor-pointer rounded border-gray-300 text-[#0F4659] focus:ring-[#0F4659]"
+                                />
+
+                                <div>
+                                    <span className="block text-sm font-medium text-[#0F4659]">
+                                        Set as Default Company
+                                    </span>
+
+                                    <span className="mt-1 block text-xs leading-5 text-gray-500">
+                                        Use this company by default when creating invoices,
+                                        unless another company is selected.
+                                    </span>
+                                </div>
+                            </label>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
     );
 
     /* =====================================================
@@ -1147,17 +1167,17 @@ export default function CompanyCreateSimpleNew() {
         <div className="w-full max-w-7xl">
             <div className="rounded-lg border border-gray-200 bg-white p-6">
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Contact & Address
                     </h2>
 
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-400">
                         Add company contact information and registered address.
                     </p>
                 </div>
 
                 <div>
-                    <h3 className="mb-4 text-sm font-semibold text-gray-700">
+                    <h3 className="mb-4 text-sm font-semibold text-gray-500">
                         Contact Information
                     </h3>
 
@@ -1197,7 +1217,7 @@ export default function CompanyCreateSimpleNew() {
                 </div>
 
                 <div className="mt-7 border-t border-gray-200 pt-6">
-                    <h3 className="mb-4 text-sm font-semibold text-gray-700">
+                    <h3 className="mb-4 text-sm font-semibold text-gray-500">
                         Company Address
                     </h3>
 
@@ -1295,11 +1315,11 @@ export default function CompanyCreateSimpleNew() {
         <div className="w-full max-w-7xl">
             <div className="rounded-lg border border-gray-200 bg-white p-6">
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Tax & Registration
                     </h2>
 
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-400">
                         Enter the company's tax and registration details.
                     </p>
                 </div>
@@ -1351,11 +1371,11 @@ export default function CompanyCreateSimpleNew() {
         <div className="w-full max-w-7xl">
             <div className="rounded-lg border border-gray-200 bg-white p-6">
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Invoice & Company Settings
                     </h2>
 
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-400">
                         Configure invoice numbering, currency and financial year.
                     </p>
                 </div>
@@ -1395,7 +1415,7 @@ export default function CompanyCreateSimpleNew() {
                 </div>
 
                 <div className="mt-8 max-w-sm border-t border-gray-200 pt-6">
-                    <h3 className="mb-4 text-sm font-semibold text-gray-700">
+                    <h3 className="mb-4 text-sm font-semibold text-gray-500">
                         Company Status
                     </h3>
 
@@ -1418,11 +1438,11 @@ export default function CompanyCreateSimpleNew() {
         <div className="w-full max-w-7xl">
             <div className="rounded-lg border border-gray-200 bg-white p-6">
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Company Branding
                     </h2>
 
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-400">
                         Upload the company logo and signature used in documents and invoices.
                     </p>
                 </div>
@@ -1431,11 +1451,11 @@ export default function CompanyCreateSimpleNew() {
                     {/* LOGO */}
 
                     <div className="rounded-lg border border-gray-200 p-4">
-                        <h3 className="text-sm font-semibold text-gray-800">
+                        <h3 className="text-sm font-semibold text-gray-500">
                             Company Logo
                         </h3>
 
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-1 text-xs text-gray-400">
                             PNG, JPG or WEBP. Maximum 5 MB.
                         </p>
 
@@ -1453,7 +1473,7 @@ export default function CompanyCreateSimpleNew() {
                                         className="text-gray-400"
                                     />
 
-                                    <span className="mt-2 text-sm text-gray-500">
+                                    <span className="mt-2 text-sm text-gray-400">
                                         Upload Logo
                                     </span>
                                 </>
@@ -1490,11 +1510,11 @@ export default function CompanyCreateSimpleNew() {
                     {/* SIGNATURE */}
 
                     <div className="rounded-lg border border-gray-200 p-4">
-                        <h3 className="text-sm font-semibold text-gray-800">
+                        <h3 className="text-sm font-semibold text-gray-500">
                             Signature
                         </h3>
 
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-1 text-xs text-gray-400">
                             PNG, JPG or WEBP. Maximum 5 MB.
                         </p>
 
@@ -1512,7 +1532,7 @@ export default function CompanyCreateSimpleNew() {
                                         className="text-gray-400"
                                     />
 
-                                    <span className="mt-2 text-sm text-gray-500">
+                                    <span className="mt-2 text-sm text-gray-400">
                                         Upload Signature
                                     </span>
                                 </>
@@ -1694,25 +1714,25 @@ export default function CompanyCreateSimpleNew() {
         <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-5">
             {/* HEADER */}
 
-            <div className="shrink-0 px-6 py-4 bg-white border-b border-gray-200 flex items-center justify-between">
+            <div className="shrink-0 px-6 py-4 bg-[#408DFB] border-b border-gray-200 rounded flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div
-                        className="w-10 h-10 rounded-lg bg-[#0F4659]/20 border border-blue-100 flex items-center justify-center cursor-pointer"
+                        className="w-10 h-10 rounded-lg bg-[#FCF7F8] border border-blue-100 flex items-center justify-center cursor-pointer"
                         onClick={() => navigate("/bankAccount")}
                     >
                         <Landmark
                             size={20}
-                            className="text-[#0F4659]"
+                            className="text-[#408DFB]"
                         />
                     </div>
 
 
                     <div>
-                        <h1 className="text-lg font-semibold text-[#0F4659]">
+                        <h1 className="text-lg font-semibold text-gray-100">
                             {isEdit ? "Edit Company" : "New Company"}
                         </h1>
 
-                        <p className="mt-0.5 text-xs text-gray-500">
+                        <p className="mt-0.5 text-xs text-gray-100">
                             {isEdit
                                 ? `Update company details${form.companyName ? ` — ${form.companyName}` : ""}`
                                 : "Create new company details"}
@@ -1724,7 +1744,7 @@ export default function CompanyCreateSimpleNew() {
                     type="button"
                     disabled={loading || editLoading}
                     onClick={handleClose}
-                    className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                    className="px-1 text-gray-100 hover:text-gray-100 hover:bg-red-500 rounded disabled:opacity-50"
                     aria-label="Close"
                 >
                     <X size={20} />
@@ -1733,15 +1753,15 @@ export default function CompanyCreateSimpleNew() {
 
             {/* TABS */}
 
-            <div className="flex shrink-0 items-center gap-7 overflow-x-auto border-b border-gray-200 bg-white px-6">
+            <div className="mt-3 flex shrink-0 items-center gap-7 overflow-x-auto border-b border-gray-200 bg-white px-5">
                 {TABS.map((tab) => (
                     <button
                         key={tab.id}
                         type="button"
                         onClick={() => setActiveTab(tab.id)}
                         className={`whitespace-nowrap border-b-2 py-3 text-sm font-medium transition ${activeTab === tab.id
-                            ? "border-[#0F4659] text-[#0F4659]"
-                            : "border-transparent text-gray-500 hover:text-gray-700"
+                            ? "border-[#408DFB] text-[#408DFB]"
+                            : "border-transparent text-gray-400 hover:text-blue-400"
                             }`}
                     >
                         {tab.label}
@@ -1791,7 +1811,8 @@ export default function CompanyCreateSimpleNew() {
                                     saveAndClose: true,
                                 })
                             }
-                            className="h-10 rounded-l-md bg-[#0F4659] px-5 text-sm font-medium text-white hover:bg-[#0F4659]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="h-10 rounded-l-md bg-[#408DFB] px-5 text-sm font-medium 
+                            text-white hover:bg-[#408DFB]/90 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {loading
                                 ? isEdit
@@ -1808,7 +1829,8 @@ export default function CompanyCreateSimpleNew() {
                             onClick={() =>
                                 setShowSaveMenu((previous) => !previous)
                             }
-                            className="flex h-10 w-10 items-center justify-center rounded-r-md border-l border-white/30 bg-[#0F4659] text-white hover:bg-[#0F4659]/90 disabled:opacity-50"
+                            className="flex h-10 w-10 items-center justify-center rounded-r-md 
+                            border-l border-white/30 bg-[#408DFB] text-white hover:bg-[#408DFB]/90 disabled:opacity-50"
                             aria-label="More save options"
                         >
                             <ChevronDown

@@ -62,6 +62,8 @@ const emptyCompany = {
   status: "ACTIVE",
 
   image: null,
+
+  isDefault: false,
 };
 
 /* =========================================================
@@ -257,8 +259,10 @@ const companySlice = createSlice({
 
         const company = action.payload?.data || action.payload;
 
-        state.company = company || {
+        state.company = {
           ...emptyCompany,
+          ...(company || {}),
+          isDefault: company?.isDefault ?? false,
         };
 
         state.message = action.payload?.message || "";
@@ -341,16 +345,20 @@ const companySlice = createSlice({
         const updatedCompany = action.payload?.data;
 
         if (updatedCompany) {
-          state.company = updatedCompany;
+          state.company = {
+            ...emptyCompany,
+            ...updatedCompany,
+            isDefault: updatedCompany.isDefault ?? false,
+          };
 
-          state.exsistingCompany = updatedCompany;
+          state.exsistingCompany = state.company;
 
           const index = state.companies.findIndex(
             (item) => item.id === updatedCompany.id,
           );
 
           if (index !== -1) {
-            state.companies[index] = updatedCompany;
+            state.companies[index] = state.company;
           }
         }
       })

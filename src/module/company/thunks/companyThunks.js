@@ -106,6 +106,8 @@ const buildCompanyFormData = (data) => {
 
     financialYearStart: data.financialYearStart || null,
 
+    isDefault: true,
+
     status: data.status || "ACTIVE",
   };
 

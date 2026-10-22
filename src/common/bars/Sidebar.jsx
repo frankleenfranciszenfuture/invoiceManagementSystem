@@ -485,7 +485,8 @@ const Sidebar = ({ onLogout }) => {
             <aside
                 className={`
                     fixed bottom-3 left-3 top-3 z-30 flex flex-col
-                    rounded-xl border-l border-r border-lime-500  bg-gradient-to-br from-[#0B57D0] to-[#2E364D]
+                    rounded-xl border-l border-r border-lime-500 
+                    bg-gradient-to-br from-[#2E364D] to-[#0B57D0]
                     transition-[width] duration-300
                     ${open ? "w-55" : "w-[72px]"}
                 `}
@@ -512,7 +513,8 @@ const Sidebar = ({ onLogout }) => {
 
                 <div className={`px-4 pb-4 pt-5 ${open ? "" : "flex justify-center px-0"}`}>
                     <div className={`flex items-center gap-3 ${open ? "border-b border-lime-400 pb-4" : ""}`}>
-                        {/* {Avatar} */} <FileText className="h-12 w-12 px-3 rounded-full bg-lime-400 text-[#FCF7F8]" />
+                        {/* {Avatar} */}
+                        <FileText className="h-10 w-10 px-3 rounded-2xl bg-gradient-to-br from-[#9AE600] to-[#166534] text-[#FCF7F8] shadow-md" />
 
                         {open && (
                             <div className="min-w-0 leading-tight">

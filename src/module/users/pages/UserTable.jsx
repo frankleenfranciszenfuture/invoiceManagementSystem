@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import toast from "react-hot-toast";
+import Pagination from "../../../common/pagination/table/Pagination";
 
 export default function UserTable({
     users = [],
@@ -332,7 +333,7 @@ export default function UserTable({
                         TABLE HEADER
                     ================================================= */}
 
-                    <thead className="bg-[#F3F4F6] border-b border-gray-300">
+                    <thead className="bg-[#FEFEFD] border-b border-gray-300">
                         <tr>
 
                             {[
@@ -350,8 +351,8 @@ export default function UserTable({
                                     px-5
                                     py-3
                                     font-medium
-                                    text-sm
-                                    text-[#0F4659]/90
+                                    text-md
+                                    text-gray-500
                                     uppercase
                                     ${header === "Actions"
                                             ? "text-right"
@@ -392,7 +393,7 @@ export default function UserTable({
                                         cursor-pointer
                                         border-b
                                         border-gray-100
-                                        text-sm
+                                        text-xs
                                         transition-colors
                                         cursor-pointer
                                         hover:bg-gray-50
@@ -660,109 +661,36 @@ export default function UserTable({
                     PAGINATION
                 ===================================================== */}
 
-                <div
-                    className="
-                        flex
-                        items-center
-                        justify-between
-                        border-t
-                        border-gray-100
-                        p-4
-                    "
-                >
+                {/* PAGINATION BUTTONS */}
 
-                    {/* SHOWING */}
-
-                    <p className="text-sm text-gray-500">
-                        Showing{" "}
-                        <span className="text-sm text-gray-700">
-                            {showingFrom}
-                        </span>{" "}
-
-                        of{" "}
-                        <span className="text-sm text-gray-700">
-                            {totalElements}
-                        </span>{" "}
-                        users
-                    </p>
-
-                    {/* PAGINATION BUTTONS */}
-
-                    <div className="flex items-center gap-3">
-
-                        {/* PREVIOUS */}
-
-                        <button
-                            type="button"
-                            onClick={
-                                handlePrevious
-                            }
-                            disabled={
-                                pageNumber <= 0 ||
-                                loading
-                            }
-                            className="
-                                text-sm
-                                text-gray-500
-                                transition-colors
-                                text-[#0F4659] 
-                                hover:text-[#0F4659]/90
-                                disabled:cursor-not-allowed
-                                disabled:opacity-50
-                            "
-                        >
-                            Previous
-                        </button>
-
-                        {/* CURRENT PAGE */}
-
-                        <span
-                            className="
-                                flex
-                                h-8
-                                w-8
-                                items-center
-                                justify-center
-                                rounded-lg
-                                bg-[#0F4659]
-                                text-sm
-                                font-medium
-                                text-white
-                            "
-                        >
-                            {pageNumber + 1}
-                        </span>
-
-                        {/* NEXT */}
-
-                        <button
-                            type="button"
-                            onClick={
-                                handleNext
-                            }
-                            disabled={
-                                last ||
-                                loading ||
-                                totalPages <= 1
-                            }
-                            className="
-                                text-sm
-                                text-gray-500
-                                transition-colors
-                                 text-[#0F4659]
-                            hover:text-[#0F4659]/90
-                                disabled:cursor-not-allowed
-                                disabled:opacity-50
-                            "
-                        >
-                            Next
-                        </button>
-
-                    </div>
-
-                </div>
+                <Pagination
+                    page={Number(pageNumber) || 0}
+                    size={Number(pageSize) || 10}
+                    totalElements={Number(totalElements) || 0}
+                    totalPages={Number(totalPages) || 0}
+                    loading={loading}
+                    label="users"
+                    onPageChange={(nextPage) => {
+                        dispatch(
+                            fetchAllUsers({
+                                page: nextPage,
+                                size: Number(pageSize) || 10,
+                            })
+                        );
+                    }}
+                    onPageSizeChange={(nextSize) => {
+                        dispatch(
+                            fetchAllUsers({
+                                page: 0,
+                                size: nextSize,
+                            })
+                        );
+                    }}
+                />
 
             </div>
+
         </div>
+
     );
 }

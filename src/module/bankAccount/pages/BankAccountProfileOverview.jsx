@@ -782,15 +782,15 @@ export default function BankAccountProfileOverview({ bankAccountId }) {
             {/* PROFILE HEADER */}
 
             <div className="w-full space-y-4">
-                <div className="rounded-xl bg-[#166534]/90 p-2 shadow shadow-md border-t border-b border-[#F59E0B]/50">
+                <div className="rounded-xl bg-[#FEFEFD] p-2 shadow shadow-md border border-blue-400">
                     <div className="flex flex-wrap items-start justify-between gap-4 px-2 py-3 pb-4">
                         <div className="flex items-start gap-4 py-2">
                             {/* AVATAR */}
 
                             <div
-                                className=" flex h-[86px] w-[86px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full 
+                                className=" flex h-[76px] w-[76px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full 
                                 border-[2px] border-slate-300
-                                bg-gradient-to-br from-[#9AE600] to-[#166534] shadow-md hover:bg-[#FF8904]/20"
+                                bg-gradient-to-br from-[#408DFB] to-[#1D4ED8] shadow-md hover:bg-[#FF8904]/20"
                                 onClick={() => navigate("/bankAccount")}
                                 title="Back to Bank Accounts"
                             >
@@ -800,40 +800,40 @@ export default function BankAccountProfileOverview({ bankAccountId }) {
                             {/* ACCOUNT DETAILS */}
 
                             <div className="pt-1">
-                                <h2 className="text-[34px] font-semibold leading-tight text-slate-100">
+                                <h2 className="text-[34px] font-semibold leading-tight text-blue-500">
                                     {current.accountName || "Bank Account"}
                                 </h2>
 
-                                <p className="mt-0.5 text-[12px] text-gray-100">
+                                <p className="mt-0.5 text-[12px] text-gray-400">
                                     ACCOUNT NO : {current.accountNumber || "-"} |   IFSC : {current.ifsc || "-"}
                                 </p>
-                                <p className="mt-0.5 text-[12px] text-gray-100">
+                                <p className="mt-0.5 text-[12px] text-gray-400">
 
                                 </p>
                                 <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-slate-500">
 
-                                    <span className="flex items-center gap-1 text-slate-100">
+                                    <span className="flex items-center gap-1 text-gray-400">
                                         <Building2 size={13} />
                                         {current.bankName || "-"}
                                     </span>
 
-                                    <span className="flex items-center gap-1 text-slate-100">
+                                    <span className="flex items-center gap-1 text-gray-400">
                                         <CreditCard size={13} />
                                         {current.accountType || "-"}
                                     </span>
 
-                                    <span className="flex items-center gap-1 text-slate-100">
+                                    <span className="flex items-center gap-1 text-gray-400">
                                         <CircleDollarSign size={13} />
                                         {current.currency || "INR"}
                                     </span>
 
-                                    <span className="flex items-center gap-1 text-slate-100">
+                                    <span className="flex items-center gap-1 text-gray-400">
                                         Status:{" "}
                                         <b
                                             className={
                                                 isActive
-                                                    ? "px-3 font-semibold text-gray-100 bg-emerald-400 rounded-full"
-                                                    : "px-3 font-semibold text-slate-100 bg-gray-400 rounded-full"
+                                                    ? "px-2 font-semibold text-gray-100 bg-emerald-600 rounded-xl"
+                                                    : "px-2 font-semibold text-gray-100 bg-gray-400 rounded-xl"
                                             }
                                         >
                                             {current.status || "ACTIVE"}

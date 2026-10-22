@@ -219,9 +219,9 @@ function SectionCard({
     children,
 }) {
     return (
-        <div className="flex h-full min-w-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex h-full min-w-0 flex-col rounded-xl border border-lime-400 bg-white shadow-sm">
             <div className="flex items-center justify-between gap-3 px-4 pt-4">
-                <h3 className="text-[14px] font-semibold text-slate-900">
+                <h3 className="text-[14px] font-semibold text-gray-500">
                     {title}
                 </h3>
 
@@ -393,7 +393,7 @@ function FieldsSection({
 
     const commonClass = (field) => `
         w-full rounded-lg border bg-white px-3
-        text-[13px] text-slate-800 outline-none
+        text-[13px] text-gray-400 outline-none
         transition focus:border-[#0F4659]
         focus:ring-2 focus:ring-[#0F4659]/10
         disabled:bg-slate-50
@@ -551,7 +551,7 @@ function FieldsSection({
                         : ""
                         }`}
                 >
-                    <p className="text-[12px] font-medium text-slate-700">
+                    <p className="text-[12px] font-medium text-gray-500">
                         {field.label}
 
                         {editing && field.required && (
@@ -566,13 +566,13 @@ function FieldsSection({
                             {renderInput(field)}
 
                             {errors[field.key] && (
-                                <p className="mt-1 text-[11.5px] text-red-500">
+                                <p className="mt-1 text-[11.5px] text-gray-500 text-red-500">
                                     {errors[field.key]}
                                 </p>
                             )}
                         </div>
                     ) : (
-                        <p className="mt-1 break-words whitespace-pre-wrap text-[12.5px] leading-5 text-slate-800">
+                        <p className="mt-1 break-words whitespace-pre-wrap text-[12.5px] leading-5 text-gray-400">
                             {renderValue(
                                 field,
                                 values[field.key],
@@ -589,17 +589,38 @@ function FieldsSection({
    STAT TILE
 ========================================================= */
 
-function StatTile({ icon: Icon, label, value }) {
+function StatTile({
+    icon: Icon,
+    label,
+    value,
+    bgColor = "bg-[#166534]/80",
+    onClick,
+}) {
     return (
-        <div className="min-w-0 rounded-lg border border-slate-200 bg-[#0F4659] px-3 py-2.5">
+        <div
+            onClick={onClick}
+            role={onClick ? "button" : undefined}
+            tabIndex={onClick ? 0 : undefined}
+            onKeyDown={(e) => {
+                if (onClick && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    onClick();
+                }
+            }}
+            className={`
+                group min-w-0 rounded-lg border border-white/20
+                ${bgColor} px-3 py-2.5
+                transition-all duration-300 ease-in-out
+                hover:-translate-y-1 hover:shadow-lg
+                ${onClick ? "cursor-pointer" : ""}
+            `}
+        >
             <div className="flex items-center gap-1.5 text-gray-100">
                 <Icon
                     size={14}
-                    className="shrink-0 text-gray-100"
+                    className="shrink-0 transition-all duration-300 group-hover:animate-pulse group-hover:text-cyan-200"
                 />
-                <span className="truncate text-[10.5px]">
-                    {label}
-                </span>
+                <span className="truncate text-[10.5px]">{label}</span>
             </div>
 
             <p className="mt-1 truncate text-[14px] font-semibold leading-tight text-white">
@@ -738,16 +759,16 @@ function CompanyImageCard({
     const isSaving = saving || uploading;
 
     return (
-        <div className="flex min-w-0 flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex min-w-0 flex-col rounded-xl border border-lime-400 bg-white p-4 shadow-sm">
             {/* HEADER */}
 
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h3 className="text-[14px] font-semibold text-slate-900">
+                    <h3 className="text-[14px] font-semibold text-gray-500">
                         {title}
                     </h3>
 
-                    <p className="mt-1 text-[11.5px] text-slate-500">
+                    <p className="mt-1 text-[11.5px] text-gray-400">
                         Upload or update your {title.toLowerCase()}
                     </p>
                 </div>
@@ -756,7 +777,9 @@ function CompanyImageCard({
                     type="button"
                     onClick={() => inputRef.current?.click()}
                     disabled={isSaving}
-                    className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#0F4659]/20 px-3 py-2 text-[12px] font-medium text-[#0F4659] transition hover:bg-[#0F4659]/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#0F4659]/20
+                    px-3 py-2 text-[12px] font-medium text-gray-100 bg-[#408DFB] transition 
+                    hover:bg-[#408DFB]/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     <SquarePen size={13} />
                     {displayedImage ? "Change" : "Upload"}
@@ -1149,7 +1172,7 @@ export default function CompanyProfileOverview({
         <div className="w-full space-y-4 p-3">
             {/* COMPANY HEADER */}
 
-            <div className="rounded-xl border border-slate-100 bg-white p-4">
+            <div className="rounded-xl border border-lime-400 shadow-md bg-white p-4">
                 <div className="flex flex-wrap items-start justify-between gap-4 px-2 py-3 pb-5">
                     <div className="flex min-w-0 items-start gap-4">
                         {/* COMPANY AVATAR */}
@@ -1174,40 +1197,40 @@ export default function CompanyProfileOverview({
                         {/* COMPANY DETAILS */}
 
                         <div className="min-w-0 pt-1">
-                            <h2 className="break-words text-[24px] font-semibold leading-tight text-[#0F4659]">
+                            <h2 className="break-words text-[34px] font-semibold leading-tight text-gray-500">
                                 {displayName}
                             </h2>
 
-                            <p className="mt-0.5 text-[12px] text-[#0F4659]">
+                            <p className="mt-0.5 text-[12px] text-gray-500">
                                 Company Code:{" "}
                                 {current.companyCode || "-"}
                             </p>
 
                             <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-slate-500">
-                                <span className="flex items-center gap-1 text-slate-700">
+                                <span className="flex items-center gap-1 text-gray-400">
                                     <Building2 size={13} />
                                     {current.legalName ||
                                         current.companyName ||
                                         "-"}
                                 </span>
 
-                                <span className="flex items-center gap-1 text-slate-700">
+                                <span className="flex items-center gap-1 text-gray-400">
                                     <ReceiptText size={13} />
                                     GSTIN: {current.gstNumber || "-"}
                                 </span>
 
-                                <span className="flex items-center gap-1 text-slate-700">
+                                <span className="flex items-center gap-1 text-gray-400">
                                     <CircleDollarSign size={13} />
                                     {current.currency || "INR"}
                                 </span>
 
-                                <span>
+                                <span className="flex items-center gap-1 text-gray-400">
                                     Status:{" "}
                                     <b
                                         className={
                                             isActive
-                                                ? "font-semibold text-emerald-600"
-                                                : "font-semibold text-slate-500"
+                                                ? "px-2 font-semibold text-gray-100 bg-emerald-600 rounded-xl"
+                                                : "px-2 font-semibold text-gray-100 bg-gray-400 rounded-xl"
                                         }
                                     >
                                         {status}
@@ -1244,8 +1267,8 @@ export default function CompanyProfileOverview({
 
             {/* COMPANY OVERVIEW */}
 
-            <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-                <h3 className="text-[14px] font-semibold text-slate-900">
+            <div className="flex h-full flex-col rounded-xl border border-lime-400 bg-white p-3 shadow-sm">
+                <h3 className="text-[14px] font-semibold text-gray-500">
                     Company Overview
                 </h3>
 
@@ -1254,24 +1277,28 @@ export default function CompanyProfileOverview({
                         icon={Building2}
                         label="Company"
                         value={displayName}
+                        StatTile
                     />
 
                     <StatTile
                         icon={Hash}
                         label="Company Code"
                         value={current.companyCode}
+                        bgColor="bg-[#0B57D0]"
                     />
 
                     <StatTile
                         icon={ReceiptText}
                         label="GSTIN"
                         value={current.gstNumber}
+                        bgColor="bg-[#8A2AF9]"
                     />
 
                     <StatTile
                         icon={CircleDollarSign}
                         label="Currency"
                         value={current.currency || "INR"}
+                        bgColor="bg-[#166534]"
                     />
                 </div>
             </div>
@@ -1355,7 +1382,7 @@ export default function CompanyProfileOverview({
                     />
                     <div className="flex w-max-full flex-col rounded-xl border border-slate-200 bg-white p-4  shadow-sm lg:min-h-[800px]">
 
-                        <h3 className=" text-[14px] font-semibold text-slate-900">
+                        <h3 className=" text-[14px] font-semibold text-gray-500">
                             Recent Activity
                         </h3>
 

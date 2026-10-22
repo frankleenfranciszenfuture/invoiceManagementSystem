@@ -519,18 +519,34 @@ function StatTile({
     icon: Icon,
     label,
     value,
+    bgColor = "bg-[#166534]/80",
+    onClick,
 }) {
     return (
-        <div className="min-w-0 rounded-lg border border-slate-200 bg-[#0F4659] px-3 py-2.5">
+        <div
+            onClick={onClick}
+            role={onClick ? "button" : undefined}
+            tabIndex={onClick ? 0 : undefined}
+            onKeyDown={(e) => {
+                if (onClick && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    onClick();
+                }
+            }}
+            className={`
+                group min-w-0 rounded-lg border border-white/20
+                ${bgColor} px-3 py-2.5
+                transition-all duration-300 ease-in-out
+                hover:-translate-y-1 hover:shadow-lg
+                ${onClick ? "cursor-pointer" : ""}
+            `}
+        >
             <div className="flex items-center gap-1.5 text-gray-100">
                 <Icon
                     size={14}
-                    className="shrink-0 text-gray-100"
+                    className="shrink-0 transition-all duration-300 group-hover:animate-pulse group-hover:text-cyan-200"
                 />
-
-                <span className="truncate text-[10.5px]">
-                    {label}
-                </span>
+                <span className="truncate text-[10.5px]">{label}</span>
             </div>
 
             <p className="mt-1 truncate text-[14px] font-semibold leading-tight text-white">
@@ -752,14 +768,16 @@ export default function RoleProfileOverview({
             {/* PROFILE HEADER */}
 
             <div className="w-full space-y-4">
-                <div className="rounded-xl border border-slate-100 bg-white p-4">
+                <div className="rounded-xl border border-lime-400 bg-white p-4">
                     <div className="flex flex-wrap items-start justify-between gap-4 px-2 py-3 pb-5">
-                        <div className="flex items-start gap-4">
+                        <div className="flex items-start gap-4 ">
 
                             {/* AVATAR */}
 
                             <div
-                                className="flex h-[86px] w-[86px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-[4px] border-white bg-gradient-to-br from-[#0F4659]/70 to-[#0F4659] shadow-md"
+                                className="flex h-[86px] w-[86px] shrink-0 cursor-pointer items-center justify-center
+                                overflow-hidden rounded-full border-[4px] border-white
+                                bg-gradient-to-br from-[#408DFB]/70 to-[#0F4659] shadow-md"
                                 onClick={() => navigate("/roles")}
                                 title="Back to Roles"
                             >
@@ -772,23 +790,23 @@ export default function RoleProfileOverview({
 
                             <div className="pt-2.5">
                                 <h2
-                                    className="cursor-pointer text-[24px] font-semibold leading-tight text-[#0F4659] hover:text-[#0F4659]/70"
+                                    className="cursor-pointer text-[24px] font-semibold leading-tight text-gray-500 hover:text-[#0F4659]/70"
                                     onClick={() => navigate("/roles")}
                                 >
                                     {roleName || "Role"}
                                 </h2>
 
-                                <p className="mt-0.5 text-[12px] text-[#0F4659]">
+                                <p className="mt-0.5 text-[12px] text-gray-500">
                                     Role ID: {current.id}
                                 </p>
 
-                                <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-slate-500">
-                                    <span className="flex items-center gap-1 text-slate-700">
+                                <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-gray-500">
+                                    <span className="flex items-center gap-1 text-gray-500">
                                         <Shield size={13} />
                                         {roleName || "-"}
                                     </span>
 
-                                    <span className="flex items-center gap-1 text-slate-700">
+                                    <span className="flex items-center gap-1 text-gray-500">
                                         <FileText size={13} />
                                         {current.description || "No description"}
                                     </span>
@@ -823,18 +841,21 @@ export default function RoleProfileOverview({
                                 icon={ShieldCheck}
                                 label="Role Name"
                                 value={current.roleName}
+                                bgColor="bg-[#0B57D0]"
                             />
 
                             <StatTile
                                 icon={BadgeCheck}
                                 label="Status"
                                 value={status}
+                                bgColor="bg-[#FF8904]"
                             />
 
                             <StatTile
                                 icon={FileText}
                                 label="Role ID"
                                 value={current.id}
+                                bgColor="bg-[#166534]"
                             />
                         </div>
 

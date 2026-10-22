@@ -49,8 +49,8 @@ import CustomSelect from "../../../common/custom/CustomSelect";
 
 const INITIAL_FORM = {
     id: null,
-    code: "",
-    name: "",
+    currencyCode: "",
+    currencyName: "",
     symbol: "",
     decimalPlaces: "",
     status: "ACTIVE",
@@ -427,9 +427,9 @@ export default function CurrencyCreateSimple() {
 
                     id: result.id,
 
-                    name: result.name || "",
+                    currencyCode: result.currencyCode || "",
 
-                    code: result.code || "",
+                    currencyName: result.currencyName || "",
 
                     symbol: result.symbol || "",
 
@@ -568,9 +568,9 @@ export default function CurrencyCreateSimple() {
     const validateForm = () => {
         const nextErrors = {};
 
-        if (!form.name?.trim()) {
-            nextErrors.name =
-                "Currency name is required.";
+        if (!form.currencyName?.trim()) {
+            nextErrors.currencyName =
+                "Currency currencyName is required.";
         }
 
         if (!form.symbol?.trim()) {
@@ -583,7 +583,7 @@ export default function CurrencyCreateSimple() {
         if (Object.keys(nextErrors).length > 0) {
             const tabFields = {
                 currency: [
-                    "name",
+                    "currencyName",
                     "symbol",
                     "decimalPlaces",
                 ],
@@ -660,13 +660,12 @@ export default function CurrencyCreateSimple() {
         const payload = {
             ...form,
 
-            code: form.code?.trim() || "",
-
-            name: form.name?.trim() || "",
-
+            currencyCode: form.currencyCode.trim().toUpperCase(),
+            currencyName: form.currencyName.trim(),
             symbol: form.symbol?.trim() || "",
-
-            status: form.status || "ACTIVE",
+            decimalPlaces: Number(form.decimalPlaces ?? 2),
+            status: form.status ?? "ACTIVE",
+            active: form.active ?? true,
         };
 
         try {
@@ -826,13 +825,13 @@ export default function CurrencyCreateSimple() {
                     <div className="space-y-5">
 
                         {renderInput({
-                            field: "name",
+                            field: "currencyName",
                             label: "Currency Name",
                             placeholder: "Enter currency name (e.g., US Dollar, Euro, Indian Rupee)",
                             required: true,
                         })}
                         {renderInput({
-                            field: "code",
+                            field: "currencyCode",
                             label: "Currency Code",
                             placeholder: "Enter currency code (e.g., USD, EUR, INR)",
                             required: true,

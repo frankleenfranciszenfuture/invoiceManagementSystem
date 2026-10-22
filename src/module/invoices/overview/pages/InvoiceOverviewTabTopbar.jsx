@@ -254,19 +254,14 @@ export default function InvoiceOverviewTabTopbar() {
                         <p className="mt-1 text-lg text-green-500">
                             {invoice.invoiceType || "Invoice"}
                         </p>
-                        <p className="mt-1 text-sm text-orange-500">
-                            Customer Name: {invoice.customerName || "No customer selected"}
-                        </p>
-                        <p className="mt-1 text-sm text-slate-500">
-                            Invoice Date:{invoice.invoiceDate || "Invoice"} | InvoiceDue Date: {invoice.dueDate}
-                        </p>
+
                     </div>
                 </div>
 
             </div>
 
             {/* Actions */}
-            <div className="flex flex-wrap items-center gap-2 mb-20">
+            <div className="flex flex-wrap items-center gap-2 mb-5">
                 <div className="flex flex-wrap gap-2">
                     <button
                         type="button"

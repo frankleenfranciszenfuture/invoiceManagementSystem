@@ -14,13 +14,21 @@ import {
     Settings,
     FileText,
     RefreshCw,
-    Home,
     ArrowLeft,
+    Building2,
+    UserRound,
+    CalendarDays,
+    Landmark,
+    Coins,
+    ReceiptText,
+    Signature,
+    ExternalLink,
 } from "lucide-react";
 
 import { openModal } from "../../../ui/uiSlice";
 import { fetchInvoiceById } from "../../thunks/invoiceThunks";
 import invoiceTemplates from "../template/templateRegistry";
+import { normalizeInvoice } from "../template/invoiceTemplateUtils";
 
 export default function InvoicePreviewCard() {
     const dispatch = useDispatch();
@@ -38,10 +46,6 @@ export default function InvoicePreviewCard() {
        REDUX STATE
     ============================================================ */
 
-    const invoiceState = useSelector(
-        (state) => state.invoice || {}
-    );
-
     const {
         invoices = [],
         selectedInvoice,
@@ -53,7 +57,8 @@ export default function InvoicePreviewCard() {
         previewError,
         error,
         invoiceTemplate: reduxInvoiceTemplate,
-    } = invoiceState;
+    } = useSelector((state) => state.invoice || {});
+
 
     const getInvoiceId = (item) =>
         item?.id ?? item?.invoiceId ?? null;
@@ -64,94 +69,63 @@ export default function InvoicePreviewCard() {
         String(first) === String(second);
 
     /* ============================================================
-       SELECTED INVOICE
-
-       Sidebar selection takes priority over the URL.
-       The URL is used when opening or refreshing a preview directly.
+       URL INVOICE ID
     ============================================================ */
 
-    const selectedInvoiceId =
-        getInvoiceId(exsistingInvoice) ??
-        getInvoiceId(selectedInvoice) ??
-        getInvoiceId(currentInvoice) ??
-        id ??
-        null;
+    const targetInvoiceId = id ?? null;
 
     /* ============================================================
-       FULL PREVIEW VALIDATION
+       VALIDATE COMPLETE PREVIEW
     ============================================================ */
 
     const hasFullPreview =
         previewInvoice != null &&
-        sameId(
-            getInvoiceId(previewInvoice),
-            selectedInvoiceId
-        ) &&
+        sameId(getInvoiceId(previewInvoice), targetInvoiceId) &&
         (
             previewInvoiceId == null ||
-            sameId(previewInvoiceId, selectedInvoiceId)
+            sameId(previewInvoiceId, targetInvoiceId)
         );
 
     /* ============================================================
-       SELECT THE CORRECT INVOICE
-
-       Never use an unrelated invoice as the preview.
-       The sidebar object is only a fallback while details load.
+       SELECT INVOICE
     ============================================================ */
 
     const invoice = useMemo(() => {
-        const matchesId = (item, targetId) =>
-            item != null &&
-            targetId != null &&
-            sameId(getInvoiceId(item), targetId);
+        if (!targetInvoiceId) {
+            return null;
+        }
 
         if (
             previewInvoice &&
-            matchesId(previewInvoice, selectedInvoiceId) &&
+            sameId(
+                previewInvoice.id ?? previewInvoice.invoiceId,
+                targetInvoiceId
+            ) &&
             (
                 previewInvoiceId == null ||
-                sameId(previewInvoiceId, selectedInvoiceId)
+                sameId(previewInvoiceId, targetInvoiceId)
             )
         ) {
             return previewInvoice;
         }
 
-        if (matchesId(exsistingInvoice, selectedInvoiceId)) {
-            return exsistingInvoice;
-        }
+        const candidates = [
+            exsistingInvoice,
+            selectedInvoice,
+            currentInvoice,
+            ...(Array.isArray(invoices) ? invoices : []),
+        ];
 
-        if (matchesId(selectedInvoice, selectedInvoiceId)) {
-            return selectedInvoice;
-        }
-
-        if (matchesId(currentInvoice, selectedInvoiceId)) {
-            return currentInvoice;
-        }
-
-        if (Array.isArray(invoices)) {
-            const listInvoice = invoices.find((item) =>
-                matchesId(item, selectedInvoiceId)
-            );
-
-            if (listInvoice) {
-                return listInvoice;
-            }
-        }
-
-        // Permit a fallback only when no target ID exists.
-        if (selectedInvoiceId == null) {
-            return (
-                previewInvoice ||
-                exsistingInvoice ||
-                selectedInvoice ||
-                currentInvoice ||
-                null
-            );
-        }
-
-        return null;
+        return (
+            candidates.find((item) =>
+                sameId(
+                    item?.id ?? item?.invoiceId,
+                    targetInvoiceId
+                )
+            ) || null
+        );
     }, [
-        selectedInvoiceId,
+        targetInvoiceId,
         previewInvoice,
         previewInvoiceId,
         exsistingInvoice,
@@ -161,38 +135,38 @@ export default function InvoicePreviewCard() {
     ]);
 
     /* ============================================================
-       FETCH ON INITIAL LOAD / REFRESH
+   SHARED NORMALIZED INVOICE DATA
+============================================================ */
 
-       Fetch when the requested URL ID does not match the current
-       selection or when its full preview has not been loaded.
+    const sharedInvoice = useMemo(
+        () => (invoice ? normalizeInvoice(invoice) : null),
+        [invoice]
+    );
+
+    /* ============================================================
+       FETCH COMPLETE INVOICE
     ============================================================ */
 
     useEffect(() => {
-        if (!id) {
+        if (!targetInvoiceId) {
             requestedInvoiceIdRef.current = null;
             return;
         }
 
-        const currentRequestId = String(id);
-
-        const previewMatchesUrl =
-            hasFullPreview &&
-            sameId(selectedInvoiceId, id);
-
-        if (previewMatchesUrl) {
+        if (hasFullPreview) {
             requestedInvoiceIdRef.current = null;
             return;
         }
 
-        if (
-            requestedInvoiceIdRef.current === currentRequestId
-        ) {
+        const requestId = String(targetInvoiceId);
+
+        if (requestedInvoiceIdRef.current === requestId) {
             return;
         }
 
-        requestedInvoiceIdRef.current = currentRequestId;
+        requestedInvoiceIdRef.current = requestId;
 
-        dispatch(fetchInvoiceById(id))
+        dispatch(fetchInvoiceById(targetInvoiceId))
             .unwrap()
             .catch((fetchError) => {
                 console.error(
@@ -202,21 +176,19 @@ export default function InvoicePreviewCard() {
             })
             .finally(() => {
                 if (
-                    requestedInvoiceIdRef.current ===
-                    currentRequestId
+                    requestedInvoiceIdRef.current === requestId
                 ) {
                     requestedInvoiceIdRef.current = null;
                 }
             });
     }, [
-        id,
         dispatch,
+        targetInvoiceId,
         hasFullPreview,
-        selectedInvoiceId,
     ]);
 
     /* ============================================================
-       CLICK OUTSIDE CUSTOMIZE DROPDOWN
+       CLOSE CUSTOMIZE DROPDOWN ON OUTSIDE CLICK
     ============================================================ */
 
     useEffect(() => {
@@ -247,14 +219,16 @@ export default function InvoicePreviewCard() {
     ============================================================ */
 
     useEffect(() => {
-        const previewElement = previewRef.current;
+        const element = previewRef.current;
 
-        if (!previewElement) return;
+        if (!element) {
+            return;
+        }
 
         const updatePreviewScale = () => {
             const availableWidth = Math.max(
                 0,
-                previewElement.clientWidth - 32
+                element.clientWidth - 32
             );
 
             setPreviewScale(
@@ -271,7 +245,7 @@ export default function InvoicePreviewCard() {
                 updatePreviewScale
             );
 
-            resizeObserver.observe(previewElement);
+            resizeObserver.observe(element);
         }
 
         window.addEventListener(
@@ -290,8 +264,8 @@ export default function InvoicePreviewCard() {
     }, []);
 
     /* ============================================================
-       CURRENT TEMPLATE
-    ============================================================ */
+    CURRENT TEMPLATE
+ ============================================================ */
 
     const invoiceTemplate =
         invoice?.invoiceTemplate ||
@@ -307,7 +281,9 @@ export default function InvoicePreviewCard() {
     ============================================================ */
 
     const handleChangeTemplate = () => {
-        if (!invoice) return;
+        if (!invoice) {
+            return;
+        }
 
         setCustomizeOpen(false);
 
@@ -324,13 +300,53 @@ export default function InvoicePreviewCard() {
     ============================================================ */
 
     const handleEditTemplate = () => {
-        if (!invoice) return;
+        if (!invoice) {
+            return;
+        }
 
         setCustomizeOpen(false);
 
-        console.log(
-            "Edit invoice:",
-            getInvoiceId(invoice)
+        const invoiceId = getInvoiceId(invoice);
+
+        const invoiceType = String(
+            invoice.invoiceType || ""
+        ).toUpperCase();
+
+        if (invoiceId == null) {
+            return;
+        }
+
+        const editRoute =
+            invoiceType === "SERVICE_INVOICE"
+                ? `/invoices/service/edit/${invoiceId}`
+                : `/invoices/product/edit/${invoiceId}`;
+
+        navigate(editRoute, {
+            state: {
+                invoiceType,
+                invoice,
+            },
+        });
+    };
+
+    /* ============================================================
+       OPEN PREVIEW IN NEW TAB
+    ============================================================ */
+
+    const handleOpenPreviewInNewTab = () => {
+        const invoiceId = getInvoiceId(invoice);
+
+        if (invoiceId == null) {
+            return;
+        }
+
+        const previewUrl =
+            `${window.location.origin}/invoices/preview/${invoiceId}`;
+
+        window.open(
+            previewUrl,
+            "_blank",
+            "noopener,noreferrer"
         );
     };
 
@@ -339,15 +355,16 @@ export default function InvoicePreviewCard() {
     ============================================================ */
 
     const handleRetry = async () => {
-        const targetId = selectedInvoiceId ?? id;
+        if (!targetInvoiceId || previewLoading) {
+            return;
+        }
 
-        if (targetId == null) return;
-
-        requestedInvoiceIdRef.current = String(targetId);
+        requestedInvoiceIdRef.current =
+            String(targetInvoiceId);
 
         try {
             await dispatch(
-                fetchInvoiceById(targetId)
+                fetchInvoiceById(targetInvoiceId)
             ).unwrap();
         } catch (fetchError) {
             console.error(
@@ -357,7 +374,7 @@ export default function InvoicePreviewCard() {
         } finally {
             if (
                 requestedInvoiceIdRef.current ===
-                String(targetId)
+                String(targetInvoiceId)
             ) {
                 requestedInvoiceIdRef.current = null;
             }
@@ -382,27 +399,9 @@ export default function InvoicePreviewCard() {
         "DRAFT"
     ).toUpperCase();
 
-    const getStatusStyles = (value) => {
-        if (
-            ["PAID", "ACTIVE", "COMPLETED"].includes(value)
-        ) {
-            return "bg-emerald-50 text-emerald-700 ring-emerald-200";
-        }
-
-        if (
-            ["OVERDUE", "CANCELLED", "REJECTED"].includes(value)
-        ) {
-            return "bg-rose-50 text-rose-700 ring-rose-200";
-        }
-
-        if (
-            ["SENT", "PARTIAL", "PARTIALLY_PAID"].includes(value)
-        ) {
-            return "bg-blue-50 text-blue-700 ring-blue-200";
-        }
-
-        return "bg-amber-50 text-amber-700 ring-amber-200";
-    };
+    const invoiceType = String(
+        invoice?.invoiceType || "INVOICE"
+    ).replaceAll("_", " ");
 
     const toDisplay = (value) => {
         if (
@@ -425,19 +424,171 @@ export default function InvoicePreviewCard() {
         return String(value);
     };
 
-    /* ============================================================
-       LOADING STATE
+    const formatAmount = (value) => {
+        if (
+            value === null ||
+            value === undefined ||
+            value === ""
+        ) {
+            return "—";
+        }
 
-       Use previewLoading, not the shared invoice-list loading flag.
+        const amount = Number(value);
+
+        if (!Number.isFinite(amount)) {
+            return String(value);
+        }
+
+        return amount.toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+    };
+
+    const currencyCode =
+        invoice?.currencyCode ||
+        invoice?.currency?.currencyCode ||
+        "";
+
+    const currencyName =
+        invoice?.currencyName ||
+        invoice?.currency?.currencyName ||
+        "";
+
+    const formatCurrency = (value) => {
+        const amount = formatAmount(value);
+
+        return currencyCode
+            ? `${currencyCode} ${amount}`
+            : amount;
+    };
+
+    const getStatusStyles = (value) => {
+        if (
+            ["PAID", "ACTIVE", "COMPLETED"].includes(value)
+        ) {
+            return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+        }
+
+        if (
+            ["OVERDUE", "CANCELLED", "REJECTED"].includes(value)
+        ) {
+            return "bg-rose-50 text-rose-700 ring-rose-200";
+        }
+
+        if (
+            ["SENT", "PARTIAL", "PARTIALLY_PAID"].includes(value)
+        ) {
+            return "bg-blue-50 text-blue-700 ring-blue-200";
+        }
+
+        return "bg-amber-50 text-amber-700 ring-amber-200";
+    };
+
+    /* ============================================================
+       COMPANY DETAILS
     ============================================================ */
 
-    if (
-        selectedInvoiceId != null &&
-        !hasFullPreview &&
-        previewLoading
-    ) {
+    const companyName =
+        invoice?.companyName ||
+        invoice?.company?.companyName ||
+        "—";
+
+    const companyCode =
+        invoice?.companyCode ||
+        invoice?.company?.companyCode ||
+        "";
+
+    const logoUrl =
+        invoice?.logo ||
+        invoice?.companyLogo ||
+        invoice?.company?.logo ||
+        "";
+
+    /* ============================================================
+       CUSTOMER AND SALESPERSON
+    ============================================================ */
+
+    const customerName =
+        invoice?.customerName ||
+        invoice?.customer?.name ||
+        invoice?.partyName ||
+        invoice?.party?.name ||
+        "No customer selected";
+
+    const salesPersonName =
+        invoice?.salesPersonName ||
+        invoice?.salesPerson?.name ||
+        "";
+
+    /* ============================================================
+       BANK DETAILS
+    ============================================================ */
+
+    const bankName =
+        invoice?.bankName ||
+        invoice?.bankAccount?.bankName ||
+        "";
+
+    const accountNumber =
+        invoice?.accountNumber ||
+        invoice?.bankAccount?.accountNumber ||
+        "";
+
+    const ifsc =
+        invoice?.ifsc ||
+        invoice?.bankAccount?.ifsc ||
+        "";
+
+    /* ============================================================
+       SIGNATURE DETAILS
+    ============================================================ */
+
+    const signatureName =
+        invoice?.signatureName ||
+        invoice?.emailSignature?.signatureName ||
+        "";
+
+    const signatureContent =
+        invoice?.signatureContent ||
+        invoice?.emailSignature?.signatureContent ||
+        "";
+
+    /* ============================================================
+       INVOICE ITEMS
+    ============================================================ */
+
+    const invoiceItems = Array.isArray(invoice?.invoiceItems)
+        ? invoice.invoiceItems
+        : [];
+
+    /* ============================================================
+       LOADING STATE
+    ============================================================ */
+
+    if (!targetInvoiceId) {
         return (
-            <div className="mt-3 flex min-h-[220px] w-full flex-col items-center justify-center rounded-md border border-gray-200 bg-white p-6 text-center">
+            <div className="mt-3 rounded-md border border-gray-200 bg-white p-6 text-center">
+                <FileText className="mx-auto mb-3 h-7 w-7 text-blue-500" />
+
+                <p className="text-sm text-gray-500">
+                    Open an invoice to view its preview.
+                </p>
+
+                <button
+                    type="button"
+                    onClick={() => navigate("/invoices")}
+                    className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                    View Invoices
+                </button>
+            </div>
+        );
+    }
+
+    if (previewLoading && !hasFullPreview) {
+        return (
+            <div className="mt-3 flex min-h-[220px] flex-col items-center justify-center rounded-md border border-gray-200 bg-white p-6 text-center">
                 <div className="mb-3 rounded-full bg-blue-50 p-3">
                     <FileText className="h-7 w-7 text-blue-500" />
                 </div>
@@ -451,55 +602,47 @@ export default function InvoicePreviewCard() {
     }
 
     /* ============================================================
-       INVOICE NOT FOUND / REQUEST FAILED
+       ERROR / MISSING FULL INVOICE
     ============================================================ */
 
-    if (!invoice || !hasFullPreview) {
+    if (!hasFullPreview) {
         const message =
             previewError ||
             error ||
-            (
-                id
-                    ? "Unable to load this invoice. Check the invoice ID and try again."
-                    : "Select an invoice to view its complete details."
-            );
+            "Unable to load this invoice. Please try again.";
 
         return (
-            <div className="mt-3 flex min-h-[220px] w-full flex-col items-center justify-center rounded-md border border-gray-200 bg-white p-6 text-center">
+            <div className="mt-3 flex min-h-[220px] flex-col items-center justify-center rounded-md border border-gray-200 bg-white p-6 text-center">
                 <div className="mb-3 rounded-full bg-blue-50 p-3">
                     <FileText className="h-7 w-7 text-blue-500" />
                 </div>
 
                 <h3 className="text-base font-semibold text-gray-800">
-                    {selectedInvoiceId != null
-                        ? "Invoice Details Unavailable"
-                        : "No Invoice Selected"}
+                    Invoice Details Unavailable
                 </h3>
 
                 <p className="mt-1 max-w-sm text-sm text-gray-500">
                     {typeof message === "string"
                         ? message
-                        : "Unable to load invoice details."}
+                        : message?.message ||
+                        "Unable to load invoice details."}
                 </p>
 
-                {selectedInvoiceId != null && (
-                    <button
-                        type="button"
-                        onClick={handleRetry}
-                        disabled={previewLoading}
-                        className="mt-4 inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        <RefreshCw
-                            size={15}
-                            className={
-                                previewLoading
-                                    ? "animate-spin"
-                                    : ""
-                            }
-                        />
-                        {previewLoading ? "Retrying..." : "Retry"}
-                    </button>
-                )}
+                <button
+                    type="button"
+                    onClick={handleRetry}
+                    disabled={previewLoading}
+                    className="mt-4 inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    <RefreshCw
+                        size={15}
+                        className={
+                            previewLoading ? "animate-spin" : ""
+                        }
+                    />
+
+                    {previewLoading ? "Loading..." : "Retry"}
+                </button>
             </div>
         );
     }
@@ -534,38 +677,35 @@ export default function InvoicePreviewCard() {
 
     return (
         <div
-            key={`${invoiceId ?? ""}-${invoiceTemplate}`}
+            key={`${invoiceId}-${invoiceTemplate}`}
             className="group w-full min-w-0 overflow-hidden rounded-md border border-gray-100 bg-white shadow-sm"
         >
-            {/* HEADER */}
+            {/* COMMON HEADER */}
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 sm:px-5">
                 <div className="flex min-w-0 items-center gap-3">
                     <div className="flex shrink-0 items-center gap-2">
-
                         <button
                             type="button"
-                            onClick={() => {
-                                const invoiceId = invoice?.id ?? invoice?.invoiceId;
-
-                                if (invoiceId != null) {
-                                    navigate(`/invoices/view/${invoiceId}`);
-                                } else {
-                                    navigate("/invoices");
-                                }
-                            }}
+                            onClick={() =>
+                                navigate(`/invoices/view/${invoiceId}`)
+                            }
                             className="flex items-center justify-center rounded-md border border-gray-200 bg-white p-2 text-[#0F4659] transition hover:bg-[#0F4659]/10"
                             title="Back to invoice"
                             aria-label="Back to invoice"
                         >
                             <ArrowLeft size={24} />
                         </button>
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-700 text-white shadow-sm"
+
+                        <button
+                            type="button"
                             onClick={() => navigate("/invoices")}
-                            title="Home"
-                            aria-label="Go to invoices">
+                            className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-700 text-white shadow-sm"
+                            title="View invoices"
+                            aria-label="Go to invoices"
+                        >
                             <FileText size={24} />
-                        </div>
+                        </button>
                     </div>
 
                     <div className="min-w-0">
@@ -582,68 +722,83 @@ export default function InvoicePreviewCard() {
                         </div>
 
                         <p className="mt-1 break-words text-sm text-slate-500">
-                            {invoice.customerName ||
-                                invoice.customer?.name ||
-                                "No customer selected"}
+                            {customerName}
                         </p>
 
                         <p className="mt-1 text-xs text-slate-400">
-                            Invoice date: {toDisplay(invoice.invoiceDate)}
-                            {" · "}
-                            Due: {toDisplay(invoice.dueDate)}
+                            {toDisplay(invoice.invoiceDate)}
+                            {" · Due: "}
+                            {toDisplay(invoice.dueDate)}
                         </p>
                     </div>
                 </div>
 
-                {/* CUSTOMIZE DROPDOWN */}
+                {/* HEADER ACTIONS */}
 
-                <div
-                    ref={customizeRef}
-                    className="relative shrink-0"
-                >
+                <div className="flex flex-wrap items-center gap-2">
                     <button
                         type="button"
-                        onClick={() =>
-                            setCustomizeOpen((previous) => !previous)
-                        }
-                        aria-expanded={customizeOpen}
-                        className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                        onClick={handleOpenPreviewInNewTab}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                        title="Open preview in a new tab"
                     >
-                        <Settings className="h-4 w-4" />
-                        <span>Customize</span>
-                        <ChevronDown
-                            className={`h-3.5 w-3.5 transition-transform duration-200 ${customizeOpen ? "rotate-180" : ""
-                                }`}
-                        />
+                        <ExternalLink size={15} />
+                        <span>New Tab</span>
                     </button>
 
-                    {customizeOpen && (
-                        <div className="absolute right-0 top-full z-[100] mt-1 w-[min(310px,calc(100vw-32px))] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl">
-                            <div className="px-4 py-3 text-sm font-semibold text-gray-500">
-                                Invoice Template
+                    {/* CUSTOMIZE DROPDOWN */}
+
+                    <div
+                        ref={customizeRef}
+                        className="relative shrink-0"
+                    >
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setCustomizeOpen((previous) => !previous)
+                            }
+                            aria-expanded={customizeOpen}
+                            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                        >
+                            <Settings className="h-4 w-4" />
+                            <span>Customize</span>
+
+                            <ChevronDown
+                                className={`h-3.5 w-3.5 transition-transform duration-200 ${customizeOpen ? "rotate-180" : ""
+                                    }`}
+                            />
+                        </button>
+
+                        {customizeOpen && (
+                            <div className="absolute right-0 top-full z-[100] mt-1 w-[min(310px,calc(100vw-32px))] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl">
+                                <div className="px-4 py-3 text-sm font-semibold text-gray-500">
+                                    Invoice Template
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={handleChangeTemplate}
+                                    className="mx-2 flex w-[calc(100%-16px)] rounded-md bg-blue-500 px-3 py-2 text-left text-sm font-medium text-white hover:bg-blue-600"
+                                >
+                                    Change Template
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={handleEditTemplate}
+                                    className="mx-2 mb-2 flex w-[calc(100%-16px)] rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-100"
+                                >
+                                    Edit Invoice
+                                </button>
                             </div>
-
-                            <button
-                                type="button"
-                                onClick={handleChangeTemplate}
-                                className="mx-2 flex w-[calc(100%-16px)] rounded-md bg-blue-500 px-3 py-2 text-left text-sm font-medium text-white hover:bg-blue-600"
-                            >
-                                Change Template
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={handleEditTemplate}
-                                className="mx-2 mb-2 flex w-[calc(100%-16px)] rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-100"
-                            >
-                                Edit Invoice
-                            </button>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {/* RESPONSIVE INVOICE PREVIEW */}
+            {/* COMMON INVOICE DETAILS */}
+
+            {/* RESPONSIVE TEMPLATE PREVIEW */}
 
             <div
                 ref={previewRef}
@@ -667,9 +822,9 @@ export default function InvoicePreviewCard() {
                         >
                             <div className="rounded-md border border-gray-200 bg-white shadow-sm">
                                 <Template
-                                    key={`${invoiceId ?? ""}-${invoiceTemplate}`}
-                                    invoice={invoice}
-                                    preview={true}
+                                    key={`${invoiceId}-${invoiceTemplate}`}
+                                    invoice={sharedInvoice}
+                                    preview
                                 />
                             </div>
                         </div>

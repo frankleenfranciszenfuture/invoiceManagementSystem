@@ -380,7 +380,7 @@ export default function UserCreate() {
     block
     text-xs
     font-medium
-    ${required ? "text-red-500" : "text-[#0F4659]"}
+    ${required ? "text-red-500" : "text-gray-500"}
     mb-1.5
 `;
 
@@ -956,9 +956,9 @@ export default function UserCreate() {
 
                     {/* HEADER */}
 
-                    <div className="shrink-0 h-[68px] flex items-center justify-between px-6 border-b border-gray-200 bg-white">
+                    <div className="shrink-0 h-[68px] flex items-center justify-between px-6 border-b border-gray-200 bg-[#408DFB]">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-[#0F4659]/20 text-[#0F4659] flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-lg bg-gray-100 text-[#408DFB] flex items-center justify-center">
                                 <UserKeyIcon
                                     size={22}
                                     strokeWidth={2}
@@ -966,13 +966,13 @@ export default function UserCreate() {
                             </div>
 
                             <div>
-                                <h2 className="text-lg font-semibold text-[#0F4659]">
+                                <h2 className="text-lg font-semibold text-gray-100">
                                     {isEdit
                                         ? "Edit User"
                                         : "Add New User"}
                                 </h2>
 
-                                <p className="text-xs text-[#0F4659] mt-0.5">
+                                <p className="text-xs text-gray-100 mt-0.5">
                                     {isEdit
                                         ? "Update user details"
                                         : "Create a new user"}
@@ -1002,15 +1002,15 @@ export default function UserCreate() {
                                         setActiveTab(tab.id)
                                     }
                                     className={`
-                                        relative h-full px-1 text-sm
+                                        relative h-full px-1 text-sm 
                                         font-medium transition
                                         ${activeTab === tab.id
                                             ? hasError
                                                 ? "text-red-600"
-                                                : "text-[#0F4659]"
+                                                : "text-[#408DFB] "
                                             : hasError
                                                 ? "text-red-600"
-                                                : "text-[#0F4659] hover:text-[#0F4659/70"
+                                                : "text-gray-500 hover:text-[#408DFB]/70"
                                         }
                                     `}
                                 >
@@ -1029,7 +1029,7 @@ export default function UserCreate() {
                                                 right-0 h-0.5
                                                 ${hasError
                                                     ? "bg-red-500"
-                                                    : "bg-[#0F4659]"
+                                                    : "bg-[#408DFB]"
                                                 }
                                             `}
                                         />
@@ -1053,11 +1053,11 @@ export default function UserCreate() {
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between pb-3 border-b border-gray-200">
                                         <div>
-                                            <h3 className="text-sm font-semibold text-[#0F4659]">
+                                            <h3 className="text-sm font-semibold text-gray-500">
                                                 User Information
                                             </h3>
 
-                                            <p className="text-xs text-[#0F4659]/70 mt-1">
+                                            <p className="text-xs text-gray-400 mt-1">
                                                 Enter the basic user details.
                                             </p>
                                         </div>
@@ -1255,11 +1255,11 @@ export default function UserCreate() {
                             {activeTab === "settings" && (
                                 <div className="space-y-6">
                                     <div className="pb-3 border-b border-gray-200">
-                                        <h3 className="text-sm font-semibold text-[#0F4659]">
+                                        <h3 className="text-sm font-semibold text-gray-500">
                                             Settings
                                         </h3>
 
-                                        <p className="text-xs text-[#0F4659]/70 mt-1">
+                                        <p className="text-xs text-gray-400 mt-1">
                                             Configure user account settings.
                                         </p>
                                     </div>
@@ -1316,11 +1316,11 @@ export default function UserCreate() {
                                     <div className="max-w-md p-4 bg-white border border-gray-200 rounded-lg">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="text-sm font-semibold text-[#0F4659]">
+                                                <p className="text-sm font-semibold text-gray-500">
                                                     User Status
                                                 </p>
 
-                                                <p className="text-xs text-[#0F4659]/70 mt-1">
+                                                <p className="text-xs text-gray-400 mt-1">
                                                     Current status of this user.
                                                 </p>
                                             </div>
@@ -1364,7 +1364,9 @@ export default function UserCreate() {
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="h-10 px-6 rounded-md bg-[#0F4659] text-white text-sm font-medium hover:bg-[#0F4659]/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="h-10 px-6 rounded-md bg-[#408DFB] text-white text-sm 
+                                    font-medium hover:bg-[#408DFB]/90 transition
+                                    disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {loading
                                         ? isEdit
@@ -1418,7 +1420,7 @@ export default function UserCreate() {
                             <button
                                 type="button"
                                 onClick={handleGoToMenuPermission}
-                                className="rounded-lg bg-[#088178] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#066b63]"
+                                className="rounded-lg bg-[#408DFB] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#408DFB]"
                             >
                                 Menu Permission
                             </button>

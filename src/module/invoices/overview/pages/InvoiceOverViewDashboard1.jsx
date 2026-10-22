@@ -66,7 +66,7 @@ export default function InvoiceOverViewDashboard1() {
                 <div className="flex min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain">
 
                     {/* LEFT SIDEBAR */}
-                    <aside className="w-[260px] min-w-[220px] shrink-0 border-r border-gray-200 bg-white">
+                    <aside className="w-[130px] min-w-[220px] shrink-0 border-r border-gray-200 bg-white">
                         <InvoiceOverViewSiderTopbar />
                         <InvoiceOverViewSiderDetails />
                     </aside>
