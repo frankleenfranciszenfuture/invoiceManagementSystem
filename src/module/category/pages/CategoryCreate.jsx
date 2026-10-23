@@ -20,6 +20,7 @@ import {
 import {
     getUserPermission,
 } from "../../menuPermission/thunks/menuPermissionThunks";
+import CustomSelect from "../../../common/custom/CustomSelect";
 
 export default function CategoryCreate() {
 
@@ -1051,7 +1052,7 @@ export default function CategoryCreate() {
         block
         text-xs
         font-medium
-        text-gray-600
+        text-gray-500
         mb-1.5
     `;
 
@@ -1062,16 +1063,14 @@ export default function CategoryCreate() {
     return (
         <div
             className="
-                w-[950px]
-                max-w-[95vw]
-                h-[700px]
-                max-h-[88vh]
-                bg-white
-                rounded-xl
-                shadow-2xl
-                overflow-hidden
-                flex
-                flex-col
+                   w-full
+        min-w-0
+        max-h-[80vh]
+        bg-white
+        rounded-lg
+        overflow-hidden
+        flex
+        flex-col
             "
         >
 
@@ -1087,8 +1086,8 @@ export default function CategoryCreate() {
                     items-center
                     justify-between
                     px-6
-                    border-b
-                    border-gray-200
+                    border
+                    border-lime-300
                     bg-white
                 "
             >
@@ -1118,7 +1117,7 @@ export default function CategoryCreate() {
 
                         <h2
                             className="
-                                text-[17px]
+                                text-[16px]
                                 font-semibold
                                 text-gray-800
                             "
@@ -1196,10 +1195,10 @@ export default function CategoryCreate() {
                                     transition
 
                                     ${active
-                                        ? "text-blue-600"
+                                        ? "text-gray-500"
                                         : hasError
                                             ? "text-red-500"
-                                            : "text-gray-500 hover:text-gray-800"
+                                            : "text-gray-500 hover:text-gray-500"
                                     }
                                 `}
                             >
@@ -1235,7 +1234,7 @@ export default function CategoryCreate() {
                                             right-0
                                             bottom-0
                                             h-[2px]
-                                            bg-blue-600
+                                            bg-lime-600
                                             rounded-t
                                         "
                                     />
@@ -1304,7 +1303,7 @@ export default function CategoryCreate() {
                                         className="
                                             text-base
                                             font-semibold
-                                            text-gray-800
+                                            text-gray-500
                                         "
                                     >
                                         Category Information
@@ -1313,7 +1312,7 @@ export default function CategoryCreate() {
                                     <p
                                         className="
                                             text-xs
-                                            text-gray-500
+                                            text-gray-400
                                             mt-1
                                         "
                                     >
@@ -1334,9 +1333,9 @@ export default function CategoryCreate() {
 
                                     <label
                                         className="
-                                            text-md
+                                            text-sm
                                             font-semibold
-                                            text-gray-600
+                                            text-gray-500
                                         "
                                     >
                                         Status :
@@ -1503,6 +1502,7 @@ export default function CategoryCreate() {
                                         placeholder="Enter category description"
                                         className="
                                             w-full
+                                            h-[60px]
                                             px-3
                                             py-3
                                             border
@@ -1542,7 +1542,7 @@ export default function CategoryCreate() {
                                     className="
                                         text-base
                                         font-semibold
-                                        text-gray-800
+                                        text-gray-500
                                     "
                                 >
                                     Category Settings
@@ -1551,7 +1551,7 @@ export default function CategoryCreate() {
                                 <p
                                     className="
                                         text-xs
-                                        text-gray-500
+                                        text-gray-400
                                         mt-1
                                     "
                                 >
@@ -1569,33 +1569,17 @@ export default function CategoryCreate() {
                                     Status
                                 </label>
 
-                                <select
-                                    value={
-                                        form.status ?? "ACTIVE"
+                                <CustomSelect
+                                    value={form.status || "ACTIVE"}
+                                    onChange={(value) =>
+                                        handleChange("status", value)
                                     }
-                                    onChange={(e) =>
-                                        handleChange(
-                                            "status",
-                                            e.target.value
-                                        )
-                                    }
-                                    className={inputClass}
-                                    disabled={loading}
-                                >
-
-                                    <option value="ACTIVE">
-                                        ACTIVE
-                                    </option>
-
-                                    <option value="INACTIVE">
-                                        INACTIVE
-                                    </option>
-
-                                    <option value="DRAFT">
-                                        DRAFT
-                                    </option>
-
-                                </select>
+                                    options={[
+                                        { value: "ACTIVE", label: "ACTIVE" },
+                                        { value: "INACTIVE", label: "INACTIVE" },
+                                        { value: "DRAFT", label: "DRAFT" },
+                                    ]}
+                                />
 
                             </div>
 

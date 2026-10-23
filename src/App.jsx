@@ -127,6 +127,9 @@ import PartyCreateSimple from "./module/parties/pages/PartyCreateSimple";
 import PartyProfileView from "./module/parties/pages/PartyProfileView";
 import ClearanceCreateSimple from "./module/clearnaceOutStandingParties/pages/ClearanceCreateSimple";
 import ClearanceDashboard from "./module/clearnaceOutStandingParties/pages/ClearanceDashboard";
+import UnitProfileView from "./module/units/pages/UnitProfileView";
+import SizeProfileView from "./module/sizes/pages/SizeProfileView";
+import CategoryProfileView from "./module/category/pages/CategoryProfileView";
 
 
 
@@ -386,6 +389,11 @@ function AppContent() {
           element={<SizesDashboard />}
         />
 
+        <Route
+          path="/sizes/view/:id"
+          element={<SizeProfileView />}
+        />
+
 
         {/* =================================================
                     UNITS
@@ -396,6 +404,10 @@ function AppContent() {
           element={<UnitDashboard />}
         />
 
+        <Route
+          path="/units/view/:id"
+          element={<UnitProfileView />}
+        />
 
         {/* =================================================
                     SUB CATEGORY
@@ -416,7 +428,10 @@ function AppContent() {
           element={<CategoryDashboard />}
         />
 
-
+        <Route
+          path="/categories/view/:id"
+          element={<CategoryProfileView />}
+        />
         {/* =================================================
                     ROLE
             ================================================= */}
@@ -437,7 +452,7 @@ function AppContent() {
             ================================================= */}
 
         <Route
-          path="/users"
+          path="/settings/users"
           element={<UserDashboard />}
         />
 

@@ -154,7 +154,7 @@ export default function SettingsDashboard() {
     const isEmpty = orgColumns.length === 0 && moduleSections.length === 0;
 
     return (
-        <div className="flex h-screen bg-gray-50 font-sans text-[13px] overflow-hidden mt-5  px-2">
+        <div className="flex h-screen bg-gray-50 font-sans text-[13px] overflow-hidden  px-2">
             <div className="flex-1 min-h-0 bg-white overflow-hidden rounded-lg">
                 <div className="px-2 py-5 max-w-30xl w-full">
                     {/* ================= TOP HEADER ================= */}

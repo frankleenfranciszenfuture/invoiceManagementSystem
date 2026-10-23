@@ -22,6 +22,7 @@ import {
 import {
     getUserPermission,
 } from "../../menuPermission/thunks/menuPermissionThunks";
+import CustomSelect from "../../../common/custom/CustomSelect";
 
 export default function SubCategoryCreate() {
 
@@ -1178,6 +1179,13 @@ export default function SubCategoryCreate() {
         mb-1.5
     `;
 
+    const getLabelClass = (required = false) => `
+    block
+    text-xs
+    font-medium
+    ${required ? "text-red-500" : "text-gray-500"}
+    mb-1.5
+`;
     // =========================================================
     // UI
     // =========================================================
@@ -1185,20 +1193,14 @@ export default function SubCategoryCreate() {
     return (
         <div
             className="
-                w-[950px]
-                max-w-[95vw]
-
-                h-[700px]
-                max-h-[88vh]
-
-                bg-white
-                rounded-xl
-                shadow-2xl
-
-                overflow-hidden
-
-                flex
-                flex-col
+                   w-full
+        min-w-0
+        max-h-[80vh]
+        bg-white
+        rounded-lg
+        overflow-hidden
+        flex
+        flex-col
             "
         >
 
@@ -1218,7 +1220,7 @@ export default function SubCategoryCreate() {
                     px-6
 
                     border-b
-                    border-gray-200
+                    border-lime-500
 
                     bg-white
                 "
@@ -1251,9 +1253,9 @@ export default function SubCategoryCreate() {
 
                         <h2
                             className="
-                                text-[17px]
+                                text-[16px]
                                 font-semibold
-                                text-gray-800
+                                text-gray-500
                             "
                         >
                             {isEdit
@@ -1264,7 +1266,7 @@ export default function SubCategoryCreate() {
                         <p
                             className="
                                 text-xs
-                                text-gray-500
+                                text-gray-400
                                 mt-0.5
                             "
                         >
@@ -1334,10 +1336,10 @@ export default function SubCategoryCreate() {
                                     transition
 
                                     ${active
-                                        ? "text-blue-600"
+                                        ? "text-gray-500"
                                         : hasError
                                             ? "text-red-500"
-                                            : "text-gray-500 hover:text-gray-800"
+                                            : "text-gray-400 hover:text-gray-600"
                                     }
                                 `}
                             >
@@ -1377,7 +1379,7 @@ export default function SubCategoryCreate() {
 
                                             h-[2px]
 
-                                            bg-blue-600
+                                            bg-lime-500
 
                                             rounded-t
                                         "
@@ -1450,9 +1452,9 @@ export default function SubCategoryCreate() {
 
                                     <h3
                                         className="
-                                            text-base
+                                            text-md
                                             font-semibold
-                                            text-gray-800
+                                            text-gray-500
                                         "
                                     >
                                         Sub Category Information
@@ -1461,7 +1463,7 @@ export default function SubCategoryCreate() {
                                     <p
                                         className="
                                             text-xs
-                                            text-gray-500
+                                            text-gray-400
                                             mt-1
                                         "
                                     >
@@ -1482,9 +1484,9 @@ export default function SubCategoryCreate() {
 
                                     <label
                                         className="
-                                            text-md
+                                            text-sm
                                             font-semibold
-                                            text-gray-600
+                                            text-gray-500
                                         "
                                     >
                                         Status :
@@ -1534,7 +1536,7 @@ export default function SubCategoryCreate() {
                                 <div>
 
                                     <label
-                                        className={labelClass}
+                                        className={getLabelClass(true)}
                                     >
                                         Category
 
@@ -1549,58 +1551,37 @@ export default function SubCategoryCreate() {
 
                                     </label>
 
-                                    <select
-                                        value={
-                                            form.categoryId ?? ""
-                                        }
-                                        onChange={(e) =>
+                                    <CustomSelect
+                                        value={form.categoryId ?? ""}
+                                        onChange={(value) =>
                                             handleChange(
                                                 "categoryId",
-                                                e.target.value
-                                                    ? Number(
-                                                        e.target.value
-                                                    )
-                                                    : null
+                                                value ? Number(value) : null
                                             )
                                         }
-                                        className={inputClass}
-                                        disabled={loading}
-                                    >
-
-                                        <option value="">
-                                            Select Category
-                                        </option>
-
-                                        {categories
-                                            .filter(
-                                                (category) =>
-                                                    category.status ===
-                                                    "ACTIVE"
-                                            )
-                                            .sort(
-                                                (a, b) =>
-                                                    (a.displayOrder ?? 0) -
-                                                    (b.displayOrder ?? 0)
-                                            )
-                                            .map(
-                                                (category) => (
-                                                    <option
-                                                        key={
-                                                            category.id
-                                                        }
-                                                        value={
-                                                            category.id
-                                                        }
-                                                    >
-                                                        {
-                                                            category.categoryName ||
-                                                            category.name
-                                                        }
-                                                    </option>
+                                        options={[
+                                            {
+                                                value: "",
+                                                label: "Select Category",
+                                            },
+                                            ...categories
+                                                .filter(
+                                                    (category) => category.status === "ACTIVE"
                                                 )
-                                            )}
-
-                                    </select>
+                                                .sort(
+                                                    (a, b) =>
+                                                        (a.displayOrder ?? 0) -
+                                                        (b.displayOrder ?? 0)
+                                                )
+                                                .map((category) => ({
+                                                    value: category.id,
+                                                    label:
+                                                        category.categoryName || category.name,
+                                                })),
+                                        ]}
+                                        placeholder="Select Category"
+                                        disabled={loading}
+                                    />
 
                                     {errors.categoryId && (
                                         <p
@@ -1623,7 +1604,7 @@ export default function SubCategoryCreate() {
                                 <div>
 
                                     <label
-                                        className={labelClass}
+                                        className={getLabelClass(true)}
                                     >
                                         Sub Category Name
 
@@ -1692,6 +1673,7 @@ export default function SubCategoryCreate() {
                                         placeholder="Enter sub category description"
                                         className="
                                             w-full
+                                            h-[50px]
                                             px-3
                                             py-3
 
@@ -1792,7 +1774,7 @@ export default function SubCategoryCreate() {
                                     className="
                                         text-base
                                         font-semibold
-                                        text-gray-800
+                                        text-gray-500
                                     "
                                 >
                                     Sub Category Settings
@@ -1801,7 +1783,7 @@ export default function SubCategoryCreate() {
                                 <p
                                     className="
                                         text-xs
-                                        text-gray-500
+                                        text-gray-400
                                         mt-1
                                     "
                                 >
@@ -1819,34 +1801,17 @@ export default function SubCategoryCreate() {
                                     Status
                                 </label>
 
-                                <select
-                                    value={
-                                        form.status ??
-                                        "ACTIVE"
+                                <CustomSelect
+                                    value={form.status || "ACTIVE"}
+                                    onChange={(value) =>
+                                        handleChange("status", value)
                                     }
-                                    onChange={(e) =>
-                                        handleChange(
-                                            "status",
-                                            e.target.value
-                                        )
-                                    }
-                                    className={inputClass}
-                                    disabled={loading}
-                                >
-
-                                    <option value="ACTIVE">
-                                        ACTIVE
-                                    </option>
-
-                                    <option value="INACTIVE">
-                                        INACTIVE
-                                    </option>
-
-                                    <option value="DRAFT">
-                                        DRAFT
-                                    </option>
-
-                                </select>
+                                    options={[
+                                        { value: "ACTIVE", label: "ACTIVE" },
+                                        { value: "INACTIVE", label: "INACTIVE" },
+                                        { value: "DRAFT", label: "DRAFT" },
+                                    ]}
+                                />
 
                             </div>
 
@@ -1879,7 +1844,7 @@ export default function SubCategoryCreate() {
                                             className="
                                                 text-sm
                                                 font-medium
-                                                text-gray-800
+                                                text-gray-500
                                             "
                                         >
                                             Sub Category Status
@@ -1888,7 +1853,7 @@ export default function SubCategoryCreate() {
                                         <p
                                             className="
                                                 text-xs
-                                                text-gray-500
+                                                text-gray-400
                                                 mt-1
                                             "
                                         >
@@ -1896,23 +1861,7 @@ export default function SubCategoryCreate() {
                                             set to{" "}
 
                                             <span
-                                                className="
-                                                    font-medium
-                                                    text-gray-700
-                                                "
-                                            >
-                                                {
-                                                    form.status ||
-                                                    "ACTIVE"
-                                                }
-                                            </span>
-
-                                        </p>
-
-                                    </div>
-
-                                    <span
-                                        className={`
+                                                className={`
                                             inline-flex
                                             items-center
                                             justify-center
@@ -1927,18 +1876,24 @@ export default function SubCategoryCreate() {
                                             font-medium
 
                                             ${form.status === "ACTIVE"
-                                                ? "bg-green-50 text-green-700"
-                                                : form.status === "INACTIVE"
-                                                    ? "bg-red-50 text-red-700"
-                                                    : "bg-yellow-50 text-yellow-700"
-                                            }
+                                                        ? "bg-green-50 text-green-700"
+                                                        : form.status === "INACTIVE"
+                                                            ? "bg-red-50 text-red-700"
+                                                            : "bg-yellow-50 text-yellow-700"
+                                                    }
                                         `}
-                                    >
-                                        {
-                                            form.status ||
-                                            "ACTIVE"
-                                        }
-                                    </span>
+                                            >
+                                                {
+                                                    form.status ||
+                                                    "ACTIVE"
+                                                }
+                                            </span>
+
+                                        </p>
+
+                                    </div>
+
+
 
                                 </div>
 

@@ -125,7 +125,38 @@ const NAV = [
     },
 ];
 
-
+const SETTINGS_NAV = [
+    {
+        label: "General Settings",
+        moduleName: "Settings",
+        icon: Settings,
+        to: "/settings",
+    },
+    {
+        label: "Users",
+        moduleName: "Users",
+        icon: Users,
+        to: "/settings/users",
+    },
+    {
+        label: "Currencies",
+        moduleName: "Currencies",
+        icon: Wallet,
+        to: "/settings/currencies",
+    },
+    {
+        label: "Bank Accounts",
+        moduleName: "Bank Accounts",
+        icon: Wallet,
+        to: "/settings/bank-accounts",
+    },
+    {
+        label: "Email Signatures",
+        moduleName: "Email Signatures",
+        icon: FileText,
+        to: "/settings/email-signatures",
+    },
+];
 // ============================================================
 // HELPERS
 // ============================================================
@@ -369,7 +400,17 @@ const Sidebar = ({ onLogout }) => {
         [effectivePermissions, hasFullAccess]
     );
 
+    const isSettingsArea =
+        location.pathname === "/settings" ||
+        location.pathname.startsWith("/settings/");
 
+    const currentNav = React.useMemo(() => {
+        const sourceNav = isSettingsArea ? SETTINGS_NAV : NAV;
+
+        return sourceNav.filter((item) =>
+            hasPermission(item.moduleName, "VIEW")
+        );
+    }, [isSettingsArea, hasPermission]);
     // ---------- NAVIGATION ----------
 
     const isActiveRoute = (path) =>
@@ -484,9 +525,9 @@ const Sidebar = ({ onLogout }) => {
 
             <aside
                 className={`
-                    fixed bottom-3 left-3 top-3 z-30 flex flex-col
-                    rounded-xl border-l border-r border-lime-500 
-                    bg-gradient-to-br from-[#2E364D] to-[#0B57D0]
+                    fixed bottom-3 left-3 top-2 z-30 flex flex-col
+                    rounded-md border-l border-r border-lime-500 
+                    bg-gradient-to-br from-[#515F73] to-[#2E364D]
                     transition-[width] duration-300
                     ${open ? "w-55" : "w-[72px]"}
                 `}
@@ -512,23 +553,55 @@ const Sidebar = ({ onLogout }) => {
                 {/* ================= USER HEADER ================= */}
 
                 <div className={`px-4 pb-4 pt-5 ${open ? "" : "flex justify-center px-0"}`}>
-                    <div className={`flex items-center gap-3 ${open ? "border-b border-lime-400 pb-4" : ""}`}>
-                        {/* {Avatar} */}
-                        <FileText className="h-10 w-10 px-3 rounded-2xl bg-gradient-to-br from-[#9AE600] to-[#166534] text-[#FCF7F8] shadow-md" />
+                    <div
+                        className={`flex items-center gap-3 ${open ? "border-b border-gray-400 pb-4" : ""
+                            }`}
+                    >
+                        {isSettingsArea ? (
+                            <button
+                                type="button"
+                                onClick={() => goTo("/dashboard")}
+                                title="Back to Main Menu"
+                                className={`
+                    flex min-w-0 items-center gap-2 rounded-lg
+                    text-sm font-semibold text-white
+                    transition hover:text-lime-300
+                    ${open ? "w-full" : "justify-center"}
+                `}
+                            >
+                                <ChevronLeft size={22} className="shrink-0" />
 
-                        {open && (
-                            <div className="min-w-0 leading-tight">
+                                {open && (
+                                    <span className="truncate">
+                                        Back to Main Menu
+                                    </span>
+                                )}
+                            </button>
+                        ) : (
+                            <>
+                                <FileText
+                                    className="
+                        h-10 w-10 shrink-0 rounded-2xl px-3
+                        bg-gradient-to-br from-[#6366F1] to-[#166534]
+                        text-[#FCF7F8] shadow-md
+                    "
+                                />
 
-                                <p className="truncate text-base font-semibold text-[#F5F5F5]">
-                                    {/* {displayName} */}
-                                    Zenfuture Tech
-                                </p>
-                                <p className="text-base text-[#F5F5F5]">InvoicePro</p>
-                            </div>
+                                {open && (
+                                    <div className="min-w-0 leading-tight">
+                                        <p className="truncate text-base font-semibold text-[#F5F5F5]">
+                                            Zenfuture Tech
+                                        </p>
+
+                                        <p className="text-base text-[#F5F5F5]">
+                                            InvoicePro
+                                        </p>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
-
 
                 {/* ================= NAV ================= */}
 
@@ -538,7 +611,10 @@ const Sidebar = ({ onLogout }) => {
                         ${open ? "overflow-y-auto" : "overflow-visible"}
                     `}
                 >
-                    {visibleNav.map((item) => {
+
+
+
+                    {currentNav.map((item) => {
                         const Icon = item.icon;
                         const hasChildren = item.children?.length > 0;
                         const active = isActiveRoute(item.to);

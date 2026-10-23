@@ -31,6 +31,7 @@ import {
 import {
     getUserPermission,
 } from "../../menuPermission/thunks/menuPermissionThunks";
+import CustomSelect from "../../../common/custom/CustomSelect";
 
 export default function UnitCreate() {
 
@@ -1359,6 +1360,14 @@ export default function UnitCreate() {
         mb-1.5
     `;
 
+    const getLabelClass = (required = false) => `
+    block
+    text-xs
+    font-medium
+    ${required ? "text-red-500" : "text-gray-500"}
+    mb-1.5
+`;
+
     // =========================================================
     // NORMAL UI
     // =========================================================
@@ -1366,19 +1375,14 @@ export default function UnitCreate() {
     return (
         <div
             className="
-                w-[950px]
-                max-w-[95vw]
-                h-[700px]
-                max-h-[88vh]
-
-                bg-white
-                rounded-xl
-                shadow-2xl
-
-                overflow-hidden
-
-                flex
-                flex-col
+                   w-full
+        min-w-0
+        max-h-[80vh]
+        bg-white
+        rounded-lg
+        overflow-hidden
+        flex
+        flex-col
             "
         >
 
@@ -1398,7 +1402,7 @@ export default function UnitCreate() {
                     px-6
 
                     border-b
-                    border-gray-200
+                    border-lime-500
 
                     bg-white
                 "
@@ -1437,9 +1441,9 @@ export default function UnitCreate() {
 
                         <h2
                             className="
-                                text-[17px]
+                                text-[16px]
                                 font-semibold
-                                text-gray-800
+                                text-gray-500
                             "
                         >
                             {isEdit
@@ -1450,7 +1454,7 @@ export default function UnitCreate() {
                         <p
                             className="
                                 text-xs
-                                text-gray-500
+                                text-gray-400
                                 mt-0.5
                             "
                         >
@@ -1525,10 +1529,10 @@ export default function UnitCreate() {
                                         transition
 
                                         ${active
-                                            ? "text-blue-600"
+                                            ? "text-gray-500"
                                             : hasError
                                                 ? "text-red-500"
-                                                : "text-gray-500 hover:text-gray-800"
+                                                : "text-gray-400 hover:text-gray-600"
                                         }
                                     `}
                                 >
@@ -1566,7 +1570,7 @@ export default function UnitCreate() {
 
                                                 h-[2px]
 
-                                                bg-blue-600
+                                                bg-lime-500
 
                                                 rounded-t
                                             "
@@ -1642,7 +1646,7 @@ export default function UnitCreate() {
                                         className="
                                             text-base
                                             font-semibold
-                                            text-gray-800
+                                            text-gray-500
                                         "
                                     >
                                         Unit Information
@@ -1651,7 +1655,7 @@ export default function UnitCreate() {
                                     <p
                                         className="
                                             text-xs
-                                            text-gray-500
+                                            text-gray-400
                                             mt-1
                                         "
                                     >
@@ -1671,9 +1675,9 @@ export default function UnitCreate() {
 
                                     <label
                                         className="
-                                            text-md
+                                            text-sm
                                             font-semibold
-                                            text-gray-600
+                                            text-gray-500
                                         "
                                     >
                                         Status :
@@ -1728,7 +1732,7 @@ export default function UnitCreate() {
                                 <div>
 
                                     <label
-                                        className={labelClass}
+                                        className={getLabelClass(true)}
                                     >
                                         Unit Name
 
@@ -1782,7 +1786,7 @@ export default function UnitCreate() {
                                 <div>
 
                                     <label
-                                        className={labelClass}
+                                        className={getLabelClass(true)}
                                     >
                                         Unit Short Name
 
@@ -1860,7 +1864,7 @@ export default function UnitCreate() {
                                         placeholder="Enter unit description"
                                         className="
                                             w-full
-
+                                            h-[50px]
                                             px-3
                                             py-3
 
@@ -1910,7 +1914,7 @@ export default function UnitCreate() {
                                     className="
                                         text-base
                                         font-semibold
-                                        text-gray-800
+                                        text-gray-500
                                     "
                                 >
                                     Unit Settings
@@ -1919,7 +1923,7 @@ export default function UnitCreate() {
                                 <p
                                     className="
                                         text-xs
-                                        text-gray-500
+                                        text-gray-400
                                         mt-1
                                     "
                                 >
@@ -1944,35 +1948,17 @@ export default function UnitCreate() {
                                     Status
                                 </label>
 
-                                <select
-                                    value={
-                                        form.status ??
-                                        "ACTIVE"
+                                <CustomSelect
+                                    value={form.status || "ACTIVE"}
+                                    onChange={(value) =>
+                                        handleChange("status", value)
                                     }
-                                    onChange={(e) =>
-                                        handleChange(
-                                            "status",
-                                            e.target.value
-                                        )
-                                    }
-                                    className={
-                                        inputClass
-                                    }
-                                >
-
-                                    <option value="ACTIVE">
-                                        ACTIVE
-                                    </option>
-
-                                    <option value="INACTIVE">
-                                        INACTIVE
-                                    </option>
-
-                                    <option value="DRAFT">
-                                        DRAFT
-                                    </option>
-
-                                </select>
+                                    options={[
+                                        { value: "ACTIVE", label: "ACTIVE" },
+                                        { value: "INACTIVE", label: "INACTIVE" },
+                                        { value: "DRAFT", label: "DRAFT" },
+                                    ]}
+                                />
 
                             </div>
 
@@ -2007,7 +1993,7 @@ export default function UnitCreate() {
                                             className="
                                                 text-sm
                                                 font-medium
-                                                text-gray-800
+                                                text-gray-500
                                             "
                                         >
                                             Unit Status
@@ -2023,23 +2009,7 @@ export default function UnitCreate() {
                                             This unit is currently set to{" "}
 
                                             <span
-                                                className="
-                                                    font-medium
-                                                    text-gray-700
-                                                "
-                                            >
-                                                {
-                                                    form.status ||
-                                                    "ACTIVE"
-                                                }
-                                            </span>
-
-                                        </p>
-
-                                    </div>
-
-                                    <span
-                                        className={`
+                                                className={`
                                             inline-flex
                                             items-center
                                             justify-center
@@ -2054,18 +2024,24 @@ export default function UnitCreate() {
                                             font-medium
 
                                             ${form.status === "ACTIVE"
-                                                ? "bg-green-50 text-green-700"
-                                                : form.status === "INACTIVE"
-                                                    ? "bg-red-50 text-red-700"
-                                                    : "bg-yellow-50 text-yellow-700"
-                                            }
+                                                        ? "bg-green-50 text-green-700"
+                                                        : form.status === "INACTIVE"
+                                                            ? "bg-red-50 text-red-700"
+                                                            : "bg-yellow-50 text-yellow-700"
+                                                    }
                                         `}
-                                    >
-                                        {
-                                            form.status ||
-                                            "ACTIVE"
-                                        }
-                                    </span>
+                                            >
+                                                {
+                                                    form.status ||
+                                                    "ACTIVE"
+                                                }
+                                            </span>
+
+                                        </p>
+
+                                    </div>
+
+
 
                                 </div>
 

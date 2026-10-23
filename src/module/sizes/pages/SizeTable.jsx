@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import toast from "react-hot-toast";
+import Pagination from "../../../common/pagination/table/Pagination";
 
 export default function SizeTable({
     sizes = [],
@@ -30,6 +31,8 @@ export default function SizeTable({
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
+    const [showEdit, setShowEdit] = useState(false);
+    const [showView, setShowView] = useState(false);
     /* =====================================================
        AUTH USER
     ===================================================== */
@@ -589,153 +592,41 @@ export default function SizeTable({
 
     return (
 
-        <div
-            className="
-                bg-white
-                rounded-xl
-                border
-                border-gray-200
-                overflow-visible
-                w-full
-            "
-        >
-
-            {/* =================================================
-                TABLE CONTAINER
-            ================================================= */}
-
-            <div
-                className="
-                    w-full
-                    overflow-visible
-                "
-            >
-
-                <table
-                    className="
-                        w-full
-                        table-fixed
-                        border-collapse
-                    "
-                >
-
-                    {/* =================================================
-                        TABLE HEADER
-                    ================================================= */}
-
-                    <thead
-                        className="
-                            bg-gray-100
-                            border-b
-                            border-gray-300
-                        "
-                    >
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
+            <div className="overflow-x-auto overflow-y-visible">
+                <table className="w-full">
+                    <thead className="bg-[#FAF9F7]/20 border-b border-gray-300">
 
                         <tr>
 
-                            {/* SIZE NAME */}
+                            {[
+                                "SizeName",
+                                "SizeShortName",
+                                "SizeCode",
+                                "Description",
+                                "Status",
+                                "Actions",
+                            ].map((header) => (
 
-                            <th
-                                className="
-                                    w-[25%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                Size Name
-                            </th>
-
-                            {/* SIZE SHORT NAME */}
-
-                            <th
-                                className="
-                                    w-[25%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                Size Short Name
-                            </th>
-
-                            {/* SIZE CODE */}
-
-                            <th
-                                className="
-                                    w-[40%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                Size Code
-                            </th>
-
-                            {/* DESCRIPTION */}
-
-                            <th
-                                className="
-                                    w-[40%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                Description
-                            </th>
-
-                            {/* STATUS */}
-
-                            <th
-                                className="
-                                    w-[15%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                Status
-                            </th>
-
-                            {/* ACTIONS */}
-
-                            {canPerformAction && (
                                 <th
-                                    className="
-                                        w-[20%]
-                                        px-2
-                                        py-3
-                                        font-medium
-                                        text-sm
-                                        text-gray-600
-                                        uppercase
-                                        text-right
-                                    "
+                                    key={header}
+                                    className={`
+                                    px-4
+                                    py-3
+                                    font-medium
+                                    text-md
+                                    text-gray-400
+                                    uppercase
+                                    ${header === "Actions"
+                                            ? "text-center"
+                                            : "text-left"
+                                        }
+                                `}
                                 >
-                                    Actions
+                                    {header}
                                 </th>
-                            )}
+
+                            ))}
 
                         </tr>
 
@@ -874,6 +765,7 @@ export default function SizeTable({
                                                 px-2
                                                 py-3
                                                 overflow-hidden
+                                                
                                             "
                                         >
 
@@ -1007,192 +899,86 @@ export default function SizeTable({
                                             ACTIONS
                                         ================================= */}
 
-                                        {canPerformAction && (
-                                            <td
-                                                className="
-                                                    relative
-                                                    overflow-visible
-                                                    px-2
-                                                    py-3
-                                                "
-                                                onClick={(e) =>
-                                                    e.stopPropagation()
-                                                }
-                                            >
+                                        {/* Actions */}
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-center gap-2">
 
-                                                <div
+                                                {/* View */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowView(true);
+                                                        dispatch(setExsistingSize(size));
+                                                        navigate(`/sizes/view/${size.id}`);
+                                                    }}
+                                                    title="View"
                                                     className="
-                                                        flex
-                                                        justify-end
-                                                    "
+                                                    flex h-8 w-8 items-center justify-center
+                                                    rounded-lg
+                                                    bg-blue-50
+                                                    text-blue-600
+                                                    transition
+                                                    hover:bg-blue-100
+                                                    hover:text-blue-700
+                                                "
                                                 >
+                                                    <Eye size={16} />
+                                                </button>
 
-                                                    <div
-                                                        className="
-                                                            relative
-                                                            group
-                                                            inline-block
+                                                {/* Edit */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+
+                                                        dispatch(setExsistingSize(size));
+                                                        dispatch(
+                                                            openModal({
+                                                                type: "editSize",
+                                                                data: size,
+                                                            })
+                                                        );
+                                                    }}
+                                                    title="Edit"
+                                                    className="
+                                                    flex h-8 w-8 items-center justify-center
+                                                    rounded-lg
+                                                    bg-amber-50
+                                                    text-amber-600
+                                                    transition
+                                                    hover:bg-amber-100
+                                                    hover:text-amber-700
                                                         "
-                                                    >
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
 
-                                                        {/* ACTION BUTTON */}
+                                                {/* Delete */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
 
-                                                        <button
-                                                            type="button"
-                                                            className="
-                                                                p-1
-                                                                rounded-full
-                                                                bg-blue-500
-                                                                text-white
-                                                                hover:bg-blue-600
-                                                                transition-colors
-                                                            "
-                                                        >
+                                                        // Your delete confirmation logic
+                                                        handleDelete(size.id);
+                                                    }}
+                                                    title="Delete"
+                                                    className="
+                                                            flex h-8 w-8 items-center justify-center
+                                                            rounded-lg
+                                                            bg-red-50
+                                                            text-red-600
+                                                            transition
+                                                            hover:bg-red-100
+                                                            hover:text-red-700
+                                                        "
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
 
-                                                            <ChevronDown
-                                                                size={16}
-                                                            />
-
-                                                        </button>
-
-                                                        {/* =========================
-                                                            ACTION MENU
-                                                        ========================= */}
-
-                                                        <div
-                                                            className="
-                                                                absolute
-                                                                right-0
-                                                                top-full
-                                                                mt-1
-                                                                z-[9999]
-                                                                opacity-0
-                                                                invisible
-                                                                group-hover:opacity-100
-                                                                group-hover:visible
-                                                                transition-all
-                                                                duration-150
-                                                            "
-                                                        >
-
-                                                            <div
-                                                                className="
-                                                                    w-36
-                                                                    rounded-md
-                                                                    bg-blue-500
-                                                                    shadow-lg
-                                                                    overflow-hidden
-                                                                "
-                                                            >
-
-                                                                {/* VIEW */}
-
-                                                                {/* <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        handleView(
-                                                                            size
-                                                                        )
-                                                                    }
-                                                                    className="
-                                                                        flex
-                                                                        w-full
-                                                                        items-center
-                                                                        gap-2
-                                                                        px-4
-                                                                        py-2
-                                                                        text-sm
-                                                                        text-white
-                                                                        hover:bg-blue-600
-                                                                        transition-colors
-                                                                    "
-                                                                >
-
-                                                                    <Eye
-                                                                        size={16}
-                                                                    />
-
-                                                                    View
-
-                                                                </button> */}
-
-                                                                {/* EDIT */}
-
-                                                                {canEditSize && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleEdit(
-                                                                                size
-                                                                            )
-                                                                        }
-                                                                        className="
-                                                                            flex
-                                                                            w-full
-                                                                            items-center
-                                                                            gap-2
-                                                                            px-4
-                                                                            py-2
-                                                                            text-sm
-                                                                            text-white
-                                                                            hover:bg-blue-600
-                                                                            transition-colors
-                                                                        "
-                                                                    >
-
-                                                                        <Edit
-                                                                            size={16}
-                                                                        />
-
-                                                                        Edit
-
-                                                                    </button>
-                                                                )}
-
-                                                                {/* DELETE */}
-
-                                                                {canDeleteSize && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleDelete(
-                                                                                size.id
-                                                                            )
-                                                                        }
-                                                                        className="
-                                                                            flex
-                                                                            w-full
-                                                                            items-center
-                                                                            gap-2
-                                                                            px-4
-                                                                            py-2
-                                                                            text-sm
-                                                                            text-white
-                                                                            hover:bg-red-600
-                                                                            transition-colors
-                                                                        "
-                                                                    >
-
-                                                                        <Trash2
-                                                                            size={16}
-                                                                        />
-
-                                                                        Delete
-
-                                                                    </button>
-                                                                )}
-
-                                                            </div>
-
-                                                        </div>
-
-                                                    </div>
-
-                                                </div>
-
-                                            </td>
-                                        )}
-
+                                            </div>
+                                        </td>
                                     </tr>
 
                                 )
@@ -1206,111 +992,32 @@ export default function SizeTable({
                     PAGINATION
                 ===================================================== */}
 
-                <div
-                    className="
-                        p-4
-                        border-t
-                        border-gray-100
-                        flex
-                        items-center
-                        justify-between
-                    "
-                >
 
-                    <p
-                        className="
-                            text-sm
-                            text-gray-500
-                        "
-                    >
+                <Pagination
+                    page={Number(pageNumber) || 0}
+                    size={Number(pageSize) || 10}
+                    totalElements={Number(totalElements) || 0}
+                    totalPages={Number(totalPages) || 0}
+                    loading={loading}
+                    label="products"
+                    onPageChange={(nextPage) => {
+                        dispatch(
+                            fetchAllSizes({
+                                page: nextPage,
+                                size: Number(pageSize) || 10,
+                            })
+                        );
+                    }}
+                    onPageSizeChange={(nextSize) => {
+                        dispatch(
+                            fetchAllSizes({
+                                page: 0,
+                                size: nextSize,
+                            })
+                        );
+                    }}
+                />
 
-                        Showing{" "}
-
-                        {currentSizes.length}
-
-                        {" "}of{" "}
-
-                        {totalElements || 0}
-
-                        {" "}sizes
-
-                    </p>
-
-                    <div
-                        className="
-                            flex
-                            items-center
-                            gap-3
-                        "
-                    >
-
-                        {/* PREVIOUS */}
-
-                        <button
-                            type="button"
-                            disabled={
-                                Number(pageNumber) <= 0
-                            }
-                            onClick={() => {
-                                // Add server-side page support here
-                            }}
-                            className="
-                                text-sm
-                                text-gray-400
-                                hover:text-gray-600
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
-                            "
-                        >
-                            Previous
-                        </button>
-
-                        {/* CURRENT PAGE */}
-
-                        <span
-                            className="
-                                w-8
-                                h-8
-                                flex
-                                items-center
-                                justify-center
-                                rounded-lg
-                                bg-indigo-600
-                                text-white
-                                text-sm
-                                font-medium
-                            "
-                        >
-
-                            {(Number(pageNumber) || 0) + 1}
-
-                        </span>
-
-                        {/* NEXT */}
-
-                        <button
-                            type="button"
-                            disabled={
-                                (Number(pageNumber) || 0) >=
-                                (Number(totalPages) || 1) - 1
-                            }
-                            onClick={() => {
-                                // Add server-side page support here
-                            }}
-                            className="
-                                text-sm
-                                text-gray-400
-                                hover:text-gray-600
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
-                            "
-                        >
-                            Next
-                        </button>
-
-                    </div>
-
-                </div>
 
             </div>
 

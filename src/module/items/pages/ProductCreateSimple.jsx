@@ -237,7 +237,7 @@ function SearchSelect({
                     block
                     text-sm
                     font-medium
-                    text-red-500
+                    text-red-400
                     mb-2
                 "
                 >
@@ -536,7 +536,7 @@ function SearchSelect({
 
                                                 ${selected
                                                     ? "bg-blue-50 text-gray-400"
-                                                    : "text-gray-400 hover:bg-[#0095FD] hover:text-gray-100"
+                                                    : "text-gray-600 hover:bg-[#0095FD] hover:text-gray-100"
                                                 }
                                             `}
                                         >
@@ -1549,9 +1549,9 @@ export default function ProductCreateSimple() {
 
     const getLabelClass = (required = false) => `
     block
-    text-xs
+    text-sm
     font-medium
-    ${required ? "text-red-500" : "text-gray-400"}
+    ${required ? "text-red-400" : "text-gray-400"}
     mb-1.5
 `;
 
@@ -2994,11 +2994,13 @@ export default function ProductCreateSimple() {
                 <div className="mb-6">
                     <h2 className="text-base font-semibold text-gray-500">
                         Product Information
+
                     </h2>
 
-                    <p className="text-sm text-gray-400 mt-1">
+                    <p className="text-xs text-gray-400 mt-1">
                         Enter the basic information of the product.
                     </p>
+
                 </div>
 
                 {/* LEFT + RIGHT */}
@@ -3212,7 +3214,7 @@ export default function ProductCreateSimple() {
                             <div className="flex items-center justify-between">
 
                                 <div>
-                                    <p className="text-sm font-medium text-gray-800">
+                                    <p className="text-sm font-medium text-gray-500">
                                         Status
                                     </p>
 
@@ -3269,7 +3271,7 @@ export default function ProductCreateSimple() {
                             p-4
                         "
                         >
-                            <p className="text-sm font-medium text-[#0F4659] mb-3">
+                            <p className="text-sm font-medium text-gray-500 mb-3">
                                 Product Image
                             </p>
 
@@ -3338,7 +3340,7 @@ export default function ProductCreateSimple() {
                                 bg-white
                                 text-sm
                                 font-medium
-                                text-[#0F4659]
+                                text-gray-400
                                 cursor-pointer
                                 hover:bg-gray-50
                             "
@@ -4074,10 +4076,10 @@ export default function ProductCreateSimple() {
 
     return (
 
-        <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-5">
+        <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-3">
             {/* HEADER */}
 
-            <div className="shrink-0 px-6 py-4 bg-[#408DFB] rounded-md border-b border-gray-200 flex items-center justify-between">
+            <div className="shrink-0 px-6 py-2.5 bg-gray-50 rounded-sm border border-lime-200 shadow-md flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div
                         className="w-10 h-10 rounded-lg bg-[#FCF7F8] border border-blue-100 flex items-center justify-center cursor-pointer"
@@ -4087,7 +4089,7 @@ export default function ProductCreateSimple() {
 
                         <Package
                             size={20}
-                            className="text-[#0095FD]"
+                            className="text-gray-500"
                         />
 
                     </div>
@@ -4095,7 +4097,7 @@ export default function ProductCreateSimple() {
 
                     <div>
 
-                        <h1 className="text-xl font-semibold text-[#FCF7F8]"
+                        <h1 className="text-xl font-medium text-gray-500"
                             onClick={() => (navigate("/items"))}
                         >
                             {isEdit
@@ -4103,7 +4105,7 @@ export default function ProductCreateSimple() {
                                 : "New Product"}
                         </h1>
 
-                        <p className="mt-0.5 text-xs text-[#FCF7F8]">
+                        <p className="mt-0.5 text-xs text-gray-400">
                             {isEdit
                                 ? "Update product information"
                                 : "Create a new product"}
@@ -4123,14 +4125,15 @@ export default function ProductCreateSimple() {
                         handleClose
                     }
                     className="
-                        w-9
-                        h-9
+                        w-8
+                        h-8
                         flex
                         items-center
                         justify-center
                         rounded-md
                         text-[#FCF7F8]
-                        hover:bg-red-400
+                        bg-red-400
+                        hover:bg-red-500
                         hover:text-gray-100
                         disabled:opacity-50
                     "
@@ -4152,14 +4155,15 @@ export default function ProductCreateSimple() {
             <div
                 className="
                     shrink-0
-                    px-6
+                    px-3
                     bg-white
                     border-b
-                    border-gray-200
+                    border-gray-100
                     flex
                     items-center
                     gap-7
                     overflow-x-auto
+                    rounded-sm
                 "
             >
 
@@ -4187,8 +4191,8 @@ export default function ProductCreateSimple() {
 
                                 ${activeTab ===
                                     tab.id
-                                    ? "text-[#408DFB] border-[#408DFB]"
-                                    : "text-gray-400 border-transparent hover:text-[#408DFB]"
+                                    ? "text-gray-400 border-lime-400"
+                                    : "text-gray-400 border-transparent hover:text-gray-500"
                                 }
                             `}
                         >
@@ -4243,7 +4247,7 @@ export default function ProductCreateSimple() {
             ================================================= */}
 
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-6 py-3">
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-400">
                     <span className="text-red-500">*</span>
                     {" "}Required fields
                 </div>

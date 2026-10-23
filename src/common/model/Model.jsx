@@ -173,51 +173,66 @@ export default function Modal() {
 
 
     const modalSizeClass = {
+        // Invoice
         addInvoice: "w-[1050px] max-w-[92vw] h-[90vh] max-h-[90vh]",
         editInvoice: "w-[1050px] max-w-[92vw] h-[90vh] max-h-[90vh]",
 
-        addEmailSignature: "w-[950px] max-w-[92vw] h-[85vh] max-h-[85vh]",
-        editEmailSignature: "w-[950px] max-w-[92vw] h-[85vh] max-h-[85vh]",
+        // Email Signature
+        addEmailSignature: "w-[850px] max-w-[92vw] max-h-[85vh]",
+        editEmailSignature: "w-[850px] max-w-[92vw] max-h-[85vh]",
 
-        addBankAccount: "w-[950px] max-w-[92vw] max-h-[90vh]",
-        editBankAccount: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        // Product
+        addProduct: "w-[800px] max-w-[92vw] max-h-[82vh]",
+        editProduct: "w-[800px] max-w-[92vw] max-h-[82vh]",
 
-        addProduct: "w-[950px] max-w-[92vw] max-h-[90vh]",
-        editProduct: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        // Category
+        addCategory: "w-[760px] max-w-[92vw] max-h-[80vh]",
+        editCategory: "w-[760px] max-w-[92vw] max-h-[80vh]",
 
-        addCategory: "w-[950px] max-w-[92vw] max-h-[90vh]",
-        editCategory: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        // Subcategory
+        addSubCategory: "w-[760px] max-w-[92vw] max-h-[80vh]",
+        editSubCategory: "w-[760px] max-w-[92vw] max-h-[80vh]",
 
-        addSubCategory: "w-[950px] max-w-[92vw] max-h-[90vh]",
-        editSubCategory: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        // Size
+        addSize: "w-[650px] max-w-[92vw] max-h-[75vh]",
+        editSize: "w-[650px] max-w-[92vw] max-h-[75vh]",
 
-        addSize: "w-[950px] max-w-[92vw] max-h-[90vh]",
-        editSize: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        // Unit
+        addUnit: "w-[650px] max-w-[92vw] max-h-[75vh]",
+        editUnit: "w-[650px] max-w-[92vw] max-h-[75vh]",
 
-        addUnit: "w-[950px] max-w-[92vw] max-h-[90vh]",
-        editUnit: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        // Tax
+        addTaxMaster: "w-[700px] max-w-[92vw] max-h-[78vh]",
+        editTaxMaster: "w-[700px] max-w-[92vw] max-h-[78vh]",
 
-        addCompany: "w-[950px] max-w-[92vw] max-h-[90vh]",
-        editCompany: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        // Bank Account
+        addBankAccount: "w-[800px] max-w-[92vw] max-h-[82vh]",
+        editBankAccount: "w-[800px] max-w-[92vw] max-h-[82vh]",
 
-        addRole: "w-[950px] max-w-[92vw] max-h-[90vh]",
-        editRole: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        // Company
+        addCompany: "w-[800px] max-w-[92vw] max-h-[82vh]",
+        editCompany: "w-[800px] max-w-[92vw] max-h-[82vh]",
 
-        addUser: "w-[950px] max-w-[92vw] max-h-[90vh]",
-        editUser: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        // Role
+        addRole: "w-[760px] max-w-[92vw] max-h-[80vh]",
+        editRole: "w-[760px] max-w-[92vw] max-h-[80vh]",
 
-        addTaxMaster: "w-[950px] max-w-[92vw] max-h-[90vh]",
-        editTaxMaster: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        // User
+        addUser: "w-[800px] max-w-[92vw] max-h-[82vh]",
+        editUser: "w-[800px] max-w-[92vw] max-h-[82vh]",
 
-        addRolePermission: "w-[950px] max-w-[92vw] max-h-[90vh]",
-        editRolePermission: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        // Permissions
+        addRolePermission: "w-[800px] max-w-[92vw] max-h-[82vh]",
+        editRolePermission: "w-[800px] max-w-[92vw] max-h-[82vh]",
+        addUserPermission: "w-[800px] max-w-[92vw] max-h-[82vh]",
+        editUserPermission: "w-[800px] max-w-[92vw] max-h-[82vh]",
 
-        addUserPermission: "w-[950px] max-w-[92vw] max-h-[90vh]",
-        editUserPermission: "w-[950px] max-w-[92vw] max-h-[90vh]",
-
-        changeTemplate: "w-[950px] max-w-[92vw] max-h-[90vh]",
-        addContactPerson: "w-[950px] max-w-[92vw] max-h-[90vh]",
+        // Other
+        invoiceNumberSetting: "w-[650px] max-w-[92vw] max-h-[75vh]",
+        changeTemplate: "w-[800px] max-w-[92vw] max-h-[82vh]",
+        addContactPerson: "w-[650px] max-w-[92vw] max-h-[75vh]",
     };
+
     /* =========================================================
        RENDER
     ========================================================= */
@@ -398,14 +413,17 @@ export default function Modal() {
         ntm-modal-container
         relative
         flex
+        min-w-0
         flex-col
         overflow-hidden
-        rounded-xl
+        rounded-md
         bg-white
         shadow-2xl
-        left-[100px]             
+        left-20
+        top-5
+        max-h-[calc(100vh-2rem)]
 
-        ${modalSizeClass[type] || "w-[900px] max-w-[90vw] max-h-[85vh]"}
+        ${modalSizeClass[type] || "w-[700px] max-w-[80vw] max-h-[75vh]"}
     `}
                 >
 
@@ -427,23 +445,23 @@ export default function Modal() {
             z-[100]
 
             flex
-            h-9
-            w-9
+            h-8
+            w-8
             shrink-0
             items-center
             justify-center
 
-            rounded-full
-            bg-white
+            rounded-md
+            bg-red-400
 
-            text-gray-500
+            text-gray-100
             shadow-md
 
             transition-all
             duration-200
 
-            hover:bg-gray-100
-            hover:text-gray-800
+            hover:bg-red-500
+            hover:text-gray-100
 
             active:scale-90
         "

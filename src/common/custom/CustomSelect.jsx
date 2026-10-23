@@ -155,9 +155,9 @@ export default function CustomSelect({
                     );
                 }}
                 className={`
-                    flex w-full items-center justify-between gap-3 p-3 py-3
+                    flex w-full items-center justify-between gap-3 p-2 py-2
                     rounded-md border border-gray-300 bg-white
-                    text-left text-[#0F4659] text-sm
+                    text-left text-gray-500 text-sm
                     outline-none transition
                     focus:border-[#0095FD]
                     focus:ring-1 focus:ring-[#0095FD]
@@ -217,7 +217,7 @@ export default function CustomSelect({
                                   
                                     ${active
                                         ? "bg-[#0095FD] text-white"
-                                        : "text-[#0F4659] hover:bg-[#0095FD] hover:text-white"
+                                        : "text-gray-500 hover:bg-[#0095FD] hover:text-white"
                                     }
                                 `}
                             >

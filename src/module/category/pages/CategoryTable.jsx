@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 import {
@@ -17,16 +17,19 @@ import {
     Edit,
     Trash2,
     List,
+    Eye
 } from "lucide-react";
 
 import toast from "react-hot-toast";
+import Pagination from "../../../common/pagination/table/Pagination";
 
 export default function CategoryTable({
     categories = [],
 }) {
 
     const dispatch = useDispatch();
-
+    const [showEdit, setShowEdit] = useState(false);
+    const [showView, setShowView] = useState(false);
     /* =====================================================
        REDUX STATE
     ===================================================== */
@@ -592,139 +595,44 @@ export default function CategoryTable({
 
     return (
 
-        <div
-            className="
-                bg-white
-                rounded-xl
-                border
-                border-gray-200
-                overflow-visible
-                w-full
-            "
-        >
-
-            {/* =================================================
-                TABLE CONTAINER
-            ================================================= */}
-
-            <div
-                className="
-                    w-full
-                    overflow-visible
-                "
-            >
-
-                <table
-                    className="
-                        w-full
-                        table-fixed
-                        border-collapse
-                    "
-                >
-
-                    {/* =================================================
-                        TABLE HEADER
-                    ================================================= */}
-
-                    <thead
-                        className="
-                            bg-gray-100
-                            border-b
-                            border-gray-300
-                        "
-                    >
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
+            <div className="overflow-x-auto overflow-y-visible">
+                <table className="w-full">
+                    <thead className="bg-[#FAF9F7]/20 border-b border-gray-300">
 
                         <tr>
 
-                            {/* CATEGORY NAME */}
+                            {[
+                                "CategoryName",
+                                "CategoryCode",
+                                "Description",
+                                "Status",
+                                "Actions",
+                            ].map((header) => (
 
-                            <th
-                                className="
-                                    w-[25%]
-                                    px-2
+                                <th
+                                    key={header}
+                                    className={`
+                                    px-4
                                     py-3
                                     font-medium
-                                    text-sm
-                                    text-gray-600
+                                    text-md
+                                    text-gray-400
                                     uppercase
-                                    text-left
-                                "
-                            >
-                                Category
-                            </th>
+                                    ${header === "Actions"
+                                            ? "text-center"
+                                            : "text-left"
+                                        }
+                                `}
+                                >
+                                    {header}
+                                </th>
 
-                            {/* CATEGORY CODE */}
-
-                            <th
-                                className="
-                                    w-[20%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                Category Code
-                            </th>
-
-                            {/* DESCRIPTION */}
-
-                            <th
-                                className="
-                                    w-[30%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                Description
-                            </th>
-
-                            {/* STATUS */}
-
-                            <th
-                                className="
-                                    w-[15%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-left
-                                "
-                            >
-                                Status
-                            </th>
-
-                            {/* ACTIONS */}
-
-                            <th
-                                className="
-                                    w-[10%]
-                                    px-2
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-gray-600
-                                    uppercase
-                                    text-right
-                                "
-                            >
-                                Actions
-                            </th>
+                            ))}
 
                         </tr>
 
                     </thead>
-
                     {/* =================================================
                         TABLE BODY
                     ================================================= */}
@@ -958,173 +866,90 @@ export default function CategoryTable({
                                         {/* =================================
                                             ACTIONS
                                         ================================= */}
+                                        {/* Actions */}
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-center gap-2">
 
-                                        <td
-                                            className="
-                                                relative
-                                                overflow-visible
-                                                px-2
-                                                py-3
-                                            "
-                                            onClick={(e) =>
-                                                e.stopPropagation()
-                                            }
-                                        >
-
-                                            <div
-                                                className="
-                                                    flex
-                                                    justify-end
-                                                "
-                                            >
-
-                                                <div
+                                                {/* View */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowView(true);
+                                                        dispatch(setExsistingCategory(category));
+                                                        navigate(`/categories/view/${category.id}`);
+                                                    }}
+                                                    title="View"
                                                     className="
-                                                        relative
-                                                        group
-                                                        inline-block
-                                                    "
+                                                    flex h-8 w-8 items-center justify-center
+                                                    rounded-lg
+                                                    bg-blue-50
+                                                    text-blue-600
+                                                    transition
+                                                    hover:bg-blue-100
+                                                    hover:text-blue-700
+                                                "
                                                 >
+                                                    <Eye size={16} />
+                                                </button>
 
-                                                    {/* ACTION BUTTON */}
+                                                {/* Edit */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
 
-                                                    <button
-                                                        type="button"
-                                                        className="
-                                                            p-1
-                                                            rounded-full
-                                                            bg-blue-500
-                                                            text-white
-                                                            hover:bg-blue-600
-                                                            transition-colors
+                                                        dispatch(setExsistingCategory(category));
+                                                        dispatch(
+                                                            openModal({
+                                                                type: "editCategory",
+                                                                data: category,
+                                                            })
+                                                        );
+                                                    }}
+                                                    title="Edit"
+                                                    className="
+                                                    flex h-8 w-8 items-center justify-center
+                                                    rounded-lg
+                                                    bg-amber-50
+                                                    text-amber-600
+                                                    transition
+                                                    hover:bg-amber-100
+                                                    hover:text-amber-700
                                                         "
-                                                    >
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
 
-                                                        <ChevronDown
-                                                            size={16}
-                                                        />
+                                                {/* Delete */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
 
-                                                    </button>
-
-                                                    {/* =================================================
-                                                        ACTION MENU
-                                                    ================================================= */}
-
-                                                    <div
-                                                        className="
-                                                            absolute
-                                                            right-0
-                                                            top-full
-                                                            mt-1
-                                                            z-[9999]
-                                                            opacity-0
-                                                            invisible
-                                                            group-hover:opacity-100
-                                                            group-hover:visible
-                                                            transition-all
-                                                            duration-150
+                                                        // Your delete confirmation logic
+                                                        handleDelete(category.id);
+                                                    }}
+                                                    title="Delete"
+                                                    className="
+                                                            flex h-8 w-8 items-center justify-center
+                                                            rounded-lg
+                                                            bg-red-50
+                                                            text-red-600
+                                                            transition
+                                                            hover:bg-red-100
+                                                            hover:text-red-700
                                                         "
-                                                    >
-
-                                                        <div
-                                                            className="
-                                                                w-36
-                                                                rounded-md
-                                                                bg-blue-500
-                                                                shadow-lg
-                                                                overflow-hidden
-                                                            "
-                                                        >
-
-                                                            {/* =================================
-                                                                EDIT
-                                                            ================================= */}
-
-                                                            {canEditCategory && (
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        handleEdit(
-                                                                            category
-                                                                        )
-                                                                    }
-                                                                    className="
-                                                                        flex
-                                                                        w-full
-                                                                        items-center
-                                                                        gap-2
-                                                                        px-4
-                                                                        py-2
-                                                                        text-sm
-                                                                        text-white
-                                                                        hover:bg-blue-600
-                                                                        transition-colors
-                                                                    "
-                                                                >
-
-                                                                    <Edit
-                                                                        size={16}
-                                                                    />
-
-                                                                    Edit
-
-                                                                </button>
-
-                                                            )}
-
-                                                            {/* =================================
-                                                                DELETE
-                                                            ================================= */}
-
-                                                            {canDeleteCategory && (
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        handleDelete(
-                                                                            category.id
-                                                                        )
-                                                                    }
-                                                                    className="
-                                                                        flex
-                                                                        w-full
-                                                                        items-center
-                                                                        gap-2
-                                                                        px-4
-                                                                        py-2
-                                                                        text-sm
-                                                                        text-white
-                                                                        hover:bg-red-600
-                                                                        transition-colors
-                                                                    "
-                                                                >
-
-                                                                    <Trash2
-                                                                        size={16}
-                                                                    />
-
-                                                                    Delete
-
-                                                                </button>
-
-                                                            )}
-
-                                                        </div>
-
-                                                    </div>
-
-                                                </div>
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
 
                                             </div>
-
                                         </td>
-
                                     </tr>
 
                                 )
                             )}
-
                     </tbody>
 
                 </table>
@@ -1133,112 +958,31 @@ export default function CategoryTable({
                     PAGINATION
                 ===================================================== */}
 
-                <div
-                    className="
-                        p-4
-                        border-t
-                        border-gray-100
-                        flex
-                        items-center
-                        justify-between
-                    "
-                >
+                <Pagination
+                    page={Number(pageNumber) || 0}
+                    size={Number(pageSize) || 10}
+                    totalElements={Number(totalElements) || 0}
+                    totalPages={Number(totalPages) || 0}
+                    loading={loading}
+                    label="products"
+                    onPageChange={(nextPage) => {
+                        dispatch(
+                            fetchAllCategories({
+                                page: nextPage,
+                                size: Number(pageSize) || 10,
+                            })
+                        );
+                    }}
+                    onPageSizeChange={(nextSize) => {
+                        dispatch(
+                            fetchAllCategories({
+                                page: 0,
+                                size: nextSize,
+                            })
+                        );
+                    }}
+                />
 
-                    <p
-                        className="
-                            text-sm
-                            text-gray-500
-                        "
-                    >
-
-                        Showing{" "}
-
-                        {currentCategories.length}
-
-                        {" "}of{" "}
-
-                        {totalElements || 0}
-
-                        {" "}categories
-
-                    </p>
-
-                    <div
-                        className="
-                            flex
-                            items-center
-                            gap-3
-                        "
-                    >
-
-                        {/* PREVIOUS */}
-
-                        <button
-                            type="button"
-                            disabled={
-                                Number(pageNumber) <= 0
-                            }
-                            onClick={() => {
-                                // Add server-side page support here
-                            }}
-                            className="
-                                text-sm
-                                text-gray-400
-                                hover:text-gray-600
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
-                            "
-                        >
-                            Previous
-                        </button>
-
-                        {/* CURRENT PAGE */}
-
-                        <span
-                            className="
-                                w-8
-                                h-8
-                                flex
-                                items-center
-                                justify-center
-                                rounded-lg
-                                bg-blue-500
-                                text-white
-                                text-sm
-                                font-medium
-                            "
-                        >
-
-                            {(Number(pageNumber) || 0) + 1}
-
-                        </span>
-
-                        {/* NEXT */}
-
-                        <button
-                            type="button"
-                            disabled={
-                                (Number(pageNumber) || 0) >=
-                                (Number(totalPages) || 1) - 1
-                            }
-                            onClick={() => {
-                                // Add server-side page support here
-                            }}
-                            className="
-                                text-sm
-                                text-gray-400
-                                hover:text-gray-600
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
-                            "
-                        >
-                            Next
-
-                        </button>
-
-                    </div>
-
-                </div>
 
             </div>
 

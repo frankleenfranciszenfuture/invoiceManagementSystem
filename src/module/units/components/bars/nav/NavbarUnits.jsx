@@ -16,6 +16,8 @@ import {
     Plus,
     ChevronDown,
     MoreHorizontal,
+    Home,
+    Settings,
 } from "lucide-react";
 
 import {
@@ -149,188 +151,193 @@ export default function NavbarUnit() {
     // ============================================================
 
     return (
-
-        <div className="
-            h-[60px]
-            border
-            border-gray-100
-            rounded-md
-            flex
-            items-center
-            justify-between
-            bg-white
-            px-2
-            py-2
-        ">
+        <div
+            className="
+                h-[60px]
+                border
+                border-gray-100
+                rounded-md
+                flex
+                items-center
+                justify-between
+                bg-white
+                px-2
+                py-2
+            "
+        >
 
             {/* =====================================================
-                LEFT - UNIT STATUS FILTER
-            ====================================================== */}
+    LEFT - HOME + ALL PRODUCTS + ROLE STATUS FILTER
+====================================================== */}
 
-            <div
-                ref={dropdownOpenRef}
-                className="relative"
-            >
+            <div className="flex items-center gap-2">
 
-                <button
-                    type="button"
-                    onClick={() =>
-                        setDropdownOpen(
-                            (prev) => !prev
-                        )
-                    }
-                    className="
-                        flex
-                        items-center
-                        gap-1
-                        rounded-md
-                        bg-blue-500
-                        px-3
-                        py-2
-                        cursor-pointer
-                        hover:bg-blue-600
-                    "
+                {/* HOME + ALL PRODUCTS */}
+                <div className="flex items-center gap-2">
+
+                    <button
+                        type="button"
+                        onClick={() => navigate("/")}
+                        className="
+                flex
+                items-center
+                justify-center
+                rounded-md
+                border
+                border-blue-200
+                bg-[white]
+                p-2
+                text-[#408DFB]
+                hover:bg-[#408DFB]/20
+                transition
+            "
+                        title="Home"
+                    >
+                        <Home size={18} />
+                    </button>
+
+
+
+                </div>
+
+                {/* EXISTING ROLE STATUS FILTER */}
+                <div
+                    ref={dropdownOpenRef}
+                    className="relative"
                 >
 
-                    <h2 className="
-                        font-semibold
-                        text-gray-100
-                    ">
-                        {selectedUnitView ||
-                            "All Units"}
-                    </h2>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setDropdownOpen((prev) => !prev)
+                        }
+                        className="
+                flex
+                items-center
+                gap-1
+                rounded-md
+                bg-[#408DFB]
+                px-3
+                py-2
+                cursor-pointer
+                hover:bg-[#408DFB]/90
+            "
+                    >
+                        <h2 className="font-semibold text-gray-100">
+                            {selectedUnitView || "All Units"}
+                        </h2>
 
-                    <ChevronDown
-                        size={14}
-                        className={`
-                            text-gray-100
-                            transition
-                            ${dropdownOpen
-                                ? "rotate-180"
-                                : ""
-                            }
-                        `}
-                    />
+                        <ChevronDown
+                            size={14}
+                            className={`
+                    text-gray-100
+                    transition
+                    ${dropdownOpen ? "rotate-180" : ""}
+                `}
+                        />
+                    </button>
 
-                </button>
-
-                {/* =================================================
-                    STATUS DROPDOWN
-                ================================================== */}
-
-                {dropdownOpen && (
-
-                    <div className="
-                        absolute
-                        left-0
-                        mt-2
-                        w-72
-                        rounded-md
-                        border
-                        border-gray-200
-                        bg-white
-                        shadow-lg
-                        z-50
-                    ">
-
-                        <div className="
-                            max-h-72
-                            overflow-y-auto
-                        ">
-
-                            {views.map(
-                                (view) => (
-
+                    {dropdownOpen && (
+                        <div
+                            className="
+                    absolute
+                    left-0
+                    mt-2
+                    w-72
+                    rounded-md
+                    border
+                    border-gray-200
+                    bg-white
+                    shadow-lg
+                    z-50
+                "
+                        >
+                            <div className="max-h-72 overflow-y-auto">
+                                {views.map((view) => (
                                     <button
                                         type="button"
-                                        key={
-                                            view.value
-                                        }
-                                        onClick={() =>
-                                            handleViewChange(
-                                                view
-                                            )
-                                        }
-                                        className={`
-                                            w-full
-                                            px-5
-                                            py-4
-                                            border-b
-                                            border-gray-50
-                                            rounded-lg
-                                            text-left
-                                            hover:bg-blue-500
-                                            hover:text-white
-                                            ${unitStatus ===
-                                                view.value
-                                                ? "bg-blue-50 text-blue-600"
-                                                : ""
-                                            }
-                                        `}
-                                    >
-
-                                        {view.label}
-
-                                    </button>
-
-                                )
-                            )}
-
-                        </div>
-
-                        {/* =================================================
-                            NEW VIEW
-                        ================================================== */}
-
-                        <button
-                            type="button"
-                            className="
+                                        key={view.value}
+                                        onClick={() => handleViewChange(view)}
+                                        className="
                                 w-full
-                                border-t
-                                border-gray-200
-                                px-4
-                                py-3
+                                px-5
+                                py-4
+                                border-b
+                                border-gray-50
                                 text-left
-                                text-blue-600
-                                hover:bg-gray-50
+                                text-sm
+                                text-gray-500
+                                hover:bg-[#408DFB]/90
+                                hover:text-white
+                                rounded-md
                             "
-                            onClick={() => {
-                                setDropdownOpen(
-                                    false
-                                );
-                            }}
-                        >
-                            + New View
-                        </button>
+                                    >
+                                        {view.label}
+                                    </button>
+                                ))}
+                            </div>
 
-                    </div>
+                            <button
+                                type="button"
+                                className="
+                        w-full
+                        border-t
+                        border-gray-200
+                        px-4
+                        py-3
+                        text-left
+                        text-[#0F4659]
+                        bg-[#408DFB]/20
+                        hover:text-white
+                        hover:bg-[#408DFB]/80
+                        rounded-md
+                    "
+                                onClick={() => {
+                                    setDropdownOpen(false);
 
-                )}
+                                    dispatch(
+                                        openModal({
+                                            type: "addUnit",
+                                        })
+                                    );
+                                }}
+                            >
+                                + New View
+                            </button>
+                        </div>
+                    )}
+                </div>
 
             </div>
+
+
 
 
             {/* =====================================================
                 RIGHT
             ====================================================== */}
 
-            <div className="
-                flex
-                items-center
-                gap-2
-            ">
+            <div
+                className="
+                    flex
+                    items-center
+                    gap-2
+                "
+            >
 
                 {/* =================================================
-                    NEW UNIT
+                    NEW ROLE
                 ================================================== */}
 
-                <div className="
-                    flex
-                    overflow-hidden
-                    rounded-md
-                    border-blue-100
-                    shadow-sm
-                ">
+                <div
+                    className="
+                        flex
+                        overflow-hidden
+                        rounded-md
+                        border-blue-100
+                        shadow-sm
+                    "
+                >
 
                     <button
                         type="button"
@@ -341,24 +348,23 @@ export default function NavbarUnit() {
                             flex
                             items-center
                             gap-1
-                            bg-blue-500
+                            bg-[#408DFB]
                             px-3
                             py-2
                             text-sm
                             font-medium
                             text-white
-                            hover:bg-blue-600
+                            hover:bg-[#408DFB]/90
                         "
                     >
 
                         <Plus size={14} />
 
-                        New Unit
+
 
                     </button>
 
                 </div>
-
 
                 {/* =================================================
                     MORE
@@ -371,173 +377,33 @@ export default function NavbarUnit() {
 
                     <button
                         type="button"
+                        // onClick={() =>
+                        //     setMoreOpen(
+                        //         (prev) => !prev
+                        //     )
+                        // }
+
                         onClick={() =>
-                            setMoreOpen(
-                                (prev) => !prev
-                            )
+                            navigate("/settings")
                         }
                         className="
                             rounded-md
                             border
-                            border-gray-300
+                            border-blue-300
                             p-2
+                            text-[#408DFB]
                             hover:bg-gray-50
                         "
                         title="More"
                     >
 
-                        <MoreHorizontal
+                        <Settings
                             size={18}
                         />
 
                     </button>
 
 
-                    {/* =================================================
-                        MORE DROPDOWN
-                    ================================================== */}
-
-                    {moreOpen && (
-
-                        <div className="
-                            absolute
-                            right-0
-                            mt-2
-                            w-52
-                            rounded-md
-                            border
-                            border-gray-200
-                            bg-white
-                            shadow-lg
-                            z-50
-                            overflow-hidden
-                        ">
-
-                            {/* =========================================
-                                UNIT
-                            ========================================== */}
-
-                            <button
-                                type="button"
-                                onClick={
-                                    handleNewUnit
-                                }
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-blue-50
-                                    hover:text-blue-600
-                                "
-                            >
-                                Unit
-                            </button>
-
-
-                            {/* =========================================
-                                ADD UNIT
-                            ========================================== */}
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(
-                                        false
-                                    );
-
-                                    // Add Unit action
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-blue-50
-                                    hover:text-blue-600
-                                "
-                            >
-                                Add Unit
-                            </button>
-
-
-                            {/* =========================================
-                                UNIT SETTINGS
-                            ========================================== */}
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(
-                                        false
-                                    );
-
-                                    // Unit Settings action
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-blue-50
-                                    hover:text-blue-600
-                                "
-                            >
-                                Unit Settings
-                            </button>
-
-
-                            {/* =========================================
-                                DIVIDER
-                            ========================================== */}
-
-                            <div className="
-                                border-t
-                                border-gray-100
-                            " />
-
-
-                            {/* =========================================
-                                OTHER SETTINGS
-                            ========================================== */}
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(
-                                        false
-                                    );
-
-                                    // Other Settings action
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-gray-50
-                                "
-                            >
-                                Other Settings
-                            </button>
-
-                        </div>
-
-                    )}
 
                 </div>
 
