@@ -36,6 +36,7 @@ const initialState = {
   taxMaster: { ...emptyTaxMaster },
 
   exsistingTaxMaster: null,
+  createdTaxMasterSelection: null,
 
   pagination: {
     pageNumber: 0,
@@ -110,6 +111,14 @@ const taxMasterSlice = createSlice({
         ...(state.taxMaster || emptyTaxMaster),
         [field]: value,
       };
+    },
+
+    setCreatedTaxMasterSelection: (state, action) => {
+      state.createdTaxMasterSelection = action.payload;
+    },
+
+    clearCreatedTaxMasterSelection: (state) => {
+      state.createdTaxMasterSelection = null;
     },
   },
 
@@ -390,6 +399,10 @@ export const {
   clearSelectedTaxMaster,
   resetTaxMasterForm,
   setTaxMasterField,
+
+  // Keep your existing actions
+  setCreatedTaxMasterSelection,
+  clearCreatedTaxMasterSelection,
 } = taxMasterSlice.actions;
 
 /* =========================================================

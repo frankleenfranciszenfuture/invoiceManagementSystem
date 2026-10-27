@@ -1309,7 +1309,7 @@ export default function UserProfileOverview({
                                     "
                                 onClick={() =>
                                     navigate(
-                                        "/users"
+                                        "/settings/users"
                                     )
                                 }
                                 title="Back to Users"
@@ -1336,7 +1336,7 @@ export default function UserProfileOverview({
                                         "
                                     onClick={() =>
                                         navigate(
-                                            "/users"
+                                            "/settings/users"
                                         )
                                     }
                                 >

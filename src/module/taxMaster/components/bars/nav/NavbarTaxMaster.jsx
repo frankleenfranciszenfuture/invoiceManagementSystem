@@ -16,6 +16,8 @@ import {
     Plus,
     ChevronDown,
     MoreHorizontal,
+    Home,
+    Settings,
 } from "lucide-react";
 
 import {
@@ -24,6 +26,7 @@ import {
 } from "../../../slices/taxMasterViewSlice";
 
 import { openModal } from "../../../../ui/uiSlice";
+import Tooltip from "../../../../../common/toolTip/Tooltip";
 
 export default function NavbarTaxMaster() {
 
@@ -45,16 +48,22 @@ export default function NavbarTaxMaster() {
     // ============================================================
     // TAX MASTER VIEW STATE
     // ============================================================
+    const EMPTY_VIEWS = [];
 
     const selectedTaxMasterView = useSelector(
         (state) =>
             state.taxMasterView?.selectedTaxMasterView
     );
 
+
+
     const views = useSelector(
         (state) =>
-            state.taxMasterView?.views ?? []
+            state.taxMasterView
+                ?.views ??
+            EMPTY_VIEWS
     );
+
 
     const taxMasterStatus = useSelector(
         (state) =>
@@ -150,428 +159,240 @@ export default function NavbarTaxMaster() {
 
     return (
 
-        <div className="
-            h-[60px]
-            border
-            border-gray-100
-            rounded-md
-            flex
-            items-center
-            justify-between
-            bg-white
-            px-2
-            py-2
-        ">
-
-            {/* =====================================================
-                LEFT - TAX MASTER STATUS FILTER
-            ====================================================== */}
-
-            <div
-                ref={dropdownOpenRef}
-                className="relative"
-            >
-
-                <button
-                    type="button"
-                    onClick={() =>
-                        setDropdownOpen(
-                            (prev) => !prev
-                        )
-                    }
-                    className="
-                        flex
-                        items-center
-                        gap-1
-                        rounded-md
-                        bg-blue-500
-                        px-3
-                        py-2
-                        hover:bg-blue-600
-                        cursor-pointer
-                    "
-                >
-
-                    <h2 className=" font-semibold text-gray-100">
-                        {selectedTaxMasterView ||
-                            "All Tax Masters"}
-                    </h2>
-
-                    <ChevronDown
-                        size={14}
-                        className={`
-                            text-gray-100
-                            transition
-                            ${dropdownOpen
-                                ? "rotate-180"
-                                : ""
-                            }
-                        `}
-                    />
-
-                </button>
-
-                {/* =================================================
-                    STATUS DROPDOWN
-                ================================================== */}
-
-                {dropdownOpen && (
-
-                    <div className="
-                        absolute
-                        left-0
-                        mt-2
-                        w-72
-                        rounded-md
-                        border
-                        border-gray-200
-                        bg-white
-                        shadow-lg
-                        z-50
-                    ">
-
-                        <div className="
-                            max-h-72
-                            overflow-y-auto
-                        ">
-
-                            {views.map(
-                                (view) => (
-
-                                    <button
-                                        type="button"
-                                        key={
-                                            view.value
-                                        }
-                                        onClick={() =>
-                                            handleViewChange(
-                                                view
-                                            )
-                                        }
-                                        className={`
-                                            w-full
-                                            px-5
-                                            py-4
-                                            border-b
-                                            border-gray-50
-                                            rounded-lg
-                                            text-left
-                                            hover:bg-blue-500
-                                            hover:text-white
-                                            ${taxMasterStatus ===
-                                                view.value
-                                                ? "bg-blue-50 text-blue-600"
-                                                : ""
-                                            }
-                                        `}
-                                    >
-
-                                        {view.label}
-
-                                    </button>
-
-                                )
-                            )}
-
-                        </div>
-
-                        {/* =================================================
-                            NEW VIEW
-                        ================================================== */}
-
-
-                        <button
-                            type="button"
-                            className="
-                                w-full
-                                border-t
-                                border-gray-200
-                                px-4
-                                py-3
-                                text-left
-                                text-blue-600
-                                hover:bg-gray-50
-                            "
-                            onClick={() => {
-                                setDropdownOpen(
-                                    false
-                                );
-                            }}
-                        >
-                            + New View
-                        </button>
-
-                    </div>
-
-                )}
-
-            </div>
-
-
-            {/* =====================================================
-                RIGHT
-            ====================================================== */}
-
-            <div className="
+        <div
+            className="
+                h-[60px]
+                border
+                border-gray-100
+                rounded-md
                 flex
                 items-center
-                gap-2
-            ">
+                justify-between
+                bg-white
+                px-2
+                py-2
+            "
+        >
 
-                {/* =================================================
-                    NEW TAX MASTER
-                ================================================== */}
+            {/* =====================================================
+    LEFT - HOME + ALL PRODUCTS + ROLE STATUS FILTER
+====================================================== */}
 
-                <div className="
-                    flex
-                    overflow-hidden
-                    rounded-md
-                    border-blue-100
-                    shadow-sm
-                ">
+            <div className="flex items-center gap-2">
+
+                {/* HOME + ALL PRODUCTS */}
+                <div className="relative flex items-center gap-2">
 
                     <button
                         type="button"
-                        onClick={
-                            handleNewTaxMaster
-                        }
+                        onClick={() => navigate("/")}
                         className="
-                            flex
-                            items-center
-                            gap-1
-                            bg-blue-500
-                            px-3
-                            py-2
-                            text-sm
-                            font-medium
-                            text-white
-                            hover:bg-blue-600
-                        "
+                        group
+                        relative
+                flex
+                items-center
+                justify-center
+                rounded-md
+                border
+                border-blue-200
+                bg-[white]
+                p-2
+                text-[#408DFB]
+                hover:bg-[#408DFB]/20
+                transition
+            "
+                        aria-label="Home"
                     >
-
-                        <Plus size={14} />
-
-                        New Tax
-
+                        <Home size={18} />
+                        <Tooltip text="Home" position="top" />
                     </button>
 
-                    {/* <button
-                        type="button"
-                        className="
-                            border-l
-                            border-blue-500
-                            bg-blue-600
-                            px-2
-                            text-white
-                            hover:bg-blue-700
-                        "
-                        onClick={() =>
-                            setDropdownOpen(
-                                false
-                            )
-                        }
-                    >
 
-                        <ChevronDown
-                            className={`
-                            text-gray-100
-                            transition
-                            ${dropdownOpen
-                                    ? "rotate-180"
-                                    : ""
-                                }
-                        `}
-                            size={14}
-                        />
-
-                    </button> */}
 
                 </div>
 
-
-                {/* =================================================
-                    MORE
-                ================================================== */}
-
+                {/* EXISTING ROLE STATUS FILTER */}
                 <div
-                    ref={moreDropdownRef}
+                    ref={dropdownOpenRef}
                     className="relative"
                 >
 
                     <button
                         type="button"
                         onClick={() =>
-                            setMoreOpen(
-                                (prev) => !prev
-                            )
+                            setDropdownOpen((prev) => !prev)
                         }
                         className="
-                            rounded-md
-                            border
-                            border-gray-300
-                            p-2
-                            hover:bg-gray-50
-                        "
-                        title="More"
+                flex
+                items-center
+                gap-1
+                rounded-md
+                bg-[#408DFB]
+                px-3
+                py-2
+                cursor-pointer
+                hover:bg-[#408DFB]/90
+            "
                     >
+                        <h2 className="font-semibold text-gray-100">
+                            {selectedTaxMasterView || "All Taxes"}
+                        </h2>
 
-                        <MoreHorizontal
-                            size={18}
+                        <ChevronDown
+                            size={14}
+                            className={`
+                    text-gray-100
+                    transition
+                    ${dropdownOpen ? "rotate-180" : ""}
+                `}
                         />
-
                     </button>
 
-
-                    {/* =================================================
-                        MORE DROPDOWN
-                    ================================================== */}
-
-                    {moreOpen && (
-
-                        <div className="
-                            absolute
-                            right-0
-                            mt-2
-                            w-52
-                            rounded-md
-                            border
-                            border-gray-200
-                            bg-white
-                            shadow-lg
-                            z-50
-                            overflow-hidden
-                        ">
-
-                            {/* =========================================
-                                TAX MASTER
-                            ========================================== */}
+                    {dropdownOpen && (
+                        <div
+                            className="
+                    absolute
+                    left-0
+                    mt-2
+                    w-72
+                    rounded-md
+                    border
+                    border-gray-200
+                    bg-white
+                    shadow-lg
+                    z-50
+                "
+                        >
+                            <div className="max-h-72 overflow-y-auto">
+                                {views.map((view) => (
+                                    <button
+                                        type="button"
+                                        key={view.value}
+                                        onClick={() => handleViewChange(view)}
+                                        className="
+                                w-full
+                                px-5
+                                py-4
+                                border-b
+                                border-gray-50
+                                text-left
+                                text-sm
+                                text-gray-500
+                                hover:bg-[#408DFB]/90
+                                hover:text-white
+                                rounded-md
+                            "
+                                    >
+                                        {view.label}
+                                    </button>
+                                ))}
+                            </div>
 
                             <button
                                 type="button"
-                                onClick={
-                                    handleNewTaxMaster
-                                }
                                 className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-blue-50
-                                    hover:text-blue-600
-                                "
-                            >
-                                Tax Master
-                            </button>
-
-
-                            {/* =========================================
-                                ADD TAX
-                            ========================================== */}
-
-                            <button
-                                type="button"
+                        w-full
+                        border-t
+                        border-gray-200
+                        px-4
+                        py-3
+                        text-left
+                        text-[#0F4659]
+                        bg-[#408DFB]/20
+                        hover:text-white
+                        hover:bg-[#408DFB]/80
+                        rounded-md
+                    "
                                 onClick={() => {
+                                    setDropdownOpen(false);
 
-                                    setMoreOpen(
-                                        false
+                                    dispatch(
+                                        openModal({
+                                            type: "addTaxes",
+                                        })
                                     );
-
-                                    // Add Tax action
-
                                 }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-blue-50
-                                    hover:text-blue-600
-                                "
                             >
-                                Add Tax
+                                + New View
                             </button>
-
-
-                            {/* =========================================
-                                TAX SETTINGS
-                            ========================================== */}
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(
-                                        false
-                                    );
-
-                                    // Tax Settings action
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-blue-50
-                                    hover:text-blue-600
-                                "
-                            >
-                                Tax Settings
-                            </button>
-
-
-                            {/* =========================================
-                                DIVIDER
-                            ========================================== */}
-
-                            <div className="
-                                border-t
-                                border-gray-100
-                            " />
-
-
-                            {/* =========================================
-                                OTHER SETTINGS
-                            ========================================== */}
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setMoreOpen(
-                                        false
-                                    );
-
-                                    // Other Settings action
-
-                                }}
-                                className="
-                                    w-full
-                                    px-4
-                                    py-3
-                                    text-left
-                                    text-sm
-                                    text-gray-700
-                                    hover:bg-gray-50
-                                "
-                            >
-                                Other Settings
-                            </button>
-
                         </div>
-
                     )}
-
                 </div>
 
             </div>
 
-        </div>
+
+
+
+            {/* =====================================================
+                RIGHT
+            ====================================================== */}
+
+            <div
+                className="
+                                          flex
+                                          items-center
+                                          gap-2
+                                      "
+            >
+
+
+                {/* NEW TAXES */}
+                <div className="relative flex rounded-md border border-blue-100 shadow-sm">
+                    <button
+                        type="button"
+                        onClick={handleNewTaxMaster}
+                        className="
+                                  group
+                                  relative
+                                  flex
+                                  items-center
+                                  gap-1
+                                  rounded-md
+                                  bg-[#408DFB]
+                                  px-3
+                                  py-2
+                                  text-sm
+                                  font-medium
+                                  text-white
+                                  transition-colors
+                                  hover:bg-[#408DFB]/90
+                              "
+                        aria-label="New Taxes"
+                    >
+                        <Plus size={14} />
+                        <Tooltip text="New Taxes" position="top" />
+                    </button>
+                </div>
+
+
+
+                {/* =================================================
+                                          MORE
+                                      ================================================== */}
+
+                <div className="relative">
+                    <button
+                        type="button"
+                        onClick={() => navigate("/settings")}
+                        className="
+                                  group
+                                  relative
+                                  rounded-md
+                                  border
+                                  border-gray-300
+                                  p-2
+                                  text-[#408DFB]
+                                  hover:bg-gray-50
+                              "
+                        aria-label="Settings"
+                    >
+                        <Settings size={18} />
+                        <Tooltip text="Settings" position="top" />
+                    </button>
+                </div>
+            </div>
+
+        </div >
     );
 }

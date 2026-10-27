@@ -189,7 +189,7 @@ export default function NavbarCompany() {
 
 
         navigate(
-            `/companies?companyStatus=${view.value}`
+            `/settings/companies?companyStatus=${view.value}`
         );
 
 
@@ -396,7 +396,7 @@ export default function NavbarCompany() {
                         //     handleNewBankAccount
                         // }
 
-                        onClick={() => navigate("/companies/newSimple")}
+                        onClick={() => navigate("/settings/companies/newSimple")}
                         className="
                             flex
                             items-center

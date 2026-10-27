@@ -572,7 +572,7 @@ export default function ProductTable({ products = [] }) {
                     label="products"
                     onPageChange={(nextPage) => {
                         dispatch(
-                            fetchInvoices({
+                            fetchAllProducts({
                                 page: nextPage,
                                 size: Number(pageSize) || 10,
                             })
@@ -580,7 +580,7 @@ export default function ProductTable({ products = [] }) {
                     }}
                     onPageSizeChange={(nextSize) => {
                         dispatch(
-                            fetchInvoices({
+                            fetchAllProducts({
                                 page: 0,
                                 size: nextSize,
                             })

@@ -594,6 +594,7 @@ export default function BankAccountDashboard() {
             "ACTIVE",
             "INACTIVE",
             "DRAFT",
+            "PRIMARY",
         ];
 
 
@@ -627,6 +628,8 @@ export default function BankAccountDashboard() {
             DRAFT:
                 "Draft Bank Accounts",
 
+            PRIMARY:
+                "Primary Bank Accounts",
         };
 
 
@@ -767,55 +770,77 @@ export default function BankAccountDashboard() {
     // FILTER BANK ACCOUNTS BY STATUS
     // ============================================================
 
-    const filteredBankAccounts =
-        useMemo(() => {
+    // ============================================================
+    // FILTER BANK ACCOUNTS BY STATUS
+    // ============================================================
 
-            const selectedStatus =
-                String(
-                    bankAccountStatus ||
-                    "ALL"
-                ).toUpperCase();
+    const filteredBankAccounts = useMemo(() => {
+        const selectedStatus = String(
+            bankAccountStatus || "ALL"
+        ).trim().toUpperCase();
 
-
-            // ====================================================
-            // ALL
-            // ====================================================
-
-            if (
-                selectedStatus ===
-                "ALL"
-            ) {
+        switch (selectedStatus) {
+            // ----------------------------------------------------
+            // ALL BANK ACCOUNTS
+            // ----------------------------------------------------
+            case "ALL":
                 return bankAccounts;
-            }
 
+            // ----------------------------------------------------
+            // ACTIVE BANK ACCOUNTS
+            // ----------------------------------------------------
+            case "ACTIVE":
+                return bankAccounts.filter(
+                    (account) =>
+                        String(account?.status ?? "")
+                            .trim()
+                            .toUpperCase() === "ACTIVE"
+                );
 
-            // ====================================================
-            // FILTER
-            // ====================================================
+            // ----------------------------------------------------
+            // INACTIVE BANK ACCOUNTS
+            // ----------------------------------------------------
+            case "INACTIVE":
+                return bankAccounts.filter(
+                    (account) =>
+                        String(account?.status ?? "")
+                            .trim()
+                            .toUpperCase() === "INACTIVE"
+                );
 
-            return bankAccounts.filter(
-                (bankAccount) => {
+            // ----------------------------------------------------
+            // DRAFT BANK ACCOUNTS
+            // ----------------------------------------------------
+            case "DRAFT":
+                return bankAccounts.filter(
+                    (account) =>
+                        String(account?.status ?? "")
+                            .trim()
+                            .toUpperCase() === "DRAFT"
+                );
 
-                    const backendStatus =
-                        String(
-                            bankAccount?.status ||
-                            ""
-                        ).toUpperCase();
+            // ----------------------------------------------------
+            // PRIMARY BANK ACCOUNTS
+            // ----------------------------------------------------
+            case "PRIMARY":
+                return bankAccounts.filter(
+                    (account) =>
+                        account?.primaryAccount === true ||
+                        String(account?.primaryAccount)
+                            .trim()
+                            .toLowerCase() === "true"
+                );
 
-
-                    return (
-                        backendStatus ===
-                        selectedStatus
-                    );
-
-                }
-            );
-
-        }, [
-            bankAccounts,
-            bankAccountStatus,
-        ]);
-
+            // ----------------------------------------------------
+            // DEFAULT
+            // ----------------------------------------------------
+            default:
+                return bankAccounts;
+        }
+    }, [
+        bankAccounts,
+        bankAccountStatus,
+    ]);
 
     // ============================================================
     // OPEN CREATE BANK ACCOUNT MODAL

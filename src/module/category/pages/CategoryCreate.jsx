@@ -10,6 +10,7 @@ import { closeModal } from "../../ui/uiSlice";
 import {
     resetCategoryForm,
     setCategoryField,
+    setCreatedCategorySelection
 } from "../slices/categorySlice";
 
 import {
@@ -449,6 +450,26 @@ export default function CategoryCreate() {
         loading,
     ]);
 
+
+    useEffect(() => {
+        if (
+            modal.open &&
+            modal.type === "addCategory" &&
+            modal.data?.categoryName
+        ) {
+            dispatch(
+                setCategoryField({
+                    field: "categoryName",
+                    value: modal.data.categoryName,
+                })
+            );
+        }
+    }, [
+        modal.open,
+        modal.type,
+        modal.data,
+        dispatch,
+    ]);
     // =========================================================
     // LOAD EXISTING DATA FOR EDIT
     // =========================================================
@@ -700,14 +721,29 @@ export default function CategoryCreate() {
             // =================================================
 
             else {
-
-                await dispatch(
+                const response = await dispatch(
                     createCategory(payload)
                 ).unwrap();
 
-                toast.success(
-                    "Category created successfully"
-                );
+                const createdCategory =
+                    response?.data?.data ??
+                    response?.data ??
+                    response;
+
+                // Send the created category to the parent form.
+                if (
+                    modal.data?.selectAfterCreate &&
+                    createdCategory?.id
+                ) {
+                    dispatch(
+                        setCreatedCategorySelection({
+                            item: createdCategory,
+                            targetField: modal.data.targetField,
+                        })
+                    );
+                }
+
+                toast.success("Category created successfully");
             }
 
             // =================================================
@@ -1056,6 +1092,14 @@ export default function CategoryCreate() {
         mb-1.5
     `;
 
+    const getLabelClass = (required = false) => `
+        block
+        text-xs
+        font-medium
+        ${required ? "text-red-500" : "text-[#0F4659]"}
+        mb-1.5
+    `;
+
     // =========================================================
     // UI
     // =========================================================
@@ -1304,6 +1348,7 @@ export default function CategoryCreate() {
                                             text-base
                                             font-semibold
                                             text-gray-500
+
                                         "
                                     >
                                         Category Information
@@ -1382,7 +1427,7 @@ export default function CategoryCreate() {
                                 <div>
 
                                     <label
-                                        className={labelClass}
+                                        className={getLabelClass(true)}
                                     >
                                         Category Name
 
@@ -1432,7 +1477,7 @@ export default function CategoryCreate() {
                                 <div>
 
                                     <label
-                                        className={labelClass}
+                                        className={getLabelClass(true)}
                                     >
                                         Display Order
 
@@ -1608,7 +1653,7 @@ export default function CategoryCreate() {
                                             className="
                                                 text-sm
                                                 font-medium
-                                                text-gray-800
+                                                text-gray-500
                                             "
                                         >
                                             Category Status
@@ -1625,20 +1670,7 @@ export default function CategoryCreate() {
                                             set to{" "}
 
                                             <span
-                                                className="
-                                                    font-medium
-                                                    text-gray-700
-                                                "
-                                            >
-                                                {form.status || "ACTIVE"}
-                                            </span>
-
-                                        </p>
-
-                                    </div>
-
-                                    <span
-                                        className={`
+                                                className={`
                                             inline-flex
                                             items-center
                                             justify-center
@@ -1650,15 +1682,21 @@ export default function CategoryCreate() {
                                             font-medium
 
                                             ${form.status === "ACTIVE"
-                                                ? "bg-green-50 text-green-700"
-                                                : form.status === "INACTIVE"
-                                                    ? "bg-red-50 text-red-700"
-                                                    : "bg-yellow-50 text-yellow-700"
-                                            }
+                                                        ? "bg-green-50 text-green-700"
+                                                        : form.status === "INACTIVE"
+                                                            ? "bg-red-50 text-red-700"
+                                                            : "bg-yellow-50 text-yellow-700"
+                                                    }
                                         `}
-                                    >
-                                        {form.status || "ACTIVE"}
-                                    </span>
+                                            >
+                                                {form.status || "ACTIVE"}
+                                            </span>
+
+                                        </p>
+
+                                    </div>
+
+
 
                                 </div>
 

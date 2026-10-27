@@ -1,7 +1,7 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-
+import { useNavigate } from "react-router-dom";
 import {
     fetchAllSubCategories,
     deleteSubCategory,
@@ -20,16 +20,21 @@ import {
     Edit,
     Trash2,
     ListTree,
+    Eye,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
+import Pagination from "../../../common/pagination/table/Pagination";
 
 export default function SubCategoryTable({
     subCategories = [],
 }) {
 
     const dispatch = useDispatch();
+    const [showEdit, setShowEdit] = useState(false);
+    const [showView, setShowView] = useState(false);
 
+    const navigate = useNavigate(false);
     // =====================================================
     // REDUX STATE
     // =====================================================
@@ -719,139 +724,42 @@ export default function SubCategoryTable({
 
     return (
 
-        <div
-            className="
-            bg-white
-            rounded-xl
-            border
-            border-gray-200
-            overflow-visible
-            w-full
-            "
-        >
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
+            <div className="overflow-x-auto overflow-y-visible">
+                <table className="w-full">
+                    <thead className="bg-[#FEFEFD]/20 border-b border-gray-300">
 
-            {/* =================================================
-                TABLE CONTAINER
-            ================================================= */}
-
-            <div
-                className="
-                w-full
-                overflow-visible
-                "
-            >
-
-                <table
-                    className="
-                    w-full
-                    table-fixed
-                    border-collapse
-                    "
-                >
-
-                    {/* =================================================
-                        TABLE HEADER
-                    ================================================= */}
-
-                    <thead
-                        className="
-                        bg-gray-100
-                        border-b
-                        border-gray-300
-                        "
-                    >
 
                         <tr>
 
-                            <th
-                                className="
-                                w-[22%]
-                                px-2
-                                py-3
-                                font-medium
-                                text-sm
-                                text-gray-600
-                                uppercase
-                                text-left
-                                "
-                            >
-                                Sub Category
-                            </th>
+                            {[
+                                "SubCategory Name",
+                                "Category Name",
+                                "SubCategoryCode",
+                                "Description",
+                                "Status",
+                                "Actions",
+                            ].map((header) => (
 
-                            <th
-                                className="
-                                w-[18%]
-                                px-2
-                                py-3
-                                font-medium
-                                text-sm
-                                text-gray-600
-                                uppercase
-                                text-left
-                                "
-                            >
-                                Category
-                            </th>
+                                <th
+                                    key={header}
+                                    className={`
+                                    px-4
+                                    py-3
+                                    font-medium
+                                    text-md
+                                    text-gray-400
+                                    uppercase
+                                    ${header === "Actions"
+                                            ? "text-center"
+                                            : "text-left"
+                                        }
+                                `}
+                                >
+                                    {header}
+                                </th>
 
-                            <th
-                                className="
-                                w-[18%]
-                                px-2
-                                py-3
-                                font-medium
-                                text-sm
-                                text-gray-600
-                                uppercase
-                                text-left
-                                "
-                            >
-                                Sub Category Code
-                            </th>
-
-                            <th
-                                className="
-                                w-[22%]
-                                px-2
-                                py-3
-                                font-medium
-                                text-sm
-                                text-gray-600
-                                uppercase
-                                text-left
-                                "
-                            >
-                                Description
-                            </th>
-
-                            <th
-                                className="
-                                w-[12%]
-                                px-2
-                                py-3
-                                font-medium
-                                text-sm
-                                text-gray-600
-                                uppercase
-                                text-left
-                                "
-                            >
-                                Status
-                            </th>
-
-                            <th
-                                className="
-                                w-[10%]
-                                px-2
-                                py-3
-                                font-medium
-                                text-sm
-                                text-gray-600
-                                uppercase
-                                text-right
-                                "
-                            >
-                                Actions
-                            </th>
+                            ))}
 
                         </tr>
 
@@ -1013,6 +921,8 @@ font - bold
                                                     }
                                                 </p>
 
+
+
                                                 <p
                                                     className="
                                                     text-xs
@@ -1120,18 +1030,18 @@ truncate
 
                                             <span
                                                 className={`
-inline - block
-px - 2
-py - 1
-rounded - full
-text - xs
-font - medium
+                                            inline - block
+                                            px - 2
+                                            py - 1
+                                            rounded - full
+                                            text - xs
+                                            font - medium
                                                 ${statusColor[
                                                     subCategory.status
                                                     ] ||
                                                     "bg-gray-100 text-gray-700"
                                                     }
-`}
+                                            `}
                                             >
                                                 {
                                                     subCategory.status ||
@@ -1145,176 +1055,86 @@ font - medium
                                             ACTIONS
                                         ================================= */}
 
-                                        <td
-                                            className="
-                                            relative
-                                            overflow-visible
-                                            px-2
-                                            py-3
-                                            "
-                                            onClick={(e) =>
-                                                e.stopPropagation()
-                                            }
-                                        >
+                                        {/* Actions */}
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-center gap-2">
 
-                                            {/* =================================================
-                                                HIDE ACTION BUTTON COMPLETELY
-                                                IF USER HAS NO EDIT/DELETE ACCESS
-                                            ================================================= */}
-
-                                            {canPerformAction && (
-
-                                                <div
+                                                {/* View */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowView(true);
+                                                        dispatch(setExsistingSubCategory(subCategory));
+                                                        navigate(`/settings/subCategories/view/${subCategory.id}`);
+                                                    }}
+                                                    title="View"
                                                     className="
-                                                    flex
-                                                    justify-end
-                                                    "
+                                                flex h-8 w-8 items-center justify-center
+                                                rounded-lg
+                                                bg-blue-50
+                                                text-blue-600
+                                                transition
+                                                hover:bg-blue-100
+                                                hover:text-blue-700
+                                            "
                                                 >
+                                                    <Eye size={16} />
+                                                </button>
 
-                                                    <div
-                                                        className="
-                                                        relative
-                                                        group
-                                                        inline-block
+                                                {/* Edit */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+
+                                                        dispatch(setExsistingSubCategory(subCategory));
+                                                        dispatch(
+                                                            openModal({
+                                                                type: "editSubCategory",
+                                                                data: subCategory,
+                                                            })
+                                                        );
+                                                    }}
+                                                    title="Edit"
+                                                    className="
+                                                    flex h-8 w-8 items-center justify-center
+                                                    rounded-lg
+                                                    bg-amber-50
+                                                    text-amber-600
+                                                    transition
+                                                    hover:bg-amber-100
+                                                    hover:text-amber-700
                                                         "
-                                                    >
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
 
-                                                        {/* ACTION BUTTON */}
+                                                {/* Delete */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
 
-                                                        <button
-                                                            type="button"
-                                                            className="
-                                                            p-1
-                                                            rounded-full
-                                                            bg-blue-500
-                                                            text-white
-                                                            hover:bg-blue-600
-                                                            transition-colors
-                                                            "
-                                                        >
+                                                        // Your delete confirmation logic
+                                                        handleDelete(subCategory.id);
+                                                    }}
+                                                    title="Delete"
+                                                    className="
+                                                flex h-8 w-8 items-center justify-center
+                                                rounded-lg
+                                                bg-red-50
+                                                text-red-600
+                                                transition
+                                                hover:bg-red-100
+                                                hover:text-red-700
+                                            "
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
 
-                                                            <ChevronDown
-                                                                size={16}
-                                                            />
-
-                                                        </button>
-
-                                                        {/* =================================================
-                                                            ACTION MENU
-                                                        ================================================= */}
-
-                                                        <div
-                                                            className="
-                                                            absolute
-                                                            right-0
-                                                            top-full
-                                                            mt-1
-                                                            z-[9999]
-                                                            opacity-0
-                                                            invisible
-                                                            group-hover:opacity-100
-                                                            group-hover:visible
-                                                            transition-all
-                                                            duration-150
-                                                            "
-                                                        >
-
-                                                            <div
-                                                                className="
-                                                                w-36
-                                                                rounded-md
-                                                                bg-blue-500
-                                                                shadow-lg
-                                                                overflow-hidden
-                                                                "
-                                                            >
-
-                                                                {/* =================================================
-                                                                    EDIT
-                                                                ================================================= */}
-
-                                                                {canEditSubCategory && (
-
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleEdit(
-                                                                                subCategory
-                                                                            )
-                                                                        }
-                                                                        className="
-                                                                        flex
-                                                                        w-full
-                                                                        items-center
-                                                                        gap-2
-                                                                        px-4
-                                                                        py-2
-                                                                        text-sm
-                                                                        text-white
-                                                                        hover:bg-blue-600
-                                                                        transition-colors
-                                                                        "
-                                                                    >
-
-                                                                        <Edit
-                                                                            size={16}
-                                                                        />
-
-                                                                        Edit
-
-                                                                    </button>
-
-                                                                )}
-
-                                                                {/* =================================================
-                                                                    DELETE
-                                                                ================================================= */}
-
-                                                                {canDeleteSubCategory && (
-
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleDelete(
-                                                                                subCategory.id
-                                                                            )
-                                                                        }
-                                                                        className="
-                                                                        flex
-                                                                        w-full
-                                                                        items-center
-                                                                        gap-2
-                                                                        px-4
-                                                                        py-2
-                                                                        text-sm
-                                                                        text-white
-                                                                        hover:bg-red-600
-                                                                        transition-colors
-                                                                        "
-                                                                    >
-
-                                                                        <Trash2
-                                                                            size={16}
-                                                                        />
-
-                                                                        Delete
-
-                                                                    </button>
-
-                                                                )}
-
-                                                            </div>
-
-                                                        </div>
-
-                                                    </div>
-
-                                                </div>
-
-                                            )}
-
+                                            </div>
                                         </td>
-
                                     </tr>
 
                                 )
@@ -1328,129 +1148,31 @@ font - medium
                     PAGINATION
                 ===================================================== */}
 
-                <div
-                    className="
-                    p-4
-                    border-t
-                    border-gray-100
-                    flex
-                    items-center
-                    justify-between
-                    "
-                >
+                <Pagination
+                    page={Number(pageNumber) || 0}
+                    size={Number(pageSize) || 10}
+                    totalElements={Number(totalElements) || 0}
+                    totalPages={Number(totalPages) || 0}
+                    loading={loading}
+                    label="categories"
+                    onPageChange={(nextPage) => {
+                        dispatch(
+                            fetchAllSubCategories({
+                                page: nextPage,
+                                size: Number(pageSize) || 10,
+                            })
+                        );
+                    }}
+                    onPageSizeChange={(nextSize) => {
+                        dispatch(
+                            fetchAllSubCategories({
+                                page: 0,
+                                size: nextSize,
+                            })
+                        );
+                    }}
+                />
 
-                    <p
-                        className="
-                        text-sm
-                        text-gray-500
-                        "
-                    >
-
-                        Showing{" "}
-
-                        {
-                            currentSubCategories.length
-                        }
-
-                        {" "}of{" "}
-
-                        {
-                            totalElements || 0
-                        }
-
-                        {" "}sub categories
-
-                    </p>
-
-                    <div
-                        className="
-                        flex
-                        items-center
-                        gap-3
-                        "
-                    >
-
-                        {/* PREVIOUS */}
-
-                        <button
-                            type="button"
-                            disabled={
-                                Number(
-                                    pageNumber
-                                ) <= 0
-                            }
-                            onClick={() => {
-                                // Add server-side page support here
-                            }}
-                            className="
-                            text-sm
-                            text-gray-400
-                            hover:text-gray-600
-                            disabled:opacity-50
-                            disabled:cursor-not-allowed
-                            "
-                        >
-                            Previous
-                        </button>
-
-                        {/* CURRENT PAGE */}
-
-                        <span
-                            className="
-                            w-8
-                            h-8
-                            flex
-                            items-center
-                            justify-center
-                            rounded-lg
-                            bg-blue-500
-                            text-white
-                            text-sm
-                            font-medium
-                            "
-                        >
-
-                            {
-                                (Number(
-                                    pageNumber
-                                ) || 0) + 1
-                            }
-
-                        </span>
-
-                        {/* NEXT */}
-
-                        <button
-                            type="button"
-                            disabled={
-                                (
-                                    Number(
-                                        pageNumber
-                                    ) || 0
-                                ) >=
-                                (
-                                    Number(
-                                        totalPages
-                                    ) || 1
-                                ) - 1
-                            }
-                            onClick={() => {
-                                // Add server-side page support here
-                            }}
-                            className="
-                            text-sm
-                            text-gray-400
-                            hover:text-gray-600
-                            disabled:opacity-50
-                            disabled:cursor-not-allowed
-                            "
-                        >
-                            Next
-                        </button>
-
-                    </div>
-
-                </div>
 
             </div>
 

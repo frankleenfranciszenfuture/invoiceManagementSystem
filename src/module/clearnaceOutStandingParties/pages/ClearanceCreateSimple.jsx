@@ -882,13 +882,13 @@ export default function ClearanceCreateSimple() {
     ========================================================= */
 
     const inputClass =
-        "w-full h-10 border border-gray-300 rounded-md px-3 text-sm bg-white focus:outline-none focus:border-[#0F4659] focus:ring-2 focus:ring-[#0F4659]/20 transition";
+        "w-full h-10 border border-gray-300 rounded-md px-3 text-sm bg-white focus:outline-none focus:border-[#408DFB] focus:ring-2 focus:ring-[#408DFB]/20 transition";
 
     const getLabelClass = (required = false) => `
         block
         text-xs
         font-medium
-        ${required ? "text-red-500" : "text-[#0F4659]"}
+        ${required ? "text-red-500" : "text-gray-400"}
         mb-1.5
     `;
 
@@ -900,11 +900,11 @@ export default function ClearanceCreateSimple() {
         <div className="w-full max-w-7xl">
             <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Clearance Information
                     </h2>
 
-                    <p className="text-sm text-[#0F4659]/70 mt-1">
+                    <p className="text-sm text-gray-400 mt-1">
                         Enter the party and amount for this clearance.
                     </p>
                 </div>
@@ -981,31 +981,31 @@ export default function ClearanceCreateSimple() {
                         <div className="flex items-center gap-2 mb-4">
                             <Landmark
                                 size={18}
-                                className="text-[#0F4659]"
+                                className="text-gray-500"
                             />
 
-                            <h3 className="text-sm font-semibold text-[#0F4659]">
+                            <h3 className="text-sm font-semibold text-gray-500">
                                 Clearance Summary
                             </h3>
                         </div>
 
                         <div className="space-y-4">
                             <div>
-                                <p className="text-xs text-[#0F4659]/70">
+                                <p className="text-xs text-gray-500">
                                     Party ID
                                 </p>
 
-                                <p className="text-sm font-medium text-[#0F4659] mt-1">
+                                <p className="text-sm font-medium text-gray-400 mt-1">
                                     {form.partyId || "Not selected"}
                                 </p>
                             </div>
 
                             <div>
-                                <p className="text-xs text-[#0F4659]/70">
+                                <p className="text-xs text-gray-500">
                                     Clearance Amount
                                 </p>
 
-                                <p className="text-lg font-semibold text-[#0F4659] mt-1">
+                                <p className="text-lg font-semibold text-gray-400 mt-1">
                                     {Number(
                                         form.clearanceAmount || 0
                                     ).toLocaleString("en-IN", {
@@ -1016,11 +1016,11 @@ export default function ClearanceCreateSimple() {
                             </div>
 
                             <div>
-                                <p className="text-xs text-[#0F4659]/70">
+                                <p className="text-xs text-gray-500">
                                     Payment Method
                                 </p>
 
-                                <p className="text-sm font-medium text-[#0F4659] mt-1">
+                                <p className="text-sm font-medium text-gray-400 mt-1">
                                     {form.paymentMethod || "CASH"}
                                 </p>
                             </div>
@@ -1039,11 +1039,11 @@ export default function ClearanceCreateSimple() {
         <div className="w-full max-w-7xl">
             <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Payment Information
                     </h2>
 
-                    <p className="text-sm text-[#0F4659]/70 mt-1">
+                    <p className="text-sm text-gray-400 mt-1">
                         Select the payment method and enter transaction details.
                     </p>
                 </div>
@@ -1124,11 +1124,11 @@ export default function ClearanceCreateSimple() {
                 </div>
 
                 <div className="mt-7 p-4 rounded-lg bg-[#0F4659]/5 border border-[#0F4659]/20 max-w-5xl">
-                    <p className="text-sm font-medium text-[#0F4659]">
+                    <p className="text-sm font-medium text-gray-500">
                         Payment Method
                     </p>
 
-                    <p className="text-xs text-[#0F4659]/80 mt-1">
+                    <p className="text-xs text-gray-400 mt-1">
                         {form.paymentMethod || "CASH"}
                     </p>
                 </div>
@@ -1144,11 +1144,11 @@ export default function ClearanceCreateSimple() {
         <div className="w-full max-w-7xl">
             <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Remarks
                     </h2>
 
-                    <p className="text-sm text-[#0F4659]/70 mt-1">
+                    <p className="text-sm text-gray-400 mt-1">
                         Add any additional information about this clearance.
                     </p>
                 </div>
@@ -1184,11 +1184,11 @@ export default function ClearanceCreateSimple() {
         <div className="w-full max-w-7xl">
             <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Clearance Settings
                     </h2>
 
-                    <p className="text-sm text-[#0F4659]/70 mt-1">
+                    <p className="text-sm text-gray-400 mt-1">
                         Review the clearance record before saving.
                     </p>
                 </div>
@@ -1197,41 +1197,41 @@ export default function ClearanceCreateSimple() {
                     <div className="flex items-center gap-2 mb-4">
                         <Landmark
                             size={18}
-                            className="text-[#0F4659]"
+                            className="text-gray-500"
                         />
 
-                        <h3 className="text-sm font-semibold text-[#0F4659]">
+                        <h3 className="text-sm font-semibold text-gray-500">
                             Record Information
                         </h3>
                     </div>
 
                     <div className="space-y-4">
                         <div>
-                            <p className="text-xs text-[#0F4659]/70">
+                            <p className="text-xs text-gray-500">
                                 Record Type
                             </p>
 
-                            <p className="text-sm font-medium text-[#0F4659] mt-1">
+                            <p className="text-sm font-medium text-gray-400 mt-1">
                                 Credit Clearance
                             </p>
                         </div>
 
                         <div>
-                            <p className="text-xs text-[#0F4659]/70">
+                            <p className="text-xs text-gray-500">
                                 Operation
                             </p>
 
-                            <p className="text-sm font-medium text-[#0F4659] mt-1">
+                            <p className="text-sm font-medium text-gray-400 mt-1">
                                 {isEdit ? "Update existing clearance" : "Create new clearance"}
                             </p>
                         </div>
 
                         <div>
-                            <p className="text-xs text-[#0F4659]/70">
+                            <p className="text-xs text-gray-500">
                                 Clearance Date
                             </p>
 
-                            <p className="text-sm font-medium text-[#0F4659] mt-1">
+                            <p className="text-sm font-medium text-gray-400 mt-1">
                                 {form.clearanceDate || "Not selected"}
                             </p>
                         </div>
@@ -1249,21 +1249,21 @@ export default function ClearanceCreateSimple() {
         <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-5">
             {/* HEADER */}
 
-            <div className="shrink-0 px-6 py-4 bg-white border-b border-gray-200 flex items-center justify-between">
+            <div className="shrink-0 px-6 py-4 bg-white border border-lime-500 rounded flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div
-                        className="w-10 h-10 rounded-lg bg-[#0F4659]/20 border border-blue-100 flex items-center justify-center cursor-pointer"
+                        className="w-10 h-10 rounded-lg bg-[#408DFB] border border-blue-100 flex items-center justify-center cursor-pointer"
                         onClick={() => navigate("/clearances")}
                     >
                         <Landmark
                             size={20}
-                            className="text-[#0F4659]"
+                            className="text-gray-100"
                         />
                     </div>
 
                     <div>
                         <h1
-                            className="text-lg font-semibold text-[#0F4659] cursor-pointer"
+                            className="text-lg font-semibold text-gray-500 cursor-pointer"
                             onClick={() => navigate("/clearances")}
                         >
                             {isEdit
@@ -1271,7 +1271,7 @@ export default function ClearanceCreateSimple() {
                                 : "New Clearance"}
                         </h1>
 
-                        <p className="text-xs text-[#0F4659] mt-0.5">
+                        <p className="text-xs text-gray-400 mt-0.5">
                             {isEdit
                                 ? `Update clearance details${form.id ? ` — #${form.id}` : ""}`
                                 : "Create a new credit clearance"}
@@ -1283,7 +1283,7 @@ export default function ClearanceCreateSimple() {
                     type="button"
                     disabled={loading || editLoading}
                     onClick={handleClose}
-                    className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                    className="px-2 py-1 text-gray-100 bg-red-500 hover:text-gray-100 hover:bg-red-400  rounded disabled:opacity-50"
                 >
                     <X size={20} />
                 </button>
@@ -1298,8 +1298,8 @@ export default function ClearanceCreateSimple() {
                         type="button"
                         onClick={() => setActiveTab(tab.id)}
                         className={`py-3 text-sm font-medium border-b-2 whitespace-nowrap transition ${activeTab === tab.id
-                            ? "text-[#0F4659] border-[#0F4659]"
-                            : "text-gray-500 border-transparent hover:text-gray-700"
+                            ? "text-gray-500 border-lime-500"
+                            : "text-gray-400 border-transparent hover:text-gray-500"
                             }`}
                     >
                         {tab.label}
@@ -1322,7 +1322,7 @@ export default function ClearanceCreateSimple() {
             {/* FOOTER */}
 
             <div className="shrink-0 border-t border-gray-200 bg-white px-6 py-2 flex items-center justify-end gap-3 mr-13">
-                <div className="text-xs text-[#0F4659]">
+                <div className="text-xs text-gray-500">
                     <span className="text-red-500">*</span>
                     {" "}Required fields
                 </div>
@@ -1332,7 +1332,8 @@ export default function ClearanceCreateSimple() {
                         type="button"
                         disabled={loading || editLoading}
                         onClick={handleClose}
-                        className="h-10 px-5 border border-gray-300 rounded-md bg-white text-sm font-medium text-[#0F4659] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="h-10 px-5 border border-gray-300 rounded-md 
+                        bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Cancel
                     </button>
@@ -1347,7 +1348,7 @@ export default function ClearanceCreateSimple() {
                                     saveAndClose: true,
                                 })
                             }
-                            className="h-10 px-5 bg-[#0F4659] hover:bg-[#0F4659]/90 text-white text-sm font-medium rounded-l-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="h-10 px-5 bg-[#408DFB] hover:bg-[#408DFB]/90 text-white text-sm font-medium rounded-l-md disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading
                                 ? isEdit ? "Updating..." : "Saving..."
@@ -1360,7 +1361,7 @@ export default function ClearanceCreateSimple() {
                             onClick={() =>
                                 setShowSaveMenu((previous) => !previous)
                             }
-                            className="h-10 w-10 bg-[#0F4659] hover:bg-[#0F4659]/90 text-white rounded-r-md border-l border-white flex items-center justify-center disabled:opacity-50"
+                            className="h-10 w-10 bg-[#408DFB] hover:bg-[#408DFB]/90 text-white rounded-r-md border-l border-white flex items-center justify-center disabled:opacity-50"
                         >
                             <ChevronDown
                                 size={16}

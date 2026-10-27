@@ -877,11 +877,11 @@ export default function SalesPersonCreateSimple() {
         <div className="w-full max-w-7xl">
             <div className="rounded-lg border border-gray-200 bg-white p-6">
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Sales Person Information
                     </h2>
 
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-400">
                         Enter the basic information of the sales person.
                     </p>
                 </div>
@@ -931,10 +931,10 @@ export default function SalesPersonCreateSimple() {
                         <div className="mb-4 flex items-center gap-2">
                             <Building2
                                 size={18}
-                                className="text-[#0F4659]"
+                                className="text-gray-500"
                             />
 
-                            <h3 className="text-sm font-semibold text-gray-800">
+                            <h3 className="text-sm font-semibold text-gray-500">
                                 Sales Person Status
                             </h3>
                         </div>
@@ -1103,25 +1103,25 @@ export default function SalesPersonCreateSimple() {
         <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-5">
             {/* HEADER */}
 
-            <div className="shrink-0 px-6 py-4 bg-white border-b border-gray-200 flex items-center justify-between">
+            <div className="shrink-0 px-6 py-4 bg-white border border-lime-400 rounded flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div
-                        className="w-10 h-10 rounded-lg bg-[#0F4659]/20 border border-blue-100 flex items-center justify-center cursor-pointer"
+                        className="w-10 h-10 rounded-lg bg-[#408DFB] border border-blue-100 flex items-center justify-center cursor-pointer"
                         onClick={() => navigate("/salesPersons")}
                     >
                         <Landmark
                             size={20}
-                            className="text-[#0F4659]"
+                            className="text-gray-100"
                         />
                     </div>
 
 
                     <div>
-                        <h1 className="text-lg font-semibold text-[#0F4659]">
+                        <h1 className="text-lg font-semibold text-gray-500">
                             {isEdit ? "Edit Sales Person" : "New Sales Person"}
                         </h1>
 
-                        <p className="mt-0.5 text-xs text-gray-500">
+                        <p className="mt-0.5 text-xs text-gray-400">
                             {isEdit
                                 ? `Update sales person details${form.salesPersonName ? ` — ${form.salesPersonName}` : ""}`
                                 : "Create new sales person details"}
@@ -1133,7 +1133,7 @@ export default function SalesPersonCreateSimple() {
                     type="button"
                     disabled={loading || editLoading}
                     onClick={handleClose}
-                    className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                    className="px-2 py-1 text-gray-100 bg-red-400 hover:bg-red-600 hover:text-gray-100 rounded disabled:opacity-50"
                     aria-label="Close"
                 >
                     <X size={20} />
@@ -1148,9 +1148,10 @@ export default function SalesPersonCreateSimple() {
                         key={tab.id}
                         type="button"
                         onClick={() => setActiveTab(tab.id)}
-                        className={`whitespace-nowrap border-b-2 py-3 text-sm font-medium transition ${activeTab === tab.id
-                            ? "border-[#0F4659] text-[#0F4659]"
-                            : "border-transparent text-gray-500 hover:text-gray-700"
+                        className={`whitespace-nowrap border-b-2 py-3 
+                            text-sm font-medium transition ${activeTab === tab.id
+                                ? "border-lime-500 text-gray-400"
+                                : "border-transparent text-gray-500 hover:text-gray-700"
                             }`}
                     >
                         {tab.label}
@@ -1193,7 +1194,8 @@ export default function SalesPersonCreateSimple() {
                                     saveAndClose: true,
                                 })
                             }
-                            className="h-10 rounded-l-md bg-[#0F4659] px-5 text-sm font-medium text-white hover:bg-[#0F4659]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="h-10 rounded-l-md bg-[#408DFB] px-5 text-sm font-medium text-white 
+                            hover:bg-[#408DFB]/90 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {loading
                                 ? isEdit
@@ -1210,7 +1212,8 @@ export default function SalesPersonCreateSimple() {
                             onClick={() =>
                                 setShowSaveMenu((previous) => !previous)
                             }
-                            className="flex h-10 w-10 items-center justify-center rounded-r-md border-l border-white/30 bg-[#0F4659] text-white hover:bg-[#0F4659]/90 disabled:opacity-50"
+                            className="flex h-10 w-10 items-center justify-center rounded-r-md border-l border-white/30
+                            bg-[#408DFB] text-white hover:bg-[#408DFB]/90 disabled:opacity-50"
                             aria-label="More save options"
                         >
                             <ChevronDown

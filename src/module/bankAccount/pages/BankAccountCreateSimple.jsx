@@ -483,7 +483,7 @@ export default function BankAccountCreateSimple() {
 
         setActiveTab("account");
 
-        navigate("/bankAccount");
+        navigate("/settings/bankAccount");
     };
 
     /* =========================================================
@@ -687,7 +687,7 @@ export default function BankAccountCreateSimple() {
             setActiveTab("account");
 
             if (saveAndClose) {
-                navigate("/bankAccount");
+                navigate("/settings/bankAccount");
             }
         } catch (error) {
             console.error(

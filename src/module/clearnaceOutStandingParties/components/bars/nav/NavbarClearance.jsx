@@ -189,8 +189,8 @@ export default function NavbarClearance() {
                 border-gray-200
                 bg-[white]
                 p-2
-                text-[#0F4659]
-                hover:bg-[#0F4659]/20
+                text-[#408DFB]
+                hover:bg-[#408DFB]/20
                 transition
             "
                         title="Home"
@@ -218,11 +218,11 @@ export default function NavbarClearance() {
                 items-center
                 gap-1
                 rounded-md
-                bg-[#0F4659]
+                bg-[#408DFB]
                 px-3
                 py-2
                 cursor-pointer
-                hover:bg-[#0F4659]/90
+                hover:bg-[#408DFB]/90
             "
                     >
                         <h2 className="font-semibold text-gray-100">
@@ -252,6 +252,7 @@ export default function NavbarClearance() {
                     bg-white
                     shadow-lg
                     z-50
+                    text-gray-500
                 "
                         >
                             <div className="max-h-72 overflow-y-auto">
@@ -268,7 +269,7 @@ export default function NavbarClearance() {
                                 border-gray-50
                                 text-left
                                 text-sm
-                                hover:bg-[#0F4659]/90
+                                hover:bg-[#408DFB]/90
                                 hover:text-white
                                 rounded-md
                             "
@@ -287,10 +288,10 @@ export default function NavbarClearance() {
                         px-4
                         py-3
                         text-left
-                        text-[#0F4659]
-                        bg-[#0F4659]/20
+                        text-[#408DFB]
+                        bg-[#408DFB]/20
                         hover:text-white
-                        hover:bg-[#0F4659]/80
+                        hover:bg-[#408DFB]/80
                         rounded-md
                     "
                                 onClick={() => {
@@ -349,19 +350,18 @@ export default function NavbarClearance() {
                                                 flex
                                                 items-center
                                                 gap-1
-                                                bg-[#0F4659]
+                                                bg-[#408DFB]
                                                 px-3
                                                 py-2
                                                 text-sm
                                                 font-medium
                                                 text-white
-                                                hover:bg-[#0F4659]/90
+                                                hover:bg-[#408DFB]/90
                                             "
                     >
 
                         <Plus size={14} />
 
-                        New Clearances
 
                     </button>
 
@@ -392,6 +392,7 @@ export default function NavbarClearance() {
                             border
                             border-gray-300
                             p-2
+                            text-[#408DFB]
                             hover:bg-gray-50
                         "
                         title="More"

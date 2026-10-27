@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 
 import toast from "react-hot-toast";
+import Pagination from "../../../common/pagination/table/Pagination";
 
 
 export default function CurrencyTable({ currency = [] }) {
@@ -663,7 +664,7 @@ export default function CurrencyTable({ currency = [] }) {
         <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
             <div className="overflow-x-auto overflow-y-visible">
                 <table className="w-full">
-                    <thead className="bg-[#F3F4F6] border-b border-gray-300">
+                    <thead className="bg-[#FEFEFD] border-b border-gray-300">
 
                         <tr>
 
@@ -682,8 +683,8 @@ export default function CurrencyTable({ currency = [] }) {
                                     px-5
                                     py-3
                                     font-medium
-                                    text-sm
-                                    text-[#0F4659]/90
+                                    text-md
+                                    text-gray-400
                                     uppercase
                                     ${header === "Actions"
                                             ? "text-right"
@@ -743,7 +744,7 @@ export default function CurrencyTable({ currency = [] }) {
                                         border-b
                                         border-gray-100
                                         hover:bg-gray-50
-                                        text-md
+                                        text-xs
                                         cursor-pointer
                                         transition-colors
                                     "
@@ -931,7 +932,7 @@ export default function CurrencyTable({ currency = [] }) {
                                                         e.stopPropagation();
                                                         setShowView(true);
                                                         dispatch(setExistingCurrency(currency));
-                                                        navigate(`/currencies/view/${currency.id}`);
+                                                        navigate(`/settings/currencies/view/${currency.id}`);
                                                     }}
                                                     title="View"
                                                     className="
@@ -954,7 +955,7 @@ export default function CurrencyTable({ currency = [] }) {
                                                         e.stopPropagation();
                                                         setShowEdit(true);
                                                         dispatch(setExistingCurrency(currency));
-                                                        navigate(`/currencies/edit/${currency.id}`);
+                                                        navigate(`/settings/currencies/edit/${currency.id}`);
                                                     }}
                                                     title="Edit"
                                                     className="
@@ -1011,104 +1012,31 @@ export default function CurrencyTable({ currency = [] }) {
                 PAGINATION
             ===================================================== */}
 
-                <div
-                    className="
-                        p-4
-                        border-t
-                        border-gray-100
-                        flex
-                        items-center
-                        justify-between
-                    "
-                >
+                <Pagination
+                    page={Number(pageNumber) || 0}
+                    size={Number(pageSize) || 10}
+                    totalElements={Number(totalElements) || 0}
+                    totalPages={Number(totalPages) || 0}
+                    loading={loading}
+                    label="currencies"
+                    onPageChange={(nextPage) => {
+                        dispatch(
+                            fetchAllCurrencies({
+                                page: nextPage,
+                                size: Number(pageSize) || 10,
+                            })
+                        );
+                    }}
+                    onPageSizeChange={(nextSize) => {
+                        dispatch(
+                            fetchAllCurrencies({
+                                page: 0,
+                                size: nextSize,
+                            })
+                        );
+                    }}
+                />
 
-                    <p
-                        className="
-                            text-sm
-                            text-gray-500
-                        "
-                    >
-
-                        Showing{" "}
-
-                        {
-                            currentCurrencies.length
-                        }
-
-                        {" "}of{" "}
-
-                        {
-                            currentCurrencies.length
-                        }
-
-                        {" "}currency Details
-
-                    </p>
-
-
-                    <div
-                        className="
-                            flex
-                            items-center
-                            gap-3
-                        "
-                    >
-
-                        {/* PREVIOUS */}
-
-                        <button
-                            type="button"
-                            disabled={true}
-                            className="
-                            text-sm
-                           text-[#0F4659] 
-                           hover:text-[#0F4659]/90
-                          disabled:cursor-not-allowed
-                          disabled:opacity-50"
-                        >
-                            Previous
-                        </button>
-
-
-                        {/* CURRENT PAGE */}
-
-                        <span
-                            className="
-                            w-8
-                            h-8
-                            flex
-                            items-center
-                            justify-center
-                            rounded-lg
-                            bg-[#0F4659]
-                            text-white
-                            text-sm
-                            font-medium
-                            "
-                        >
-                            1
-                        </span>
-
-
-                        {/* NEXT */}
-
-                        <button
-                            type="button"
-                            disabled={true}
-                            className="
-                            text-sm
-                            text-[#0F4659]
-                            hover:text-[#0F4659]/90
-                             disabled:cursor-not-allowed
-                                disabled:opacity-50
-                            "
-                        >
-                            Next
-                        </button>
-
-                    </div>
-
-                </div>
 
             </div>
 

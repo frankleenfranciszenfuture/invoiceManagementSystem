@@ -345,6 +345,11 @@ function AppContent() {
         />
 
         <Route
+          path="/settings/items"
+          element={<ProductDashboard />}
+        />
+
+        <Route
           path="/items/new"
           element={<ProductCreate />}
         />
@@ -356,6 +361,11 @@ function AppContent() {
 
         <Route
           path="/items/newSimple"
+          element={<ProductCreateSimple />}
+        />
+
+        <Route
+          path="/settings/items/newSimple"
           element={<ProductCreateSimple />}
         />
 
@@ -375,7 +385,7 @@ function AppContent() {
             ================================================= */}
 
         <Route
-          path="/taxes"
+          path="/settings/taxes"
           element={<TaxMasterDashboard />}
         />
 
@@ -385,12 +395,12 @@ function AppContent() {
             ================================================= */}
 
         <Route
-          path="/sizes"
+          path="/settings/sizes"
           element={<SizesDashboard />}
         />
 
         <Route
-          path="/sizes/view/:id"
+          path="/settings/sizes/view/:id"
           element={<SizeProfileView />}
         />
 
@@ -400,12 +410,12 @@ function AppContent() {
             ================================================= */}
 
         <Route
-          path="/units"
+          path="/settings/units"
           element={<UnitDashboard />}
         />
 
         <Route
-          path="/units/view/:id"
+          path="/settings/units/view/:id"
           element={<UnitProfileView />}
         />
 
@@ -414,7 +424,7 @@ function AppContent() {
             ================================================= */}
 
         <Route
-          path="/subCategoires"
+          path="/settings/subCategoires"
           element={<SubCategoryDashboard />}
         />
 
@@ -424,7 +434,7 @@ function AppContent() {
             ================================================= */}
 
         <Route
-          path="/categories"
+          path="/settings/categories"
           element={<CategoryDashboard />}
         />
 
@@ -437,7 +447,7 @@ function AppContent() {
             ================================================= */}
 
         <Route
-          path="/roles"
+          path="/settings/roles"
           element={<RoleDashboard />}
         />
 
@@ -467,54 +477,58 @@ function AppContent() {
             ================================================= */}
 
         <Route
-          path="/bankAccount"
+          path="/settings/bankAccount"
           element={<BankAccountDashboard />}
         />
 
         <Route
-          path="/bankAccount/newSimple"
+          path="/settings/bankAccount/newSimple"
           element={<BankAccountCreateSimple />}
         />
 
         <Route
-          path="/bankAccount/editSimple/:id"
+          path="/settings/bankAccount/editSimple/:id"
           element={<BankAccountCreateSimple />}
         />
 
         <Route
-          path="/bankAccount/view/:id"
+          path="/settings/bankAccount/view/:id"
           element={<BankAccountProfileOverview />}
         />
+
+
         {/* =================================================
                     COMPANY
             ================================================= */}
 
         <Route
-          path="/companies"
+          path="/settings/companies"
           element={<CompanyDashboard />}
         />
 
         <Route
-          path="/companies/view/:id"
+          path="/settings/companies/view/:id"
           element={<CompanyProfileOverview />}
         />
 
         <Route
-          path="/companies/view/"
+          path="/settings/companies/view/"
           element={<CompanyProfileOverview />}
         />
 
         <Route
-          path="/companies/newSimple"
+          path="/settings/companies/newSimple"
           element={<CompanyCreateSimple />}
 
         />
 
 
         <Route
-          path="/companies/editSimple/:id"
+          path="/settings/companies/editSimple/:id"
           element={<CompanyCreateSimple />}
         />
+
+
         {/* =================================================
                     INVOICES
           ================================================= */}
@@ -575,25 +589,25 @@ function AppContent() {
         />
 
         {/* =================================================
-                    SALES PERSON
+                  EmailSignature
             ================================================= */}
 
         <Route
-          path="/emailSignatures"
+          path="/settings/emailSignatures"
           element={<EmailSignatureDashboard />}
         />
 
         <Route
-          path="/emailSignatures/newSimple"
+          path="/settings/emailSignatures/newSimple"
           element={<EmailSignatureCreateSimple />}
         />
         <Route
-          path="/emailSignatures/edit/:id"
+          path="/settings/emailSignatures/edit/:id"
           element={<EmailSignatureCreateSimple />}
         />
 
         <Route
-          path="/emailSignatures/table"
+          path="/settings/emailSignatures/table"
           element={<EmailSignatureTable />}
         />
 
@@ -627,21 +641,21 @@ function AppContent() {
             ================================================= */}
 
         <Route
-          path="/currencies"
+          path="/settings/currencies"
           element={<CurrencyDashboard />}
         />
 
         <Route
-          path="/currencies/newSimple"
+          path="/settings/currencies/newSimple"
           element={<CurrencyCreateSimple />}
         />
         <Route
-          path="/currencies/edit/:id"
+          path="/settings/currencies/edit/:id"
           element={<CurrencyCreateSimple />}
         />
 
         <Route
-          path="/currencies/view/:id"
+          path="/settings/currencies/view/:id"
         // element={<CurrencyOverView />}
         />
 
@@ -701,7 +715,7 @@ function AppContent() {
 
 
         <Route
-          path="/menuPermission"
+          path="/settings/menuPermission"
           element={<MenuPermissions />}
         />
 

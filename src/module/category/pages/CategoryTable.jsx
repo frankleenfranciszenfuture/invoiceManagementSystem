@@ -598,7 +598,7 @@ export default function CategoryTable({
         <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
             <div className="overflow-x-auto overflow-y-visible">
                 <table className="w-full">
-                    <thead className="bg-[#FAF9F7]/20 border-b border-gray-300">
+                    <thead className="bg-[#FEFEFD]/20 border-b border-gray-300">
 
                         <tr>
 
@@ -964,7 +964,7 @@ export default function CategoryTable({
                     totalElements={Number(totalElements) || 0}
                     totalPages={Number(totalPages) || 0}
                     loading={loading}
-                    label="products"
+                    label="categories"
                     onPageChange={(nextPage) => {
                         dispatch(
                             fetchAllCategories({

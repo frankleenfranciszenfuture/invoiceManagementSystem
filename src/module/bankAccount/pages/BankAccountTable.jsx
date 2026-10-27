@@ -1092,7 +1092,7 @@ export default function BankAccountTable({
                                                         e.stopPropagation();
                                                         setShowView(true);
                                                         dispatch(setExsistingBankAccount(bankAccount));
-                                                        navigate(`/bankAccount/view/${bankAccount.id}`);
+                                                        navigate(`/settings/bankAccount/view/${bankAccount.id}`);
                                                     }}
                                                     title="View"
                                                     className="
@@ -1115,7 +1115,7 @@ export default function BankAccountTable({
                                                         e.stopPropagation();
                                                         setShowEdit(true);
                                                         dispatch(setExsistingBankAccount(bankAccount));
-                                                        navigate(`/bankAccount/editSimple/${bankAccount.id}`);
+                                                        navigate(`/settings/bankAccount/editSimple/${bankAccount.id}`);
 
                                                     }}
                                                     title="Edit"

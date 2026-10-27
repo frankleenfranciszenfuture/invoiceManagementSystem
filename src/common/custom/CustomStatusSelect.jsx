@@ -142,8 +142,8 @@ export default function CustomStatusSelect({
           rounded-md border border-gray-300 bg-white
           px-3 text-left text-sm text-[#0F4659]
           outline-none transition
-          focus:border-[#0F4659]
-          focus:ring-1 focus:ring-[#0F4659]
+          focus:border-[#408DFB]
+          focus:ring-1 focus:ring-[#408DFB]
           disabled:cursor-not-allowed
           disabled:bg-gray-100 disabled:opacity-60
         `}
@@ -195,8 +195,8 @@ export default function CustomStatusSelect({
                   justify-between rounded-sm px-3 py-2
                   text-sm transition-colors
                   ${active
-                                        ? "bg-[#0F4659] text-white"
-                                        : "text-[#0F4659] hover:bg-[#0F4659] hover:text-white"
+                                        ? "bg-[#408DFB] text-white"
+                                        : "text-gray-500 hover:bg-[#408DFB] hover:text-white"
                                     }
                 `}
                             >

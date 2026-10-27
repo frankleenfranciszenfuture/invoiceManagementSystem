@@ -25,6 +25,7 @@ import {
 } from "../../../slices/categoryViewSlice";
 
 import { openModal } from "../../../../ui/uiSlice";
+import Tooltip from "../../../../../common/toolTip/Tooltip";
 
 // ============================================================
 // STABLE EMPTY ARRAY
@@ -179,12 +180,14 @@ export default function NavbarCategory() {
             <div className="flex items-center gap-2">
 
                 {/* HOME + ALL PRODUCTS */}
-                <div className="flex items-center gap-2">
+                <div className="relative flex items-center gap-2">
 
                     <button
                         type="button"
                         onClick={() => navigate("/")}
                         className="
+                         group
+                relative
                 flex
                 items-center
                 justify-center
@@ -197,9 +200,10 @@ export default function NavbarCategory() {
                 hover:bg-[#408DFB]/20
                 transition
             "
-                        title="Home"
+                        aria-label="Home"
                     >
                         <Home size={18} />
+                        <Tooltip text="Home" position="top" />
                     </button>
 
 
@@ -322,7 +326,6 @@ export default function NavbarCategory() {
             {/* =====================================================
                 RIGHT
             ====================================================== */}
-
             <div
                 className="
                     flex
@@ -331,90 +334,63 @@ export default function NavbarCategory() {
                 "
             >
 
-                {/* =================================================
-                    NEW SIZE
-                ================================================== */}
 
-                <div
-                    className="
-                        flex
-                        overflow-hidden
-                        rounded-md
-                        border-blue-100
-                        shadow-sm
-                    "
-                >
-
+                {/* NEW CATEGORY */}
+                <div className="relative flex rounded-md border border-blue-100 shadow-sm">
                     <button
                         type="button"
-                        onClick={
-                            handleNewCategory
-                        }
+                        onClick={handleNewCategory}
                         className="
-                            flex
-                            items-center
-                            gap-1
-                            bg-[#408DFB]
-                            px-3
-                            py-2
-                            text-sm
-                            font-medium
-                            text-white
-                            hover:bg-[#408DFB]/90
-                        "
+            group
+            relative
+            flex
+            items-center
+            gap-1
+            rounded-md
+            bg-[#408DFB]
+            px-3
+            py-2
+            text-sm
+            font-medium
+            text-white
+            transition-colors
+            hover:bg-[#408DFB]/90
+        "
+                        aria-label="New Category"
                     >
-
                         <Plus size={14} />
-
-
-
+                        <Tooltip text="New Category" position="top" />
                     </button>
-
                 </div>
+
+
 
                 {/* =================================================
                     MORE
                 ================================================== */}
 
-                <div
-                    ref={moreDropdownRef}
-                    className="relative"
-                >
-
+                <div className="relative">
                     <button
                         type="button"
-                        // onClick={() =>
-                        //     setMoreOpen(
-                        //         (prev) => !prev
-                        //     )
-                        // }
-
-                        onClick={() =>
-                            navigate("/settings")
-                        }
+                        onClick={() => navigate("/settings")}
                         className="
-                            rounded-md
-                            border
-                            border-blue-300
-                            p-2
-                            text-[#408DFB]
-                            hover:bg-gray-50
-                        "
-                        title="More"
+            group
+            relative
+            rounded-md
+            border
+            border-gray-300
+            p-2
+            text-[#408DFB]
+            hover:bg-gray-50
+        "
+                        aria-label="Settings"
                     >
-
-                        <Settings
-                            size={18}
-                        />
-
+                        <Settings size={18} />
+                        <Tooltip text="Settings" position="top" />
                     </button>
-
-
-
                 </div>
-
             </div>
 
-        </div>
+        </div >
     );
 }

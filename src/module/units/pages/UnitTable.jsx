@@ -870,7 +870,7 @@ export default function UnitTable({
                                                         e.stopPropagation();
                                                         setShowView(true);
                                                         dispatch(setExsistingUnit(unit));
-                                                        navigate(`/units/view/${unit.id}`);
+                                                        navigate(`/settings/units/view/${unit.id}`);
                                                     }}
                                                     title="View"
                                                     className="
@@ -958,7 +958,7 @@ export default function UnitTable({
                     totalElements={Number(totalElements) || 0}
                     totalPages={Number(totalPages) || 0}
                     loading={loading}
-                    label="products"
+                    label="units"
                     onPageChange={(nextPage) => {
                         dispatch(
                             fetchAllUnits({

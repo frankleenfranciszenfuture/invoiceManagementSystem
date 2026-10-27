@@ -952,11 +952,32 @@ export default function UserCreate() {
     return (
         <>
             {isOpen && (
-                <div className="w-[950px] max-w-[95vw] h-[700px] max-h-[88vh] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
+                <div
+                    className="
+                   w-full
+        min-w-0
+        max-h-[80vh]
+        bg-white
+        rounded-lg
+        overflow-hidden
+        flex
+        flex-col
+            "
+                >
 
                     {/* HEADER */}
 
-                    <div className="shrink-0 h-[68px] flex items-center justify-between px-6 border-b border-gray-200 bg-[#408DFB]">
+                    <div className="
+                    shrink-0
+                    h-[68px]
+                    flex
+                    items-center
+                    justify-between
+                    px-6
+                    border
+                    border-lime-300
+                    bg-white
+                ">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-lg bg-gray-100 text-[#408DFB] flex items-center justify-center">
                                 <UserKeyIcon
@@ -966,13 +987,18 @@ export default function UserCreate() {
                             </div>
 
                             <div>
-                                <h2 className="text-lg font-semibold text-gray-100">
+                                <h2 className=" 
+                                text-[16px]
+                                font-semibold
+                                text-gray-500">
                                     {isEdit
                                         ? "Edit User"
                                         : "Add New User"}
                                 </h2>
 
-                                <p className="text-xs text-gray-100 mt-0.5">
+                                <p className="text-xs
+                                text-gray-400
+                                mt-0.5">
                                     {isEdit
                                         ? "Update user details"
                                         : "Create a new user"}
@@ -1007,10 +1033,10 @@ export default function UserCreate() {
                                         ${activeTab === tab.id
                                             ? hasError
                                                 ? "text-red-600"
-                                                : "text-[#408DFB] "
+                                                : "text-gray-500"
                                             : hasError
                                                 ? "text-red-600"
-                                                : "text-gray-500 hover:text-[#408DFB]/70"
+                                                : "text-gray-500 hover:text-gray-400"
                                         }
                                     `}
                                 >
@@ -1029,7 +1055,7 @@ export default function UserCreate() {
                                                 right-0 h-0.5
                                                 ${hasError
                                                     ? "bg-red-500"
-                                                    : "bg-[#408DFB]"
+                                                    : "bg-lime-500"
                                                 }
                                             `}
                                         />

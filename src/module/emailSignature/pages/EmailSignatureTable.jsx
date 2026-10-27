@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 
 import { fetchAllEmailSignatures, deleteEmailSignature } from "../thunks/emailSignatureThunks";
 import { setExistingEmailSignature } from "../slices/emailSignatureSlice";
+import Pagination from "../../../common/pagination/table/Pagination";
 
 const normalizeModule = (value) =>
     String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
@@ -33,6 +34,10 @@ export default function EmailSignatureTable({ emailSignatures: signatureProp }) 
 
     const signatureState = useSelector((state) => state.emailSignatures ?? {});
     const { loading = false, error = null, pagination = {} } = signatureState;
+    const {
+        pageNumber,
+        pageSize,
+    } = pagination || {};
     const user = useSelector((state) => state.auth?.user);
     const permissions = useSelector((state) =>
         Array.isArray(state.menuPermission?.userPermissions)
@@ -155,7 +160,7 @@ export default function EmailSignatureTable({ emailSignatures: signatureProp }) 
             return;
         }
         dispatch(setExistingEmailSignature(signature));
-        navigate(`/email-signatures/view/${signature.id}`);
+        navigate(`/settings/emailSignatures/view/${signature.id}`);
     };
 
     const handleEdit = (signature) => {
@@ -164,7 +169,7 @@ export default function EmailSignatureTable({ emailSignatures: signatureProp }) 
             return;
         }
         dispatch(setExistingEmailSignature(signature));
-        navigate(`/emailSignatures/edit/${signature.id}`);
+        navigate(`/settings/emailSignatures/edit/${signature.id}`);
     };
 
     const handleDelete = async (signature) => {
@@ -272,7 +277,7 @@ export default function EmailSignatureTable({ emailSignatures: signatureProp }) 
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
             <div className="overflow-x-auto">
                 <table className="w-full min-w-[1050px]">
-                    <thead className="border-b border-gray-200 bg-[#F3F4F6]">
+                    <thead className="border-b border-gray-200 bg-[#FEFEFD]">
                         <tr>
                             {[
                                 "Signature Name",
@@ -285,7 +290,10 @@ export default function EmailSignatureTable({ emailSignatures: signatureProp }) 
                             ].map((heading) => (
                                 <th
                                     key={heading}
-                                    className={`whitespace-nowrap px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#0F4659]/90 ${heading === "Actions" ? "text-right" : ""
+                                    className={`whitespace-nowrap px-5 py-3 
+                                        text-left text-md font-semibold uppercase 
+                                        tracking-wide text-gray-400
+                                         ${heading === "Actions" ? "text-right" : ""
                                         }`}
                                 >
                                     {heading}
@@ -320,8 +328,14 @@ export default function EmailSignatureTable({ emailSignatures: signatureProp }) 
                                     </td>
 
                                     <td className="max-w-[360px] px-5 py-3">
-                                        <p className="max-w-[340px] truncate text-gray-600" title={signature?.signatureContent ?? ""}>
-                                            {String(signature?.signatureContent ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() || "—"}
+                                        <p
+                                            className="max-w-[340px] whitespace-normal break-words text-gray-600"
+                                            title={signature?.signatureContent ?? ""}
+                                        >
+                                            {String(signature?.signatureContent ?? "")
+                                                .replace(/<[^>]*>/g, " ")
+                                                .replace(/\s+/g, " ")
+                                                .trim() || "—"}
                                         </p>
                                     </td>
 
@@ -401,36 +415,33 @@ export default function EmailSignatureTable({ emailSignatures: signatureProp }) 
                         })}
                     </tbody>
                 </table>
-            </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 p-4">
-                <p className="text-sm text-gray-500">
-                    Showing <span className="font-medium text-gray-700">{rows.length}</span>
-                    {" "}of <span className="font-medium text-gray-700">{totalElements || rows.length}</span>
-                    {" "}email signatures
-                </p>
+                <Pagination
+                    page={Number(pageNumber) || 0}
+                    size={Number(pageSize) || 10}
+                    totalElements={Number(totalElements) || 0}
+                    totalPages={Number(totalPages) || 0}
+                    loading={loading}
+                    label="emailSignatures"
+                    onPageChange={(nextPage) => {
+                        dispatch(
+                            fetchAllEmailSignatures({
+                                page: nextPage,
+                                size: Number(pageSize) || 10,
+                            })
+                        );
+                    }}
+                    onPageSizeChange={(nextSize) => {
+                        dispatch(
+                            fetchAllEmailSignatures({
+                                page: 0,
+                                size: nextSize,
+                            })
+                        );
+                    }}
+                />
 
-                <div className="flex items-center gap-3">
-                    <button
-                        type="button"
-                        disabled={true}
-                        onClick={() => { }}
-                        className="text-sm text-[#0F4659] hover:text-[#0F4659]/80 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                        Previous
-                    </button>
-                    <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-[#0F4659] px-2 text-sm font-medium text-white">
-                        {currentPage}
-                    </span>
-                    <button
-                        type="button"
-                        disabled={true}
-                        onClick={() => { }}
-                        className="text-sm text-[#0F4659] hover:text-[#0F4659]/80 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                        Next
-                    </button>
-                </div>
+
             </div>
         </div>
     );

@@ -64,6 +64,10 @@ const initialState = {
 
   exsistingProduct: null,
 
+  createdCategorySelection: null,
+  createdSubCategorySelection: null,
+  createdTaxMasterSelection: null,
+
   pagination: {
     pageNumber: 0,
     pageSize: 20,
@@ -162,6 +166,33 @@ const productSlice = createSlice({
       state.exsistingProduct = null;
     },
 
+    /* =====================================================
+   CREATED CATEGORY / SUBCATEGORY SELECTION
+===================================================== */
+
+    setCreatedCategorySelection: (state, action) => {
+      state.createdCategorySelection = action.payload;
+    },
+
+    clearCreatedCategorySelection: (state) => {
+      state.createdCategorySelection = null;
+    },
+
+    setCreatedSubCategorySelection: (state, action) => {
+      state.createdSubCategorySelection = action.payload;
+    },
+
+    clearCreatedSubCategorySelection: (state) => {
+      state.createdSubCategorySelection = null;
+    },
+
+    setCreatedTaxMasterSelection: (state, action) => {
+      state.createdTaxMasterSelection = action.payload;
+    },
+
+    clearCreatedTaxMasterSelection: (state) => {
+      state.createdTaxMasterSelection = null;
+    },
     /* =====================================================
        SET PRODUCT FIELD
     ===================================================== */
@@ -649,6 +680,13 @@ export const {
   addProductUnit,
 
   removeProductUnit,
+
+  setCreatedCategorySelection,
+  clearCreatedCategorySelection,
+  setCreatedSubCategorySelection,
+  clearCreatedSubCategorySelection,
+  setCreatedTaxMasterSelection,
+  clearCreatedTaxMasterSelection,
 } = productSlice.actions;
 
 /* =========================================================

@@ -36,6 +36,7 @@ const initialState = {
   },
 
   exsistingCategory: null,
+  createdCategorySelection: null,
 
   pagination: {
     pageNumber: 0,
@@ -108,6 +109,14 @@ const categorySlice = createSlice({
 
       state.selectedCategoryView = null;
       state.categoryStatus = "ACTIVE";
+    },
+
+    setCreatedCategorySelection: (state, action) => {
+      state.createdCategorySelection = action.payload;
+    },
+
+    clearCreatedCategorySelection: (state) => {
+      state.createdCategorySelection = null;
     },
 
     /* =====================================================
@@ -534,6 +543,8 @@ export const {
   setCategoryField,
   setSelectedCategoryView,
   setCategoryStatus,
+  setCreatedCategorySelection,
+  clearCreatedCategorySelection,
 } = categorySlice.actions;
 
 /* =========================================================

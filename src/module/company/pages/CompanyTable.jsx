@@ -422,7 +422,7 @@ export default function CompanyTable({
 
 
             navigate(
-                `/companies/view/${company.id}`
+                `/settings/companies/view/${company.id}`
             );
 
         } catch (error) {
@@ -1010,7 +1010,7 @@ export default function CompanyTable({
                                                         e.stopPropagation();
                                                         setShowView(true);
                                                         dispatch(setExsistingCompany(company));
-                                                        navigate(`/companies/view/${company.id}`);
+                                                        navigate(`/settings/companies/view/${company.id}`);
                                                     }}
                                                     title="View"
                                                     className="
@@ -1033,7 +1033,7 @@ export default function CompanyTable({
                                                         e.stopPropagation();
                                                         setShowEdit(true);
                                                         dispatch(setExsistingCompany(company));
-                                                        navigate(`/companies/editSimple/${company.id}`);
+                                                        navigate(`/settings/companies/editSimple/${company.id}`);
 
                                                     }}
                                                     title="Edit"

@@ -1,236 +1,3 @@
-// import {
-//   Building2,
-//   Palette,
-//   Bot,
-//   ChartPie,
-//   Users,
-//   ShieldCheck,
-//   Receipt,
-//   Landmark,
-//   BadgePercent,
-//   MonitorSmartphone,
-//   SlidersHorizontal,
-//   CreditCard,
-//   Package,
-//   UserRound,
-//   FileText,
-//   FileCheck,
-//   Wallet,
-//   Truck,
-//   ClipboardList,
-//   CircleDollarSign,
-//   Calculator,
-//   ScrollText,
-//   Boxes,
-//   Bell,
-//   Mail,
-//   Globe,
-//   Lock,
-//   Database,
-// } from "lucide-react";
-
-// export const settings = [
-//   {
-//     title: "Organization",
-//     items: [
-//       {
-//         label: "Organization Profile",
-//         icon: Building2,
-//         path: "/companies",
-//       },
-//       {
-//         label: "Bank Account",
-//         icon: Bot,
-//         path: "/bankAccount",
-//       },
-//       {
-//         label: "Users",
-//         icon: Users,
-//         path: "/users",
-//       },
-//       {
-//         label: "Roles",
-//         icon: ShieldCheck,
-//         path: "/roles",
-//       },
-
-//       {
-//         label: "MenuPermission",
-//         icon: ShieldCheck,
-//         path: "/menupermission",
-//       },
-//     ],
-//   },
-
-//   {
-//     title: "Taxes",
-//     items: [
-//       {
-//         label: "Taxes",
-//         icon: Receipt,
-//         path: "/taxes",
-//       },
-//     ],
-//   },
-
-//   {
-//     title: "Inventory",
-//     items: [
-//       {
-//         label: "Items",
-//         icon: Package,
-//         path: "/items",
-//       },
-//       {
-//         label: "Category",
-//         icon: Boxes,
-//         path: "/categories",
-//       },
-
-//       {
-//         label: "Sub Category",
-//         icon: Boxes,
-//         path: "/subCategoires",
-//       },
-
-//       {
-//         label: "Sizes",
-//         icon: Boxes,
-//         path: "/sizes",
-//       },
-
-//       {
-//         label: "Units",
-//         icon: Boxes,
-//         path: "/units",
-//       },
-//     ],
-//   },
-
-//   // {
-//   //   title: "Preferences",
-//   //   items: [
-//   //     {
-//   //       label: "MSME Settings",
-//   //       icon: MonitorSmartphone,
-//   //       path: "/settings/msme",
-//   //     },
-//   //     {
-//   //       label: "Customer Portal",
-//   //       icon: Globe,
-//   //       path: "/settings/customer-portal",
-//   //     },
-//   //     {
-//   //       label: "General Preferences",
-//   //       icon: SlidersHorizontal,
-//   //       path: "/settings/preferences",
-//   //     },
-//   //     {
-//   //       label: "Payment Terms",
-//   //       icon: CreditCard,
-//   //       path: "/settings/payment-terms",
-//   //     },
-//   //     {
-//   //       label: "Notifications",
-//   //       icon: Bell,
-//   //       path: "/settings/notifications",
-//   //     },
-//   //     {
-//   //       label: "Email Templates",
-//   //       icon: Mail,
-//   //       path: "/settings/email",
-//   //     },
-//   //     {
-//   //       label: "Security",
-//   //       icon: Lock,
-//   //       path: "/settings/security",
-//   //     },
-//   //     {
-//   //       label: "Backup & Restore",
-//   //       icon: Database,
-//   //       path: "/settings/backup",
-//   //     },
-//   //   ],
-//   // },
-
-//   // {
-//   //   title: "Sales",
-//   //   items: [
-//   //     {
-//   //       label: "Customers",
-//   //       icon: UserRound,
-//   //       path: "/customers",
-//   //     },
-//   //     {
-//   //       label: "Quotes",
-//   //       icon: FileText,
-//   //       path: "/quotes",
-//   //     },
-//   //     {
-//   //       label: "Invoices",
-//   //       icon: FileCheck,
-//   //       path: "/invoices",
-//   //     },
-//   //     {
-//   //       label: "Payments Received",
-//   //       icon: Wallet,
-//   //       path: "/payments",
-//   //     },
-//   //     {
-//   //       label: "Delivery Notes",
-//   //       icon: Truck,
-//   //       path: "/delivery-notes",
-//   //     },
-//   //     {
-//   //       label: "Packing Slips",
-//   //       icon: ClipboardList,
-//   //       path: "/packing-slips",
-//   //     },
-//   //   ],
-//   // },
-
-//   // {
-//   //   title: "Purchases",
-//   //   items: [
-//   //     {
-//   //       label: "Expenses",
-//   //       icon: CircleDollarSign,
-//   //       path: "/expenses",
-//   //     },
-//   //     {
-//   //       label: "Bills",
-//   //       icon: ScrollText,
-//   //       path: "/bills",
-//   //     },
-//   //     {
-//   //       label: "Vendors",
-//   //       icon: Users,
-//   //       path: "/vendors",
-//   //     },
-//   //   ],
-//   // },
-
-//   // {
-//   //   title: "Accounting",
-//   //   items: [
-//   //     {
-//   //       label: "Chart of Accounts",
-//   //       icon: Calculator,
-//   //       path: "/accounts",
-//   //     },
-//   //   ],
-//   // },
-// ];
-
-/* =========================================================
-   SETTINGS DATA  (single source of truth)
-
-   group: "organization" -> Organization Settings panel / sidebar group
-   group: "module"       -> Module Settings panel / sidebar group
-
-   To add a new module later, add ONE object with group: "module".
-   It automatically appears in the dashboard, the sidebar and the routes.
-========================================================= */
 import CompanyOverViewDashboard from "../../../../../module/company/overviewCard/CompanyOverViewDashboard";
 import ComingSoon from "./ComingSoon";
 // import BrandingPage from "../pages/BrandingPage";
@@ -248,33 +15,18 @@ export const settings = [
     group: "organization",
     items: [
       {
-        label: "Profile",
-        path: "/companies",
+        label: "Company Profile",
+        path: "/settings/companies",
         component: CompanyOverViewDashboard,
       },
-      {
-        label: "Branding",
-        path: "/companies/View",
-        component: ComingSoon,
-      },
+      // {
+      //   label: "Branding",
+      //   path: "/companies/View",
+      //   component: ComingSoon,
+      // },
       {
         label: "Bank Account",
         path: "/bankAccount",
-        component: ComingSoon,
-      },
-      {
-        label: "Locations",
-        path: "/settings/organization/locations",
-        component: ComingSoon,
-      },
-      {
-        label: "AI Integration",
-        path: "/settings/organization/ai-integration",
-        component: ComingSoon,
-      },
-      {
-        label: "Manage Subscription",
-        path: "/settings/organization/subscription",
         component: ComingSoon,
       },
     ],
@@ -283,8 +35,8 @@ export const settings = [
     title: "Users & Roles",
     group: "organization",
     items: [
-      { label: "Users", path: "/users", component: ComingSoon },
-      { label: "Roles", path: "/roles", component: ComingSoon },
+      { label: "Users", path: "/settings/users", component: ComingSoon },
+      { label: "Roles", path: "/settings/roles", component: ComingSoon },
       {
         label: "Menu Permission",
         path: "/menuPermission",
@@ -297,12 +49,12 @@ export const settings = [
     group: "organization",
     items: [
       { label: "Taxes", path: "/settings/taxes", component: ComingSoon },
-      {
-        label: "Direct Taxes",
-        path: "/settings/direct-taxes",
-        component: ComingSoon,
-      },
-      { label: "MSME Settings", path: "/settings/msme", component: ComingSoon },
+      // {
+      //   label: "Direct Taxes",
+      //   path: "/settings/direct-taxes",
+      //   component: ComingSoon,
+      // },
+      // { label: "MSME Settings", path: "/settings/msme", component: ComingSoon },
     ],
   },
 
@@ -359,47 +111,6 @@ export const settings = [
       },
     ],
   },
-  // {
-  //   title: "Customization",
-  //   group: "organization",
-  //   items: [
-  //     {
-  //       label: "Transaction Number Series",
-  //       path: "/settings/customization/number-series",
-  //       component: ComingSoon,
-  //     },
-  //     {
-  //       label: "PDF Templates",
-  //       path: "/settings/customization/pdf-templates",
-  //       component: ComingSoon,
-  //     },
-  //     {
-  //       label: "Email Notifications",
-  //       path: "/settings/customization/email",
-  //       component: ComingSoon,
-  //     },
-  //     {
-  //       label: "SMS Notifications",
-  //       path: "/settings/customization/sms",
-  //       component: ComingSoon,
-  //     },
-  //     {
-  //       label: "Reporting Tags",
-  //       path: "/settings/customization/reporting-tags",
-  //       component: ComingSoon,
-  //     },
-  //     {
-  //       label: "Web Tabs",
-  //       path: "/settings/customization/web-tabs",
-  //       component: ComingSoon,
-  //     },
-  //     {
-  //       label: "Digital Signature",
-  //       path: "/settings/customization/digital-signature",
-  //       component: ComingSoon,
-  //     },
-  //   ],
-  // },
   {
     title: "Invoice Customization",
     group: "organization",

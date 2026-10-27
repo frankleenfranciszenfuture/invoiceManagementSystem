@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import toast from "react-hot-toast";
+import Pagination from "../../../common/pagination/table/Pagination";
 
 export default function ClearanceTable({ clearances: suppliedClearances = [] }) {
     const dispatch = useDispatch();
@@ -33,6 +34,14 @@ export default function ClearanceTable({ clearances: suppliedClearances = [] }) 
         error = null,
         pagination = {},
     } = useSelector((state) => state.clearance || {});
+
+    const {
+        pageNumber,
+        pageSize,
+        totalPages,
+        totalElements,
+    } = pagination || {};
+
 
     // Use the filtered rows supplied by the dashboard.
     const currentClearances = Array.isArray(suppliedClearances)
@@ -434,35 +443,30 @@ export default function ClearanceTable({ clearances: suppliedClearances = [] }) 
                 </table>
 
                 {/* Pagination summary */}
-                <div className="flex items-center justify-between border-t border-gray-100 p-4">
-                    <p className="text-sm text-gray-500">
-                        Showing {currentClearances.length} of{" "}
-                        {pagination.totalElements ??
-                            currentClearances.length} clearances
-                    </p>
-
-                    <div className="flex items-center gap-3">
-                        <button
-                            type="button"
-                            disabled
-                            className="text-sm text-[#0F4659] disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            Previous
-                        </button>
-
-                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0F4659] text-sm font-medium text-white">
-                            {(pagination.pageNumber ?? 0) + 1}
-                        </span>
-
-                        <button
-                            type="button"
-                            disabled
-                            className="text-sm text-[#0F4659] disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
+                <Pagination
+                    page={Number(pageNumber) || 0}
+                    size={Number(pageSize) || 10}
+                    totalElements={Number(totalElements) || 0}
+                    totalPages={Number(totalPages) || 0}
+                    loading={loading}
+                    label="clearances"
+                    onPageChange={(nextPage) => {
+                        dispatch(
+                            fetchAllClearance({
+                                page: nextPage,
+                                size: Number(pageSize) || 10,
+                            })
+                        );
+                    }}
+                    onPageSizeChange={(nextSize) => {
+                        dispatch(
+                            fetchAllClearance({
+                                page: 0,
+                                size: nextSize,
+                            })
+                        );
+                    }}
+                />
             </div>
         </div>
     );

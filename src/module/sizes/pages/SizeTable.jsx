@@ -910,7 +910,7 @@ export default function SizeTable({
                                                         e.stopPropagation();
                                                         setShowView(true);
                                                         dispatch(setExsistingSize(size));
-                                                        navigate(`/sizes/view/${size.id}`);
+                                                        navigate(`/settings/sizes/view/${size.id}`);
                                                     }}
                                                     title="View"
                                                     className="
@@ -999,7 +999,7 @@ export default function SizeTable({
                     totalElements={Number(totalElements) || 0}
                     totalPages={Number(totalPages) || 0}
                     loading={loading}
-                    label="products"
+                    label="sizes"
                     onPageChange={(nextPage) => {
                         dispatch(
                             fetchAllSizes({

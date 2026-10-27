@@ -192,7 +192,7 @@ export default function NavbarProduct() {
                 border-gray-200
                 bg-[white]
                 p-2
-                text-[#0F4659]
+                text-[#408DFB]
                 hover:bg-[#408DFB]/20
                 transition
             "
@@ -377,6 +377,7 @@ export default function NavbarProduct() {
             border
             border-gray-300
             p-2
+            text-[#408DFB]
             hover:bg-gray-50
         "
                         aria-label="Settings"

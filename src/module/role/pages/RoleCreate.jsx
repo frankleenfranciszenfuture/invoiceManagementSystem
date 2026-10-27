@@ -769,10 +769,31 @@ export default function RoleCreate() {
             ================================================= */}
 
             {isOpen && (
-                <div className="w-[950px] max-w-[95vw] h-[700px] max-h-[88vh] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
+                <div
+                    className="
+                   w-full
+        min-w-0
+        max-h-[80vh]
+        bg-white
+        rounded-lg
+        overflow-hidden
+        flex
+        flex-col
+            "
+                >
                     {/* HEADER */}
 
-                    <div className="shrink-0 h-[68px] flex items-center justify-between px-6 border-b border-gray-200 bg-[#408DFB]">
+                    <div className="
+                    shrink-0
+                    h-[68px]
+                    flex
+                    items-center
+                    justify-between
+                    px-6
+                    border
+                    border-lime-300
+                    bg-white
+                ">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-lg bg-gray-100 text-[#408DFB] flex items-center justify-center">
                                 <UserKeyIcon
@@ -782,13 +803,13 @@ export default function RoleCreate() {
                             </div>
 
                             <div>
-                                <h2 className="text-lg font-semibold text-gray-100">
+                                <h2 className="text-lg font-semibold text-gray-500">
                                     {isEdit
                                         ? "Edit Role"
                                         : "Add New Role"}
                                 </h2>
 
-                                <p className="text-xs text-gray-100 mt-0.5">
+                                <p className="text-xs text-gray-400 mt-0.5">
                                     {isEdit
                                         ? "Update role details"
                                         : "Create a new role"}
@@ -796,15 +817,7 @@ export default function RoleCreate() {
                             </div>
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={handleClose}
-                            disabled={loading}
-                            className="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition disabled:opacity-50"
-                            aria-label="Close role form"
-                        >
-                            <X size={20} />
-                        </button>
+
                     </div>
 
                     {/* TABS */}
@@ -827,10 +840,10 @@ export default function RoleCreate() {
                                         ${activeTab === tab.id
                                             ? hasError
                                                 ? "text-red-600"
-                                                : "text-[#408DFB]"
+                                                : "text-gray-500"
                                             : hasError
                                                 ? "text-red-600"
-                                                : "text-gray-500 hover:text-[#408DFB]/90"
+                                                : "text-gray-500 hover:text-gray-400"
                                         }
                                     `}
                                 >
@@ -848,7 +861,7 @@ export default function RoleCreate() {
                                                 absolute bottom-0 left-0 right-0 h-0.5
                                                 ${hasError
                                                     ? "bg-red-500"
-                                                    : "bg-[#408DFB]"
+                                                    : "bg-lime-500"
                                                 }
                                             `}
                                         />
@@ -963,7 +976,7 @@ export default function RoleCreate() {
                                             placeholder="Enter role description"
                                             disabled={loading}
                                             className="
-                                                w-full px-3 py-3 border border-gray-300 rounded-md
+                                                w-full h-[50px] px-3 py-3 border border-gray-300 rounded-md
                                                 text-sm text-gray-700 bg-white outline-none resize-none
                                                 transition focus:border-[#0F4659] focus:ring-1 focus:ring-[#0F4659]/70
                                                 disabled:bg-gray-100

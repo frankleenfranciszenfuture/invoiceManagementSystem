@@ -32,6 +32,10 @@ import {
 
 import {
     resetProductForm,
+
+    clearCreatedCategorySelection,
+    clearCreatedSubCategorySelection,
+    clearCreatedTaxMasterSelection,
 } from "../slices/productSlice";
 
 import {
@@ -432,48 +436,52 @@ function SearchSelect({
                                 </div>
 
 
-                                {onAdd &&
-                                    search.trim() && (
+                                {onAdd && search.trim() && (
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            try {
+                                                const newItem = await onAdd(search.trim());
 
-                                        <button
-                                            type="button"
-                                            onClick={() => {
+                                                if (!newItem) return;
 
-                                                onAdd(
-                                                    search.trim()
-                                                );
+                                                const newItemKey =
+                                                    typeof newItem === "object"
+                                                        ? getSafeOptionKey(newItem)
+                                                        : newItem;
+
+                                                if (
+                                                    newItemKey === null ||
+                                                    newItemKey === undefined
+                                                ) {
+                                                    return;
+                                                }
+
+                                                onChange?.(newItemKey);
 
                                                 setOpen(false);
                                                 setSearch("");
+                                            } catch (error) {
+                                                console.error("Failed to add option:", error);
+                                            }
+                                        }}
+                                        className="
+            w-full
+            px-4 py-2.5
+            border-t border-gray-200
+            flex items-center gap-2
+            text-left text-sm text-gray-500
+            hover:bg-blue-500
+            hover:text-white
+        "
+                                    >
+                                        <span className="text-lg">+</span>
 
-                                            }}
-                                            className="
-                                                w-full
-                                                px-4
-                                                py-2.5
-                                                border-t
-                                                border-gray-100
-                                                flex
-                                                items-center
-                                                gap-2
-                                                text-left
-                                                text-sm
-                                                text-gray-100
-                                                hover:bg-blue-50
-                                            "
-                                        >
-
-                                            <span className="text-lg">
-                                                +
-                                            </span>
-
-                                            <span className="font-medium">
-                                                {addLabel || "New"}
-                                            </span>
-
-                                        </button>
-
-                                    )}
+                                        <span className="font-medium">
+                                            {addLabel || "New"}
+                                        </span>
+                                    </button>
+                                )}
 
                             </>
 
@@ -1160,6 +1168,17 @@ export default function ProductCreateSimple() {
         useNavigate();
 
 
+    const createdCategorySelection = useSelector(
+        (state) => state.category.createdCategorySelection
+    );
+
+    const createdSubCategorySelection = useSelector(
+        (state) => state.subCategory.createdSubCategorySelection
+    );
+
+    const createdTaxMasterSelection = useSelector(
+        (state) => state.taxMaster.createdTaxMasterSelection
+    );
     /* =====================================================
        PRODUCT STATE
     ===================================================== */
@@ -1453,6 +1472,7 @@ export default function ProductCreateSimple() {
         );
 
 
+
     useEffect(() => {
 
         if (authChecking) {
@@ -1484,6 +1504,59 @@ export default function ProductCreateSimple() {
         permissionLoading,
         dispatch,
     ]);
+
+
+    // Automatically select newly created category
+    useEffect(() => {
+        if (!createdCategorySelection) return;
+
+        const { item } = createdCategorySelection;
+
+        if (item?.id) {
+            handleCategoryChange(item.id);
+        }
+
+        dispatch(clearCreatedCategorySelection());
+    }, [createdCategorySelection, dispatch]);
+
+    // Automatically select newly created subcategory
+    useEffect(() => {
+        if (!createdSubCategorySelection) return;
+
+        const { item } = createdSubCategorySelection;
+
+        if (
+            item?.id &&
+            String(item.categoryId) === String(form.categoryId)
+        ) {
+            handleChange("subCategoryId", item.id);
+        }
+
+        dispatch(clearCreatedSubCategorySelection());
+    }, [createdSubCategorySelection, dispatch]);
+
+
+
+    useEffect(() => {
+        if (!createdTaxMasterSelection) return;
+
+        const { item, targetField } = createdTaxMasterSelection;
+
+        const createdTaxId = item?.id ?? item?.taxId;
+
+        if (
+            createdTaxId &&
+            targetField === "taxId"
+        ) {
+            handleChange("taxId", createdTaxId);
+        }
+
+        dispatch(clearCreatedTaxMasterSelection());
+
+    }, [createdTaxMasterSelection, dispatch]);
+
+
+
     /* =====================================================
        FORM
     ===================================================== */
@@ -3042,9 +3115,13 @@ export default function ProductCreateSimple() {
                                             type: "addCategory",
                                             data: {
                                                 categoryName: searchValue,
+                                                targetField: "categoryId",
+                                                selectAfterCreate: true,
                                             },
                                         })
                                     );
+
+                                    return null;
                                 }}
                             />
 
@@ -3079,13 +3156,20 @@ export default function ProductCreateSimple() {
                                         openModal({
                                             type: "addSubCategory",
                                             data: {
-                                                subCategoryName:
-                                                    searchValue,
-                                                categoryId:
-                                                    form.categoryId,
+                                                subCategoryName: searchValue,
+                                                categoryId: form.categoryId,
+                                                categoryName:
+                                                    categories.find(
+                                                        (item) =>
+                                                            String(item.id) === String(form.categoryId)
+                                                    )?.categoryName || "",
+                                                targetField: "subCategoryId",
+                                                selectAfterCreate: true,
                                             },
                                         })
                                     );
+
+                                    return null;
                                 }}
                             />
 
@@ -3595,11 +3679,14 @@ export default function ProductCreateSimple() {
                                     openModal({
                                         type: "addTaxMaster",
                                         data: {
-                                            taxName:
-                                                searchValue,
+                                            taxName: searchValue,
+                                            targetField: "taxId",
+                                            selectAfterCreate: true,
                                         },
                                     })
                                 );
+
+                                return null;
                             }}
                         />
 

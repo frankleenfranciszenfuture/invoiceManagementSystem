@@ -12,6 +12,7 @@ import {
 import {
     resetSubCategoryForm,
     setSubCategoryField,
+    setCreatedSubCategorySelection
 } from "../slices/subCategorySlice";
 
 import {
@@ -453,6 +454,20 @@ export default function SubCategoryCreate() {
         loading,
     ]);
 
+    useEffect(() => {
+        if (modal.type === "addSubCategory" && modal.data) {
+            dispatch(setSubCategoryField({
+                field: "categoryId",
+                value: modal.data.categoryId,
+            }));
+
+            dispatch(setSubCategoryField({
+                field: "categoryName",
+                value: modal.data.categoryName,
+            }));
+        }
+    }, [modal.type, modal.data, dispatch]);
+
     // =========================================================
     // LOAD EXISTING DATA FOR EDIT
     // =========================================================
@@ -781,12 +796,26 @@ export default function SubCategoryCreate() {
 
             else {
 
-                await dispatch(
-                    createSubCategory(
-                        payload
-                    )
+                const response = await dispatch(
+                    createSubCategory(payload)
                 ).unwrap();
 
+                const createdSubCategory =
+                    response?.data?.data ??
+                    response?.data ??
+                    response;
+
+                if (
+                    modal.data?.selectAfterCreate &&
+                    createdSubCategory?.id
+                ) {
+                    dispatch(
+                        setCreatedSubCategorySelection({
+                            item: createdSubCategory,
+                            targetField: modal.data.targetField,
+                        })
+                    );
+                }
                 toast.success(
                     "Sub category created successfully"
                 );
@@ -1707,7 +1736,7 @@ export default function SubCategoryCreate() {
                                 <div>
 
                                     <label
-                                        className={labelClass}
+                                        className={getLabelClass(true)}
                                     >
                                         Display Order
 

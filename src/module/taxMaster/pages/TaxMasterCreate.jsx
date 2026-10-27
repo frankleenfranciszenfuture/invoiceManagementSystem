@@ -9,6 +9,7 @@ import { closeModal } from "../../ui/uiSlice";
 import {
     resetTaxMasterForm,
     setTaxMasterField,
+    setCreatedTaxMasterSelection,
 } from "../slices/taxMasterSlice";
 
 import {
@@ -17,6 +18,7 @@ import {
 } from "../thunks/taxMasterThunks";
 
 import { getUserPermission } from "../../menuPermission/thunks/menuPermissionThunks";
+import CustomSelect from "../../../common/custom/CustomSelect";
 
 export default function TaxMasterCreate() {
 
@@ -399,6 +401,22 @@ export default function TaxMasterCreate() {
 
     }, [isOpen]);
 
+
+    useEffect(() => {
+        if (
+            modal.open &&
+            modal.type === "addTaxMaster" &&
+            modal.data?.taxName
+        ) {
+            dispatch(
+                setTaxMasterField({
+                    field: "taxName",
+                    value: modal.data.taxName,
+                })
+            );
+        }
+    }, [modal.open, modal.type, modal.data, dispatch]);
+
     // =========================================================
     // LOAD EXISTING DATA FOR EDIT
     // =========================================================
@@ -568,6 +586,13 @@ export default function TaxMasterCreate() {
         mb-1.5
     `;
 
+    const getLabelClass = (required = false) => `
+    block
+    text-xs
+    font-medium
+    ${required ? "text-red-500" : "text-gray-500"}
+    mb-1.5
+`;
     // =========================================================
     // SAVE
     // CREATE / UPDATE
@@ -805,16 +830,38 @@ export default function TaxMasterCreate() {
             // =================================================
 
             else {
-
-                await dispatch(
-                    createTaxMaster(
-                        payload
-                    )
+                const response = await dispatch(
+                    createTaxMaster(payload)
                 ).unwrap();
 
-                toast.success(
-                    "Tax master created successfully"
-                );
+                console.log("Tax Master API Response:", response);
+
+                const createdTaxMaster =
+                    response?.data?.data ??
+                    response?.data ??
+                    response?.result ??
+                    response;
+
+                const createdTaxId =
+                    createdTaxMaster?.id ??
+                    createdTaxMaster?.taxId;
+
+                if (
+                    modal.data?.selectAfterCreate &&
+                    createdTaxId
+                ) {
+                    dispatch(
+                        setCreatedTaxMasterSelection({
+                            item: {
+                                ...createdTaxMaster,
+                                id: createdTaxId,
+                            },
+                            targetField: modal.data.targetField,
+                        })
+                    );
+                }
+
+                toast.success("Tax master created successfully");
             }
 
             // =================================================
@@ -1377,16 +1424,14 @@ export default function TaxMasterCreate() {
     return (
         <div
             className="
-                w-[950px]
-                max-w-[95vw]
-                h-[700px]
-                max-h-[88vh]
-                bg-white
-                rounded-xl
-                shadow-2xl
-                overflow-hidden
-                flex
-                flex-col
+                   w-full
+        min-w-0
+        max-h-[80vh]
+        bg-white
+        rounded-lg
+        overflow-hidden
+        flex
+        flex-col
             "
         >
 
@@ -1403,7 +1448,7 @@ export default function TaxMasterCreate() {
                     justify-between
                     px-6
                     border-b
-                    border-gray-200
+                    border-lime-500
                     bg-white
                 "
             >
@@ -1434,9 +1479,9 @@ export default function TaxMasterCreate() {
 
                         <h2
                             className="
-                                text-lg
+                               text-[16px]
                                 font-semibold
-                                text-gray-800
+                                text-gray-500
                             "
                         >
                             {isEdit
@@ -1515,10 +1560,10 @@ export default function TaxMasterCreate() {
                                 ${activeTab === tab.id
                                     ? hasError
                                         ? "text-red-600"
-                                        : "text-blue-600"
+                                        : "text-gray-500"
                                     : hasError
                                         ? "text-red-600"
-                                        : "text-gray-500 hover:text-gray-700"
+                                        : "text-gray-400 hover:text-gray-500"
                                 }
                             `}
                         >
@@ -1551,7 +1596,7 @@ export default function TaxMasterCreate() {
 
                                         ${hasError
                                             ? "bg-red-500"
-                                            : "bg-blue-500"
+                                            : "bg-gray-500"
                                         }
                                     `}
                                 />
@@ -1621,7 +1666,7 @@ export default function TaxMasterCreate() {
                                         className="
                                             text-sm
                                             font-semibold
-                                            text-gray-800
+                                            text-gray-500
                                         "
                                     >
                                         Tax Information
@@ -1630,7 +1675,7 @@ export default function TaxMasterCreate() {
                                     <p
                                         className="
                                             text-xs
-                                            text-gray-500
+                                            text-gray-400
                                             mt-1
                                         "
                                     >
@@ -1652,7 +1697,7 @@ export default function TaxMasterCreate() {
 
                                     <label
                                         className="
-                                            text-md
+                                            text-sm
                                             font-semibold
                                             text-gray-600
                                         "
@@ -1703,7 +1748,7 @@ export default function TaxMasterCreate() {
                                 <div>
 
                                     <label
-                                        className={labelClass}
+                                        className={getLabelClass(true)}
                                     >
                                         Tax Name
 
@@ -1747,7 +1792,7 @@ export default function TaxMasterCreate() {
                                 <div>
 
                                     <label
-                                        className={labelClass}
+                                        className={getLabelClass(true)}
                                     >
                                         Tax Type
 
@@ -1756,25 +1801,23 @@ export default function TaxMasterCreate() {
                                         </span>
                                     </label>
 
-                                    <select
+                                    <CustomSelect
                                         value={form.taxType ?? ""}
-                                        onChange={(e) => {
-                                            const taxType = e.target.value;
-
-                                            handleChange("taxType", taxType);
+                                        onChange={(value) => {
+                                            handleChange("taxType", value);
 
                                             // Reset rates when changing the tax type.
                                             handleChange("cgstRate", "");
                                             handleChange("sgstRate", "");
                                             handleChange("igstRate", "");
                                         }}
-                                        className={inputClass}
-                                    >
-                                        <option value="">Select Tax Type</option>
-                                        <option value="GST">GST</option>
-                                        <option value="CGST_SGST">CGST + SGST</option>
-                                        <option value="IGST">IGST</option>
-                                    </select>
+                                        options={[
+                                            { value: "GST", label: "GST" },
+                                            { value: "CGST_SGST", label: "CGST + SGST" },
+                                            { value: "IGST", label: "IGST" },
+                                        ]}
+                                        placeholder="Select Tax Type"
+                                    />
 
                                     {errors?.taxType && (
                                         <p
@@ -1795,7 +1838,7 @@ export default function TaxMasterCreate() {
                                 <div>
 
                                     <label
-                                        className={labelClass}
+                                        className={getLabelClass(true)}
                                     >
                                         Tax Rate (%)
 
@@ -2003,6 +2046,7 @@ export default function TaxMasterCreate() {
                                     placeholder="Enter description"
                                     className="
                                         w-full
+                                        h-[50px]
                                         px-3
                                         py-3
                                         border

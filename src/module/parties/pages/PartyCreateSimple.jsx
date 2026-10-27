@@ -156,16 +156,25 @@ const getFieldError = (value) =>
     String(value ?? "").trim();
 
 const inputClass =
-    "w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100";
+    "w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-500 outline-none transition placeholder:text-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100";
 
 const labelClass =
-    "mb-1.5 block text-sm font-medium text-gray-700";
+    "mb-1.5 block text-sm font-medium text-gray-500";
+
+
+const getLabelClass = (required = false) => `
+        block
+        text-xs
+        font-medium
+        ${required ? "text-red-500" : "text-[#0F4659]"}
+        mb-1.5
+    `;
 
 const sectionClass =
-    "rounded-xl border border-gray-200 bg-white p-5";
+    "rounded-xl border border-gray-200 bg-white p-5 ";
 
 const buttonSecondaryClass =
-    "inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50";
+    "inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50";
 
 
 /* =========================================================
@@ -181,7 +190,7 @@ function FormField({
 }) {
     return (
         <div className={className}>
-            <label className={labelClass}>
+            <label className={`${getLabelClass(required)} ${labelClass}`}>
                 {label}
                 {required && (
                     <span className="ml-1 text-red-500">*</span>
@@ -305,12 +314,12 @@ function CheckboxField({
             />
 
             <span className="min-w-0">
-                <span className="block text-sm font-medium text-gray-700">
+                <span className="block text-sm font-medium text-gray-500">
                     {label}
                 </span>
 
                 {description && (
-                    <span className="mt-0.5 block text-xs text-gray-500">
+                    <span className="mt-0.5 block text-xs text-gray-400">
                         {description}
                     </span>
                 )}
@@ -327,12 +336,12 @@ function SectionHeading({
     return (
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
             <div>
-                <h3 className="text-base font-semibold text-gray-900">
+                <h3 className="text-xm font-semibold text-gray-500">
                     {title}
                 </h3>
 
                 {description && (
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-400">
                         {description}
                     </p>
                 )}
@@ -1055,10 +1064,11 @@ export default function PartyCreateSimple() {
                     description="Enter the party's business and contact details."
                 />
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 ">
                     <TextInput
                         label="Party Code"
                         value={party.partyCode}
+                        labelClassName="!text-gray-400"
                         onChange={(value) =>
                             updateField("partyCode", value)
                         }
@@ -1259,11 +1269,11 @@ export default function PartyCreateSimple() {
                             </div>
 
                             <div>
-                                <h3 className="text-sm font-semibold text-gray-900">
+                                <h3 className="text-sm font-semibold text-gray-500">
                                     Address {index + 1}
                                 </h3>
 
-                                <p className="mt-0.5 text-xs text-gray-500">
+                                <p className="mt-0.5 text-xs text-gray-400">
                                     {address.addressType || "BILLING"}
                                 </p>
                             </div>
@@ -1450,11 +1460,11 @@ export default function PartyCreateSimple() {
                             </div>
 
                             <div>
-                                <h3 className="text-sm font-semibold text-gray-900">
+                                <h3 className="text-sm font-semibold text-gray-500">
                                     Bank Account {index + 1}
                                 </h3>
 
-                                <p className="mt-0.5 text-xs text-gray-500">
+                                <p className="mt-0.5 text-xs text-gray-400">
                                     {account.bankName || "Bank details"}
                                 </p>
                             </div>
@@ -1760,235 +1770,233 @@ export default function PartyCreateSimple() {
     ========================================================= */
 
     return (
-        <div className="flex  min-h-0 flex-col overflow-hidden bg-gray-50 mt-5">
-            {/* HEADER */}
-            <header className="shrink-0 border-b border-gray-200 bg-[#0095FD] rounded">
-                <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-7">
-                    <div className="flex min-w-0 items-center gap-3">
-                        {/* <button
+        <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-3">
+            <div className="flex  min-h-0 flex-col overflow-hidden bg-gray-50 mt-5 ">
+                {/* HEADER */}
+                <header className="shrink-0 border border-lime-500 rounded bg-white rounded">
+                    <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-7">
+                        <div className="flex min-w-0 items-center gap-3">
+
+
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"
+                                onClick={handleClose}
+                            >
+                                <Building2 size={22} />
+                            </div>
+
+                            <div className="min-w-0">
+                                <h1 className="truncate text-lg font-semibold text-gray-500">
+                                    {isEdit ? "Edit Party" : "Create Party"}
+                                </h1>
+
+                                <p className="mt-0.5 text-sm text-gray-400">
+                                    {isEdit
+                                        ? "Update party information and account details."
+                                        : "Add a new supplier or customer to your records."}
+                                </p>
+                            </div>
+                        </div>
+
+                        <button
                             type="button"
                             onClick={handleClose}
                             disabled={submitting}
-                            title="Back to Parties"
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:bg-gray-50 hover:text-gray-800 disabled:opacity-50"
+                            title="Close"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg
+                             text-gray-100 transition bg-red-500 hover:bg-red-400 
+                             hover:text-gray-100 disabled:opacity-50"
                         >
-                            <UserRoundArrowLeft size={19} />
-                        </button> */}
+                            <X size={20} />
+                        </button>
+                    </div>
+                </header>
 
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"
-                            onClick={handleClose}
-                        >
-                            <Building2 size={22} />
+
+                {/* TABS */}
+                <div className="overflow-x-auto px-5 lg:px-7 mt-3 border-b border-gray-300 rounded">
+                    <div className="flex min-w-max gap-6">
+                        {TABS.map((tab) => {
+                            const Icon = tab.icon;
+                            const active = activeTab === tab.id;
+
+                            return (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() =>
+                                        setActiveTab(tab.id)
+                                    }
+                                    className={`relative inline-flex items-center gap-2 border-b-2 px-1 pb-3 pt-1 text-sm font-medium transition ${active
+                                        ? "border-lime-500 text-gray-500"
+                                        : "border-transparent text-gray-400 hover:text-gray-500"
+                                        }`}
+                                >
+                                    <Icon size={16} />
+                                    {tab.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+
+
+                {/* CONTENT */}
+                <main className="min-h-0 flex-1 overflow-y-auto px-5 py-5 lg:px-2">
+                    {editLoading ? (
+                        <div className="flex min-h-[280px] items-center justify-center">
+                            <div className="flex items-center gap-3 text-sm text-gray-500">
+                                <span className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                                Loading party details...
+                            </div>
                         </div>
+                    ) : editLoadError ? (
+                        <div className="mx-auto flex min-h-[280px] max-w-lg flex-col items-center justify-center text-center">
+                            <Building2
+                                size={40}
+                                className="mb-3 text-gray-300"
+                            />
 
-                        <div className="min-w-0">
-                            <h1 className="truncate text-lg font-semibold text-[#FAF9F7]">
-                                {isEdit ? "Edit Party" : "Create Party"}
-                            </h1>
+                            <h2 className="text-base font-semibold text-gray-900">
+                                Unable to load party
+                            </h2>
 
-                            <p className="mt-0.5 text-sm text-[#FAF9F7]">
-                                {isEdit
-                                    ? "Update party information and account details."
-                                    : "Add a new supplier or customer to your records."}
+                            <p className="mt-1 text-sm text-gray-500">
+                                The party details could not be loaded. Return to the party list and try again.
                             </p>
-                        </div>
-                    </div>
 
-                    <button
-                        type="button"
-                        onClick={handleClose}
-                        disabled={submitting}
-                        title="Close"
-                        className="flex h-9 w-9 items-center justify-center rounded-lg text-[#FAF9F7] transition hover:bg-red-400 hover:text-gray-100 disabled:opacity-50"
-                    >
-                        <X size={20} />
-                    </button>
-                </div>
-            </header>
-
-
-            {/* TABS */}
-            <div className="overflow-x-auto px-5 lg:px-7 mt-3 border-b border-gray-300 rounded">
-                <div className="flex min-w-max gap-6">
-                    {TABS.map((tab) => {
-                        const Icon = tab.icon;
-                        const active = activeTab === tab.id;
-
-                        return (
                             <button
-                                key={tab.id}
                                 type="button"
-                                onClick={() =>
-                                    setActiveTab(tab.id)
-                                }
-                                className={`relative inline-flex items-center gap-2 border-b-2 px-1 pb-3 pt-1 text-sm font-medium transition ${active
-                                    ? "border-blue-600 text-blue-600"
-                                    : "border-transparent text-gray-500 hover:text-gray-800"
-                                    }`}
+                                onClick={handleClose}
+                                className="mt-5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
                             >
-                                <Icon size={16} />
-                                {tab.label}
+                                Back to Parties
                             </button>
-                        );
-                    })}
-                </div>
-            </div>
-
-
-
-            {/* CONTENT */}
-            <main className="min-h-0 flex-1 overflow-y-auto px-5 py-5 lg:px-7">
-                {editLoading ? (
-                    <div className="flex min-h-[280px] items-center justify-center">
-                        <div className="flex items-center gap-3 text-sm text-gray-500">
-                            <span className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                            Loading party details...
                         </div>
-                    </div>
-                ) : editLoadError ? (
-                    <div className="mx-auto flex min-h-[280px] max-w-lg flex-col items-center justify-center text-center">
-                        <Building2
-                            size={40}
-                            className="mb-3 text-gray-300"
-                        />
+                    ) : (
+                        <div className="mx-auto max-w-full">
+                            {activeTab === "details" &&
+                                renderPartyDetails()}
 
-                        <h2 className="text-base font-semibold text-gray-900">
-                            Unable to load party
-                        </h2>
+                            {activeTab === "addresses" &&
+                                renderAddresses()}
 
-                        <p className="mt-1 text-sm text-gray-500">
-                            The party details could not be loaded. Return to the party list and try again.
+                            {activeTab === "bankAccounts" &&
+                                renderBankAccounts()}
+
+                            {activeTab === "settings" &&
+                                renderSettings()}
+                        </div>
+                    )}
+                </main>
+
+
+                {/* FOOTER */}
+                <footer className="relative z-20 shrink-0 border-t border-gray-200 bg-white px-5 py-3.5 lg:px-7">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-xs text-gray-500">
+                            Fields marked with{" "}
+                            <span className="font-semibold text-red-500">*</span>{" "}
+                            are required.
                         </p>
 
-                        <button
-                            type="button"
-                            onClick={handleClose}
-                            className="mt-5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
-                        >
-                            Back to Parties
-                        </button>
-                    </div>
-                ) : (
-                    <div className="mx-auto max-w-[1400px]">
-                        {activeTab === "details" &&
-                            renderPartyDetails()}
-
-                        {activeTab === "addresses" &&
-                            renderAddresses()}
-
-                        {activeTab === "bankAccounts" &&
-                            renderBankAccounts()}
-
-                        {activeTab === "settings" &&
-                            renderSettings()}
-                    </div>
-                )}
-            </main>
-
-
-            {/* FOOTER */}
-            <footer className="relative z-20 shrink-0 border-t border-gray-200 bg-white px-5 py-3.5 lg:px-7">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-xs text-gray-500">
-                        Fields marked with{" "}
-                        <span className="font-semibold text-red-500">*</span>{" "}
-                        are required.
-                    </p>
-
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={handleClose}
-                            disabled={submitting}
-                            className={buttonSecondaryClass}
-                        >
-                            Cancel
-                        </button>
-
-                        <div className="relative flex">
+                        <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={() => handleSave("close")}
-                                disabled={
-                                    submitting ||
-                                    editLoading ||
-                                    editLoadError ||
-                                    !canSave
-                                }
-                                className="inline-flex items-center justify-center gap-2 rounded-l-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                onClick={handleClose}
+                                disabled={submitting}
+                                className={buttonSecondaryClass}
                             >
-                                {submitting ? (
-                                    <>
-                                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                                        Saving...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Check size={16} />
-                                        {isEdit ? "Update Party" : "Save Party"}
-                                    </>
-                                )}
+                                Cancel
                             </button>
 
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setSaveMenuOpen((previous) => !previous)
-                                }
-                                disabled={
-                                    submitting ||
-                                    editLoading ||
-                                    editLoadError ||
-                                    !canSave
-                                }
-                                title="More save options"
-                                className="inline-flex items-center justify-center rounded-r-lg border-l border-blue-500 bg-blue-600 px-3 text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                <ChevronDown size={17} />
-                            </button>
+                            <div className="relative flex">
+                                <button
+                                    type="button"
+                                    onClick={() => handleSave("close")}
+                                    disabled={
+                                        submitting ||
+                                        editLoading ||
+                                        editLoadError ||
+                                        !canSave
+                                    }
+                                    className="inline-flex items-center justify-center gap-2 rounded-l-lg bg-[#408DFB] px-4 py-2.5 text-sm font-medium text-white 
+                                    transition hover:bg-[#408DFB] disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {submitting ? (
+                                        <>
+                                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Check size={16} />
+                                            {isEdit ? "Update Party" : "Save Party"}
+                                        </>
+                                    )}
+                                </button>
 
-                            {saveMenuOpen && (
-                                <>
-                                    <button
-                                        type="button"
-                                        aria-label="Close save menu"
-                                        onClick={() => setSaveMenuOpen(false)}
-                                        className="fixed inset-0 z-30 cursor-default"
-                                    />
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setSaveMenuOpen((previous) => !previous)
+                                    }
+                                    disabled={
+                                        submitting ||
+                                        editLoading ||
+                                        editLoadError ||
+                                        !canSave
+                                    }
+                                    title="More save options"
+                                    className="inline-flex items-center justify-center rounded-r-lg border-l border-gray-100 bg-[#408DFB] 
+                                    px-3 text-white transition hover:bg-[#408DFB] disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <ChevronDown size={17} />
+                                </button>
 
-                                    <div className="absolute bottom-full right-0 z-40 mb-2 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-xl">
-                                        {!isEdit && (
+                                {saveMenuOpen && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            aria-label="Close save menu"
+                                            onClick={() => setSaveMenuOpen(false)}
+                                            className="fixed inset-0 z-30 cursor-default"
+                                        />
+
+                                        <div className="absolute bottom-full right-0 z-40 mb-2 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-xl">
+                                            {!isEdit && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSave("new")}
+                                                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50"
+                                                >
+                                                    <Plus
+                                                        size={15}
+                                                        className="text-gray-400"
+                                                    />
+                                                    Save & New
+                                                </button>
+                                            )}
+
                                             <button
                                                 type="button"
-                                                onClick={() => handleSave("new")}
+                                                onClick={() => handleSave("close")}
                                                 className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50"
                                             >
-                                                <Plus
+                                                <Check
                                                     size={15}
                                                     className="text-gray-400"
                                                 />
-                                                Save & New
+                                                Save & Close
                                             </button>
-                                        )}
-
-                                        <button
-                                            type="button"
-                                            onClick={() => handleSave("close")}
-                                            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50"
-                                        >
-                                            <Check
-                                                size={15}
-                                                className="text-gray-400"
-                                            />
-                                            Save & Close
-                                        </button>
-                                    </div>
-                                </>
-                            )}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            </footer>
+                </footer>
+            </div>
         </div>
     );
 }

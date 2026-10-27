@@ -46,6 +46,7 @@ export default function NavbarBankAccount() {
     // ============================================================
     // BANK ACCOUNT VIEW STATE
     // ============================================================
+    const EMPTY_ARRAY = [];
 
     const selectedBankAccountView =
         useSelector(
@@ -54,13 +55,9 @@ export default function NavbarBankAccount() {
                     ?.selectedBankAccountView
         );
 
-    const views =
-        useSelector(
-            (state) =>
-                state.bankAccountView
-                    ?.views ?? []
-        );
-
+    const views = useSelector(
+        (state) => state.bankAccountView?.views ?? EMPTY_ARRAY
+    );
     const bankAccountStatus =
         useSelector(
             (state) =>
@@ -147,7 +144,7 @@ export default function NavbarBankAccount() {
         );
 
         navigate(
-            `/bankAccounts?bankAccountStatus=${view.value}`
+            `/settings/bankAccount?bankAccountStatus=${view.value}`
         );
 
         setDropdownOpen(false);
@@ -351,7 +348,7 @@ export default function NavbarBankAccount() {
                         //     handleNewBankAccount
                         // }
 
-                        onClick={() => navigate("/bankAccount/newSimple")}
+                        onClick={() => navigate("/settings/bankAccount/newSimple")}
                         className="
                             flex
                             items-center

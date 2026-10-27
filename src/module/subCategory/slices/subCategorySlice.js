@@ -39,6 +39,7 @@ const initialState = {
   },
 
   exsistingSubCategory: null,
+  createdSubCategorySelection: null,
 
   pagination: {
     pageNumber: 0,
@@ -153,6 +154,14 @@ const subCategorySlice = createSlice({
 
     setSubCategoryStatus: (state, action) => {
       state.setSubCategoryStatus = action.payload;
+    },
+
+    setCreatedSubCategorySelection: (state, action) => {
+      state.createdSubCategorySelection = action.payload;
+    },
+
+    clearCreatedSubCategorySelection: (state) => {
+      state.createdSubCategorySelection = null;
     },
   },
 
@@ -543,6 +552,8 @@ export const {
   setSubCategoryField,
   setSelectedSubCategoryView,
   setSubCategoryStatus,
+  setCreatedSubCategorySelection,
+  clearCreatedSubCategorySelection,
 } = subCategorySlice.actions;
 
 /* =========================================================

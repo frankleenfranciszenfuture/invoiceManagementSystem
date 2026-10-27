@@ -791,7 +791,7 @@ export default function BankAccountProfileOverview({ bankAccountId }) {
                                 className=" flex h-[76px] w-[76px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full 
                                 border-[2px] border-slate-300
                                 bg-gradient-to-br from-[#408DFB] to-[#1D4ED8] shadow-md hover:bg-[#FF8904]/20"
-                                onClick={() => navigate("/bankAccount")}
+                                onClick={() => navigate("/settings/bankAccount")}
                                 title="Back to Bank Accounts"
                             >
                                 <Landmark size={40} className="px-1 text-slate-100  " />

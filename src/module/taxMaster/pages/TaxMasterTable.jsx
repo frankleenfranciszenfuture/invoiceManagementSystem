@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import toast from "react-hot-toast";
+import Pagination from "../../../common/pagination/table/Pagination";
 
 export default function TaxMasterTable({
     taxMasters = [],
@@ -30,7 +31,8 @@ export default function TaxMasterTable({
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
-
+    const [showEdit, setShowEdit] = useState(false);
+    const [showView, setShowView] = useState(false);
     /* =====================================================
        REDUX STATE
     ===================================================== */
@@ -698,188 +700,49 @@ export default function TaxMasterTable({
 
     return (
 
-        <div
-            className="
-            bg-white
-            rounded-xl
-            border
-            border-gray-200
-            overflow-visible
-            w-full
-            "
-        >
-
-            {/* =================================================
-                TABLE CONTAINER
-            ================================================= */}
-
-            <div
-                className="
-                w-full
-                overflow-visible
-                "
-            >
-
-                <table
-                    className="
-                    w-full
-                    table-fixed
-                    border-collapse
-                    "
-                >
-
-                    {/* =================================================
-                        TABLE HEADER
-                    ================================================= */}
-
-                    <thead
-                        className="
-                        bg-gray-100
-                        border-b
-                        border-gray-300
-                        "
-                    >
-
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
+            <div className="overflow-x-auto overflow-y-visible">
+                <table className="w-full">
+                    <thead className="bg-[#FEFEFD]/20 border-b border-gray-300">
                         <tr>
 
-                            <th
-                                className="
-                                w-[16%]
-                                px-2
-                                py-3
-                                font-medium
-                                text-sm
-                                text-gray-600
-                                uppercase
-                                text-left
-                                "
-                            >
-                                Tax Name
-                            </th>
+                            {[
+                                "Tax Name",
+                                "Tax Type",
+                                "Tax Rate",
+                                "CgstRate",
+                                "sgstRate",
+                                "igstRate",
+                                "description",
+                                "Status",
+                                "Actions",
+                            ].map((header) => (
 
-                            <th
-                                className="
-                                w-[10%]
-                                px-2
-                                py-3
-                                font-medium
-                                text-sm
-                                text-gray-600
-                                uppercase
-                                text-left
-                                "
-                            >
-                                Tax Type
-                            </th>
+                                <th
+                                    key={header}
+                                    className={`
+                                    px-4
+                                    py-3
+                                    font-medium
+                                    text-md
+                                    text-gray-400
+                                    uppercase
+                                    ${header === "Actions"
+                                            ? "text-center"
+                                            : "text-left"
+                                        }
+                                `}
+                                >
+                                    {header}
+                                </th>
 
-                            <th
-                                className="
-                                w-[8%]
-                                px-2
-                                py-3
-                                font-medium
-                                text-sm
-                                text-gray-600
-                                uppercase
-                                text-left
-                                "
-                            >
-                                Tax Rate
-                            </th>
-
-                            <th
-                                className="
-                                w-[7%]
-                                px-2
-                                py-3
-                                font-medium
-                                text-sm
-                                text-gray-600
-                                uppercase
-                                text-left
-                                "
-                            >
-                                CGST
-                            </th>
-
-                            <th
-                                className="
-                                w-[7%]
-                                px-2
-                                py-3
-                                font-medium
-                                text-sm
-                                text-gray-600
-                                uppercase
-                                text-left
-                                "
-                            >
-                                SGST
-                            </th>
-
-                            <th
-                                className="
-                                w-[7%]
-                                px-2
-                                py-3
-                                font-medium
-                                text-sm
-                                text-gray-600
-                                uppercase
-                                text-left
-                                "
-                            >
-                                IGST
-                            </th>
-
-                            <th
-                                className="
-                                w-[20%]
-                                px-2
-                                py-3
-                                font-medium
-                                text-sm
-                                text-gray-600
-                                uppercase
-                                text-left
-                                "
-                            >
-                                Description
-                            </th>
-
-                            <th
-                                className="
-                                w-[10%]
-                                px-2
-                                py-3
-                                font-medium
-                                text-sm
-                                text-gray-600
-                                uppercase
-                                text-left
-                                "
-                            >
-                                Status
-                            </th>
-
-                            <th
-                                className="
-                                w-[15%]
-                                px-2
-                                py-3
-                                font-medium
-                                text-sm
-                                text-gray-600
-                                uppercase
-                                text-right
-                                "
-                            >
-                                Actions
-                            </th>
+                            ))}
 
                         </tr>
 
                     </thead>
+
+
 
                     {/* =================================================
                         TABLE BODY
@@ -907,7 +770,7 @@ export default function TaxMasterTable({
                                         border-b
                                         border-gray-100
                                         hover:bg-gray-50
-                                        text-sm
+                                        text-xs
                                         cursor-pointer
                                         transition-colors
                                         "
@@ -1177,176 +1040,87 @@ export default function TaxMasterTable({
                                             ACTIONS
                                         ================================= */}
 
-                                        <td
-                                            className="
-                                            relative
-                                            overflow-visible
-                                            px-2
-                                            py-3
-                                            "
-                                            onClick={(e) =>
-                                                e.stopPropagation()
-                                            }
-                                        >
 
-                                            {/* =================================================
-                                                HIDE ACTION BUTTON COMPLETELY
-                                                IF USER HAS NO EDIT/DELETE ACCESS
-                                            ================================================= */}
+                                        {/* Actions */}
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-center gap-2">
 
-                                            {canPerformAction && (
-
-                                                <div
+                                                {/* View */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowView(true);
+                                                        dispatch(setExsistingTaxMaster(taxMaster));
+                                                        navigate(`/settings/taxes/view/${taxMaster.id}`);
+                                                    }}
+                                                    title="View"
                                                     className="
-                                                    flex
-                                                    justify-end
-                                                    "
+                                                flex h-8 w-8 items-center justify-center
+                                                rounded-lg
+                                                bg-blue-50
+                                                text-blue-600
+                                                transition
+                                                hover:bg-blue-100
+                                                hover:text-blue-700
+                                            "
                                                 >
+                                                    <Eye size={16} />
+                                                </button>
 
-                                                    <div
-                                                        className="
-                                                        relative
-                                                        group
-                                                        inline-block
-                                                        "
-                                                    >
+                                                {/* Edit */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
 
-                                                        {/* ACTION BUTTON */}
-
-                                                        <button
-                                                            type="button"
-                                                            className="
-                                                            p-1
-                                                            rounded-full
-                                                            bg-blue-500
-                                                            text-white
-                                                            hover:bg-blue-600
-                                                            transition-colors
+                                                        dispatch(setExsistingTaxMaster(taxMaster));
+                                                        dispatch(
+                                                            openModal({
+                                                                type: "editTaxMaster",
+                                                                data: taxMaster,
+                                                            })
+                                                        );
+                                                    }}
+                                                    title="Edit"
+                                                    className="
+                                                        flex h-8 w-8 items-center justify-center
+                                                        rounded-lg
+                                                        bg-amber-50
+                                                        text-amber-600
+                                                        transition
+                                                        hover:bg-amber-100
+                                                        hover:text-amber-700
                                                             "
-                                                        >
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
 
-                                                            <ChevronDown
-                                                                size={16}
-                                                            />
+                                                {/* Delete */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
 
-                                                        </button>
+                                                        // Your delete confirmation logic
+                                                        handleDelete(taxMaster.id);
+                                                    }}
+                                                    title="Delete"
+                                                    className="
+                                                    flex h-8 w-8 items-center justify-center
+                                                    rounded-lg
+                                                    bg-red-50
+                                                    text-red-600
+                                                    transition
+                                                    hover:bg-red-100
+                                                    hover:text-red-700
+                                                "
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
 
-                                                        {/* =================================================
-                                                            ACTION MENU
-                                                        ================================================= */}
-
-                                                        <div
-                                                            className="
-                                                            absolute
-                                                            right-0
-                                                            top-full
-                                                            mt-1
-                                                            z-[9999]
-                                                            opacity-0
-                                                            invisible
-                                                            group-hover:opacity-100
-                                                            group-hover:visible
-                                                            transition-all
-                                                            duration-150
-                                                            "
-                                                        >
-
-                                                            <div
-                                                                className="
-                                                                w-36
-                                                                rounded-md
-                                                                bg-blue-500
-                                                                shadow-lg
-                                                                overflow-hidden
-                                                                "
-                                                            >
-
-                                                                {/* =================================================
-                                                                    EDIT
-                                                                ================================================= */}
-
-                                                                {canEditTaxMaster && (
-
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleEdit(
-                                                                                taxMaster
-                                                                            )
-                                                                        }
-                                                                        className="
-                                                                        flex
-                                                                        w-full
-                                                                        items-center
-                                                                        gap-2
-                                                                        px-4
-                                                                        py-2
-                                                                        text-sm
-                                                                        text-white
-                                                                        hover:bg-blue-600
-                                                                        transition-colors
-                                                                        "
-                                                                    >
-
-                                                                        <Edit
-                                                                            size={16}
-                                                                        />
-
-                                                                        Edit
-
-                                                                    </button>
-
-                                                                )}
-
-                                                                {/* =================================================
-                                                                    DELETE
-                                                                ================================================= */}
-
-                                                                {canDeleteTaxMaster && (
-
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleDelete(
-                                                                                taxMaster.id
-                                                                            )
-                                                                        }
-                                                                        className="
-                                                                        flex
-                                                                        w-full
-                                                                        items-center
-                                                                        gap-2
-                                                                        px-4
-                                                                        py-2
-                                                                        text-sm
-                                                                        text-white
-                                                                        hover:bg-red-600
-                                                                        transition-colors
-                                                                        "
-                                                                    >
-
-                                                                        <Trash2
-                                                                            size={16}
-                                                                        />
-
-                                                                        Delete
-
-                                                                    </button>
-
-                                                                )}
-
-                                                            </div>
-
-                                                        </div>
-
-                                                    </div>
-
-                                                </div>
-
-                                            )}
-
+                                            </div>
                                         </td>
-
                                     </tr>
 
                                 )
@@ -1359,133 +1133,34 @@ export default function TaxMasterTable({
                 {/* =====================================================
                     PAGINATION
                 ===================================================== */}
+                <Pagination
+                    page={Number(pageNumber) || 0}
+                    size={Number(pageSize) || 10}
+                    totalElements={Number(totalElements) || 0}
+                    totalPages={Number(totalPages) || 0}
+                    loading={loading}
+                    label="taxes"
+                    onPageChange={(nextPage) => {
+                        dispatch(
+                            fetchAllTaxMasters({
+                                page: nextPage,
+                                size: Number(pageSize) || 10,
+                            })
+                        );
+                    }}
+                    onPageSizeChange={(nextSize) => {
+                        dispatch(
+                            fetchAllTaxMasters({
+                                page: 0,
+                                size: nextSize,
+                            })
+                        );
+                    }}
+                />
 
-                <div
-                    className="
-                    p-4
-                    border-t
-                    border-gray-100
-                    flex
-                    items-center
-                    justify-between
-                    "
-                >
-
-                    <p
-                        className="
-                        text-sm
-                        text-gray-500
-                        "
-                    >
-
-                        Showing{" "}
-
-                        {
-                            currentTaxMasters.length
-                        }
-
-                        {" "}of{" "}
-
-                        {
-                            totalElements || 0
-                        }
-
-                        {" "}tax masters
-
-                    </p>
-
-                    <div
-                        className="
-                        flex
-                        items-center
-                        gap-3
-                        "
-                    >
-
-                        {/* PREVIOUS */}
-
-                        <button
-                            type="button"
-                            disabled={
-                                Number(
-                                    pageNumber
-                                ) <= 0
-                            }
-                            onClick={() => {
-                                // Add server-side page support here
-                            }}
-                            className="
-                            text-sm
-                            text-gray-400
-                            hover:text-gray-600
-                            disabled:opacity-50
-                            disabled:cursor-not-allowed
-                            "
-                        >
-                            Previous
-                        </button>
-
-                        {/* CURRENT PAGE */}
-
-                        <span
-                            className="
-                            w-8
-                            h-8
-                            flex
-                            items-center
-                            justify-center
-                            rounded-lg
-                            bg-blue-500
-                            text-white
-                            text-sm
-                            font-medium
-                            "
-                        >
-
-                            {
-                                (Number(
-                                    pageNumber
-                                ) || 0) + 1
-                            }
-
-                        </span>
-
-                        {/* NEXT */}
-
-                        <button
-                            type="button"
-                            disabled={
-                                (
-                                    Number(
-                                        pageNumber
-                                    ) || 0
-                                ) >=
-                                (
-                                    Number(
-                                        totalPages
-                                    ) || 1
-                                ) - 1
-                            }
-                            onClick={() => {
-                                // Add server-side page support here
-                            }}
-                            className="
-                            text-sm
-                            text-gray-400
-                            hover:text-gray-600
-                            disabled:opacity-50
-                            disabled:cursor-not-allowed
-                            "
-                        >
-                            Next
-                        </button>
-
-                    </div>
-
-                </div>
 
             </div>
 
-        </div>
+        </div >
     );
 }

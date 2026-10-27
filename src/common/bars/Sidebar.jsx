@@ -1,6 +1,8 @@
+
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+
 import RightTooltip from "../toolTip/RightTooltip";
 import { showLeaveDialog, toggleSidebar } from "../../module/ui/uiSlice";
 
@@ -13,21 +15,31 @@ import {
     Users,
     FileText,
     Wallet,
-    Plus,
     Package,
     LogOut,
     Settings,
+    Building2,
+    BoxIcon,
+    BadgeJapaneseYen,
 } from "lucide-react";
-import { assets } from "../../assets/assets";
-
 
 // ============================================================
-// NAVIGATION
+// CONSTANTS
 // ============================================================
-/*
- * children[].action  -> permission needed to see the child (default VIEW)
- * badge              -> optional number/string shown as an amber chip
- */
+
+const EMPTY_ARRAY = [];
+const EMPTY_OBJECT = {};
+
+const SETTINGS_PRODUCT_PATHS = [
+    "/settings/categories",
+    "/settings/subCategoires",
+    "/settings/sizes",
+    "/settings/units",
+];
+
+// ============================================================
+// MAIN NAVIGATION
+// ============================================================
 
 const NAV = [
     {
@@ -41,10 +53,7 @@ const NAV = [
         moduleName: "Customers",
         icon: Users,
         to: "/customers",
-        addTo: "/customers",
-        queryKey: "status",
         dropdown: true,
-
         children: [
             {
                 label: "Create",
@@ -52,7 +61,6 @@ const NAV = [
             },
         ],
     },
-
     {
         label: "Items",
         moduleName: "Products",
@@ -61,11 +69,7 @@ const NAV = [
         addTo: "/items/newSimple",
         basePath: "/items",
         dropdown: true,
-
-
     },
-
-
     {
         label: "Parties",
         moduleName: "Parties",
@@ -74,8 +78,15 @@ const NAV = [
         addTo: "/parties/newSimple",
         basePath: "/parties",
         dropdown: true,
-
-
+    },
+    {
+        label: "Sales Persons",
+        moduleName: "SalesPersons",
+        icon: FileText,
+        to: "/salesPersons",
+        addTo: "/salesPersons/newSimple",
+        basePath: "/salesPersons",
+        dropdown: true,
     },
 
     {
@@ -86,44 +97,27 @@ const NAV = [
         addTo: "/invoices/new",
         basePath: "/invoices",
         dropdown: true,
-
-        // children: [
-        //     { label: "All invoices", to: "/invoices", action: "VIEW" },
-        //     { label: "New invoice", to: "/invoices/new", action: "CREATE" },
-        // ],
     },
-
-
     {
         label: "Payments",
         moduleName: "Payments",
         icon: Wallet,
         to: "/payments",
         addTo: "/payments/new",
-        queryKey: "status",
         dropdown: true,
-
-        // children: [
-        //     { label: "All payments", to: "/payments", action: "VIEW" },
-        //     { label: "New payment", to: "/payments/new", action: "CREATE" },
-        // ],
     },
-
     {
         label: "Settings",
         moduleName: "Settings",
         icon: Settings,
         to: "/settings",
-        addTo: "/settings",
-        queryKey: "status",
         dropdown: true,
-
-        // children: [
-        //     { label: "All payments", to: "/payments", action: "VIEW" },
-        //     { label: "New payment", to: "/payments/new", action: "CREATE" },
-        // ],
     },
 ];
+
+// ============================================================
+// SETTINGS NAVIGATION
+// ============================================================
 
 const SETTINGS_NAV = [
     {
@@ -139,29 +133,81 @@ const SETTINGS_NAV = [
         to: "/settings/users",
     },
     {
-        label: "Currencies",
-        moduleName: "Currencies",
-        icon: Wallet,
-        to: "/settings/currencies",
+        label: "Roles",
+        moduleName: "Roles",
+        icon: Users,
+        to: "/settings/roles",
+    },
+    {
+        label: "MenuPermission",
+        moduleName: "MenuPermission",
+        icon: Users,
+        to: "/settings/menuPermission",
+    },
+    {
+        label: "Company Profile",
+        moduleName: "Company Profile",
+        icon: Building2,
+        to: "/settings/companies",
     },
     {
         label: "Bank Accounts",
         moduleName: "Bank Accounts",
         icon: Wallet,
-        to: "/settings/bank-accounts",
+        to: "/settings/bankAccount",
     },
+    {
+        label: "Currencies",
+        moduleName: "Currencies",
+        icon: Wallet,
+        to: "/settings/currencies",
+    },
+
     {
         label: "Email Signatures",
         moduleName: "Email Signatures",
         icon: FileText,
-        to: "/settings/email-signatures",
+        to: "/settings/emailSignatures",
+    },
+
+
+    {
+        label: "Taxes",
+        moduleName: "Taxes",
+        icon: BadgeJapaneseYen,
+        to: "/settings/taxes",
+    },
+
+    {
+        label: "Products",
+        moduleName: "Products",
+        icon: BoxIcon,
+        to: "/settings",
+        dropdown: true,
+        children: [
+            {
+                label: "Category",
+                to: "/settings/categories",
+            },
+            {
+                label: "SubCategory",
+                to: "/settings/subCategoires",
+            },
+            {
+                label: "Sizes",
+                to: "/settings/sizes",
+            },
+            {
+                label: "Units",
+                to: "/settings/units",
+            },
+        ],
     },
 ];
+
 // ============================================================
 // HELPERS
 // ============================================================
-
-const EMPTY_PERMISSIONS = [];
 
 const normalizeAction = (action) =>
     action == null ? "" : String(action).trim().toUpperCase();
@@ -171,9 +217,12 @@ const normalizeModule = (moduleName) =>
 
 const normalizePermissionArray = (value) => {
     if (Array.isArray(value)) return value;
+
     if (Array.isArray(value?.data)) return value.data;
+
     if (Array.isArray(value?.content)) return value.content;
-    return EMPTY_PERMISSIONS;
+
+    return EMPTY_ARRAY;
 };
 
 const getRoleName = (user) => {
@@ -190,9 +239,8 @@ const getRoleName = (user) => {
     return String(role).trim().toUpperCase();
 };
 
-// SUPER_ADMIN -> Super Admin
 const formatRole = (role) =>
-    role
+    String(role || "")
         .toLowerCase()
         .split("_")
         .filter(Boolean)
@@ -208,122 +256,199 @@ const getDisplayName = (user) =>
     "User";
 
 const getInitials = (name) =>
-    String(name)
+    String(name || "User")
         .split(/[\s@._-]+/)
         .filter(Boolean)
         .slice(0, 2)
         .map((part) => part[0].toUpperCase())
         .join("");
 
-/*
- * Merge flat / grouped permission formats into one flat list.
- * User permissions are applied after role permissions, so they override.
- */
-const collectPermissions = (list, source, permissionMap) => {
-    list.forEach((permission) => {
-        if (permission?.moduleId != null && permission?.actionId != null) {
-            permissionMap.set(`${permission.moduleId}-${permission.actionId}`, {
-                ...permission,
-                source,
-            });
-            return;
-        }
+// ============================================================
+// PERMISSION HELPERS
+// ============================================================
 
-        if (Array.isArray(permission?.actions)) {
-            permission.actions.forEach((action) => {
-                permissionMap.set(`${permission.moduleId}-${action?.actionId}`, {
-                    ...action,
-                    moduleId: permission?.moduleId,
-                    moduleName: permission?.moduleName,
-                    roleId: permission?.roleId,
-                    userId: permission?.userId,
-                    source,
+const isPermissionAllowed = (permission) =>
+    permission?.allowed === true &&
+    permission?.active !== false &&
+    normalizeAction(permission?.status) !== "INACTIVE";
+
+/*
+ * Supports:
+ * 1. Flat permission format.
+ * 2. Grouped permission format.
+ *
+ * User permissions override role permissions.
+ */
+
+const buildPermissionMap = (rolePermissions, userPermissions) => {
+    const permissionMap = new Map();
+
+    const addPermissions = (permissions) => {
+        permissions.forEach((permission) => {
+            if (!permission) return;
+
+            // Flat permission format
+            if (
+                permission.moduleName &&
+                permission.actionName
+            ) {
+                const key = `${normalizeModule(
+                    permission.moduleName
+                )}-${normalizeAction(permission.actionName)}`;
+
+                permissionMap.set(key, permission);
+                return;
+            }
+
+            // Grouped permission format
+            if (Array.isArray(permission.actions)) {
+                permission.actions.forEach((action) => {
+                    const actionName =
+                        typeof action === "string"
+                            ? action
+                            : action?.actionName;
+
+                    if (!permission.moduleName || !actionName) return;
+
+                    const key = `${normalizeModule(
+                        permission.moduleName
+                    )}-${normalizeAction(actionName)}`;
+
+                    permissionMap.set(key, {
+                        ...action === Object(action) ? action : {},
+                        moduleName: permission.moduleName,
+                        actionName,
+                        allowed:
+                            typeof action === "string"
+                                ? true
+                                : action?.allowed,
+                        active:
+                            typeof action === "string"
+                                ? true
+                                : action?.active,
+                        status:
+                            typeof action === "string"
+                                ? "ACTIVE"
+                                : action?.status,
+                    });
                 });
-            });
-        }
-    });
+            }
+        });
+    };
+
+    // Role permissions first
+    addPermissions(rolePermissions);
+
+    // User permissions override role permissions
+    addPermissions(userPermissions);
+
+    return permissionMap;
 };
 
-
 // ============================================================
-// SMALL UI PIECES
+// SMALL UI COMPONENTS
 // ============================================================
 
-const Badge = ({ value }) =>
-    value ? (
+const Badge = ({ value }) => {
+    if (!value) return null;
+
+    return (
         <span className="ml-auto rounded-md bg-amber-400 px-1.5 py-0.5 text-[11px] font-bold leading-none text-slate-900">
             {value}
         </span>
-    ) : null;
+    );
+};
 
-/* Row used inside the expanded tree and inside the collapsed flyout */
 const ChildRow = ({ child, active, onClick }) => (
     <button
         type="button"
         onClick={onClick}
         className={`
-            my-0.5 flex w-full items-center justify-between rounded-lg
-            px-3 py-2 text-left text-sm transition-colors
+            my-0.5 flex w-full items-center justify-between
+            rounded-lg px-3 py-2 text-left text-sm
+            transition-colors
             ${active
                 ? "bg-white/10 font-medium text-white"
-                : "text-white hover:bg-white/10 hover:text-white"}
+                : "text-white hover:bg-white/10 hover:text-white"
+            }
         `}
     >
         <span className="truncate">{child.label}</span>
+
         {active && <ChevronRight size={15} className="shrink-0" />}
     </button>
 );
 
-/* Round initials avatar used in the bottom user card */
 const AvatarCircle = ({ src, name }) => (
     <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-orange-600 text-sm font-semibold text-[#FCF7F8] ring-2 ring-white/10">
         {src ? (
-            <img src={assets.zenfutureLogo} alt={name} className="h-full w-full object-cover" />
+            <img
+                src={src}
+                alt={name}
+                className="h-full w-full object-cover"
+            />
         ) : (
             getInitials(name)
         )}
     </div>
 );
 
-
 // ============================================================
 // SIDEBAR
 // ============================================================
 
-/*
- * onLogout: pass your logout handler, e.g.
- *   <Sidebar onLogout={() => dispatch(logoutUser())} />
- * Falls back to navigating to /login.
- */
 const Sidebar = ({ onLogout }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const location = useLocation();
 
+    // --------------------------------------------------------
+    // REDUX SELECTORS
+    // --------------------------------------------------------
 
-    // ---------- STORE ----------
+    const open = useSelector(
+        (state) => state.ui?.sidebarOpen ?? false
+    );
 
-    const open = useSelector((state) => state.ui?.sidebarOpen);
-    const isDirty = useSelector((state) => state.customers?.isDirty);
+    const isDirty = useSelector(
+        (state) => state.customers?.isDirty ?? false
+    );
 
-    const currentUser = useSelector((state) => state.auth?.user || null);
-    const isAuthenticated = useSelector((state) => state.auth?.isAuthenticated === true);
-    const authChecking = useSelector((state) => state.auth?.authChecking === true);
+    const currentUser = useSelector(
+        (state) => state.auth?.user ?? null
+    );
+
+    const isAuthenticated = useSelector(
+        (state) => state.auth?.isAuthenticated === true
+    );
+
+    const authChecking = useSelector(
+        (state) => state.auth?.authChecking === true
+    );
 
     const rolePermissionsState = useSelector(
-        (state) => state.menuPermission?.rolePermissions || EMPTY_PERMISSIONS
+        (state) =>
+            state.menuPermission?.rolePermissions ?? EMPTY_ARRAY
     );
+
     const userPermissionsState = useSelector(
-        (state) => state.menuPermission?.userPermissions || EMPTY_PERMISSIONS
+        (state) =>
+            state.menuPermission?.userPermissions ?? EMPTY_ARRAY
     );
+
     const permissionLoading = useSelector(
         (state) => state.menuPermission?.loading === true
     );
 
+    // --------------------------------------------------------
+    // LOCAL STATE
+    // --------------------------------------------------------
+
     const [openMenu, setOpenMenu] = React.useState(null);
 
-
-    // ---------- PERMISSIONS ----------
+    // --------------------------------------------------------
+    // NORMALIZED DATA
+    // --------------------------------------------------------
 
     const rolePermissions = React.useMemo(
         () => normalizePermissionArray(rolePermissionsState),
@@ -341,122 +466,185 @@ const Sidebar = ({ onLogout }) => {
     );
 
     const hasFullAccess =
-        normalizedRoleName === "SUPER_ADMIN" || normalizedRoleName === "ADMIN";
+        normalizedRoleName === "SUPER_ADMIN" ||
+        normalizedRoleName === "ADMIN";
 
-    // ROLE first, USER overrides ROLE
-    const effectivePermissions = React.useMemo(() => {
-        if (hasFullAccess) return [];
+    // --------------------------------------------------------
+    // EFFECTIVE PERMISSIONS
+    // --------------------------------------------------------
 
-        const permissionMap = new Map();
-        collectPermissions(rolePermissions, "ROLE", permissionMap);
-        collectPermissions(userPermissions, "USER", permissionMap);
-
-        return Array.from(permissionMap.values());
-    }, [rolePermissions, userPermissions, hasFullAccess]);
+    const effectivePermissions = React.useMemo(
+        () =>
+            buildPermissionMap(
+                rolePermissions,
+                userPermissions
+            ),
+        [rolePermissions, userPermissions]
+    );
 
     const hasPermission = React.useCallback(
         (moduleName, action = "VIEW") => {
             if (hasFullAccess) return true;
+
             if (!moduleName) return false;
 
-            const requestedModule = normalizeModule(moduleName);
-            const requestedAction = normalizeAction(action);
+            const key = `${normalizeModule(
+                moduleName
+            )}-${normalizeAction(action)}`;
 
-            // flat format
-            const flat = effectivePermissions.find(
-                (p) =>
-                    normalizeModule(p?.moduleName) === requestedModule &&
-                    normalizeAction(p?.actionName) === requestedAction
-            );
+            const permission = effectivePermissions.get(key);
 
-            if (flat) {
-                return (
-                    flat.allowed === true &&
-                    flat.active !== false &&
-                    normalizeAction(flat.status) !== "INACTIVE"
-                );
-            }
-
-            // grouped format fallback
-            const grouped = effectivePermissions.find(
-                (p) => normalizeModule(p?.moduleName) === requestedModule
-            );
-
-            if (!grouped || !Array.isArray(grouped.actions)) return false;
-
-            return grouped.actions.some((a) => {
-                if (typeof a === "string") {
-                    return normalizeAction(a) === requestedAction;
-                }
-
-                return (
-                    normalizeAction(a?.actionName) === requestedAction &&
-                    a?.allowed === true &&
-                    a?.active !== false &&
-                    normalizeAction(a?.status) !== "INACTIVE"
-                );
-            });
+            return permission
+                ? isPermissionAllowed(permission)
+                : false;
         },
         [effectivePermissions, hasFullAccess]
     );
 
+    // --------------------------------------------------------
+    // SETTINGS AREA
+    // --------------------------------------------------------
+
+    const pathname = location.pathname;
+
     const isSettingsArea =
-        location.pathname === "/settings" ||
-        location.pathname.startsWith("/settings/");
+        pathname === "/settings" ||
+        pathname.startsWith("/settings/");
 
-    const currentNav = React.useMemo(() => {
-        const sourceNav = isSettingsArea ? SETTINGS_NAV : NAV;
+    // --------------------------------------------------------
+    // ROUTE HELPERS
+    // --------------------------------------------------------
 
-        return sourceNav.filter((item) =>
-            hasPermission(item.moduleName, "VIEW")
-        );
-    }, [isSettingsArea, hasPermission]);
-    // ---------- NAVIGATION ----------
-
-    const isActiveRoute = (path) =>
-        !!path &&
-        (location.pathname === path || location.pathname.startsWith(`${path}/`));
-
-    const goTo = (path) => {
-        if (!path) return;
-
-        if (isDirty) {
-            dispatch(showLeaveDialog(path));
-        } else {
-            navigate(path);
-        }
-    };
-
-    // Only the items (and children) the user may see
-    const visibleNav = React.useMemo(
-        () =>
-            NAV.filter((item) => hasPermission(item.moduleName, "VIEW")).map(
-                (item) => ({
-                    ...item,
-                    children: item.children?.filter((child) =>
-                        hasPermission(item.moduleName, child.action || "VIEW")
-                    ),
-                })
+    const isActiveRoute = React.useCallback(
+        (path) =>
+            Boolean(
+                path &&
+                (pathname === path ||
+                    pathname.startsWith(`${path}/`))
             ),
-        [hasPermission]
+        [pathname]
     );
 
-    // Auto-open the menu that matches the current route
+    const isNavItemActive = React.useCallback(
+        (item) => {
+            if (!isSettingsArea) {
+                return isActiveRoute(item.to);
+            }
+
+            // General Settings: exact route only
+            if (item.label === "General Settings") {
+                return pathname === "/settings";
+            }
+
+            // Products: only product settings routes
+            if (item.label === "Products") {
+                return SETTINGS_PRODUCT_PATHS.some(
+                    (path) =>
+                        pathname === path ||
+                        pathname.startsWith(`${path}/`)
+                );
+            }
+
+            return isActiveRoute(item.to);
+        },
+        [isSettingsArea, isActiveRoute, pathname]
+    );
+
+    // --------------------------------------------------------
+    // CURRENT NAVIGATION
+    // --------------------------------------------------------
+
+    const currentNav = React.useMemo(() => {
+        const sourceNav = isSettingsArea
+            ? SETTINGS_NAV
+            : NAV;
+
+        return sourceNav
+            .filter((item) =>
+                hasPermission(item.moduleName, "VIEW")
+            )
+            .map((item) => ({
+                ...item,
+                children: item.children
+                    ? item.children.filter((child) =>
+                        hasPermission(
+                            item.moduleName,
+                            child.action || "VIEW"
+                        )
+                    )
+                    : undefined,
+            }));
+    }, [isSettingsArea, hasPermission]);
+
+    // --------------------------------------------------------
+    // NAVIGATION HANDLER
+    // --------------------------------------------------------
+
+    const goTo = React.useCallback(
+        (path) => {
+            if (!path) return;
+
+            if (isDirty) {
+                dispatch(showLeaveDialog(path));
+                return;
+            }
+
+            navigate(path);
+        },
+        [isDirty, dispatch, navigate]
+    );
+
+    // --------------------------------------------------------
+    // AUTOMATICALLY OPEN ACTIVE SUBMENU
+    // --------------------------------------------------------
+
     React.useEffect(() => {
-        const activeItem = NAV.find(
-            (item) => item.children?.length && isActiveRoute(item.to)
+        if (!isSettingsArea) {
+            const activeItem = NAV.find(
+                (item) =>
+                    item.children?.length &&
+                    isActiveRoute(item.to)
+            );
+
+            setOpenMenu(activeItem?.label ?? null);
+            return;
+        }
+
+        const productPage = SETTINGS_PRODUCT_PATHS.some(
+            (path) =>
+                pathname === path ||
+                pathname.startsWith(`${path}/`)
         );
 
-        if (activeItem) setOpenMenu(activeItem.label);
-    }, [location.pathname]);
+        setOpenMenu(productPage ? "Products" : null);
+    }, [pathname, isSettingsArea, isActiveRoute]);
+
+    // --------------------------------------------------------
+    // PARENT MENU CLICK
+    // --------------------------------------------------------
 
     const handleParentClick = (item) => {
-        goTo(item.to);
-
         if (open) {
-            setOpenMenu(item.label);
+            setOpenMenu((previous) =>
+                previous === item.label ? null : item.label
+            );
         }
+
+        // Settings Products is a submenu.
+        // Do not navigate back to /settings when opening it.
+        if (
+            isSettingsArea &&
+            item.label === "Products"
+        ) {
+            return;
+        }
+
+        goTo(item.to);
     };
+
+    // --------------------------------------------------------
+    // LOGOUT
+    // --------------------------------------------------------
 
     const handleLogout = () => {
         if (typeof onLogout === "function") {
@@ -466,8 +654,9 @@ const Sidebar = ({ onLogout }) => {
         }
     };
 
-
-    // ---------- EARLY STATES ----------
+    // --------------------------------------------------------
+    // AUTHENTICATION STATES
+    // --------------------------------------------------------
 
     if (authChecking) {
         return (
@@ -490,32 +679,27 @@ const Sidebar = ({ onLogout }) => {
         );
     }
 
-
-    // ---------- DERIVED ----------
+    // --------------------------------------------------------
+    // USER INFORMATION
+    // --------------------------------------------------------
 
     const displayName = getDisplayName(currentUser);
+
     const roleLabel = formatRole(normalizedRoleName);
+
     const avatarSrc =
-        currentUser?.avatar || currentUser?.profileImage || currentUser?.imageUrl;
+        currentUser?.avatar ||
+        currentUser?.profileImage ||
+        currentUser?.imageUrl;
 
-    const canCreateInvoice = hasPermission("Invoices", "CREATE");
-
-    const Avatar = (
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#F23C17] text-lg font-semibold text-[#F5F5F5] ring-1 ring-white/10">
-            {avatarSrc ? (
-                <img src={avatarSrc} alt={displayName} className="h-full w-full object-cover" />
-            ) : (
-                getInitials(displayName)
-            )}
-        </div>
-    );
-
-
-    // ---------- RENDER ----------
+    // --------------------------------------------------------
+    // RENDER
+    // --------------------------------------------------------
 
     return (
         <>
-            {/* Mobile overlay */}
+            {/* MOBILE OVERLAY */}
+
             {open && (
                 <div
                     className="fixed inset-0 z-20 bg-black/40 lg:hidden"
@@ -525,37 +709,55 @@ const Sidebar = ({ onLogout }) => {
 
             <aside
                 className={`
-                    fixed bottom-3 left-3 top-2 z-30 flex flex-col
-                    rounded-md border-l border-r border-lime-500 
-                    bg-gradient-to-br from-[#515F73] to-[#2E364D]
+                    fixed bottom-3 left-3 top-2 z-30
+                    flex flex-col rounded-md
+                    border-l border-r border-lime-500
+                    bg-gradient-to-br
+                    from-[#515F73] to-[#2E364D]
                     transition-[width] duration-300
                     ${open ? "w-55" : "w-[72px]"}
                 `}
             >
-
-                {/* ================= COLLAPSE TOGGLE ================= */}
+                {/* COLLAPSE TOGGLE */}
 
                 <button
                     type="button"
                     onClick={() => dispatch(toggleSidebar())}
-                    aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
+                    aria-label={
+                        open
+                            ? "Collapse sidebar"
+                            : "Expand sidebar"
+                    }
                     className="
-                        absolute -right-3 top-[34px] z-40 flex h-6 w-6
-                        items-center justify-center rounded-full border-l border-red-900
-                        bg-[#FCF7F8] text-[#0F4659] hover:text-[#FCF7F8] shadow-lg shadow-blue-500/30
+                        absolute -right-3 top-[34px] z-40
+                        flex h-6 w-6 items-center justify-center
+                        rounded-full border-l border-red-900
+                        bg-[#FCF7F8] text-[#0F4659]
+                        shadow-lg shadow-blue-500/30
                         transition hover:bg-[#B3E848]
+                        hover:text-[#FCF7F8]
                     "
                 >
-                    {open ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+                    {open ? (
+                        <ChevronLeft size={14} />
+                    ) : (
+                        <ChevronRight size={14} />
+                    )}
                 </button>
 
+                {/* USER HEADER */}
 
-                {/* ================= USER HEADER ================= */}
-
-                <div className={`px-4 pb-4 pt-5 ${open ? "" : "flex justify-center px-0"}`}>
+                <div
+                    className={`
+                        px-4 pb-4 pt-5
+                        ${open ? "" : "flex justify-center px-0"}
+                    `}
+                >
                     <div
-                        className={`flex items-center gap-3 ${open ? "border-b border-gray-400 pb-4" : ""
-                            }`}
+                        className={`
+                            flex items-center gap-3
+                            ${open ? "border-b border-gray-400 pb-4" : ""}
+                        `}
                     >
                         {isSettingsArea ? (
                             <button
@@ -563,13 +765,17 @@ const Sidebar = ({ onLogout }) => {
                                 onClick={() => goTo("/dashboard")}
                                 title="Back to Main Menu"
                                 className={`
-                    flex min-w-0 items-center gap-2 rounded-lg
-                    text-sm font-semibold text-white
-                    transition hover:text-lime-300
-                    ${open ? "w-full" : "justify-center"}
-                `}
+                                    flex min-w-0 items-center gap-2
+                                    rounded-lg text-sm font-semibold
+                                    text-white transition
+                                    hover:text-lime-300
+                                    ${open ? "w-full" : "justify-center"}
+                                `}
                             >
-                                <ChevronLeft size={22} className="shrink-0" />
+                                <ChevronLeft
+                                    size={22}
+                                    className="shrink-0"
+                                />
 
                                 {open && (
                                     <span className="truncate">
@@ -581,10 +787,12 @@ const Sidebar = ({ onLogout }) => {
                             <>
                                 <FileText
                                     className="
-                        h-10 w-10 shrink-0 rounded-2xl px-3
-                        bg-gradient-to-br from-[#6366F1] to-[#166534]
-                        text-[#FCF7F8] shadow-md
-                    "
+                                        h-10 w-10 shrink-0
+                                        rounded-2xl px-3
+                                        bg-gradient-to-br
+                                        from-[#6366F1] to-[#166534]
+                                        text-[#FCF7F8] shadow-md
+                                    "
                                 />
 
                                 {open && (
@@ -603,32 +811,46 @@ const Sidebar = ({ onLogout }) => {
                     </div>
                 </div>
 
-                {/* ================= NAV ================= */}
+                {/* NAVIGATION */}
 
                 <nav
                     className={`
-                        flex-1 space-y-1 px-3 py-1
+                        flex-1 space-y-1 px-3 py-1 
                         ${open ? "overflow-y-auto" : "overflow-visible"}
                     `}
                 >
-
-
-
                     {currentNav.map((item) => {
                         const Icon = item.icon;
-                        const hasChildren = item.children?.length > 0;
-                        const active = isActiveRoute(item.to);
-                        const expanded = open && hasChildren && openMenu === item.label;
+
+                        const hasChildren =
+                            item.children?.length > 0;
+
+                        const active = isNavItemActive(item);
+
+                        const expanded =
+                            open &&
+                            hasChildren &&
+                            openMenu === item.label;
 
                         return (
-                            <div key={item.label} className="group/item relative">
+                            <div
+                                key={item.label}
+                                className="group/item relative"
+                            >
+                                {/* ACTIVE MARKER */}
 
-                                {/* active marker on the panel edge */}
                                 {active && (
-                                    <span className="absolute -left-3 top-1/2 h-9 w-1.5 -translate-y-1/2 rounded-r-full bg-orange-600" />
+                                    <span
+                                        className="
+                                            absolute -left-3 top-1/2
+                                            h-9 w-1.5 -translate-y-1/2
+                                            rounded-r-full bg-orange-600
+                                        "
+                                    />
                                 )}
 
-                                {/* ---------- MAIN ROW ---------- */}
+                                {/* MAIN ROW */}
+
                                 <button
                                     type="button"
                                     title={!open ? item.label : undefined}
@@ -641,121 +863,154 @@ const Sidebar = ({ onLogout }) => {
                                         }
                                     }}
                                     className={`
-        flex items-center rounded-lg text-sm font-medium
-        transition-colors duration-150
-        ${open
+                                        flex items-center rounded-lg
+                                        text-sm font-medium
+                                        transition-colors duration-150
+                                        ${open
                                             ? "w-full gap-3 px-5 py-2.5"
                                             : "mx-auto h-11 w-11 justify-center"
                                         }
-        ${active
-                                            ? "bg-[#FCF7F8]/20 text-[#FCF7F8]  border-r border-lime-400 "
+                                        ${active
+                                            ? "border-r border-lime-400 bg-[#FCF7F8]/20 text-[#FCF7F8]"
                                             : "text-[#F5F5F5] hover:bg-[#B3E848]/70 hover:text-[#F5F5F5]"
                                         }
-    `}
+                                    `}
                                 >
-                                    <Icon size={18} className="shrink-0" />
+                                    <Icon
+                                        size={18}
+                                        className="shrink-0"
+                                    />
 
-                                    {open && <span className="truncate">{item.label}</span>}
+                                    {open && (
+                                        <span className="truncate">
+                                            {item.label}
+                                        </span>
+                                    )}
 
-                                    {open && <Badge value={item.badge} />}
+                                    {open && (
+                                        <Badge value={item.badge} />
+                                    )}
 
                                     {open && hasChildren && (
                                         <span className="ml-auto text-white">
-                                            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                            {expanded ? (
+                                                <ChevronUp size={16} />
+                                            ) : (
+                                                <ChevronDown size={16} />
+                                            )}
                                         </span>
                                     )}
                                 </button>
 
-                                {/* ---------- EXPANDED TREE ---------- */}
+                                {/* EXPANDED SUBMENU */}
+
                                 {expanded && (
-                                    <div className="relative ml-[22px] mt-1 mb-1">
-                                        {item.children.map((child, index) => {
-                                            const isLast = index === item.children.length - 1;
-                                            const childActive = location.pathname === child.to;
+                                    <div className="relative mb-1 ml-[22px] mt-1">
+                                        {item.children.map(
+                                            (child, index) => {
+                                                const isLast =
+                                                    index ===
+                                                    item.children.length - 1;
 
-                                            return (
-                                                <div key={child.to} className="relative pl-5">
-                                                    {!isLast && (
-                                                        <span className="absolute left-0 top-0 h-full border-l border-white/15" />
-                                                    )}
+                                                const childActive =
+                                                    pathname === child.to;
 
-                                                    <span className="absolute left-0 top-0 h-1/2 w-3.5 rounded-bl-lg border-b border-l border-white/15" />
+                                                return (
+                                                    <div
+                                                        key={child.to}
+                                                        className="relative pl-5"
+                                                    >
+                                                        {!isLast && (
+                                                            <span
+                                                                className="
+                                                                    absolute left-0 top-0
+                                                                    h-full border-l
+                                                                    border-white/15
+                                                                "
+                                                            />
+                                                        )}
 
-                                                    <ChildRow
-                                                        child={child}
-                                                        active={childActive}
-                                                        onClick={() => goTo(child.to)}
-                                                    />
-                                                </div>
-                                            );
-                                        })}
+                                                        <span
+                                                            className="
+                                                                absolute left-0 top-0
+                                                                h-1/2 w-3.5
+                                                                rounded-bl-lg
+                                                                border-b border-l
+                                                                border-white/15
+                                                            "
+                                                        />
+
+                                                        <ChildRow
+                                                            child={child}
+                                                            active={childActive}
+                                                            onClick={() =>
+                                                                goTo(child.to)
+                                                            }
+                                                        />
+                                                    </div>
+                                                );
+                                            }
+                                        )}
                                     </div>
                                 )}
 
+                                {/* COLLAPSED TOOLTIP / FLYOUT */}
+
                                 {!open && (
                                     <>
-                                        {/* =====================================================
-            NORMAL MODULE → SIMPLE TOOLTIP
-        ===================================================== */}
                                         {!hasChildren && (
-                                            <RightTooltip text={item.label} />
+                                            <RightTooltip
+                                                text={item.label}
+                                            />
                                         )}
 
-                                        {/* =====================================================
-                                        MODULE WITH CHILDREN → FLYOUT TOOLTIP
-                                    ===================================================== */}
                                         {hasChildren && (
                                             <div
                                                 className="
-                                                    absolute
-                                                    left-full
-                                                    top-1/2
-                                                    z-[9999]
-                                                    hidden
-                                                    -translate-y-1/2
-                                                    pl-5
+                                                    absolute left-full top-1/2
+                                                    z-[9999] hidden
+                                                    -translate-y-1/2 pl-5
                                                     group-hover/item:block
                                                     group-focus-within/item:block
                                                 "
                                             >
                                                 <div
                                                     className="
-                                                            min-w-[210px]
-                                                            overflow-hidden
-                                                            rounded-xl
-                                                            bg-[#088178]
-                                                            p-1.5
-                                                            shadow-2xl
-                                                            ring-1
-                                                            ring-white/10
-                                                        "
+                                                        min-w-[210px]
+                                                        overflow-hidden
+                                                        rounded-xl bg-[#088178]
+                                                        p-1.5 shadow-2xl
+                                                        ring-1 ring-white/10
+                                                    "
                                                 >
-                                                    {/* Parent / tooltip title */}
                                                     <div
                                                         className="
-                                                        px-3
-                                                        py-2
-                                                        text-xs
-                                                        font-semibold
-                                                        text-white
-                                                    "
+                                                            px-3 py-2
+                                                            text-xs font-semibold
+                                                            text-white
+                                                        "
                                                     >
                                                         {item.label}
                                                     </div>
 
-                                                    {/* Divider */}
                                                     <div className="mx-2 border-t border-white/10" />
 
-                                                    {/* Children */}
                                                     <div className="pt-1">
-                                                        {item.children.map((child) => (
-                                                            <ChildRow
-                                                                key={child.to}
-                                                                child={child}
-                                                                active={location.pathname === child.to}
-                                                                onClick={() => goTo(child.to)}
-                                                            />
-                                                        ))}
+                                                        {item.children.map(
+                                                            (child) => (
+                                                                <ChildRow
+                                                                    key={child.to}
+                                                                    child={child}
+                                                                    active={
+                                                                        pathname ===
+                                                                        child.to
+                                                                    }
+                                                                    onClick={() =>
+                                                                        goTo(child.to)
+                                                                    }
+                                                                />
+                                                            )
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -767,83 +1022,60 @@ const Sidebar = ({ onLogout }) => {
                     })}
                 </nav>
 
-
-                {/* ================= QUICK ACTION ================= */}
-
-                {/* {canCreateInvoice && (
-                    <div className="px-3 pt-3">
-                        {open ? (
-                            <button
-                                type="button"
-                                onClick={() => goTo("/invoices/new")}
-                                className="
-                                    flex w-full flex-col items-center gap-2 rounded-2xl
-                                    border border-dashed border-white/15 px-4 py-4
-                                    transition hover:border-blue-400/60 hover:bg-white/[0.03]
-                                "
-                            >
-                                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg shadow-blue-500/30">
-                                    <Plus size={20} />
-                                </span>
-
-                                <span className="text-sm font-semibold text-white">
-                                    Create invoice
-                                </span>
-
-                                <span className="text-[11px] text-gray-500">
-                                    Start a new bill
-                                </span>
-                            </button>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => goTo("/invoices/new")}
-                                className="mx-auto flex flex-col items-center gap-1.5"
-                                aria-label="Create invoice"
-                            >
-                                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-400">
-                                    <Plus size={20} />
-                                </span>
-
-                                <span className="text-xs font-semibold text-white">New</span>
-                            </button>
-                        )}
-                    </div>
-                )} */}
-
-
-                {/* ================= USER CARD (BOTTOM) ================= */}
+                {/* BOTTOM USER CARD */}
 
                 <div className="shrink-0 p-3">
                     {open ? (
-                        <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-[#FCF7F8] p-2.5">
-                            <AvatarCircle src={avatarSrc} name={displayName} />
+                        <div
+                            className="
+                                flex items-center gap-3
+                                rounded-2xl border border-white/5
+                                bg-[#FCF7F8] p-2.5
+                            "
+                        >
+                            <AvatarCircle
+                                src={avatarSrc}
+                                name={displayName}
+                            />
 
                             <div className="min-w-0 flex-1 leading-tight">
                                 <p className="truncate text-sm font-semibold text-[#05142D]">
                                     {displayName}
                                 </p>
-                                <p className="truncate text-xs text-[#05142D]">{roleLabel}</p>
+
+                                <p className="truncate text-xs text-[#05142D]">
+                                    {roleLabel}
+                                </p>
                             </div>
 
                             <button
                                 type="button"
                                 onClick={handleLogout}
                                 aria-label="Log out"
-                                className="rounded-lg p-2 text-[#05142D] transition hover:bg-[#19253A]/80 hover:text-white"
+                                className="
+                                    rounded-lg p-2 text-[#05142D]
+                                    transition hover:bg-[#19253A]/80
+                                    hover:text-white
+                                "
                             >
                                 <LogOut size={18} />
                             </button>
                         </div>
                     ) : (
                         <div className="flex flex-col items-center gap-1.5">
-                            <AvatarCircle src={avatarSrc} name={displayName} />
+                            <AvatarCircle
+                                src={avatarSrc}
+                                name={displayName}
+                            />
 
                             <button
                                 type="button"
                                 onClick={handleLogout}
                                 aria-label="Log out"
-                                className="rounded-lg p-2 text-white transition hover:bg-white/10 hover:text-white"
+                                className="
+                                    rounded-lg p-2 text-white
+                                    transition hover:bg-white/10
+                                "
                             >
                                 <LogOut size={18} />
                             </button>

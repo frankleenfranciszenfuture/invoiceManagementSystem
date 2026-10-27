@@ -778,7 +778,7 @@ export default function RoleProfileOverview({
                                 className="flex h-[86px] w-[86px] shrink-0 cursor-pointer items-center justify-center
                                 overflow-hidden rounded-full border-[4px] border-white
                                 bg-gradient-to-br from-[#408DFB]/70 to-[#0F4659] shadow-md"
-                                onClick={() => navigate("/roles")}
+                                onClick={() => navigate("/settings/roles")}
                                 title="Back to Roles"
                             >
                                 <span className="text-[24px] font-bold tracking-tight text-white">
@@ -791,7 +791,7 @@ export default function RoleProfileOverview({
                             <div className="pt-2.5">
                                 <h2
                                     className="cursor-pointer text-[24px] font-semibold leading-tight text-gray-500 hover:text-[#0F4659]/70"
-                                    onClick={() => navigate("/roles")}
+                                    onClick={() => navigate("/settings/roles")}
                                 >
                                     {roleName || "Role"}
                                 </h2>

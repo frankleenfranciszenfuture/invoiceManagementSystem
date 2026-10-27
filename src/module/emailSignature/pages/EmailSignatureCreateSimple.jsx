@@ -45,7 +45,15 @@ const STATUS_OPTIONS = [
     { value: "DRAFT", label: "Draft" },
 ];
 
-const labelClass = "mb-1.5 block text-xs font-medium text-[#0F4659]";
+const labelClass = "mb-1.5 block text-xs font-medium text-gray-500";
+const getLabelClass = (required = false) => `
+        block
+        text-xs
+        font-medium
+        ${required ? "text-red-500" : "text-[#0F4659]"}
+        mb-1.5
+    `;
+
 const errorClass = "mt-1 text-xs text-red-500";
 
 const inputBaseClass =
@@ -366,7 +374,7 @@ export default function EmailSignatureCreateSimple() {
         setShowSaveMenu(false);
         setErrors({});
         dispatch(resetEmailSignatureForm());
-        navigate("/emailsignatures");
+        navigate("/settings/emailsignatures");
     };
 
     // Escape closes the form.
@@ -487,7 +495,7 @@ export default function EmailSignatureCreateSimple() {
                 return;
             }
 
-            navigate("/emailSignatures");
+            navigate("/settings/emailSignatures");
         } catch (error) {
             toast.error(
                 typeof error === "string"
@@ -507,7 +515,7 @@ export default function EmailSignatureCreateSimple() {
         maxLength,
     }) => (
         <div>
-            <label className={labelClass}>
+            <label className={getLabelClass(true)}>
                 {label}
                 {required && (
                     <span className="ml-1 text-red-500">*</span>
@@ -541,7 +549,7 @@ export default function EmailSignatureCreateSimple() {
             <label className={labelClass}>
                 {label}
                 {required && (
-                    <span className="ml-1 text-red-500">*</span>
+                    <span className="ml-1 text-red-500"></span>
                 )}
             </label>
 
@@ -561,11 +569,11 @@ export default function EmailSignatureCreateSimple() {
         <div className="w-full max-w-7xl">
             <div className="rounded-lg border border-gray-200 bg-white p-6">
                 <div className="mb-6">
-                    <h2 className="text-base font-semibold text-[#0F4659]">
+                    <h2 className="text-base font-semibold text-gray-500">
                         Email Signature Information
                     </h2>
 
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-400">
                         Create and configure your email signature.
                     </p>
                 </div>
@@ -581,7 +589,7 @@ export default function EmailSignatureCreateSimple() {
                         })}
 
                         <div>
-                            <label className={labelClass}>
+                            <label className={getLabelClass(true)}>
                                 Signature Content
                                 <span className="ml-1 text-red-500">*</span>
                             </label>
@@ -614,11 +622,12 @@ export default function EmailSignatureCreateSimple() {
                         </div>
 
                         <div className="space-y-3 rounded-lg border border-gray-200 p-4">
-                            <h3 className="text-sm font-semibold text-[#0F4659]">
+                            <h3 className="text-sm font-semibold text-gray-500">
                                 Default Preferences
                             </h3>
 
-                            <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                            <label className="flex cursor-pointer items-center gap-2
+                             text-sm text-gray-400">
                                 <input
                                     type="checkbox"
                                     checked={Boolean(
@@ -635,7 +644,8 @@ export default function EmailSignatureCreateSimple() {
                                 Use as default for new messages
                             </label>
 
-                            <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                            <label className="flex cursor-pointer items-center gap-2 
+                            text-sm text-gray-400">
                                 <input
                                     type="checkbox"
                                     checked={Boolean(
@@ -658,9 +668,9 @@ export default function EmailSignatureCreateSimple() {
                         <div className="mb-4 flex items-center gap-2">
                             <Mail
                                 size={18}
-                                className="text-[#0F4659]"
+                                className="text-gray-500"
                             />
-                            <h3 className="text-sm font-semibold text-gray-800">
+                            <h3 className="text-sm font-semibold text-gray-500">
                                 Signature Settings
                             </h3>
                         </div>
@@ -807,29 +817,31 @@ export default function EmailSignatureCreateSimple() {
     return (
         <div className="flex h-full min-h-0 flex-col bg-gray-50 px-3.5 py-5">
             {/* Header */}
-            <div className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+            <div className="flex shrink-0 items-center justify-between 
+            border border-lime-500 rounded bg-white px-6 py-4">
                 <div className="flex items-center gap-3">
                     <div
-                        className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-blue-100 bg-[#0F4659]/10"
-                        onClick={() => navigate("/email-signatures")}
+                        className="flex h-10 w-10 cursor-pointer items-center
+                         justify-center rounded-lg border border-blue-100 bg-[#408DFB]"
+                        onClick={() => navigate("/settings/emailSignatures")}
                         role="button"
                         tabIndex={0}
                         onKeyDown={(event) => {
                             if (event.key === "Enter") {
-                                navigate("/email-signatures");
+                                navigate("/settings/emailSignatures");
                             }
                         }}
                     >
-                        <Mail size={20} className="text-[#0F4659]" />
+                        <Mail size={20} className="text-gray-100" />
                     </div>
 
                     <div>
-                        <h1 className="text-lg font-semibold text-[#0F4659]">
+                        <h1 className="text-lg font-semibold text-gray-500">
                             {isEdit
                                 ? "Edit Email Signature"
                                 : "New Email Signature"}
                         </h1>
-                        <p className="mt-0.5 text-xs text-gray-500">
+                        <p className="mt-0.5 text-xs text-gray-400">
                             {isEdit
                                 ? `Update email signature${form.signatureName ? ` — ${form.signatureName}` : ""}`
                                 : "Create a new email signature"}
@@ -841,7 +853,8 @@ export default function EmailSignatureCreateSimple() {
                     type="button"
                     disabled={loading || editLoading}
                     onClick={handleClose}
-                    className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                    className="px-2 py-1 text-gray-100 hover:text-gray-100 bg-red-500 hover:bg-red-600 
+                    rounded  disabled:opacity-50"
                     aria-label="Close"
                 >
                     <X size={20} />
@@ -856,7 +869,7 @@ export default function EmailSignatureCreateSimple() {
                         type="button"
                         onClick={() => setActiveTab(tab.id)}
                         className={`whitespace-nowrap border-b-2 py-3 text-sm font-medium transition ${activeTab === tab.id
-                            ? "border-[#0F4659] text-[#0F4659]"
+                            ? "border-lime-500 text-gray-500"
                             : "border-transparent text-gray-500 hover:text-gray-700"
                             }`}
                     >
@@ -892,7 +905,8 @@ export default function EmailSignatureCreateSimple() {
                             type="button"
                             disabled={loading || editLoading}
                             onClick={() => handleSave()}
-                            className="h-10 rounded-l-md bg-[#0F4659] px-5 text-sm font-medium text-white hover:bg-[#0F4659]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="h-10 rounded-l-md bg-[#408DFB] px-5 text-sm font-medium text-white 
+                            hover:bg-[#408DFB]/90 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {loading
                                 ? isEdit
@@ -909,7 +923,8 @@ export default function EmailSignatureCreateSimple() {
                             onClick={() =>
                                 setShowSaveMenu((previous) => !previous)
                             }
-                            className="flex h-10 w-10 items-center justify-center rounded-r-md border-l border-white/30 bg-[#0F4659] text-white hover:bg-[#0F4659]/90 disabled:opacity-50"
+                            className="flex h-10 w-10 items-center justify-center rounded-r-md border-l border-white/30
+                             bg-[#408DFB] text-white hover:bg-[#408DFB]/90 disabled:opacity-50"
                             aria-label="More save options"
                         >
                             <ChevronDown

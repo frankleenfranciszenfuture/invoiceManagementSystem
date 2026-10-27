@@ -611,7 +611,7 @@ export default function CompanyCreateSimpleNew() {
 
         setActiveTab("company");
 
-        navigate("/companies");
+        navigate("/settings/companies");
     };
 
     useEffect(() => {
@@ -962,7 +962,7 @@ export default function CompanyCreateSimpleNew() {
             setActiveTab("company");
 
             if (saveAndClose) {
-                navigate("/companies");
+                navigate("/settings/companies");
             }
         } catch (error) {
             console.error(
@@ -1714,25 +1714,25 @@ export default function CompanyCreateSimpleNew() {
         <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-5">
             {/* HEADER */}
 
-            <div className="shrink-0 px-6 py-4 bg-[#408DFB] border-b border-gray-200 rounded flex items-center justify-between">
+            <div className="shrink-0 px-6 py-4 bg-white border border-lime-400 rounded flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div
-                        className="w-10 h-10 rounded-lg bg-[#FCF7F8] border border-blue-100 flex items-center justify-center cursor-pointer"
-                        onClick={() => navigate("/bankAccount")}
+                        className="w-10 h-10 rounded-lg bg-blue-400 border border-blue-100 flex items-center justify-center cursor-pointer"
+                        onClick={() => navigate("/companies")}
                     >
                         <Landmark
                             size={20}
-                            className="text-[#408DFB]"
+                            className="text-gray-100"
                         />
                     </div>
 
 
                     <div>
-                        <h1 className="text-lg font-semibold text-gray-100">
+                        <h1 className="text-lg font-semibold text-gray-500">
                             {isEdit ? "Edit Company" : "New Company"}
                         </h1>
 
-                        <p className="mt-0.5 text-xs text-gray-100">
+                        <p className="mt-0.5 text-xs text-gray-400">
                             {isEdit
                                 ? `Update company details${form.companyName ? ` — ${form.companyName}` : ""}`
                                 : "Create new company details"}
@@ -1744,7 +1744,7 @@ export default function CompanyCreateSimpleNew() {
                     type="button"
                     disabled={loading || editLoading}
                     onClick={handleClose}
-                    className="px-1 text-gray-100 hover:text-gray-100 hover:bg-red-500 rounded disabled:opacity-50"
+                    className="px-1 py-1 text-gray-100 hover:text-gray-100 bg-red-500 hover:bg-red-600 rounded disabled:opacity-50"
                     aria-label="Close"
                 >
                     <X size={20} />
@@ -1760,8 +1760,8 @@ export default function CompanyCreateSimpleNew() {
                         type="button"
                         onClick={() => setActiveTab(tab.id)}
                         className={`whitespace-nowrap border-b-2 py-3 text-sm font-medium transition ${activeTab === tab.id
-                            ? "border-[#408DFB] text-[#408DFB]"
-                            : "border-transparent text-gray-400 hover:text-blue-400"
+                            ? "border-lime-500 text-gray-500"
+                            : "border-transparent text-gray-400 hover:text-gray-500"
                             }`}
                     >
                         {tab.label}
