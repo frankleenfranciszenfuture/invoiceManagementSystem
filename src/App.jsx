@@ -130,6 +130,8 @@ import ClearanceDashboard from "./module/clearnaceOutStandingParties/pages/Clear
 import UnitProfileView from "./module/units/pages/UnitProfileView";
 import SizeProfileView from "./module/sizes/pages/SizeProfileView";
 import CategoryProfileView from "./module/category/pages/CategoryProfileView";
+import CustomerCreateModal from "./module/customer/pages/CustomerCreateModal";
+import CurrencyModel from "./module/currency/pages/CurrencyModel";
 
 
 
@@ -319,13 +321,18 @@ function AppContent() {
         />
 
         <Route
+          path="/customers/model"
+          element={<CustomerCreateModal />}
+        />
+
+        <Route
           path="/customers/new"
           element={<CreateCustomer />}
         />
 
         <Route
           path="/customers/edit/:id"
-          element={<EditCustomer />}
+          element={<CreateCustomer />}
         />
 
         <Route
@@ -649,6 +656,14 @@ function AppContent() {
           path="/settings/currencies/newSimple"
           element={<CurrencyCreateSimple />}
         />
+
+
+        <Route
+          path="/currencies/model"
+          element={<CurrencyModel />}
+        />
+
+
         <Route
           path="/settings/currencies/edit/:id"
           element={<CurrencyCreateSimple />}

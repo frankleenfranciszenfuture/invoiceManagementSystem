@@ -33,6 +33,7 @@ const initialState = {
   size: { ...emptySize },
 
   exsistingSize: null,
+  createdSizeSelection: null,
 
   pagination: {
     pageNumber: 0,
@@ -143,6 +144,14 @@ const sizeSlice = createSlice({
     setSizeStatus(state, action) {
       state.setSizeStatus = action.payload;
     },
+
+    setCreatedSizeSelection: (state, action) => {
+      state.createdSizeSelection = action.payload;
+    },
+
+    clearCreatedSizeSelection: (state) => {
+      state.createdSizeSelection = null;
+    },
   },
 
   /* =======================================================
@@ -249,18 +258,38 @@ const sizeSlice = createSlice({
         state.success = true;
         state.error = null;
 
-        state.message = action.payload?.message || "Size created successfully.";
+        const response = action.payload;
 
-        const newSize = action.payload?.data;
+        // Extract the created size
+        const newSize =
+          response?.data?.data ??
+          response?.data ??
+          response?.result?.data ??
+          response?.result ??
+          response;
 
-        if (newSize) {
-          state.size = newSize;
+        state.message = response?.message || "Size created successfully.";
 
-          state.exsistingSize = newSize;
+        if (newSize?.id != null || newSize?.sizeId != null) {
+          const normalizedSize = {
+            ...newSize,
+            id: newSize.id ?? newSize.sizeId,
+          };
 
-          state.sizes.push(newSize);
+          state.size = normalizedSize;
+          state.exsistingSize = normalizedSize;
 
-          state.pagination.totalElements += 1;
+          // Avoid duplicate entries
+          const existingIndex = state.sizes.findIndex(
+            (item) => String(item.id) === String(normalizedSize.id),
+          );
+
+          if (existingIndex === -1) {
+            state.sizes.push(normalizedSize);
+            state.pagination.totalElements += 1;
+          } else {
+            state.sizes[existingIndex] = normalizedSize;
+          }
         }
       })
 
@@ -526,6 +555,9 @@ export const {
   setSizeField,
   setSelectedSizeView,
   setSizeStatus,
+
+  setCreatedSizeSelection,
+  clearCreatedSizeSelection,
 } = sizeSlice.actions;
 
 /* =========================================================

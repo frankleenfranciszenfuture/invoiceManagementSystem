@@ -65,6 +65,18 @@ import {
 } from "../slices/invoiceSlice";
 
 import {
+  clearCreatedSizeSelection,
+} from "../../sizes/slices/sizeSlice";
+
+import {
+  clearCreatedUnitSelection,
+} from "../../units/slices/unitSlice";
+
+import {
+  clearCreatedTaxMasterSelection,
+} from "../../taxMaster/slices/taxMasterSlice";
+
+import {
   createInvoice,
   editInvoice,
   fetchInvoiceById,
@@ -170,6 +182,7 @@ export default function InvoiceCreate() {
 
   const [showInvoiceTypeOptions, setShowInvoiceTypeOptions] =
     useState(true);
+
 
   // =========================================================
   // SELECT PRODUCT INVOICE
@@ -1461,6 +1474,109 @@ export default function InvoiceCreate() {
 
   }, []);
 
+
+  // Automatically select newly created category
+  const { createdSizeSelection } = useSelector(
+    (state) => state.size
+  );
+
+  useEffect(() => {
+    if (!createdSizeSelection) return;
+
+    console.log("Received Created Size:", createdSizeSelection);
+
+    const { item, targetField, rowIndex } = createdSizeSelection;
+
+    if (
+      targetField === "sizeId" &&
+      rowIndex != null &&
+      item?.id != null
+    ) {
+      updateItem(rowIndex, "sizeId", String(item.id));
+
+      dispatch(clearCreatedSizeSelection());
+    }
+  }, [createdSizeSelection, dispatch]);
+
+
+  const createdUnitSelection = useSelector(
+    (state) => state.unit.createdUnitSelection
+  );
+
+
+  useEffect(() => {
+    if (!createdUnitSelection) return;
+
+    const { item, targetField, rowIndex } = createdUnitSelection;
+
+    if (
+      targetField === "unitId" &&
+      rowIndex != null &&
+      item?.id != null
+    ) {
+      updateItem(rowIndex, "unitId", String(item.id));
+      dispatch(clearCreatedUnitSelection());
+    }
+  }, [createdUnitSelection, dispatch]);
+
+
+  const createdTaxMasterSelection = useSelector(
+    (state) => state.taxMaster.createdTaxMasterSelection
+  );
+
+  useEffect(() => {
+    if (!createdTaxMasterSelection) return;
+
+    const {
+      item,
+      targetField,
+      rowIndex,
+    } = createdTaxMasterSelection;
+
+    console.log("Received Tax Selection:", createdTaxMasterSelection);
+
+    if (
+      targetField === "taxMasterId" &&
+      rowIndex != null &&
+      item?.id != null
+    ) {
+      updateItem(
+        rowIndex,
+        "taxMasterId",
+        String(item.id)
+      );
+
+      dispatch(clearCreatedTaxMasterSelection());
+    }
+  }, [createdTaxMasterSelection, dispatch]);
+
+
+  const handleChange =
+    (
+      field,
+      value
+    ) => {
+
+      setForm(
+        (prev) => ({
+          ...prev,
+
+          [field]:
+            value,
+        })
+      );
+
+
+      setErrors(
+        (prev) => ({
+          ...prev,
+
+          [field]:
+            "",
+        })
+      );
+
+    };
 
   /* =========================================================
      CLOSE
@@ -3041,7 +3157,7 @@ BANKACCOUNT NAME
   return (
 
     <>
-      <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-5">
+      <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-2">
 
         <div
           className={
@@ -3055,7 +3171,7 @@ BANKACCOUNT NAME
             HEADER
         ================================================= */}
 
-          <div className="mr-2 px-6 py-4 bg-white border-b border-gray-200 shrink-0">
+          <div className="mr-2 px-6 py-4 bg-white border-b border-lime-500 shrink-0">
 
             <div className="flex items-center justify-between">
 
@@ -3126,7 +3242,7 @@ BANKACCOUNT NAME
             BODY
         ================================================= */}
 
-          <div className="flex-1 overflow-y-auto px-5 py-6">
+          <div className="flex-1 overflow-y-auto px-2 py-6">
 
             {/* =================================================
               CUSTOMER
@@ -3302,7 +3418,7 @@ BANKACCOUNT NAME
                                         customer
                                       )
                                     }
-                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white"
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white rounded"
                                   >
 
                                     <div className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-medium shrink-0">
@@ -3346,19 +3462,19 @@ BANKACCOUNT NAME
                         <button
                           type="button"
                           className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
-                          // onClick={() => {
-                          //   setDropdownOpen(
-                          //     false
-                          //   );
-                          //   dispatch(
-                          //     openModal({
-                          //       type: "addCustomer",
-                          //     })
-                          //   );
+                          onClick={() => {
+                            setDropdownOpen(
+                              false
+                            );
+                            dispatch(
+                              openModal({
+                                type: "addCustomer",
+                              })
+                            );
 
-                          // }}
+                          }}
 
-                          onClick={() => (navigate("/customers/new"))}
+                        // onClick={() => (navigate("/customers/model"))}
                         >
 
                           <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center"
@@ -3686,7 +3802,7 @@ BANKACCOUNT NAME
                                       setOpenCurrency(false);
                                       setCurrencySearch("");
                                     }}
-                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white"
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white rounded"
                                   >
 
                                     <div className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-medium shrink-0">
@@ -3713,12 +3829,6 @@ BANKACCOUNT NAME
 
                                       </p>
 
-                                      <p className="text-xs opacity-70 truncate">
-
-                                        {currency.currencyCode ||
-                                          ""}
-
-                                      </p>
                                     </div>
 
                                   </button>
@@ -3733,19 +3843,19 @@ BANKACCOUNT NAME
                         <button
                           type="button"
                           className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
-                          // onClick={() => {
-                          //   setDropdownOpen(
-                          //     false
-                          //   );
-                          //   dispatch(
-                          //     openModal({
-                          //       type: "addCustomer",
-                          //     })
-                          //   );
+                          onClick={() => {
+                            setDropdownOpen(
+                              false
+                            );
+                            dispatch(
+                              openModal({
+                                type: "addCurrency",
+                              })
+                            );
 
-                          // }}
+                          }}
 
-                          onClick={() => (navigate("/currencies/new"))}
+                        // onClick={() => (navigate("/currencies/new"))}
                         >
 
                           <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center"
@@ -3952,7 +4062,7 @@ BANKACCOUNT NAME
                                         salesPerson
                                       )
                                     }
-                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white"
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white rounded"
                                   >
 
                                     <div className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-medium shrink-0">
@@ -3972,15 +4082,6 @@ BANKACCOUNT NAME
                                         {name}
                                       </p>
 
-                                      <p className="text-xs opacity-70 truncate">
-
-                                        {salesPerson.email ||
-                                          salesPerson.mobile ||
-                                          salesPerson.phoneNumber ||
-                                          salesPerson.mobileNumber ||
-                                          ""}
-
-                                      </p>
 
                                       <p className="text-xs opacity-70 truncate">
 
@@ -4002,19 +4103,19 @@ BANKACCOUNT NAME
                         <button
                           type="button"
                           className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
-                          // onClick={() => {
-                          //   setDropdownOpen(
-                          //     false
-                          //   );
-                          //   dispatch(
-                          //     openModal({
-                          //       type: "addCustomer",
-                          //     })
-                          //   );
+                          onClick={() => {
+                            setDropdownOpen(
+                              false
+                            );
+                            dispatch(
+                              openModal({
+                                type: "addSalesPerson",
+                              })
+                            );
 
-                          // }}
+                          }}
 
-                          onClick={() => (navigate("/salespersons/new"))}
+                        // onClick={() => (navigate("/salespersons/new"))}
                         >
 
                           <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center"
@@ -4287,19 +4388,26 @@ BANKACCOUNT NAME
                             <td className="px-3 py-3">
                               <CustomSUSelect
                                 value={item.unitId || ""}
-                                onChange={(value) => updateItem(index, "unitId", value)}
+                                onChange={(value) =>
+                                  updateItem(index, "unitId", value)
+                                }
                                 placeholder="Select Unit"
                                 searchPlaceholder="Search units..."
                                 searchable
                                 addNewLabel="Unit"
                                 addNewModalType="addUnit"
+                                addNewData={{
+                                  targetField: "unitId",
+                                  rowIndex: index,
+                                  selectAfterCreate: true,
+                                }}
                                 width="w-[130px]"
                                 size="sm"
                                 options={[
                                   { value: "", label: "Select" },
                                   ...units.map((unit) => ({
                                     value: String(unit.id),
-                                    label: unit.unitName || unit.name || unit.unitCode,
+                                    label: unit.unitName || unit.unitShortName,
                                   })),
                                 ]}
                               />
@@ -4309,25 +4417,38 @@ BANKACCOUNT NAME
                             {/* SIZE */}
 
                             <td className="px-3 py-3">
+
                               <CustomSUSelect
                                 value={item.sizeId || ""}
-                                onChange={(value) => updateItem(index, "sizeId", value)}
+                                onChange={(value) =>
+                                  updateItem(index, "sizeId", value)
+                                }
                                 placeholder="Select Size"
                                 searchPlaceholder="Search sizes..."
                                 searchable
                                 addNewLabel="Size"
                                 addNewModalType="addSize"
+                                addNewData={{
+                                  sizeName: "", // Initial value comes from typed search
+                                  targetField: "sizeId",
+                                  rowIndex: index,
+                                  selectAfterCreate: true,
+                                }}
                                 width="w-[130px]"
                                 size="sm"
                                 options={[
                                   { value: "", label: "Select" },
                                   ...sizes.map((size) => ({
                                     value: String(size.id),
-                                    label: size.sizeName || size.name || size.sizeCode,
+                                    label:
+                                      size.sizeName ||
+                                      size.name ||
+                                      size.sizeCode,
                                   })),
                                 ]}
                               />
                             </td>
+
 
 
                             {/* DISCOUNT */}
@@ -4385,13 +4506,15 @@ BANKACCOUNT NAME
                                 searchable
                                 addNewLabel="Tax"
                                 addNewModalType="addTaxMaster"
+                                addNewData={{
+                                  targetField: "taxMasterId",
+                                  rowIndex: index,
+                                  selectAfterCreate: true,
+                                }}
                                 width="w-[130px]"
                                 size="sm"
                                 options={[
-                                  {
-                                    value: "",
-                                    label: "Select Tax",
-                                  },
+                                  { value: "", label: "Select Tax" },
                                   ...taxMasters.map((tax) => {
                                     const rate =
                                       tax.taxPercentage ??
@@ -4407,7 +4530,6 @@ BANKACCOUNT NAME
                                   }),
                                 ]}
                               />
-
                             </td>
 
                             {/* QUANTITY */}
@@ -5080,7 +5202,7 @@ BANKACCOUNT NAME
                       true
                     )
                   }
-                  className="flex items-center gap-2 text-xl text-blue-500 hover:text-blue-500"
+                  className="flex items-center gap-2 text-lg text-blue-500 hover:text-blue-500"
                 >
 
                   <div className="w-8 h-8 px-1 text-blue-400 rounded-full border-2 border-blue-400 flex items-center justify-center">
@@ -5100,7 +5222,7 @@ BANKACCOUNT NAME
 
                 <div>
 
-                  <label className="text-xl font-medium text-blue-500 block mb-1">
+                  <label className="text-lg font-medium text-blue-500 block mb-1">
                     Bank Account
                   </label>
 
@@ -5260,7 +5382,7 @@ BANKACCOUNT NAME
                                             bankAccount
                                           )
                                         }
-                                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white"
+                                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white rounded"
                                       >
 
                                         <div className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-medium shrink-0">
@@ -5280,14 +5402,6 @@ BANKACCOUNT NAME
                                             {name}
                                           </p>
 
-                                          <p className="text-xs opacity-70 truncate">
-
-                                            {bankAccount.bankName ||
-                                              bankAccount.id ||
-
-                                              ""}
-
-                                          </p>
 
                                           <p className="text-xs opacity-70 truncate">
 
@@ -5317,8 +5431,19 @@ BANKACCOUNT NAME
                               type="button"
                               className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
 
-                              onClick={() =>
-                                (navigate("/bankAccount/newSimple"))}
+                              onClick={() => {
+                                setDropdownOpen(
+                                  false
+                                );
+                                dispatch(
+                                  openModal({
+                                    type: "addBankAccount",
+                                  })
+                                );
+
+                              }}
+                            // onClick={() =>
+                            //   (navigate("/bankAccount/newSimple"))}
                             >
 
                               <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center"
@@ -5380,7 +5505,7 @@ BANKACCOUNT NAME
                       true
                     )
                   }
-                  className="flex items-center gap-2 text-xl text-blue-500 hover:text-blue-500"
+                  className="flex items-center gap-2 text-lg text-blue-500 hover:text-blue-500"
                 >
 
                   <div className="w-8 h-8 px-1 text-blue-400 rounded-full border-2 border-blue-400 flex items-center justify-center">
@@ -5400,7 +5525,7 @@ BANKACCOUNT NAME
 
                 <div>
 
-                  <label className="text-xl font-medium text-blue-500 block mb-1">
+                  <label className="text-lg font-medium text-blue-500 block mb-1">
                     Signature
                   </label>
 
@@ -5555,7 +5680,7 @@ BANKACCOUNT NAME
                                           e.stopPropagation();
                                           handleEmailSignatureSelect(emailSignature);
                                         }}
-                                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white"
+                                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white rounded"
                                       >
                                         <div className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-medium shrink-0">
                                           {name.charAt(0).toUpperCase()}
@@ -5579,14 +5704,17 @@ BANKACCOUNT NAME
                             <button
                               type="button"
                               className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
-                              onClick={() =>
+                              onClick={() => {
+                                setDropdownOpen(
+                                  false
+                                );
                                 dispatch(
                                   openModal({
                                     type: "addEmailSignature",
-                                    data: null,
                                   })
-                                )
-                              }
+                                );
+
+                              }}
                             >
                               <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center">
                                 <Plus size={14} />
@@ -6046,23 +6174,24 @@ BANKACCOUNT NAME
           <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4">
             <div className="w-full max-w-xl rounded-xl bg-white shadow-xl">
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <div className="flex items-center justify-between border-b border-lime-500 px-6 py-4">
                 <div className="flex items-center gap-3">
                   <UserKeyIcon
                     size={22}
                     strokeWidth={2}
-                    className="text-blue-500"
+                    className="text-lg text-gray-500"
                   />
 
-                  <h2 className="text-lg font-semibold text-blue-500">
+                  <h2 className="text-lg font-semibold text-gray-500">
                     Invoice Dates & Terms
+
                   </h2>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setShowDateTermsModal(false)}
-                  className="text-2xl text-gray-500 transition hover:text-red-500"
+                  className="px-1 text-xl text-gray-100 transition bg-red-500 hover:bg-red-400 hover:text-gray-100 rounded"
                   aria-label="Close modal"
                 >
                   &times;

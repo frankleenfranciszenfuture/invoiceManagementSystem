@@ -25,7 +25,9 @@ import {
     setCurrency,
     setErrors,
     resetSelectedCustomer,
+    setSelectedCustomer,
     resetDirty,
+    resetCustomerForm,
 
 } from "../slices/customerSlices"
 
@@ -43,7 +45,10 @@ import {
     User,
     Users,
     Users2Icon,
+    X,
 } from "lucide-react";
+import CustomSelect from '../../../common/custom/CustomSelect';
+import CustomSUSelect from '../../../common/custom/CustomSUSelect';
 
 const TwitterIcon = ({ className }) => (
     <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -61,13 +66,19 @@ const InfoIcon = () => (
     <HelpCircle className="inline w-3.5 h-3.5 text-gray-400 ml-1 -mt-0.5" />
 );
 
+// const Label = ({ children, required }) => (
+//     <label className="text-sm text-gray-700 flex items-center">
+//         {required && <span className="text-red-500 mr-0.5">*</span>}
+//         <span className={required ? "text-red-500" : ""}>{children}</span>
+//     </label>
+// );
+
 const Label = ({ children, required }) => (
-    <label className="text-sm text-gray-700 flex items-center">
+    <label className="flex items-center text-sm font-md text-gray-500">
         {required && <span className="text-red-500 mr-0.5">*</span>}
         <span className={required ? "text-red-500" : ""}>{children}</span>
     </label>
 );
-
 
 const AddressColumn = ({
     title,
@@ -76,9 +87,12 @@ const AddressColumn = ({
     dispatch,
     showCopyLink = false,
 }) => {
-    const errors = useSelector((state) => state.customers.errors);
+    const errors = useSelector((state) => state.customers.errors || {});
 
-    const safeAddress = address || emptyAddress;
+    const safeAddress = address || {
+        attention: "", country: "", address: "", city: "", state: "",
+        zipCode: "", phoneCode: "+91", phone: "", fax: "",
+    };
 
     const countries = [
         "India",
@@ -104,23 +118,24 @@ const AddressColumn = ({
         dispatch(clearFieldError(field));
     };
 
+
     return (
         <div className="flex-1 min-w-[400px]">
             <div className="flex justify-between items-center mb-5">
-                <h3 className="font-semibold text-lg">{title}</h3>
+                <h3 className="font-semibold text-lg text-gray-500">{title}</h3>
 
                 {showCopyLink && (
                     <button
                         type="button"
                         onClick={() => dispatch(copyBillingToShipping())}
-                        className="text-blue-600 focus-within:border-blue-400 hover:underline text-sm"
+                        className="text-blue-600 hover:underline text-sm"
                     >
                         Copy billing address
                     </button>
                 )}
             </div>
 
-            <div className="space-y-4 ">
+            <div className="space-y-4">
 
                 {/* Attention */}
                 <div className="grid grid-cols-[110px_1fr] items-center">
@@ -130,7 +145,7 @@ const AddressColumn = ({
                         type="text"
                         value={safeAddress.attention}
                         onChange={handleAddrChange("attention")}
-                        className="w-full border border-gray-300 rounded px-2 py-1.5"
+                        className="w-full border border-gray-400 rounded px-2 py-1.5 text-gray-500 outline-none focus:border-blue-400"
                     />
                 </div>
 
@@ -139,24 +154,32 @@ const AddressColumn = ({
                     <Label>Country/Region</Label>
 
                     <div className="relative">
-                        <select
-                            value={safeAddress.country}
-                            onChange={handleAddrChange("country")}
-                            className={`w-full rounded px-3 py-2 border border-gray-300 ${errors.country
-                                ? "border-red-500 bg-red-50"
-                                : "border-gray-300"
-                                }`}
-                        >
-                            <option value="">Select Country</option>
+                        <CustomSUSelect
+                            value={safeAddress.country || ""}
+                            onChange={(selectedOption) => {
+                                const value =
+                                    typeof selectedOption === "object"
+                                        ? selectedOption?.value
+                                        : selectedOption;
 
-                            {countries.map((item) => (
-                                <option key={item} value={item}>
-                                    {item}
-                                </option>
-                            ))}
-                        </select>
+                                dispatch(setAddressField({
+                                    addressType,
+                                    field: "country",
+                                    value: value || "",
+                                }));
 
-                        {/* <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" /> */}
+                                dispatch(clearFieldError("country"));
+                            }}
+                            options={[
+                                { value: "", label: "Select Country" },
+                                ...countries.map((item) => ({
+                                    value: item,
+                                    label: item,
+                                })),
+                            ]}
+                            placeholder="Select Country"
+                        />
+
                     </div>
                 </div>
 
@@ -170,7 +193,7 @@ const AddressColumn = ({
                             placeholder="address"
                             value={safeAddress.address}
                             onChange={handleAddrChange("address")}
-                            className="w-full border border-gray-300 rounded px-2 py-1.5"
+                            className="w-full border border-gray-400 rounded px-2 py-1.5"
                         />
 
 
@@ -184,7 +207,7 @@ const AddressColumn = ({
                     <input
                         value={safeAddress.city}
                         onChange={handleAddrChange("city")}
-                        className="w-full border border-gray-300 rounded px-2 py-1.5"
+                        className="w-full border border-gray-400 rounded px-2 py-1.5"
                     />
                 </div>
 
@@ -193,29 +216,45 @@ const AddressColumn = ({
                     <Label>State</Label>
 
                     <div className="relative">
-                        <select
-                            value={safeAddress.state}
-                            onChange={handleAddrChange("state")}
-                            className="w-full border border-gray-300 rounded px-2 py-1.5 appearance-none"
-                        >
-                            <option value="">Select State</option>
-                            <option value="Tamil Nadu">Tamil Nadu</option>
-                            <option value="Karnataka">Karnataka</option>
-                            <option value="Maharashtra">Maharashtra</option>
-                        </select>
+                        <CustomSUSelect
+                            value={safeAddress.state || ""}
+                            onChange={(selectedOption) => {
+                                const value =
+                                    typeof selectedOption === "object"
+                                        ? selectedOption?.value
+                                        : selectedOption;
 
-                        <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                dispatch(setAddressField({
+                                    addressType,
+                                    field: "state",
+                                    value: value || "",
+                                }));
+
+                                dispatch(clearFieldError("state"));
+                            }}
+                            options={[
+                                { value: "", label: "Select State" },
+                                { value: "Tamil Nadu", label: "Tamil Nadu" },
+                                { value: "Karnataka", label: "Karnataka" },
+                                { value: "AndhraPradesh", label: "AndhraPradesh" },
+                                { value: "Kerala", label: "Kerala" },
+                                { value: "Maharashtra", label: "Maharashtra" },
+                                { value: "Delhi", label: "Delhi" },
+                                { value: "Others", label: "Others" },
+                            ]}
+                            placeholder="Select State"
+                        />
                     </div>
                 </div>
 
                 {/* Pin Code */}
                 <div className="grid grid-cols-[110px_1fr] items-center">
-                    <Label>Zip Code</Label>
+                    <Label>Pin Code</Label>
 
                     <input
                         value={safeAddress.zipCode}
                         onChange={handleAddrChange("zipCode")}
-                        className="w-full border border-gray-300 rounded px-2 py-1.5"
+                        className="w-full border border-gray-400 rounded px-2 py-1.5"
                     />
                 </div>
 
@@ -223,16 +262,29 @@ const AddressColumn = ({
                 <div className="grid grid-cols-[110px_1fr] items-center">
                     <Label>Phone</Label>
 
-                    <div className="flex border border-gray-300 rounded overflow-hidden">
-                        <select
-                            value={safeAddress.phoneCode}
-                            onChange={handleAddrChange("phoneCode")}
-                            className="border-r border-gray-300 px-2"
-                        >
-                            <option value="+91">+91</option>
-                            <option value="+1">+1</option>
-                            <option value="+44">+44</option>
-                        </select>
+                    <div className="flex border rounded overflow-hidden">
+                        <CustomSUSelect
+                            value={safeAddress.phoneCode || "+91"}
+                            onChange={(selectedOption) => {
+                                const value =
+                                    typeof selectedOption === "object"
+                                        ? selectedOption?.value
+                                        : selectedOption;
+
+                                dispatch(setAddressField({
+                                    addressType,
+                                    field: "phoneCode",
+                                    value,
+                                }));
+                            }}
+                            options={[
+                                { value: "+91", label: "+91" },
+                                { value: "+1", label: "+1" },
+                                { value: "+44", label: "+44" },
+                            ]}
+                            width="w-[90px]"
+                            size="sm"
+                        />
 
                         <input
                             value={safeAddress.phone}
@@ -249,7 +301,7 @@ const AddressColumn = ({
                     <input
                         value={safeAddress.fax}
                         onChange={handleAddrChange("fax")}
-                        className="w-full border border-gray-300 rounded px-2 py-1.5"
+                        className="w-full border rounded px-2 py-1.5"
                     />
                 </div>
 
@@ -257,6 +309,7 @@ const AddressColumn = ({
         </div>
     );
 };
+
 
 
 export default function CreateCustomer({
@@ -275,6 +328,12 @@ export default function CreateCustomer({
         (state) => state.customerLanguage?.customerLanguage || "",
     );
 
+    const selectedCustomer = useSelector(
+        (state) => state.customers.selectedCustomer
+    );
+
+    const isEdit = Boolean(selectedCustomer?.id);
+
     const errors = useSelector((state) => state.customers.errors);
 
     const isDirty = useSelector(
@@ -288,6 +347,12 @@ export default function CreateCustomer({
         console.log("isDirty:", isDirty);
     }, [isDirty]);
 
+
+    const loading =
+        useSelector(
+            (state) =>
+                state.customers?.loading
+        );
 
 
     const changeTab = (tab) => {
@@ -329,6 +394,25 @@ export default function CreateCustomer({
 
         dispatch(setActiveTab(tab));
     };
+
+    const handleClose =
+        () => {
+
+            if (loading) {
+                return;
+            }
+
+
+            dispatch(
+                resetCustomerForm()
+            );
+
+
+            navigate(
+                "/customers"
+            );
+
+        };
 
 
     const handleChange = (field) => (e) => {
@@ -387,30 +471,48 @@ export default function CreateCustomer({
         }
     };
 
-    useEffect(() => {
-        dispatch(resetSelectedCustomer());
-    }, [dispatch]);
+    // useEffect(() => {
+    //     dispatch(resetSelectedCustomer());
+    // }, [dispatch]);
 
-    const handleSave = async (status) => {
-        const errors = validateCustomerForm(customer);
-        dispatch(setErrors(errors));
+    const handleSave = async () => {
+        const validationErrors = validateCustomerForm(customer);
 
-        if (Object.keys(errors).length > 0) {
+        dispatch(setErrors(validationErrors));
+
+        if (Object.keys(validationErrors).length > 0) {
+            toast.error(Object.values(validationErrors)[0]);
             return;
         }
 
-
         try {
-            const savedCustomer = await dispatch(
-                addCustomer({
-                    ...customer,
-                    status: "ACTIVE",
-                })
-            ).unwrap();
+            let savedCustomer;
+
+            if (isEdit) {
+                savedCustomer = await dispatch(
+                    editCustomer({
+                        id: selectedCustomer.id,
+                        data: {
+                            ...customer,
+                            id: selectedCustomer.id,
+                        },
+                    })
+                ).unwrap();
+
+                toast.success("Customer updated successfully!");
+            } else {
+                savedCustomer = await dispatch(
+                    addCustomer({
+                        ...customer,
+                        status: "ACTIVE",
+                    })
+                ).unwrap();
+
+                toast.success("Customer created successfully!");
+            }
 
             dispatch(resetDirty());
             dispatch(resetSelectedCustomer());
-            dispatch(closeModal());
 
             await dispatch(
                 loadCustomers({
@@ -419,22 +521,21 @@ export default function CreateCustomer({
                     search: "",
                     sortBy: "displayName",
                     direction: "asc",
-                    status: savedCustomer.status,
                 })
             );
 
             if (mode === "modal") {
-
                 dispatch(closeCustomerModal());
-
+                dispatch(closeModal());
                 onSuccess?.(savedCustomer);
-
             } else {
-
-                navigate(`/customers?status=${savedCustomer.status}`);
+                navigate("/customers");
             }
         } catch (error) {
-            toast.error(error?.message || error || "Failed to create customer");
+            toast.error(
+                error?.message || error || "Failed to save customer"
+            );
+            console.error("Customer save failed:", error);
         }
     };
 
@@ -547,16 +648,63 @@ export default function CreateCustomer({
 
     return (
         <>
-            <div className="min-h-screen bg-gray-50 font-sans text-[13px] mt-4 p-3">
+            <div className="min-h-screen bg-gray-50 font-sans text-[13px] mt-2 p-3">
                 {/* Form Container Wrapper allowing separate inner scrolling */}
                 <div className="flex-1 min-h-0 bg-white rounded-lg">
-                    <div className="px-3 py-3 max-w-30xl w-full ">
-                        <h1 className="flex items-center gap-2 text-xl font-medium text-[#088178] mb-4">
-                            <Users2Icon className="w-6 h-6" />
-                            <span>New Customer</span>
-                        </h1>
+                    <div className="px-2 py-2 max-w-30xl w-full ">
+                        <div className="shrink-0 px-3 py-2.5 bg-gray-50 rounded-sm border border-lime-200 shadow-md flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div
+                                    className="w-10 h-10 rounded-lg bg-[#FCF7F8] border border-blue-100 flex items-center justify-center cursor-pointer"
+
+                                    onClick={() => (navigate("/customes"))}
+                                >
+                                    <Users2Icon className="w-6 h-6" />
+                                </div>
+                                <div>
+
+                                    <h1 className="text-xl font-medium text-gray-500">
+
+                                        <span>{isEdit ? "Edit Customer" : "New Customer"}</span>
+                                    </h1>
+                                    <p className="mt-0.5 text-xs text-gray-400">
+
+                                        {isEdit
+                                            ? "Update existing customer details"
+                                            : "Create a new Customer"}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                disabled={loading}
+                                onClick={
+                                    handleClose
+                                }
+                                className="
+                                                    w-8
+                                                    h-8
+                                                    flex
+                                                    items-center
+                                                    justify-center
+                                                    rounded-md
+                                                    text-[#FCF7F8]
+                                                    bg-red-400
+                                                    hover:bg-red-500
+                                                    hover:text-gray-100
+                                                    disabled:opacity-50
+                                                "
+                            >
+
+                                <X
+                                    size={20}
+                                />
+
+                            </button>
+                        </div>
                         {/* GST Profile banner */}
-                        <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded px-3 py-2 mb-6 text-sm">
+                        {/* <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded px-3 py-2 mb-6 text-sm">
                             <FileSpreadsheet className="w-4 h-4 text-blue-500" />
                             <span className="text-gray-600">
                                 Profill Customer details from the GST portal using the Customer's
@@ -565,12 +713,12 @@ export default function CreateCustomer({
                             <a href="#" className="text-blue-600 font-medium hover:underline">
                                 Profill &gt;
                             </a>
-                        </div>
+                        </div> */}
 
-                        <div className="space-y-4">
+                        <div className="space-y-4 mt-6">
                             {/* Customer Type */}
                             <div className="grid grid-cols-[160px_1fr] items-center">
-                                <Label>
+                                <Label required>
                                     Customer Type <InfoIcon />
                                 </Label>
                                 <div className="flex items-center gap-6">
@@ -601,23 +749,23 @@ export default function CreateCustomer({
 
                             {/* Primary Contact */}
                             <div className="grid grid-cols-[160px_1fr] items-start">
-                                <Label>
+                                <Label required>
                                     Primary Contact <InfoIcon />
                                 </Label>
                                 <div className="flex gap-2 max-w-md">
                                     <div className="relative w-32 flex-shrink-0">
-                                        <select
-                                            value={customer.salutation}
-                                            onChange={handleChange("salutation")}
-                                            className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-500 appearance-none bg-white outline-none focus:border-blue-400"
-                                        >
-                                            <option value="">Salutation</option>
-                                            <option value="Mr.">Mr.</option>
-                                            <option value="Mrs.">Mrs.</option>
-                                            <option value="Ms.">Ms.</option>
-                                            <option value="Dr.">Dr.</option>
-                                        </select>
-                                        <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        <CustomSelect
+                                            value={customer.salutation || ""}
+                                            onChange={(value) => handleChange("salutation")(value)}
+                                            options={[
+                                                { value: "", label: "Salutation" },
+                                                { value: "Mr.", label: "Mr." },
+                                                { value: "Mrs.", label: "Mrs." },
+                                                { value: "Ms.", label: "Ms." },
+                                                { value: "Dr.", label: "Dr." },
+                                            ]}
+                                            placeholder="Salutation"
+                                        />
                                     </div>
                                     <div className="flex-1">
                                         <input
@@ -661,7 +809,7 @@ export default function CreateCustomer({
 
                             {/* Company Name */}
                             <div className="grid grid-cols-[160px_1fr] items-start">
-                                <Label>Company Name</Label>
+                                <Label required>Company Name</Label>
 
                                 <div className="max-w-md w-full">
                                     <input
@@ -709,31 +857,43 @@ export default function CreateCustomer({
 
                             {/* Currency */}
                             <div className="grid grid-cols-[160px_1fr] items-start">
-                                <Label>
+                                <Label required>
                                     Currency <InfoIcon />
                                 </Label>
                                 <div className="max-w-md w-full">
                                     <div className="relative">
-                                        <select
-                                            value={currency}
-                                            onChange={(e) => {
-                                                dispatch(setCurrency(e.target.value));
+                                        <CustomSelect
+                                            value={customer.currency || ""}
+                                            onChange={(selectedOption) => {
+                                                const value =
+                                                    typeof selectedOption === "object"
+                                                        ? selectedOption?.value
+                                                        : selectedOption;
+
+                                                dispatch(
+                                                    setField({
+                                                        field: "currency",
+                                                        value: value || "",
+                                                    })
+                                                );
+
                                                 dispatch(clearFieldError("currency"));
                                             }}
-                                            className={`w-full rounded px-3 py-2 border border-gray-200 text-gray-500 ${errors.currency
-                                                ? "border-red-500 bg-red-50"
-                                                : "border-gray-300"
-                                                }`}
-                                        >
-                                            <option value="">Select Currency</option>
+                                            options={[
+                                                { value: "", label: "Select Currency" },
+                                                ...currencies.map((code) => ({
+                                                    value: code,
+                                                    label: `${getCurrencySymbol(code)} ${code} - ${currencyNames.of(code)}`,
+                                                })),
+                                            ]}
+                                            placeholder="Select Currency"
+                                        />
 
-                                            {currencies.map((code) => (
-                                                <option key={code} value={code}>
-                                                    {getCurrencySymbol(code)} {code} -{" "}
-                                                    {currencyNames.of(code)}
-                                                </option>
-                                            ))}
-                                        </select>
+                                        {errors.currency && (
+                                            <p className="mt-1 text-xs text-red-500">
+                                                {errors.currency}
+                                            </p>
+                                        )}
                                     </div>
                                     {/* <p className="text-xs text-gray-400 mt-1">
                     Currency cannot be edited as multi-currency handling is
@@ -744,7 +904,7 @@ export default function CreateCustomer({
 
                             {/* Email Address */}
                             <div className="grid grid-cols-[160px_1fr] items-center">
-                                <Label>
+                                <Label required>
                                     Email Address <InfoIcon />
                                 </Label>
 
@@ -771,45 +931,37 @@ export default function CreateCustomer({
                                 </Label>
                                 <div className="flex gap-4 max-w-md w-full">
                                     <div className="flex flex-1 border border-gray-300 rounded overflow-hidden focus-within:border-blue-400">
-                                        <div className="relative">
-                                            <select
-                                                value={customer.workPhoneCode}
-                                                onChange={handleChange("workPhoneCode")}
-                                                className="appearance-none bg-gray-50 border-r border-gray-300 pl-2 pr-5 py-1.5 text-sm outline-none"
-                                            >
-                                                <option value="+91">+91</option>
-                                                <option value="+1">+1</option>
-                                                <option value="+44">+44</option>
-                                            </select>
-                                            <ChevronDown className="w-3 h-3 text-gray-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                        </div>
-                                        <input
-                                            value={customer.workPhone}
-                                            onChange={handleChange("workPhone")}
-                                            className={`flex-1 px-2 py-2 ${errors.workPhone ? "bg-red-50" : ""
-                                                }`}
-                                        />
-                                    </div>
-                                    <div className="flex flex-1 border border-gray-300 rounded overflow-hidden focus-within:border-blue-400">
-                                        <div className="relative">
-                                            <select
-                                                value={customer.mobileCode}
-                                                onChange={handleChange("mobileCode")}
-                                                className="appearance-none bg-gray-50 border-r border-gray-300 pl-2 pr-5 py-1.5 text-sm outline-none"
-                                            >
-                                                <option value="+91">+91</option>
-                                                <option value="+1">+1</option>
-                                                <option value="+44">+44</option>
-                                            </select>
-                                            <ChevronDown className="w-3 h-3 text-gray-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        <div className="relative w-[75px] shrink-0 border-r border-gray-300 bg-gray-50">
+                                            <CustomSUSelect
+                                                value={customer.workPhoneCode || "+91"}
+                                                onChange={(selectedOption) => {
+                                                    const value =
+                                                        typeof selectedOption === "object"
+                                                            ? selectedOption?.value
+                                                            : selectedOption;
+
+                                                    dispatch(setField({
+                                                        field: "workPhoneCode",
+                                                        value,
+                                                    }));
+
+                                                    dispatch(clearFieldError("workPhoneCode"));
+                                                }}
+                                                options={[
+                                                    { value: "+91", label: "+91" },
+                                                    { value: "+1", label: "+1" },
+                                                    { value: "+44", label: "+44" },
+                                                ]}
+                                            />
                                         </div>
                                         <input
                                             value={customer.mobile}
                                             onChange={handleChange("mobile")}
-                                            className={`flex-1 px-2 py-2 ${errors.mobile ? "bg-red-50" : ""
+                                            className={`flex-1 px-2 py-2 ${errors.mobile ? "" : ""
                                                 }`}
                                         />
                                     </div>
+
                                 </div>
                             </div>
 
@@ -819,31 +971,32 @@ export default function CreateCustomer({
                                     Customer Language <InfoIcon />
                                 </Label>
                                 <div className="relative max-w-md w-full">
-                                    <select
-                                        value={customer.customerLanguage}
-                                        onChange={(e) => {
+                                    <CustomSelect
+                                        value={customer.customerLanguage || ""}
+                                        onChange={(selectedOption) => {
+                                            const value =
+                                                typeof selectedOption === "object"
+                                                    ? selectedOption?.value
+                                                    : selectedOption;
+
                                             dispatch(
                                                 setField({
                                                     field: "customerLanguage",
-                                                    value: e.target.value,
-                                                }),
+                                                    value,
+                                                })
                                             );
+
                                             dispatch(clearFieldError("customerLanguage"));
                                         }}
-                                        className={`w-full rounded px-3 py-2 border text-gray-500 ${errors.customerLanguage
-                                            ? "border-red-500 bg-red-50"
-                                            : "border-gray-300"
-                                            }`}
-                                    >
-                                        <option value="">Select Language</option>
-
-
-                                        {languages.map((lang) => (
-                                            <option key={lang} value={lang}>
-                                                {lang}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        options={[
+                                            { value: "", label: "Select Language" },
+                                            ...languages.map((lang) => ({
+                                                value: lang,
+                                                label: lang,
+                                            })),
+                                        ]}
+                                        placeholder="Select Language"
+                                    />
 
                                 </div>
                             </div>
@@ -891,17 +1044,31 @@ export default function CreateCustomer({
                                 <div className="grid grid-cols-[160px_1fr] items-center">
                                     <Label>Payment Terms</Label>
                                     <div className="relative max-w-md w-full">
-                                        <select
-                                            value={customer.paymentTerms}
-                                            onChange={handleChange("paymentTerms")}
-                                            className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-700 appearance-none bg-white outline-none focus:border-blue-400"
-                                        >
-                                            <option value="Due on Receipt">Due on Receipt</option>
-                                            <option value="Net 15">Net 15</option>
-                                            <option value="Net 30">Net 30</option>
-                                            <option value="Net 45">Net 45</option>
-                                        </select>
-                                        <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        <CustomSelect
+                                            value={customer.paymentTerms || "Due on Receipt"}
+                                            onChange={(selectedOption) => {
+                                                const value =
+                                                    typeof selectedOption === "object"
+                                                        ? selectedOption?.value
+                                                        : selectedOption;
+
+                                                dispatch(
+                                                    setField({
+                                                        field: "paymentTerms",
+                                                        value,
+                                                    })
+                                                );
+
+                                                dispatch(clearFieldError("paymentTerms"));
+                                            }}
+                                            options={[
+                                                { value: "Due on Receipt", label: "Due on Receipt" },
+                                                { value: "Net 15", label: "Net 15" },
+                                                { value: "Net 30", label: "Net 30" },
+                                                { value: "Net 45", label: "Net 45" },
+                                            ]}
+                                            placeholder="Select Payment Terms"
+                                        />
                                     </div>
                                 </div>
 
@@ -1097,14 +1264,18 @@ export default function CreateCustomer({
                         {/* Action buttons */}
                         <div className="mt-8 pb-10">
                             <CustomerBottomActionBar
-                                onSave={() => handleSave("ACTIVE")}
+                                onSave={handleSave}
                                 onCancel={handleCancel}
-                                onSubmit={() => handleSaveDraft("DRAFT")}
+                                onSubmit={() =>
+                                    isEdit
+                                        ? handleSave()
+                                        : handleSaveDraft("DRAFT")
+                                }
                             />
                         </div>
                     </div>
                 </div>
-            </div>
+            </div >
 
             {showLeaveConfirmation && (
                 <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/40 p-4">
@@ -1144,7 +1315,8 @@ export default function CreateCustomer({
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
         </>
     );

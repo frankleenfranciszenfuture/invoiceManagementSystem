@@ -34,6 +34,7 @@ const initialState = {
   unit: { ...emptyUnit },
 
   exsistingUnit: null,
+  createdUnitSelection: null,
 
   pagination: {
     pageNumber: 0,
@@ -135,6 +136,14 @@ const unitSlice = createSlice({
         ...(state.unit || emptyUnit),
         [field]: value,
       };
+    },
+
+    setCreatedUnitSelection: (state, action) => {
+      state.createdUnitSelection = action.payload;
+    },
+
+    clearCreatedUnitSelection: (state) => {
+      state.createdUnitSelection = null;
     },
   },
 
@@ -521,6 +530,9 @@ export const {
   clearSelectedUnit,
   resetUnitForm,
   setUnitField,
+
+  setCreatedUnitSelection,
+  clearCreatedUnitSelection,
 } = unitSlice.actions;
 
 /* =========================================================

@@ -21,6 +21,7 @@ import {
 import {
     resetUnitForm,
     setUnitField,
+    setCreatedUnitSelection
 } from "../slices/unitSlice";
 
 import {
@@ -505,6 +506,22 @@ export default function UnitCreate() {
 
     }, [isOpen]);
 
+    useEffect(() => {
+        if (modal.open && modal.type === "addUnit") {
+            dispatch(resetUnitForm());
+
+            dispatch(
+                setUnitField({
+                    field: "unitName",
+                    value: modal.data?.initialValue ?? modal.data?.unitName ?? "",
+                })
+            );
+
+            setErrors({});
+            setActiveTab("unit");
+        }
+    }, [modal.open, modal.type, modal.data, dispatch]);
+
     // =========================================================
     // LOAD EXISTING DATA FOR EDIT
     // =========================================================
@@ -746,15 +763,32 @@ export default function UnitCreate() {
                 // CREATE
                 // =================================================
 
-                await dispatch(
-                    createUnit(
-                        payload
-                    )
-                ).unwrap();
+                const response = await dispatch(createUnit(payload)).unwrap();
 
-                toast.success(
-                    "Unit created successfully"
-                );
+                const createdUnit =
+                    response?.data?.data ??
+                    response?.data ??
+                    response?.result?.data ??
+                    response?.result ??
+                    response;
+
+                const createdUnitId = createdUnit?.id ?? createdUnit?.unitId;
+
+                if (modal.data?.selectAfterCreate && createdUnitId != null) {
+                    dispatch(
+                        setCreatedUnitSelection({
+                            item: {
+                                ...createdUnit,
+                                id: createdUnitId,
+                            },
+                            targetField: modal.data.targetField,
+                            rowIndex: modal.data.rowIndex,
+                        })
+                    );
+                }
+
+                toast.success("Unit created successfully");
+
             }
 
             // =================================================

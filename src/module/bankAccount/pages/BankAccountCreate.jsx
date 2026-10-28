@@ -32,6 +32,7 @@ import {
 import {
     getUserPermission,
 } from "../../menuPermission/thunks/menuPermissionThunks";
+import CustomSelect from "../../../common/custom/CustomSelect";
 
 export default function BankAccountCreate() {
 
@@ -1240,10 +1241,17 @@ export default function BankAccountCreate() {
         block
         text-[13px]
         font-medium
-        text-gray-700
+        text-gray-500
         mb-1.5
     `;
 
+    const getLabelClass = (required = false) => `
+        block
+        text-xs
+        font-medium
+        ${required ? "text-red-500" : "text-[#0F4659]"}
+        mb-1.5
+    `;
     // =========================================================
     // MAIN MODAL
     // =========================================================
@@ -1278,7 +1286,7 @@ export default function BankAccountCreate() {
                     justify-between
                     px-6
                     border-b
-                    border-gray-200
+                    border-lime-500
                     bg-white
                 "
             >
@@ -1296,7 +1304,7 @@ export default function BankAccountCreate() {
                             w-9
                             h-9
                             rounded-lg
-                            bg-blue-50
+                            bg-[#408DFB]
                             flex
                             items-center
                             justify-center
@@ -1305,7 +1313,7 @@ export default function BankAccountCreate() {
 
                         <Landmark
                             size={20}
-                            className="text-blue-600"
+                            className="text-gray-100"
                         />
 
                     </div>
@@ -1316,7 +1324,7 @@ export default function BankAccountCreate() {
                             className="
                                 text-[17px]
                                 font-semibold
-                                text-gray-800
+                                text-gray-500
                             "
                         >
                             {isEdit
@@ -1327,7 +1335,7 @@ export default function BankAccountCreate() {
                         <p
                             className="
                                 text-xs
-                                text-gray-500
+                                text-gray-400
                                 mt-0.5
                             "
                         >
@@ -1351,7 +1359,7 @@ export default function BankAccountCreate() {
                     shrink-0
                     px-6
                     border-b
-                    border-gray-200
+                    border-gray-100
                     bg-white
                 "
             >
@@ -1387,8 +1395,8 @@ export default function BankAccountCreate() {
                                     font-medium
                                     transition
                                     ${active
-                                        ? "text-blue-600"
-                                        : "text-gray-500 hover:text-gray-800"
+                                        ? "text-gray-500"
+                                        : "text-gray-400 hover:text-gray-500"
                                     }
                                 `}
                             >
@@ -1404,7 +1412,7 @@ export default function BankAccountCreate() {
                                             right-0
                                             bottom-0
                                             h-[2px]
-                                            bg-blue-600
+                                            bg-lime-500
                                             rounded-t
                                         "
                                     />
@@ -1466,7 +1474,7 @@ export default function BankAccountCreate() {
                                     className="
                                         text-base
                                         font-semibold
-                                        text-gray-800
+                                        text-gray-500
                                     "
                                 >
                                     Account Information
@@ -1475,7 +1483,7 @@ export default function BankAccountCreate() {
                                 <p
                                     className="
                                         text-xs
-                                        text-gray-500
+                                        text-gray-400
                                         mt-1
                                     "
                                 >
@@ -1499,7 +1507,7 @@ export default function BankAccountCreate() {
                                 <div>
 
                                     <label
-                                        className={labelClass}
+                                        className={getLabelClass(true)}
                                     >
                                         Account Type
                                         <span className="text-red-500 ml-1">
@@ -1507,29 +1515,23 @@ export default function BankAccountCreate() {
                                         </span>
                                     </label>
 
-                                    <select
-                                        value={
-                                            form.accountType ??
-                                            "CURRENT"
+                                    <CustomSelect
+                                        value={form.accountType ?? "CURRENT"}
+                                        onChange={(value) =>
+                                            handleChange("accountType", value)
                                         }
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "accountType",
-                                                e.target.value
-                                            )
-                                        }
-                                        className={inputClass}
-                                    >
-
-                                        <option value="CURRENT">
-                                            CURRENT
-                                        </option>
-
-                                        <option value="SAVINGS">
-                                            SAVINGS
-                                        </option>
-
-                                    </select>
+                                        options={[
+                                            {
+                                                value: "CURRENT",
+                                                label: "CURRENT",
+                                            },
+                                            {
+                                                value: "SAVINGS",
+                                                label: "SAVINGS",
+                                            },
+                                        ]}
+                                        placeholder="Select Account Type"
+                                    />
 
                                 </div>
 
@@ -1538,7 +1540,7 @@ export default function BankAccountCreate() {
                                 <div>
 
                                     <label
-                                        className={labelClass}
+                                        className={getLabelClass(true)}
                                     >
                                         Currency
                                         <span className="text-red-500 ml-1">
@@ -1546,33 +1548,18 @@ export default function BankAccountCreate() {
                                         </span>
                                     </label>
 
-                                    <select
-                                        value={
-                                            form.currency ??
-                                            "INR"
+                                    <CustomSelect
+                                        value={form.currency ?? "INR"}
+                                        onChange={(value) =>
+                                            handleChange("currency", value)
                                         }
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "currency",
-                                                e.target.value
-                                            )
-                                        }
-                                        className={inputClass}
-                                    >
-
-                                        <option value="INR">
-                                            INR
-                                        </option>
-
-                                        <option value="USD">
-                                            USD
-                                        </option>
-
-                                        <option value="EUR">
-                                            EUR
-                                        </option>
-
-                                    </select>
+                                        options={[
+                                            { value: "INR", label: "INR" },
+                                            { value: "USD", label: "USD" },
+                                            { value: "EUR", label: "EUR" },
+                                        ]}
+                                        placeholder="Select Currency"
+                                    />
 
                                 </div>
 
@@ -1583,7 +1570,7 @@ export default function BankAccountCreate() {
                                     <label
                                         className={labelClass}
                                     >
-                                        Account Name
+                                        Account Holder Name
                                         <span className="text-red-500 ml-1">
                                             *
                                         </span>
@@ -1655,7 +1642,7 @@ export default function BankAccountCreate() {
                                     className="
                                         text-base
                                         font-semibold
-                                        text-gray-800
+                                        text-gray-500
                                     "
                                 >
                                     Bank Information
@@ -1664,7 +1651,7 @@ export default function BankAccountCreate() {
                                 <p
                                     className="
                                         text-xs
-                                        text-gray-500
+                                        text-gray-400
                                         mt-1
                                     "
                                 >
@@ -1688,7 +1675,7 @@ export default function BankAccountCreate() {
                                 <div>
 
                                     <label
-                                        className={labelClass}
+                                        className={getLabelClass(true)}
                                     >
                                         Bank Name
                                         <span className="text-red-500 ml-1">
@@ -1719,7 +1706,7 @@ export default function BankAccountCreate() {
                                 <div>
 
                                     <label
-                                        className={labelClass}
+                                        className={getLabelClass(true)}
                                     >
                                         Account Number
                                         <span className="text-red-500 ml-1">
@@ -1847,7 +1834,7 @@ export default function BankAccountCreate() {
                                         <span
                                             className="
                                                 text-sm
-                                                text-gray-700
+                                                text-gray-500
                                             "
                                         >
                                             Set as primary bank account
@@ -1876,7 +1863,7 @@ export default function BankAccountCreate() {
                                     className="
                                         text-sm
                                         font-medium
-                                        text-blue-800
+                                        text-gray-500
                                     "
                                 >
                                     Bank Account
@@ -1885,7 +1872,7 @@ export default function BankAccountCreate() {
                                 <p
                                     className="
                                         text-xs
-                                        text-blue-700
+                                        text-gray-400
                                         mt-1
                                     "
                                 >
@@ -1917,7 +1904,7 @@ export default function BankAccountCreate() {
                                     className="
                                         text-base
                                         font-semibold
-                                        text-gray-800
+                                        text-gray-500
                                     "
                                 >
                                     Access & Notes
@@ -1926,7 +1913,7 @@ export default function BankAccountCreate() {
                                 <p
                                     className="
                                         text-xs
-                                        text-gray-500
+                                        text-gray-400
                                         mt-1
                                     "
                                 >
@@ -2050,7 +2037,7 @@ export default function BankAccountCreate() {
                                     className="
                                         text-base
                                         font-semibold
-                                        text-gray-800
+                                        text-gray-500
                                     "
                                 >
                                     Account Settings
@@ -2059,7 +2046,7 @@ export default function BankAccountCreate() {
                                 <p
                                     className="
                                         text-xs
-                                        text-gray-500
+                                        text-gray-400
                                         mt-1
                                     "
                                 >
@@ -2083,33 +2070,18 @@ export default function BankAccountCreate() {
                                     Status
                                 </label>
 
-                                <select
-                                    value={
-                                        form.status ??
-                                        "ACTIVE"
+                                <CustomSelect
+                                    value={form.status || "ACTIVE"}
+                                    onChange={(value) =>
+                                        handleChange("status", value)
                                     }
-                                    onChange={(e) =>
-                                        handleChange(
-                                            "status",
-                                            e.target.value
-                                        )
-                                    }
-                                    className={inputClass}
-                                >
+                                    options={[
+                                        { value: "ACTIVE", label: "ACTIVE" },
+                                        { value: "INACTIVE", label: "INACTIVE" },
+                                        { value: "DRAFT", label: "DRAFT" },
+                                    ]}
+                                />
 
-                                    <option value="ACTIVE">
-                                        ACTIVE
-                                    </option>
-
-                                    <option value="INACTIVE">
-                                        INACTIVE
-                                    </option>
-
-                                    <option value="DRAFT">
-                                        DRAFT
-                                    </option>
-
-                                </select>
 
                             </div>
 
@@ -2140,7 +2112,7 @@ export default function BankAccountCreate() {
                                             className="
                                                 text-sm
                                                 font-medium
-                                                text-gray-800
+                                                text-gray-500
                                             "
                                         >
                                             Account Status
@@ -2154,40 +2126,32 @@ export default function BankAccountCreate() {
                                             "
                                         >
                                             This account is currently set
-                                            to{" "}
+                                            to {" "}
                                             <span
-                                                className="
-                                                    font-medium
-                                                    text-gray-700
-                                                "
-                                            >
-                                                {form.status ||
-                                                    "ACTIVE"}
-                                            </span>
-                                        </p>
-
-                                    </div>
-
-                                    <span
-                                        className={`
+                                                className={`
                                             px-3
                                             py-1
                                             rounded-full
                                             text-xs
                                             font-medium
                                             ${form.status ===
-                                                "ACTIVE"
-                                                ? "bg-green-50 text-green-700"
-                                                : form.status ===
-                                                    "INACTIVE"
-                                                    ? "bg-red-50 text-red-700"
-                                                    : "bg-yellow-50 text-yellow-700"
-                                            }
+                                                        "ACTIVE"
+                                                        ? "bg-green-50 text-green-700"
+                                                        : form.status ===
+                                                            "INACTIVE"
+                                                            ? "bg-red-50 text-red-700"
+                                                            : "bg-yellow-50 text-yellow-700"
+                                                    }
                                         `}
-                                    >
-                                        {form.status ||
-                                            "ACTIVE"}
-                                    </span>
+                                            >
+                                                {form.status ||
+                                                    "ACTIVE"}
+                                            </span>
+
+                                        </p>
+
+                                    </div>
+
 
                                 </div>
 

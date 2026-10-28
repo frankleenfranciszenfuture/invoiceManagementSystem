@@ -295,7 +295,7 @@ export default function InvoiceNumberSetting() {
 
                 <div>
 
-                    <h2 className="text-lg font-semibold text-gray-800">
+                    <h2 className="text-lg font-semibold text-gray-500">
                         Invoice Number Settings
                     </h2>
 

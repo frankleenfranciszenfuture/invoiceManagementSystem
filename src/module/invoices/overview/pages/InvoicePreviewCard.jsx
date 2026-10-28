@@ -6,6 +6,9 @@ import React, {
     useState,
 } from "react";
 
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas-pro";
+
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -23,6 +26,7 @@ import {
     ReceiptText,
     Signature,
     ExternalLink,
+    DownloadCloudIcon,
 } from "lucide-react";
 
 import { openModal } from "../../../ui/uiSlice";
@@ -380,6 +384,115 @@ export default function InvoicePreviewCard() {
             }
         }
     };
+
+
+
+    const handleDownload = async () => {
+        const element = document.getElementById("invoice-template-4");
+
+        if (!element) {
+            console.error("Invoice template not found");
+            return;
+        }
+
+        try {
+            // Capture actual invoice dimensions
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: "#ffffff",
+                logging: false,
+                width: element.scrollWidth,
+                height: element.scrollHeight,
+                windowWidth: element.scrollWidth,
+                windowHeight: element.scrollHeight,
+                scrollX: 0,
+                scrollY: 0,
+            });
+
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "mm",
+                format: "a4",
+                compress: true,
+            });
+
+            const pageWidth = 210;
+            const pageHeight = 297;
+
+            // Maintain the invoice aspect ratio
+            const imageHeight =
+                (canvas.height * pageWidth) / canvas.width;
+
+            // Calculate required pages
+            const totalPages = Math.ceil(
+                imageHeight / pageHeight - 0.001
+            );
+
+            // Crop each page from the original canvas
+            const pagePixelHeight = Math.floor(
+                (canvas.width * pageHeight) / pageWidth
+            );
+
+            for (let page = 0; page < totalPages; page++) {
+                const startY = page * pagePixelHeight;
+
+                const currentHeight = Math.min(
+                    pagePixelHeight,
+                    canvas.height - startY
+                );
+
+                if (currentHeight <= 0) break;
+
+                const pageCanvas = document.createElement("canvas");
+                pageCanvas.width = canvas.width;
+                pageCanvas.height = currentHeight;
+
+                const context = pageCanvas.getContext("2d");
+
+                context.fillStyle = "#ffffff";
+                context.fillRect(0, 0, canvas.width, currentHeight);
+
+                context.drawImage(
+                    canvas,
+                    0,
+                    startY,
+                    canvas.width,
+                    currentHeight,
+                    0,
+                    0,
+                    canvas.width,
+                    currentHeight
+                );
+
+                if (page > 0) {
+                    pdf.addPage();
+                }
+
+                const pageImage = pageCanvas.toDataURL("image/jpeg", 0.95);
+
+                const renderedHeight =
+                    (currentHeight * pageWidth) / canvas.width;
+
+                pdf.addImage(
+                    pageImage,
+                    "JPEG",
+                    0,
+                    0,
+                    pageWidth,
+                    renderedHeight,
+                    undefined,
+                    "FAST"
+                );
+            }
+
+            pdf.save(`${invoice?.invoiceNumber || "Invoice"}.pdf`);
+
+        } catch (error) {
+            console.error("PDF download failed:", error);
+        }
+    };
+
 
     /* ============================================================
        DISPLAY HELPERS
@@ -746,6 +859,15 @@ export default function InvoicePreviewCard() {
                         <span>New Tab</span>
                     </button>
 
+                    <button
+                        type="button"
+                        onClick={handleDownload}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-2 text-sm font-medium text-gray-100 transition bg-red-500 hover:bg-red-400 hover:text-gray-100"
+                        title="Open preview in a new tab"
+                    >
+                        <DownloadCloudIcon size={15} />
+                        <span>Pdf Download</span>
+                    </button>
                     {/* CUSTOMIZE DROPDOWN */}
 
                     <div

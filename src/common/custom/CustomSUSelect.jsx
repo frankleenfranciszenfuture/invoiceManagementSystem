@@ -169,12 +169,26 @@ export default function CustomSUSelect({
     const handleAddNew = () => {
         if (!addNewModalType) return;
 
+        const typedValue = search.trim();
+
+        if (!typedValue) return;
+
         closeDropdown();
+
+        const fieldName = {
+            addSize: "sizeName",
+            addUnit: "unitName",
+            addTaxMaster: "taxName",
+        }[addNewModalType];
 
         dispatch(
             openModal({
                 type: addNewModalType,
-                data: addNewData,
+                data: {
+                    ...(addNewData || {}),
+                    ...(fieldName ? { [fieldName]: typedValue } : {}),
+                    initialValue: typedValue,
+                },
             })
         );
     };
@@ -425,8 +439,8 @@ export default function CustomSUSelect({
                                                 transition-colors
                                                 ${optionSize}
                                                 ${active
-                                                    ? "bg-[#1A2444] text-white"
-                                                    : "text-[#0F4659] hover:bg-[#0F4659] hover:text-white"
+                                                    ? "bg-[#408DFB] text-white"
+                                                    : "text-gray-500 hover:bg-[#408DFB] hover:text-white"
                                                 }
                                             `}
                                         >

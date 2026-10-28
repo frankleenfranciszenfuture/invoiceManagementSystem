@@ -21,7 +21,10 @@ import {
 import {
     resetSizeForm,
     setSizeField,
+    setCreatedSizeSelection,
 } from "../slices/sizeSlice";
+
+
 
 import {
     createSize,
@@ -124,6 +127,7 @@ export default function SizeCreate() {
         size || {
             id: null,
             sizeName: "",
+            sizeShortName: "",
             sizeCode: "",
             description: "",
             status: "ACTIVE",
@@ -387,6 +391,34 @@ export default function SizeCreate() {
         dispatch,
     ]);
 
+    useEffect(() => {
+        if (
+            modal.open &&
+            modal.type === "addSize"
+        ) {
+            dispatch(
+                resetSizeForm()
+            );
+
+            dispatch(
+                setSizeField({
+                    field: "sizeName",
+                    value:
+                        modal.data?.initialValue ??
+                        modal.data?.sizeName ??
+                        "",
+                })
+            );
+
+            setErrors({});
+            setActiveTab("size");
+        }
+    }, [
+        modal.open,
+        modal.type,
+        modal.data,
+        dispatch,
+    ]);
     // =========================================================
     // LOAD EXISTING DATA FOR EDIT
     // =========================================================
@@ -565,12 +597,12 @@ export default function SizeCreate() {
 
         if (
             !String(
-                form.sizeCode ?? ""
+                form.sizeShortName ?? ""
             ).trim()
         ) {
 
-            newErrors.sizeCode =
-                "Size code is required";
+            newErrors.sizeShortName =
+                "Size Short name is required";
         }
 
         setErrors(newErrors);
@@ -664,10 +696,15 @@ export default function SizeCreate() {
                     form.sizeName ?? ""
                 ).trim(),
 
-            sizeCode:
+            sizeShortName:
                 String(
-                    form.sizeCode ?? ""
+                    form.sizeShortName ?? ""
                 ).trim(),
+
+            // sizeCode:
+            //     String(
+            //         form.sizeCode ?? ""
+            //     ).trim(),
 
             description:
                 String(
@@ -717,17 +754,65 @@ export default function SizeCreate() {
             // CREATE
             // =================================================
 
+            // else {
+
+            //     await dispatch(
+            //         createSize(
+            //             payload
+            //         )
+            //     ).unwrap();
+
+            //     toast.success(
+            //         "Size created successfully"
+            //     );
+            // }
+
+            // =================================================
+            // CREATE
+            // =================================================
+
             else {
+                const response = await dispatch(createSize(payload)).unwrap();
 
-                await dispatch(
-                    createSize(
-                        payload
-                    )
-                ).unwrap();
+                console.log("Complete Size API Response:", response);
 
-                toast.success(
-                    "Size created successfully"
-                );
+                const createdSize =
+                    response?.data?.data ??
+                    response?.data ??
+                    response?.result?.data ??
+                    response?.result ??
+                    response;
+
+                console.log("Extracted Created Size:", createdSize);
+
+                const createdSizeId =
+                    createdSize?.id ??
+                    createdSize?.sizeId;
+
+                console.log("Created Size ID:", createdSizeId);
+                console.log("Modal Data:", modal.data);
+
+                if (
+                    modal.data?.selectAfterCreate &&
+                    createdSizeId != null
+                ) {
+                    dispatch(
+                        setCreatedSizeSelection({
+                            item: {
+                                ...createdSize,
+                                id: createdSizeId,
+                            },
+                            targetField: modal.data.targetField,
+                            rowIndex: modal.data.rowIndex,
+                        })
+                    );
+
+                    console.log("Size selection dispatched successfully");
+                }
+
+                toast.success("Size created successfully");
+
+
             }
 
             // =================================================
@@ -1527,14 +1612,12 @@ export default function SizeCreate() {
 
                                 </div>
 
-                                {/* SIZE CODE */}
-
                                 <div>
 
                                     <label
                                         className={getLabelClass(true)}
                                     >
-                                        Size Code
+                                        Size ShortName
 
                                         <span
                                             className="
@@ -1550,21 +1633,21 @@ export default function SizeCreate() {
                                     <input
                                         type="text"
                                         value={
-                                            form.sizeCode ??
+                                            form.sizeShortName ??
                                             ""
                                         }
                                         onChange={(e) =>
                                             handleChange(
-                                                "sizeCode",
+                                                "sizeShortName",
                                                 e.target.value
                                             )
                                         }
-                                        placeholder="Enter size code"
+                                        placeholder="Enter size short name"
                                         className={inputClass}
                                         disabled={loading}
                                     />
 
-                                    {errors.sizeCode && (
+                                    {errors.sizeShortName && (
                                         <p
                                             className="
                                                 text-xs
@@ -1573,12 +1656,16 @@ export default function SizeCreate() {
                                             "
                                         >
                                             {
-                                                errors.sizeCode
+                                                errors.sizeShortName
                                             }
                                         </p>
                                     )}
 
                                 </div>
+
+                                {/* SIZE CODE */}
+
+
 
                                 {/* DESCRIPTION */}
 

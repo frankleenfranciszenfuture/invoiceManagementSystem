@@ -120,6 +120,11 @@ const initialState = {
    */
   exsistingInvoice: null,
 
+  createdCategorySelection: null,
+  createdSubCategorySelection: null,
+  createdTaxMasterSelection: null,
+  createdSizeSelection: null,
+
   // Full invoice returned by fetchInvoiceById
   previewInvoice: null,
   previewInvoiceId: null,
@@ -396,6 +401,38 @@ const invoiceSlice = createSlice({
 
     addActivity: (state, action) => {
       state.activities.unshift(action.payload);
+    },
+
+    setCreatedCategorySelection: (state, action) => {
+      state.createdCategorySelection = action.payload;
+    },
+
+    clearCreatedCategorySelection: (state) => {
+      state.createdCategorySelection = null;
+    },
+
+    setCreatedSubCategorySelection: (state, action) => {
+      state.createdSubCategorySelection = action.payload;
+    },
+
+    clearCreatedSubCategorySelection: (state) => {
+      state.createdSubCategorySelection = null;
+    },
+
+    setCreatedTaxMasterSelection: (state, action) => {
+      state.createdTaxMasterSelection = action.payload;
+    },
+
+    clearCreatedTaxMasterSelection: (state) => {
+      state.createdTaxMasterSelection = null;
+    },
+
+    setCreatedSizeSelection: (state, action) => {
+      state.createdSizeSelection = action.payload;
+    },
+
+    clearCreatedSizeSelection: (state) => {
+      state.createdSizeSelection = null;
     },
   },
 
@@ -774,6 +811,15 @@ export const {
   addRecentActivity,
   setRecentActivities,
   clearActivities,
+
+  setCreatedCategorySelection,
+  clearCreatedCategorySelection,
+  setCreatedSubCategorySelection,
+  clearCreatedSubCategorySelection,
+  setCreatedTaxMasterSelection,
+  clearCreatedTaxMasterSelection,
+  setCreatedSizeSelection,
+  clearCreatedSizeSelection,
 } = invoiceSlice.actions;
 
 /* =========================================================

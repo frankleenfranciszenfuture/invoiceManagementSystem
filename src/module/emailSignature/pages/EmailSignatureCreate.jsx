@@ -1,14 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import toast from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
 
+import React, { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
-    UserKeyIcon,
-    Check,
-    X,
-    Loader2,
+    Building2,
+    UserRoundArrowLeft,
+    Mail,
+    ChevronDown,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 import { closeModal } from "../../ui/uiSlice";
 
@@ -20,282 +19,265 @@ import {
 import {
     createEmailSignature,
     updateEmailSignature,
+    fetchEmailSignaturesById,
 } from "../thunks/emailSignatureThunks";
 
-import {
-    getUserPermission,
-} from "../../menuPermission/thunks/menuPermissionThunks";
-
+import { getUserPermission } from "../../menuPermission/thunks/menuPermissionThunks";
 import CustomSelect from "../../../common/custom/CustomSelect";
+
+const INITIAL_FORM = {
+    id: null,
+    userId: null,
+    signatureName: "",
+    signatureContent: "",
+    defaultForNewMessages: false,
+    defaultForReplies: false,
+    status: "ACTIVE",
+};
+
+const TABS = [
+    { id: "emailSignatures", label: "Email Signature Information" },
+];
+
+const STATUS_OPTIONS = [
+    { value: "ACTIVE", label: "Active" },
+    { value: "INACTIVE", label: "Inactive" },
+    { value: "DRAFT", label: "Draft" },
+];
+
+const labelClass = "mb-1.5 block text-xs font-medium text-gray-500";
+
+const getLabelClass = (required = false) => `
+    block
+    text-xs
+    font-medium
+    ${required ? "text-red-500" : "text-[#0F4659]"}
+    mb-1.5
+`;
+
+const errorClass = "mt-1 text-xs text-red-500";
+
+const inputBaseClass =
+    "h-10 w-full rounded-md border bg-white px-3 text-sm " +
+    "text-[#0F4659] transition focus:outline-none focus:ring-2";
+
+const textareaBaseClass =
+    "w-full rounded-md border bg-white px-3 py-2 text-sm " +
+    "text-[#0F4659] resize-y focus:outline-none focus:ring-2";
+
+const inputClass = (hasError = false) =>
+    `${inputBaseClass} ${hasError
+        ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+        : "border-gray-300 focus:border-[#0F4659] focus:ring-[#0F4659]/20"
+    }`;
+
+const textareaClass = (hasError = false) =>
+    `${textareaBaseClass} ${hasError
+        ? "h-[40px] border-red-400 focus:border-red-400 focus:ring-red-100"
+        : "h-[40px] border-gray-300 focus:border-[#0F4659] focus:ring-[#0F4659]/20"
+    }`;
+
+const normalizeModule = (value) =>
+    String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+
+const normalizeAction = (value) =>
+    String(value ?? "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+
+const isTrue = (value) => value === true || value === "true";
 
 export default function EmailSignatureCreate() {
     const dispatch = useDispatch();
-    const navigate = useNavigate();
 
-    // =========================================================
-    // MODAL
-    // =========================================================
+    // Redux modal state
+    const modal = useSelector((state) => state.ui?.modal || {});
 
-    const { modal } = useSelector(
-        (state) => state.ui
+    const modalType = modal.type;
+
+    const isEdit = modalType === "editEmailSignature";
+
+    const modalData = modal.data;
+
+    const id =
+        typeof modalData === "object"
+            ? modalData?.id
+            : modalData;
+
+    // Email signature Redux state
+    const emailSignatureState = useSelector(
+        (state) => state.emailSignatures || {}
     );
-
-    // =========================================================
-    // EMAIL SIGNATURE REDUX STATE
-    // =========================================================
 
     const {
         emailSignature,
-        loading,
-    } = useSelector(
-        (state) => state.emailSignatures
+        loading = false,
+    } = emailSignatureState;
+
+    const form = emailSignature || INITIAL_FORM;
+
+    // Authentication
+    const authState = useSelector((state) => state.auth || {});
+
+    const { user } = authState;
+
+    const isAuthenticated = authState.isAuthenticated !== false;
+
+    const authChecking = Boolean(
+        authState.authChecking ?? authState.loading
     );
 
-    // =========================================================
-    // AUTH / PERMISSIONS
-    // =========================================================
-
-    const user = useSelector(
-        (state) => state.auth?.user
+    // Permission state
+    const permissionState = useSelector(
+        (state) => state.menuPermission || {}
     );
 
-    const isAuthenticated = useSelector(
-        (state) =>
-            state.auth?.isAuthenticated === true
-    );
-
-    const authChecking = useSelector(
-        (state) =>
-            state.auth?.authChecking === true
-    );
-
-    const permissions = useSelector(
-        (state) =>
-            Array.isArray(
-                state.menuPermission?.userPermissions
-            )
-                ? state.menuPermission.userPermissions
-                : []
-    );
-
-    const permissionLoading = useSelector(
-        (state) =>
-            state.menuPermission
-                ?.userPermissionsLoading === true
-    );
-
-    const permissionsLoaded = useSelector(
-        (state) =>
-            state.menuPermission
-                ?.userPermissionsLoaded === true
-    );
-
-    // =========================================================
-    // ADD / EDIT MODE
-    // =========================================================
-
-    const isEdit =
-        modal.type === "editEmailSignature";
-
-    const isOpen =
-        modal.open &&
-        (
-            modal.type === "addEmailSignature" ||
-            modal.type === "editEmailSignature"
-        );
-
-    // =========================================================
-    // SAVE SUCCESS OPTIONS
-    // =========================================================
-
-    const [showSaveOptions, setShowSaveOptions] =
-        useState(false);
-
-    const [savedAction, setSavedAction] =
-        useState("");
-
-    // =========================================================
-    // LOCAL STATE
-    // =========================================================
-
+    const [activeTab, setActiveTab] = useState("emailSignatures");
+    const [showSaveMenu, setShowSaveMenu] = useState(false);
+    const [editLoading, setEditLoading] = useState(false);
+    const [editLoadError, setEditLoadError] = useState(false);
     const [errors, setErrors] = useState({});
 
-    const [activeTab, setActiveTab] =
-        useState("emailSignature");
+    const userPermissions = Array.isArray(
+        permissionState.userPermissions
+    )
+        ? permissionState.userPermissions
+        : [];
 
-    // =========================================================
-    // PERMISSION HELPERS
-    // =========================================================
+    const permissionLoading = Boolean(
+        permissionState.userPermissionsLoading ??
+        permissionState.loading
+    );
 
-    const normalizeModule = (value) =>
-        String(value ?? "")
-            .trim()
-            .toLowerCase();
+    const permissionsLoaded =
+        permissionState.userPermissionsLoaded === true ||
+        permissionState.permissionsLoaded === true ||
+        permissionState.loaded === true ||
+        (
+            permissionState.userPermissions !== undefined &&
+            permissionState.userPermissions !== null
+        );
 
-    const normalizeAction = (value) =>
-        String(value ?? "")
-            .trim()
-            .toUpperCase();
+    const role = useMemo(
+        () =>
+            user?.roleName ||
+            user?.role?.roleName ||
+            user?.role?.name ||
+            user?.role ||
+            user?.authority ||
+            "",
+        [user]
+    );
 
-    const roleNameFromUser =
-        user?.roleName ||
-        user?.role?.roleName ||
-        user?.role?.name ||
-        user?.role ||
-        user?.authority ||
-        "";
+    const normalizedRole = normalizeAction(
+        typeof role === "object"
+            ? role?.name || role?.roleName
+            : role
+    );
 
-    const normalizedRole =
-        normalizeAction(roleNameFromUser);
+    const hasFullAccess = ["ADMIN", "SUPER_ADMIN"].includes(
+        normalizedRole
+    );
 
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
+    const hasPermission = (moduleName, actionName) => {
+        if (hasFullAccess) return true;
 
-    const isAdmin =
-        normalizedRole === "ADMIN";
+        const requestedModule = normalizeModule(moduleName);
+        const requestedAction = normalizeAction(actionName);
 
-    const hasFullAccess =
-        isSuperAdmin || isAdmin;
+        return userPermissions.some((permission) => {
+            const permissionModule = normalizeModule(
+                permission?.moduleName ||
+                permission?.module?.moduleName ||
+                permission?.module?.name ||
+                ""
+            );
 
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
-        if (hasFullAccess) {
-            return true;
-        }
-
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
-
-        const requestedModule =
-            normalizeModule(moduleName);
-
-        const requestedAction =
-            normalizeAction(actionName);
-
-        return permissions.some((permission) => {
-            const permissionModule =
-                normalizeModule(
-                    permission?.moduleName ||
-                    permission?.module?.moduleName ||
-                    permission?.module?.name ||
-                    ""
-                );
+            if (permissionModule !== requestedModule) return false;
 
             if (
-                permissionModule !== requestedModule
+                permission?.active === false ||
+                normalizeAction(permission?.status) === "INACTIVE"
             ) {
                 return false;
             }
 
-            if (permission?.active === false) {
-                return false;
-            }
+            const nestedActions = Array.isArray(permission?.actions)
+                ? permission.actions
+                : [];
 
-            if (
-                normalizeAction(permission?.status) ===
-                "INACTIVE"
-            ) {
-                return false;
-            }
+            const matchingNestedAction = nestedActions.find((action) => {
+                const actionNameValue =
+                    typeof action === "string"
+                        ? action
+                        : action?.actionName ||
+                        action?.action?.actionName ||
+                        action?.action?.name ||
+                        action?.name ||
+                        "";
 
-            if (Array.isArray(permission?.actions)) {
-                return permission.actions.some((action) => {
-                    if (typeof action === "string") {
-                        return (
-                            normalizeAction(action) ===
-                            requestedAction
-                        );
-                    }
+                return normalizeAction(actionNameValue) === requestedAction;
+            });
 
-                    const permissionAction =
-                        normalizeAction(
-                            action?.actionName ||
-                            action?.action?.actionName ||
-                            action?.action?.name ||
-                            action?.name ||
-                            ""
-                        );
+            if (matchingNestedAction !== undefined) {
+                if (typeof matchingNestedAction === "string") {
+                    return true;
+                }
 
-                    const allowed =
-                        action?.allowed === true ||
-                        action?.allowed === "true";
-
-                    if (action?.active === false) {
-                        return false;
-                    }
-
-                    if (
-                        normalizeAction(action?.status) ===
-                        "INACTIVE"
-                    ) {
-                        return false;
-                    }
-
-                    return (
-                        permissionAction === requestedAction &&
-                        allowed
-                    );
-                });
-            }
-
-            const permissionAction =
-                normalizeAction(
-                    permission?.actionName ||
-                    permission?.action?.actionName ||
-                    permission?.action?.name ||
-                    ""
+                return (
+                    matchingNestedAction?.active !== false &&
+                    normalizeAction(matchingNestedAction?.status) !==
+                    "INACTIVE" &&
+                    (
+                        isTrue(matchingNestedAction?.allowed) ||
+                        isTrue(matchingNestedAction?.isAllowed)
+                    )
                 );
+            }
 
-            const allowed =
-                permission?.allowed === true ||
-                permission?.allowed === "true";
+            const directAction = normalizeAction(
+                permission?.actionName ||
+                permission?.action?.actionName ||
+                permission?.action?.name ||
+                ""
+            );
 
             return (
-                permissionAction === requestedAction &&
-                allowed
+                directAction === requestedAction &&
+                (
+                    isTrue(permission?.allowed) ||
+                    isTrue(permission?.isAllowed)
+                )
             );
         });
     };
 
-    // =========================================================
-    // REQUIRED PERMISSION
-    // =========================================================
+    const hasCreatePermission = hasPermission(
+        "Email Signatures",
+        "CREATE"
+    );
 
-    const requiredAction =
-        isEdit ? "EDIT" : "CREATE";
+    const hasEditPermission = hasPermission(
+        "Email Signatures",
+        "EDIT"
+    );
 
-    // Keep this module name aligned with the exact module name
-    // configured in your menu permission master.
-    const hasRequiredPermission =
-        hasPermission(
-            "Email Signature",
-            requiredAction
-        );
+    const hasSavePermission = isEdit
+        ? hasEditPermission
+        : hasCreatePermission;
 
-    // =========================================================
-    // LOAD USER PERMISSIONS
-    // =========================================================
-
+    // Load permissions
     useEffect(() => {
-        if (!isOpen) return;
-
-        if (authChecking) return;
-
-        if (!isAuthenticated) return;
-
-        if (hasFullAccess) return;
-
         if (
-            !permissionsLoaded &&
-            !permissionLoading
+            authChecking ||
+            !isAuthenticated ||
+            hasFullAccess ||
+            permissionsLoaded ||
+            permissionLoading
         ) {
-            dispatch(getUserPermission());
+            return;
         }
+
+        dispatch(getUserPermission());
     }, [
-        isOpen,
         authChecking,
         isAuthenticated,
         hasFullAccess,
@@ -304,411 +286,491 @@ export default function EmailSignatureCreate() {
         dispatch,
     ]);
 
-    // =========================================================
-    // FORM
-    // =========================================================
+    // Reset form whenever the modal opens or changes between Add/Edit
+    useEffect(() => {
+        setActiveTab("emailSignatures");
+        setShowSaveMenu(false);
+        setErrors({});
+        setEditLoadError(false);
 
-    const form = emailSignature || {
-        id: null,
-        userId: user?.id ?? null,
-        signatureName: "",
-        signatureContent: "",
-        defaultForNewMessages: false,
-        defaultForReplies: false,
-        status: "ACTIVE",
-    };
-
-    // =========================================================
-    // CHANGE FIELD
-    // =========================================================
-
-    const handleChange = (field, value) => {
-        dispatch(
-            setEmailSignatureField({
-                field,
-                value,
-            })
-        );
-
-        if (errors[field]) {
-            setErrors((prev) => ({
-                ...prev,
-                [field]: "",
-            }));
-        }
-    };
-
-    // =========================================================
-    // RESET AND CLOSE
-    // =========================================================
-
-    const handleClose = () => {
-        setShowSaveOptions(false);
-        setSavedAction("");
-
-        dispatch(closeModal());
         dispatch(resetEmailSignatureForm());
 
-        setErrors({});
-        setActiveTab("emailSignature");
-    };
-
-    // =========================================================
-    // ESCAPE KEY
-    // =========================================================
-
-    useEffect(() => {
-        if (!isOpen || showSaveOptions) {
-            return;
+        if (!isEdit) {
+            setEditLoading(false);
         }
+    }, [dispatch, modalType, id, isEdit]);
 
-        const handleEscape = (event) => {
-            if (event.key === "Escape") {
-                handleClose();
+    // Load existing email signature for Edit modal
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadEmailSignature = async () => {
+            if (!isEdit || !id) {
+                setEditLoading(false);
+                return;
+            }
+
+            setEditLoading(true);
+            setEditLoadError(false);
+
+            try {
+                const response = await dispatch(
+                    fetchEmailSignaturesById({
+                        id: Number(id),
+                        userId: user?.id,
+                    })
+                ).unwrap();
+
+                if (cancelled) return;
+
+                const result =
+                    response?.data?.data ??
+                    response?.data ??
+                    response;
+
+                if (
+                    !result ||
+                    typeof result !== "object" ||
+                    Array.isArray(result) ||
+                    result.id == null
+                ) {
+                    throw new Error(
+                        "Email signature details were not found."
+                    );
+                }
+
+                const loadedForm = {
+                    id: result.id,
+                    userId: result.userId ?? null,
+                    signatureName: result.signatureName ?? "",
+                    signatureContent: result.signatureContent ?? "",
+                    defaultForNewMessages:
+                        result.defaultForNewMessages ?? false,
+                    defaultForReplies:
+                        result.defaultForReplies ?? false,
+                    status: result.status ?? "ACTIVE",
+                };
+
+                Object.entries(loadedForm).forEach(([field, value]) => {
+                    dispatch(
+                        setEmailSignatureField({ field, value })
+                    );
+                });
+            } catch (error) {
+                if (cancelled) return;
+
+                console.error(
+                    "Failed to load email signature:",
+                    error
+                );
+
+                setEditLoadError(true);
+
+                toast.error(
+                    typeof error === "string"
+                        ? error
+                        : error?.message ||
+                        "Failed to load email signature."
+                );
+            } finally {
+                if (!cancelled) {
+                    setEditLoading(false);
+                }
             }
         };
 
-        document.addEventListener(
-            "keydown",
-            handleEscape
-        );
+        loadEmailSignature();
 
         return () => {
-            document.removeEventListener(
-                "keydown",
-                handleEscape
-            );
+            cancelled = true;
         };
-    }, [isOpen, showSaveOptions]);
+    }, [dispatch, id, isEdit, user?.id]);
 
-    // =========================================================
-    // LOAD EXISTING DATA FOR EDIT
-    // =========================================================
+    const handleChange = (field, value) => {
+        dispatch(setEmailSignatureField({ field, value }));
 
-    useEffect(() => {
-        if (
-            !modal.open ||
-            modal.type !== "editEmailSignature" ||
-            !modal.data
-        ) {
-            return;
-        }
+        setErrors((previous) => {
+            if (!previous[field]) return previous;
 
-        const existingEmailSignature = modal.data;
+            const updated = { ...previous };
+            delete updated[field];
 
-        dispatch(
-            setEmailSignatureField({
-                field: "id",
-                value: existingEmailSignature.id ?? null,
-            })
-        );
+            return updated;
+        });
+    };
 
-        dispatch(
-            setEmailSignatureField({
-                field: "userId",
-                value:
-                    existingEmailSignature.userId ??
-                    user?.id ??
-                    null,
-            })
-        );
+    // Close modal
+    const handleClose = () => {
+        if (loading || editLoading) return;
 
-        dispatch(
-            setEmailSignatureField({
-                field: "signatureName",
-                value:
-                    existingEmailSignature.signatureName ?? "",
-            })
-        );
-
-        dispatch(
-            setEmailSignatureField({
-                field: "signatureContent",
-                value:
-                    existingEmailSignature.signatureContent ?? "",
-            })
-        );
-
-        dispatch(
-            setEmailSignatureField({
-                field: "defaultForNewMessages",
-                value:
-                    existingEmailSignature.defaultForNewMessages ??
-                    false,
-            })
-        );
-
-        dispatch(
-            setEmailSignatureField({
-                field: "defaultForReplies",
-                value:
-                    existingEmailSignature.defaultForReplies ??
-                    false,
-            })
-        );
-
-        dispatch(
-            setEmailSignatureField({
-                field: "status",
-                value:
-                    existingEmailSignature.status ?? "ACTIVE",
-            })
-        );
-    }, [
-        modal.open,
-        modal.type,
-        modal.data,
-        user?.id,
-        dispatch,
-    ]);
-
-    // =========================================================
-    // SAVE
-    // CREATE / UPDATE EMAIL SIGNATURE
-    // =========================================================
-
-    const handleSave = async (e) => {
-        e.preventDefault();
-
-        if (loading) return;
-
-        // AUTH CHECK
-
-        if (authChecking) {
-            return;
-        }
-
-        if (!isAuthenticated) {
-            toast.error("You are not authenticated");
-            return;
-        }
-
-        // PERMISSION CHECK
-
-        if (
-            !hasFullAccess &&
-            !permissionsLoaded
-        ) {
-            toast.error(
-                "Permissions are still loading"
-            );
-            return;
-        }
-
-        if (
-            !hasFullAccess &&
-            !hasRequiredPermission
-        ) {
-            toast.error(
-                `You do not have permission to ${requiredAction.toLowerCase()} email signatures`
-            );
-            return;
-        }
-
-        // USER ID VALIDATION
-
-        const userId = user?.id ?? form.userId;
-
-        if (!userId) {
-            toast.error(
-                "User ID is missing. Please log in again."
-            );
-            return;
-        }
-
-        // SIGNATURE NAME VALIDATION
-
-        if (!form.signatureName?.trim()) {
-            setErrors({
-                signatureName:
-                    "Signature name is required",
-            });
-
-            setActiveTab("emailSignature");
-
-            toast.error(
-                "Signature name is required"
-            );
-
-            return;
-        }
-
-        // SIGNATURE CONTENT VALIDATION
-
-        if (!form.signatureContent?.trim()) {
-            setErrors({
-                signatureContent:
-                    "Signature content is required",
-            });
-
-            setActiveTab("emailSignature");
-
-            toast.error(
-                "Signature content is required"
-            );
-
-            return;
-        }
-
+        setShowSaveMenu(false);
         setErrors({});
 
-        // PAYLOAD
+        dispatch(resetEmailSignatureForm());
+        dispatch(closeModal());
+    };
+
+    // Validation
+    const validateForm = () => {
+        const nextErrors = {};
+
+        if (!form.signatureName?.trim()) {
+            nextErrors.signatureName = "Signature name is required.";
+        }
+
+        if (!form.signatureContent?.trim()) {
+            nextErrors.signatureContent =
+                "Signature content is required.";
+        }
+
+        setErrors(nextErrors);
+
+        if (Object.keys(nextErrors).length > 0) {
+            setActiveTab("emailSignatures");
+            toast.error(Object.values(nextErrors)[0]);
+            return false;
+        }
+
+        return true;
+    };
+
+    // Save / Save & New
+    const handleSave = async ({
+        saveAndNew = false,
+    } = {}) => {
+        if (!isAuthenticated) {
+            toast.error("You are not authenticated.");
+            return;
+        }
+
+        if (loading || editLoading) return;
+
+        if (isEdit && editLoadError) {
+            toast.error(
+                "Cannot update because email signature details failed to load."
+            );
+            return;
+        }
+
+        if (
+            !hasFullAccess &&
+            (permissionLoading || !permissionsLoaded)
+        ) {
+            toast.error(
+                "Permissions are still loading. Please try again."
+            );
+            return;
+        }
+
+        if (!hasSavePermission) {
+            toast.error(
+                isEdit
+                    ? "You do not have permission to edit email signatures."
+                    : "You do not have permission to create email signatures."
+            );
+            return;
+        }
+
+        if (!validateForm()) return;
 
         const payload = {
-            signatureName:
-                form.signatureName.trim(),
-
-            signatureContent:
-                form.signatureContent.trim(),
-
-            defaultForNewMessages:
-                Boolean(form.defaultForNewMessages),
-
-            defaultForReplies:
-                Boolean(form.defaultForReplies),
-
-            status:
-                form.status || "ACTIVE",
+            userId: user?.id ?? form.userId ?? null,
+            signatureName: form.signatureName.trim(),
+            signatureContent: form.signatureContent.trim(),
+            defaultForNewMessages: Boolean(
+                form.defaultForNewMessages
+            ),
+            defaultForReplies: Boolean(form.defaultForReplies),
+            status: form.status || "ACTIVE",
         };
 
         try {
-            // UPDATE EMAIL SIGNATURE
-
             if (isEdit) {
-                const signatureId =
-                    form.id ?? modal.data?.id;
-
-                if (!signatureId) {
-                    toast.error(
-                        "Email signature ID is missing"
-                    );
-                    return;
-                }
-
                 await dispatch(
                     updateEmailSignature({
-                        userId,
-                        id: signatureId,
+                        userId: payload.userId,
+                        id: Number(id),
                         data: payload,
                     })
                 ).unwrap();
 
-                setSavedAction("updated");
-            }
-
-            // CREATE EMAIL SIGNATURE
-
-            else {
+                toast.success(
+                    "Email signature updated successfully."
+                );
+            } else {
                 await dispatch(
                     createEmailSignature({
-                        userId,
+                        userId: payload.userId,
                         data: payload,
                     })
                 ).unwrap();
 
-                setSavedAction("created");
+                toast.success(
+                    "Email signature created successfully."
+                );
             }
 
-            // Keep the modal open until the user chooses
-            // what to do next.
+            setErrors({});
+            setShowSaveMenu(false);
+            dispatch(resetEmailSignatureForm());
 
-            setShowSaveOptions(true);
+            // Save & New: keep the Add modal open
+            if (saveAndNew && !isEdit) {
+                setActiveTab("emailSignatures");
+                setEditLoadError(false);
+                return;
+            }
+
+            // Save or Update: close the modal
+            dispatch(closeModal());
         } catch (error) {
-            console.error(
-                "Email signature save error:",
-                error
-            );
-
             toast.error(
                 typeof error === "string"
                     ? error
                     : error?.message ||
-                    (
-                        isEdit
-                            ? "Failed to update email signature"
-                            : "Failed to create email signature"
-                    )
+                    "Failed to save email signature."
             );
         }
     };
 
-    // =========================================================
-    // SAVE SUCCESS - STAY HERE
-    // =========================================================
+    const renderInput = ({
+        field,
+        label,
+        placeholder = "",
+        type = "text",
+        required = false,
+        maxLength,
+    }) => (
+        <div>
+            <label className={getLabelClass(required)}>
+                {label}
+                {required && (
+                    <span className="ml-1 text-red-500">*</span>
+                )}
+            </label>
 
-    const handleStayHere = () => {
-        const message =
-            savedAction === "updated"
-                ? "Email signature updated successfully"
-                : "Email signature created successfully";
+            <input
+                type={type}
+                value={form[field] ?? ""}
+                maxLength={maxLength}
+                placeholder={placeholder}
+                onChange={(event) =>
+                    handleChange(field, event.target.value)
+                }
+                className={inputClass(Boolean(errors[field]))}
+            />
 
-        setShowSaveOptions(false);
-        setSavedAction("");
+            {errors[field] && (
+                <p className={errorClass}>{errors[field]}</p>
+            )}
+        </div>
+    );
 
-        dispatch(closeModal());
-        dispatch(resetEmailSignatureForm());
+    const renderSelect = ({
+        field,
+        label,
+        options,
+        required = false,
+    }) => (
+        <div>
+            <label className={labelClass}>
+                {label}
+                {required && (
+                    <span className="ml-1 text-red-500">*</span>
+                )}
+            </label>
 
-        setErrors({});
-        setActiveTab("emailSignature");
+            <CustomSelect
+                value={form[field] ?? ""}
+                onChange={(value) => handleChange(field, value)}
+                options={options}
+            />
 
-        toast.success(message);
-    };
+            {errors[field] && (
+                <p className={errorClass}>{errors[field]}</p>
+            )}
+        </div>
+    );
 
-    // =========================================================
-    // SAVE SUCCESS - GO TO MENU PERMISSION
-    // =========================================================
+    const renderEmailSignaturesTab = () => (
+        <div className="w-full min-w-0">
+            <div className="rounded-lg border border-gray-200 bg-white p-6">
+                <div className="mb-6">
+                    <h2 className="text-base font-semibold text-gray-500">
+                        Email Signature Information
+                    </h2>
 
-    const handleGoToMenuPermission = () => {
-        const message =
-            savedAction === "updated"
-                ? "Email signature updated successfully"
-                : "Email signature created successfully";
+                    <p className="mt-1 text-sm text-gray-400">
+                        Create and configure your email signature.
+                    </p>
+                </div>
 
-        setShowSaveOptions(false);
-        setSavedAction("");
+                <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
+                    <div className="space-y-5">
+                        {renderInput({
+                            field: "signatureName",
+                            label: "Signature Name",
+                            placeholder: "Enter signature name",
+                            required: true,
+                            maxLength: 150,
+                        })}
 
-        dispatch(closeModal());
-        dispatch(resetEmailSignatureForm());
+                        <div>
+                            <label className={getLabelClass(true)}>
+                                Signature Content
+                                <span className="ml-1 text-red-500">*</span>
+                            </label>
 
-        setErrors({});
-        setActiveTab("emailSignature");
+                            <textarea
+                                value={form.signatureContent ?? ""}
+                                onChange={(event) =>
+                                    handleChange(
+                                        "signatureContent",
+                                        event.target.value
+                                    )
+                                }
+                                placeholder="Enter your email signature HTML or text"
+                                rows={8}
+                                className={textareaClass(
+                                    Boolean(errors.signatureContent)
+                                )}
+                            />
 
-        toast.success(message);
+                            {errors.signatureContent && (
+                                <p className={errorClass}>
+                                    {errors.signatureContent}
+                                </p>
+                            )}
 
-        navigate("/menuPermission");
-    };
+                            <p className="mt-1 text-xs text-gray-400">
+                                Enter the signature content supported by
+                                your email editor.
+                            </p>
+                        </div>
 
-    // =========================================================
-    // DO NOT RENDER
-    // =========================================================
+                        <div className="space-y-3 rounded-lg border border-gray-200 p-4">
+                            <h3 className="text-sm font-semibold text-gray-500">
+                                Default Preferences
+                            </h3>
 
-    if (!isOpen && !showSaveOptions) {
-        return null;
+                            <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-400">
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(
+                                        form.defaultForNewMessages
+                                    )}
+                                    onChange={(event) =>
+                                        handleChange(
+                                            "defaultForNewMessages",
+                                            event.target.checked
+                                        )
+                                    }
+                                    className="h-4 w-4 accent-[#0F4659]"
+                                />
+                                Use as default for new messages
+                            </label>
+
+                            <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-400">
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(
+                                        form.defaultForReplies
+                                    )}
+                                    onChange={(event) =>
+                                        handleChange(
+                                            "defaultForReplies",
+                                            event.target.checked
+                                        )
+                                    }
+                                    className="h-4 w-4 accent-[#0F4659]"
+                                />
+                                Use as default for replies and forwards
+                            </label>
+                        </div>
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 p-4">
+                        <div className="mb-4 flex items-center gap-2">
+                            <Mail
+                                size={18}
+                                className="text-gray-500"
+                            />
+
+                            <h3 className="text-sm font-semibold text-gray-500">
+                                Signature Settings
+                            </h3>
+                        </div>
+
+                        {renderSelect({
+                            field: "status",
+                            label: "Status",
+                            options: STATUS_OPTIONS,
+                            required: true,
+                        })}
+
+                        <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-3">
+                            <p className="text-xs leading-5 text-gray-500">
+                                Active signatures are available for use.
+                                Inactive signatures are retained but should
+                                not be selected as defaults.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    // Authentication loading
+    if (authChecking) {
+        return (
+            <div className="flex min-h-40 items-center justify-center">
+                <p className="text-sm text-gray-500">
+                    Checking authentication...
+                </p>
+            </div>
+        );
     }
 
-    // =========================================================
-    // PERMISSION LOADING
-    // =========================================================
+    // Authentication required
+    if (!isAuthenticated) {
+        return (
+            <div className="flex min-h-64 items-center justify-center px-6">
+                <div className="w-full max-w-md  border border-gray-200 bg-white p-10 text-center shadow-sm">
+                    <UserRoundArrowLeft
+                        className="mx-auto mb-4 text-red-500"
+                        size={42}
+                    />
 
+                    <h2 className="text-lg font-semibold text-gray-800">
+                        Authentication Required
+                    </h2>
+
+                    <p className="mt-2 text-sm text-gray-500">
+                        Please sign in to manage email signatures.
+                    </p>
+
+                    <button
+                        type="button"
+                        onClick={handleClose}
+                        className="mt-6 rounded-md bg-[#0F4659] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#0F4659]/90"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // Permission loading
     if (
-        isOpen &&
-        !showSaveOptions &&
-        (
-            authChecking ||
-            (
-                isAuthenticated &&
-                !hasFullAccess &&
-                (
-                    permissionLoading ||
-                    !permissionsLoaded
-                )
-            )
-        )
+        !hasFullAccess &&
+        (permissionLoading || !permissionsLoaded)
     ) {
         return (
-            <div className="w-[950px] max-w-[95vw] min-h-[300px] bg-white rounded-xl shadow-2xl flex items-center justify-center p-8">
+            <div className="flex min-h-40 items-center justify-center">
                 <div className="text-center">
-                    <div className="w-10 h-10 mx-auto mb-3 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                    <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-[#0F4659]/20 border-t-[#0F4659]" />
 
                     <p className="text-sm font-medium text-gray-600">
                         Loading permissions...
@@ -718,619 +780,239 @@ export default function EmailSignatureCreate() {
         );
     }
 
-    // =========================================================
-    // ACCESS DENIED
-    // =========================================================
-
-    if (
-        isOpen &&
-        !showSaveOptions &&
-        !hasFullAccess &&
-        permissionsLoaded &&
-        !hasRequiredPermission
-    ) {
+    // Permission denied
+    if (!hasSavePermission) {
         return (
-            <div className="w-[950px] max-w-[95vw] min-h-[300px] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
-                <div className="shrink-0 h-[68px] flex items-center justify-between px-6 border-b border-gray-200 bg-white">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#0F4659] flex items-center justify-center">
-                            <UserKeyIcon
-                                size={22}
-                                strokeWidth={2}
-                            />
-                        </div>
+            <div className="flex items-center justify-center py-8">
+                <div className="w-full max-w-md text-center">
+                    <UserRoundArrowLeft
+                        size={28}
+                        className="mx-auto mb-3 text-red-500"
+                    />
 
-                        <div>
-                            <h2 className="text-lg font-semibold text-gray-800">
-                                {isEdit
-                                    ? "Edit Email Signature"
-                                    : "Add Email Signature"}
-                            </h2>
+                    <h2 className="text-lg font-semibold text-gray-800">
+                        Access Denied
+                    </h2>
 
-                            <p className="text-xs text-gray-500 mt-0.5">
-                                {isEdit
-                                    ? "Update your email signature"
-                                    : "Create a new email signature"}
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                    <p className="mt-2 text-sm text-gray-500">
+                        {isEdit
+                            ? "You do not have permission to edit email signatures."
+                            : "You do not have permission to create email signatures."}
+                    </p>
 
-                <div className="flex-1 min-h-[230px] flex items-center justify-center px-6 py-8 bg-gray-50/50">
-                    <div className="text-center">
-                        <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-red-50 text-red-500 flex items-center justify-center">
-                            <UserKeyIcon
-                                size={26}
-                                strokeWidth={2}
-                            />
-                        </div>
-
-                        <h3 className="text-base font-semibold text-gray-800">
-                            Access Denied
-                        </h3>
-
-                        <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto">
-                            You do not have permission to{" "}
-                            {requiredAction.toLowerCase()}{" "}
-                            email signatures.
-                        </p>
-
-
-                    </div>
+                    <button
+                        type="button"
+                        onClick={handleClose}
+                        className="mt-4 rounded-md border border-gray-300 px-4 py-2 text-sm text-[#0F4659] hover:bg-gray-50"
+                    >
+                        Close
+                    </button>
                 </div>
             </div>
         );
     }
 
-    // =========================================================
-    // TABS
-    // =========================================================
+    // Edit loading
+    if (editLoading) {
+        return (
+            <div className="flex min-h-64 flex-col items-center justify-center">
+                <div className="mb-3 h-10 w-10 animate-spin rounded-full border-2 border-[#0F4659]/20 border-t-[#0F4659]" />
 
-    const tabs = [
-        {
-            id: "emailSignature",
-            label: "Signature Information",
-        },
-        {
-            id: "settings",
-            label: "Settings",
-        },
-    ];
+                <p className="text-sm font-medium text-[#0F4659]">
+                    Loading email signature details...
+                </p>
+            </div>
+        );
+    }
 
-    // =========================================================
-    // INPUT CLASS
-    // =========================================================
+    // Edit loading error
+    if (isEdit && editLoadError) {
+        return (
+            <div className="flex min-h-64 items-center justify-center px-4">
+                <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 text-center">
+                    <Building2
+                        size={32}
+                        className="mx-auto mb-3 text-red-500"
+                    />
 
-    const inputClass = `
-        w-full
-        h-11
-        px-3
-        border
-        border-gray-300
-        rounded-md
-        text-sm
-        text-gray-700
-        bg-white
-        outline-none
-        transition
-        focus:border-[#0F4659]
-        focus:ring-1
-        focus:ring-[#0F4659]/70
-        disabled:bg-gray-100
-        disabled:text-gray-500
-        disabled:cursor-not-allowed
-    `;
+                    <h2 className="text-lg font-semibold text-[#0F4659]">
+                        Unable to Load Email Signature
+                    </h2>
 
-    // =========================================================
-    // LABEL CLASS
-    // =========================================================
+                    <p className="mt-2 text-sm text-gray-500">
+                        Email signature details could not be loaded.
+                        Close this window and try again.
+                    </p>
 
-    const getLabelClass = (required = false) => `
-        block
-        text-xs
-        font-medium
-        ${required ? "text-red-500" : "text-[#0F4659]"}
-        mb-1.5
-    `;
-
-    // =========================================================
-    // UI
-    // =========================================================
+                    <button
+                        type="button"
+                        onClick={handleClose}
+                        className="mt-5 h-10 rounded-md bg-[#0F4659] px-5 text-sm font-medium text-white hover:bg-[#0F4659]/90"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <>
-            {/* =================================================
-                EMAIL SIGNATURE MODAL
-            ================================================= */}
-
-            {isOpen && (
-                <div className="w-[950px] max-w-[95vw] h-[700px] max-h-[88vh] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
-                    {/* HEADER */}
-
-                    <div className="shrink-0 h-[68px] flex items-center justify-between px-6 border-b border-gray-200 bg-white">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-[#0F4659]/20 text-[#0F4659] flex items-center justify-center">
-                                <UserKeyIcon
-                                    size={22}
-                                    strokeWidth={2}
-                                />
-                            </div>
-
-                            <div>
-                                <h2 className="text-lg font-semibold text-[#0F4659]">
-                                    {isEdit
-                                        ? "Edit Email Signature"
-                                        : "Add Email Signature"}
-                                </h2>
-
-                                <p className="text-xs text-[#0F4659] mt-0.5">
-                                    {isEdit
-                                        ? "Update your email signature details"
-                                        : "Create a new email signature"}
-                                </p>
-                            </div>
-                        </div>
-
-
+        <div className="flex h-full min-h-0 w-full min-w-0 flex-col bg-gray-50">
+            {/* Header */}
+            <div className="flex shrink-0 items-center justify-between border-b border-lime-500 bg-white px-6 py-4">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-blue-100 bg-[#408DFB]">
+                        <Mail size={20} className="text-gray-100" />
                     </div>
 
-                    {/* TABS */}
+                    <div>
+                        <h1 className="text-lg font-semibold text-gray-500">
+                            {isEdit
+                                ? "Edit Email Signature"
+                                : "New Email Signature"}
+                        </h1>
 
-                    <div className="shrink-0 h-[52px] flex items-center gap-8 px-6 border-b border-gray-200 bg-white">
-                        {tabs.map((tab) => {
-                            const hasError =
-                                tab.id === "emailSignature" &&
-                                Boolean(
-                                    errors?.signatureName ||
-                                    errors?.signatureContent
-                                );
-
-                            return (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    onClick={() =>
-                                        setActiveTab(tab.id)
-                                    }
-                                    className={`
-                                        relative h-full px-1 text-sm font-medium transition
-                                        ${activeTab === tab.id
-                                            ? "text-[#0F4659]"
-                                            : "text-[#0F4659] hover:text-[#0F4659]/90"
-                                        }
-                                        ${hasError ? "text-red-600" : ""}
-                                    `}
-                                >
-                                    <span className="flex items-center gap-2">
-                                        {tab.label}
-
-                                        {hasError && (
-                                            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                                        )}
-                                    </span>
-
-                                    {activeTab === tab.id && (
-                                        <span
-                                            className={`
-                                                absolute bottom-0 left-0 right-0 h-0.5
-                                                ${hasError
-                                                    ? "bg-red-500"
-                                                    : "bg-[#0F4659]"
-                                                }
-                                            `}
-                                        />
-                                    )}
-                                </button>
-                            );
-                        })}
+                        <p className="mt-0.5 text-xs text-gray-400">
+                            {isEdit
+                                ? `Update email signature${form.signatureName
+                                    ? ` — ${form.signatureName}`
+                                    : ""
+                                }`
+                                : "Create a new email signature"}
+                        </p>
                     </div>
+                </div>
+            </div>
 
-                    {/* FORM */}
-
-                    <form
-                        onSubmit={handleSave}
-                        className="flex flex-col flex-1 min-h-0 overflow-hidden"
+            {/* Tabs */}
+            <div className="flex shrink-0 items-center gap-7 overflow-x-auto border-b border-gray-200 bg-white px-6">
+                {TABS.map((tab) => (
+                    <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`whitespace-nowrap border-b-2 py-3 text-sm font-medium transition ${activeTab === tab.id
+                            ? "border-lime-500 text-gray-500"
+                            : "border-transparent text-gray-500 hover:text-gray-700"
+                            }`}
                     >
-                        {/* SCROLL BODY */}
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
 
-                        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-7 py-6 bg-gray-50/50">
-                            {/* SIGNATURE INFORMATION */}
+            {/* Scrollable Body */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-5">
+                {activeTab === "emailSignatures" &&
+                    renderEmailSignaturesTab()}
+            </div>
 
-                            {activeTab === "emailSignature" && (
-                                <div className="space-y-6">
-                                    {/* SECTION HEADER */}
+            {/* Footer */}
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-6 py-3">
+                <div className="text-xs text-gray-500">
+                    <span className="text-red-500">*</span> Required fields
+                </div>
 
-                                    <div className="flex items-center justify-between pb-3 border-b border-gray-200">
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-[#0F4659]">
-                                                Signature Information
-                                            </h3>
+                <div className="flex items-center justify-end gap-3">
+                    <button
+                        type="button"
+                        disabled={loading || editLoading}
+                        onClick={handleClose}
+                        className="h-10 rounded-md border border-gray-300 bg-white px-5 text-sm font-medium text-[#0F4659] hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Cancel
+                    </button>
 
-                                            <p className="text-xs text-[#0F4659]/80 mt-1">
-                                                Enter the name and content of your email signature.
-                                            </p>
-                                        </div>
+                    <div className="relative flex">
+                        <button
+                            type="button"
+                            disabled={loading || editLoading}
+                            onClick={() => handleSave()}
+                            className="h-10 rounded-l-md bg-[#408DFB] px-5 text-sm font-medium text-white hover:bg-[#408DFB]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {loading
+                                ? isEdit
+                                    ? "Updating..."
+                                    : "Saving..."
+                                : isEdit
+                                    ? "Update Signature"
+                                    : "Save Signature"}
+                        </button>
 
-                                        {/* STATUS */}
+                        <button
+                            type="button"
+                            disabled={loading || editLoading}
+                            onClick={() =>
+                                setShowSaveMenu((previous) => !previous)
+                            }
+                            className="flex h-10 w-10 items-center justify-center rounded-r-md border-l border-white/30 bg-[#408DFB] text-white hover:bg-[#408DFB]/90 disabled:opacity-50"
+                            aria-label="More save options"
+                        >
+                            <ChevronDown
+                                size={16}
+                                className={
+                                    showSaveMenu
+                                        ? "rotate-180 transition-transform"
+                                        : "transition-transform"
+                                }
+                            />
+                        </button>
 
-                                        <div className="flex items-center gap-3 shrink-0">
-                                            <label className="text-md font-semibold text-[#0F4659]">
-                                                Status :
-                                            </label>
+                        {showSaveMenu && (
+                            <>
+                                <button
+                                    type="button"
+                                    aria-label="Close save options"
+                                    className="fixed inset-0 z-[80] cursor-default"
+                                    onClick={() =>
+                                        setShowSaveMenu(false)
+                                    }
+                                />
 
-                                            <span
-                                                className={`
-                                                    inline-flex items-center justify-center min-w-[85px] h-7 px-3 rounded-full text-sm font-bold
-                                                    ${form.status === "ACTIVE"
-                                                        ? "bg-green-50 text-green-700"
-                                                        : form.status === "INACTIVE"
-                                                            ? "bg-red-50 text-red-700"
-                                                            : "bg-yellow-50 text-yellow-700"
-                                                    }
-                                                `}
-                                            >
-                                                {form.status || "ACTIVE"}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* SIGNATURE NAME */}
-
-                                    <div>
-                                        <label className={getLabelClass(true)}>
-                                            Signature Name
-                                            <span className="text-red-500 ml-1">
-                                                *
-                                            </span>
-                                        </label>
-
-                                        <input
-                                            type="text"
-                                            value={
-                                                form.signatureName ?? ""
+                                <div className="absolute bottom-full right-0 z-[90] mb-2 w-56 overflow-hidden rounded-md border border-gray-200 bg-white shadow-xl">
+                                    {!isEdit && (
+                                        <button
+                                            type="button"
+                                            disabled={loading || editLoading}
+                                            onClick={() =>
+                                                handleSave({
+                                                    saveAndNew: true,
+                                                })
                                             }
-                                            onChange={(e) =>
-                                                handleChange(
-                                                    "signatureName",
-                                                    e.target.value
-                                                )
-                                            }
-                                            placeholder="Enter signature name"
-                                            className={`
-                                                ${inputClass}
-                                                ${errors.signatureName
-                                                    ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                                                    : ""
-                                                }
-                                            `}
-                                            disabled={loading}
-                                        />
-
-                                        {errors?.signatureName && (
-                                            <p className="mt-1 text-xs text-red-500">
-                                                {errors.signatureName}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* SIGNATURE CONTENT */}
-
-                                    <div>
-                                        <label className={getLabelClass(true)}>
-                                            Signature Content
-                                            <span className="text-red-500 ml-1">
-                                                *
-                                            </span>
-                                        </label>
-
-                                        <textarea
-                                            rows={8}
-                                            value={
-                                                form.signatureContent ?? ""
-                                            }
-                                            onChange={(e) =>
-                                                handleChange(
-                                                    "signatureContent",
-                                                    e.target.value
-                                                )
-                                            }
-                                            placeholder="Enter your email signature content"
-                                            disabled={loading}
-                                            className={`
-                                                w-full px-3 py-3 border rounded-md
-                                                text-sm text-gray-700 bg-white outline-none resize-y
-                                                transition focus:border-[#0F4659] focus:ring-1 focus:ring-[#0F4659]/70
-                                                disabled:bg-gray-100
-                                                ${errors.signatureContent
-                                                    ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                                                    : "border-gray-300"
-                                                }
-                                            `}
-                                        />
-
-                                        {errors?.signatureContent && (
-                                            <p className="mt-1 text-xs text-red-500">
-                                                {errors.signatureContent}
-                                            </p>
-                                        )}
-
-                                        <p className="mt-1 text-xs text-gray-500">
-                                            Enter the content that should appear at the end of your emails.
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* SETTINGS TAB */}
-
-                            {activeTab === "settings" && (
-                                <div className="space-y-6">
-                                    <div className="pb-3 border-b border-gray-200">
-                                        <h3 className="text-sm font-semibold text-[#0F4659]">
-                                            Settings
-                                        </h3>
-
-                                        <p className="text-xs text-[#0F4659]/70 mt-1">
-                                            Configure default signature options and status.
-                                        </p>
-                                    </div>
-
-                                    {/* STATUS */}
-
-                                    <div className="max-w-md">
-                                        <label className={getLabelClass(false)}>
-                                            Status
-                                        </label>
-
-                                        <CustomSelect
-                                            value={
-                                                form.status || "ACTIVE"
-                                            }
-                                            onChange={(value) =>
-                                                handleChange(
-                                                    "status",
-                                                    value
-                                                )
-                                            }
-                                            options={[
-                                                {
-                                                    value: "ACTIVE",
-                                                    label: "ACTIVE",
-                                                },
-                                                {
-                                                    value: "INACTIVE",
-                                                    label: "INACTIVE",
-                                                },
-                                                {
-                                                    value: "DRAFT",
-                                                    label: "DRAFT",
-                                                },
-                                            ]}
-                                        />
-                                    </div>
-
-                                    {/* DEFAULT FOR NEW MESSAGES */}
-
-                                    <div className="max-w-md p-4 bg-white border border-gray-200 rounded-lg">
-                                        <label className="flex items-start gap-3 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    Boolean(
-                                                        form.defaultForNewMessages
-                                                    )
-                                                }
-                                                onChange={(e) =>
-                                                    handleChange(
-                                                        "defaultForNewMessages",
-                                                        e.target.checked
-                                                    )
-                                                }
-                                                disabled={loading}
-                                                className="mt-1 h-4 w-4 accent-[#0F4659]"
-                                            />
-
-                                            <span>
-                                                <span className="block text-sm font-semibold text-[#0F4659]">
-                                                    Default for New Messages
-                                                </span>
-
-                                                <span className="block text-xs text-gray-500 mt-1">
-                                                    Automatically use this signature when composing new emails.
-                                                </span>
-                                            </span>
-                                        </label>
-                                    </div>
-
-                                    {/* DEFAULT FOR REPLIES */}
-
-                                    <div className="max-w-md p-4 bg-white border border-gray-200 rounded-lg">
-                                        <label className="flex items-start gap-3 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    Boolean(
-                                                        form.defaultForReplies
-                                                    )
-                                                }
-                                                onChange={(e) =>
-                                                    handleChange(
-                                                        "defaultForReplies",
-                                                        e.target.checked
-                                                    )
-                                                }
-                                                disabled={loading}
-                                                className="mt-1 h-4 w-4 accent-[#0F4659]"
-                                            />
-
-                                            <span>
-                                                <span className="block text-sm font-semibold text-[#0F4659]">
-                                                    Default for Replies
-                                                </span>
-
-                                                <span className="block text-xs text-gray-500 mt-1">
-                                                    Automatically use this signature when replying to emails.
-                                                </span>
-                                            </span>
-                                        </label>
-                                    </div>
-
-                                    {/* STATUS SUMMARY */}
-
-                                    <div className="max-w-md p-4 bg-white border border-gray-200 rounded-lg">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-sm font-semibold text-[#0F4659]">
-                                                    Email Signature Status
-                                                </p>
-
-                                                <p className="text-xs text-[#0F4659]/80 mt-1">
-                                                    Current status of this email signature.
-                                                </p>
+                                            className="w-full border-b border-gray-100 px-4 py-3 text-left hover:bg-gray-50 disabled:opacity-50"
+                                        >
+                                            <div className="text-sm font-medium text-gray-700">
+                                                Save & New
                                             </div>
 
-                                            <span
-                                                className={`
-                                                    inline-flex items-center justify-center min-w-[85px] h-7 px-3 rounded-full text-sm font-bold
-                                                    ${form.status === "ACTIVE"
-                                                        ? "bg-green-50 text-green-700"
-                                                        : form.status === "INACTIVE"
-                                                            ? "bg-red-50 text-red-700"
-                                                            : "bg-yellow-50 text-yellow-700"
-                                                    }
-                                                `}
-                                            >
-                                                {form.status || "ACTIVE"}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* FOOTER */}
-
-                        <div className="shrink-0 h-[68px] flex items-center justify-between px-6 border-t border-gray-200 bg-white">
-                            <div />
-
-                            <div className="flex items-center gap-3">
-                                {/* CANCEL */}
-
-                                <button
-                                    type="button"
-                                    onClick={handleClose}
-                                    disabled={loading}
-                                    className="
-                                        h-10 px-5 rounded-md border border-gray-300
-                                        text-sm font-medium text-gray-700 bg-white
-                                        hover:bg-gray-50 transition
-                                        disabled:opacity-50 disabled:cursor-not-allowed
-                                    "
-                                >
-                                    Cancel
-                                </button>
-
-                                {/* SAVE / UPDATE */}
-
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="
-                                        h-10 px-6 rounded-md bg-[#0F4659] text-white
-                                        text-sm font-medium hover:bg-[#0F4659]/90 transition
-                                        disabled:opacity-50 disabled:cursor-not-allowed
-                                        inline-flex items-center gap-2
-                                    "
-                                >
-                                    {loading && (
-                                        <Loader2
-                                            size={16}
-                                            className="animate-spin"
-                                        />
+                                            <div className="mt-0.5 text-xs text-gray-400">
+                                                Save and create another signature
+                                            </div>
+                                        </button>
                                     )}
 
-                                    {loading
-                                        ? isEdit
-                                            ? "Updating..."
-                                            : "Saving..."
-                                        : isEdit
-                                            ? "Update"
-                                            : "Save"}
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            )}
+                                    <button
+                                        type="button"
+                                        disabled={loading || editLoading}
+                                        onClick={() => handleSave()}
+                                        className="w-full px-4 py-3 text-left hover:bg-gray-50 disabled:opacity-50"
+                                    >
+                                        <div className="text-sm font-medium text-gray-700">
+                                            {isEdit
+                                                ? "Update & Close"
+                                                : "Save & Close"}
+                                        </div>
 
-            {/* =================================================
-                SAVE SUCCESS CONFIRMATION
-            ================================================= */}
-
-            {showSaveOptions && (
-                <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 p-4">
-                    <div
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="email-signature-save-title"
-                        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
-                    >
-                        {/* SUCCESS ICON */}
-
-                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50">
-                            <Check
-                                className="text-emerald-600"
-                                size={26}
-                            />
-                        </div>
-
-                        {/* TITLE */}
-
-                        <h2
-                            id="email-signature-save-title"
-                            className="text-xl font-semibold text-gray-900"
-                        >
-                            Email Signature{" "}
-                            {savedAction === "updated"
-                                ? "Updated"
-                                : "Created"}{" "}
-                            Successfully
-                        </h2>
-
-                        <p className="mt-2 text-sm text-gray-500">
-                            What would you like to do next?
-                        </p>
-
-                        {/* ACTIONS */}
-
-                        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
-                            <button
-                                type="button"
-                                onClick={handleStayHere}
-                                className="
-                                    rounded-lg border border-gray-300
-                                    px-4 py-2.5 text-sm font-medium text-gray-700
-                                    transition hover:bg-gray-50
-                                "
-                            >
-                                Stay and Save Here
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={handleGoToMenuPermission}
-                                className="
-                                    rounded-lg bg-[#088178] px-4 py-2.5
-                                    text-sm font-semibold text-white
-                                    transition hover:bg-[#066b63]
-                                "
-                            >
-                                Menu Permission
-                            </button>
-                        </div>
+                                        <div className="mt-0.5 text-xs text-gray-400">
+                                            Save and close this window
+                                        </div>
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
-            )}
-        </>
+            </div>
+        </div>
     );
 }

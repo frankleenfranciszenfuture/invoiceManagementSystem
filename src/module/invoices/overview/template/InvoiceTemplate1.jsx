@@ -1,678 +1,10 @@
 
 import React from "react";
 
-/*
- * ============================================================
- * NUMBER TO WORDS
- * Indian system for INR, International system otherwise
- * ============================================================
- */
-
-const ONES = [
-    "",
-    "One",
-    "Two",
-    "Three",
-    "Four",
-    "Five",
-    "Six",
-    "Seven",
-    "Eight",
-    "Nine",
-    "Ten",
-    "Eleven",
-    "Twelve",
-    "Thirteen",
-    "Fourteen",
-    "Fifteen",
-    "Sixteen",
-    "Seventeen",
-    "Eighteen",
-    "Nineteen",
-];
-
-const TENS = [
-    "",
-    "",
-    "Twenty",
-    "Thirty",
-    "Forty",
-    "Fifty",
-    "Sixty",
-    "Seventy",
-    "Eighty",
-    "Ninety",
-];
-
-const CURRENCY_UNITS = {
-    INR: ["Rupees", "Paise"],
-    USD: ["Dollars", "Cents"],
-    EUR: ["Euros", "Cents"],
-    GBP: ["Pounds", "Pence"],
-    AED: ["Dirhams", "Fils"],
-    SGD: ["Dollars", "Cents"],
-    AUD: ["Dollars", "Cents"],
-    CAD: ["Dollars", "Cents"],
-};
-
-const CURRENCY_SYMBOLS = {
-    INR: "₹",
-    USD: "$",
-    EUR: "€",
-    GBP: "£",
-    AED: "AED ",
-    SGD: "S$",
-    AUD: "A$",
-    CAD: "C$",
-};
-
-const twoDigitsToWords = (num) => {
-    if (num < 20) return ONES[num];
-
-    const ones = num % 10;
-
-    return `${TENS[Math.floor(num / 10)]}${ones ? ` ${ONES[ones]}` : ""
-        }`;
-};
-
-const threeDigitsToWords = (num) => {
-    const hundreds = Math.floor(num / 100);
-    const rest = num % 100;
-
-    let words = "";
-
-    if (hundreds) {
-        words += `${ONES[hundreds]} Hundred`;
-    }
-
-    if (rest) {
-        words += `${words ? " " : ""}${twoDigitsToWords(rest)}`;
-    }
-
-    return words;
-};
-
-const integerToWords = (value, indian) => {
-    let num = Math.floor(Number(value) || 0);
-
-    if (num === 0) return "Zero";
-
-    const scales = indian
-        ? [
-            [10000000, "Crore"],
-            [100000, "Lakh"],
-            [1000, "Thousand"],
-        ]
-        : [
-            [1000000000, "Billion"],
-            [1000000, "Million"],
-            [1000, "Thousand"],
-        ];
-
-    const parts = [];
-
-    scales.forEach(([size, label]) => {
-        const chunk = Math.floor(num / size);
-
-        num %= size;
-
-        if (chunk) {
-            parts.push(
-                `${integerToWords(chunk, indian)} ${label}`
-            );
-        }
-    });
-
-    if (num) {
-        parts.push(threeDigitsToWords(num));
-    }
-
-    return parts.join(" ");
-};
-
-const amountInWords = (amount, currency = "INR") => {
-    const value = Math.max(0, Number(amount) || 0);
-
-    // Avoid a minor-unit value of 100 after rounding.
-    const totalMinor = Math.round(value * 100);
-    const major = Math.floor(totalMinor / 100);
-    const minor = totalMinor % 100;
-
-    const indian = currency === "INR";
-
-    const [majorName, minorName] =
-        CURRENCY_UNITS[currency] || ["", "Cents"];
-
-    let words = `${currency} ${integerToWords(
-        major,
-        indian
-    )}${majorName ? ` ${majorName}` : ""}`;
-
-    if (minor > 0) {
-        words += ` and ${integerToWords(
-            minor,
-            indian
-        )} ${minorName}`;
-    }
-
-    return `${words} Only.`;
-};
-
-/*
- * ============================================================
- * SHARED DATA HELPERS
- *
- * Supports both the existing Template 4 data structure and
- * the shared invoice/company fields used by other templates.
- * ============================================================
- */
-
-const firstValue = (...values) =>
-    values.find(
-        (value) =>
-            value !== undefined &&
-            value !== null &&
-            value !== ""
-    );
-
-const getText = (value) => {
-    if (value === undefined || value === null) return "";
-
-    if (typeof value === "string" || typeof value === "number") {
-        return String(value);
-    }
-
-    return "";
-};
-
-const formatDate = (value) => {
-    if (!value) return "-";
-
-    if (typeof value !== "string") return String(value);
-
-    // Keep API date-only values from shifting due to time zones.
-    const dateOnly = value.match(/^(\d{4}-\d{2}-\d{2})$/);
-
-    if (dateOnly) {
-        const [year, month, day] = dateOnly[1]
-            .split("-")
-            .map(Number);
-
-        return new Date(year, month - 1, day).toLocaleDateString(
-            "en-IN",
-            {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-            }
-        );
-    }
-
-    const parsed = new Date(value);
-
-    if (Number.isNaN(parsed.getTime())) return value;
-
-    return parsed.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-    });
-};
-
-const money = (value, currency = "INR") =>
-    Number(value || 0).toLocaleString(
-        currency === "INR" ? "en-IN" : "en-US",
-        {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }
-    );
-
-const getCurrencyCode = (invoice = {}) => {
-    const currency = invoice.currency;
-
-    const value = firstValue(
-        invoice.currencyCode,
-        invoice.currency_code,
-        typeof currency === "object"
-            ? currency.currencyCode
-            : null,
-        typeof currency === "object"
-            ? currency.code
-            : null,
-        typeof currency === "string"
-            ? currency
-            : null,
-        "INR"
-    );
-
-    return String(value).toUpperCase();
-};
-
-const getInvoiceItems = (invoice = {}) => {
-    const items = firstValue(
-        invoice.invoiceItems,
-        invoice.items,
-        invoice.lineItems,
-        []
-    );
-
-    return Array.isArray(items) ? items : [];
-};
-
-const resolvePartyAddress = (invoice = {}) => {
-    const party = invoice.party || {};
-    const customer = invoice.customer || {};
-
-    return firstValue(
-        invoice.partyAddress,
-        invoice.billingAddress,
-        party.address,
-        party.billingAddress,
-        customer.address,
-        customer.billingAddress,
-        ""
-    );
-};
-
-const resolvePartyName = (invoice = {}) =>
-    firstValue(
-        invoice.partyName,
-        invoice.customerName,
-        invoice.party?.name,
-        invoice.customer?.customerName,
-        invoice.customer?.name,
-        invoice.party?.partyName,
-        "-"
-    );
-
-const resolvePartyGstin = (invoice = {}) =>
-    firstValue(
-        invoice.partyGstin,
-        invoice.customerGstin,
-        invoice.party?.gstin,
-        invoice.party?.gstNumber,
-        invoice.customer?.gstin,
-        invoice.customer?.gstNumber,
-        ""
-    );
-
-const resolveCompany = (invoice = {}) => {
-    const company = invoice.pdfCompanyInfo || {};
-    const companyInfo = invoice.companyInfo || {};
-    const companyObject =
-        typeof invoice.company === "object" &&
-            invoice.company !== null
-            ? invoice.company
-            : {};
-
-    const source = {
-        ...companyObject,
-        ...companyInfo,
-        ...company,
-    };
-
-    const address = firstValue(
-        source.addressLines,
-        source.address,
-        invoice.companyAddress,
-        invoice.address,
-        []
-    );
-
-    let addressLines = [];
-
-    if (Array.isArray(address)) {
-        addressLines = address
-            .map((line) => getText(line).trim())
-            .filter(Boolean);
-    } else if (typeof address === "string") {
-        addressLines = address
-            .split(/\r?\n/)
-            .map((line) => line.trim())
-            .filter(Boolean);
-    }
-
-    return {
-        ...source,
-
-        name: firstValue(
-            source.name,
-            source.companyName,
-            invoice.companyName,
-            invoice.businessName,
-            ""
-        ),
-
-        companyCode: firstValue(
-            source.companyCode,
-            invoice.companyCode,
-            ""
-        ),
-
-        logo: firstValue(
-            source.logo,
-            source.logoUrl,
-            source.logoPath,
-            invoice.logo,
-            invoice.logoUrl,
-            ""
-        ),
-
-        gstin: firstValue(
-            source.gstin,
-            source.gstNumber,
-            invoice.companyGstin,
-            invoice.gstin,
-            ""
-        ),
-
-        addressLines,
-
-        contact: firstValue(
-            source.contact,
-            source.phone,
-            source.mobile,
-            source.contactNumber,
-            invoice.companyPhone,
-            invoice.companyContact,
-            ""
-        ),
-
-        email: firstValue(
-            source.email,
-            invoice.companyEmail,
-            ""
-        ),
-
-        website: firstValue(
-            source.website,
-            invoice.companyWebsite,
-            ""
-        ),
-
-        tagline: firstValue(
-            source.tagline,
-            source.companyCode,
-            invoice.companyCode,
-            ""
-        ),
-
-        bank: {
-            ...(source.bank || {}),
-
-            bankName: firstValue(
-                source.bank?.bankName,
-                source.bankName,
-                invoice.bankName,
-                ""
-            ),
-
-            accountHolder: firstValue(
-                source.bank?.accountHolder,
-                source.bank?.accountHolderName,
-                source.accountHolder,
-                source.accountHolderName,
-                invoice.accountHolder,
-                invoice.accountHolderName,
-                source.name,
-                invoice.companyName,
-                ""
-            ),
-
-            accountNumber: firstValue(
-                source.bank?.accountNumber,
-                source.accountNumber,
-                invoice.accountNumber,
-                ""
-            ),
-
-            ifscNumber: firstValue(
-                source.bank?.ifscNumber,
-                source.bank?.ifsc,
-                source.ifscNumber,
-                source.ifsc,
-                invoice.ifscNumber,
-                invoice.ifsc,
-                ""
-            ),
-
-            branchName: firstValue(
-                source.bank?.branchName,
-                source.bank?.branch,
-                source.branchName,
-                source.bankBranch,
-                invoice.bankBranch,
-                ""
-            ),
-
-            swiftCode: firstValue(
-                source.bank?.swiftCode,
-                source.swiftCode,
-                invoice.swiftCode,
-                ""
-            ),
-        },
-
-        upiQrCode: firstValue(
-            source.upiQrCode,
-            source.qrCode,
-            invoice.upiQrCode,
-            invoice.qrCode,
-            ""
-        ),
-
-        signature: firstValue(
-            source.signature,
-            source.signatureUrl,
-            invoice.signature,
-            invoice.signatureUrl,
-            ""
-        ),
-
-        signatureName: firstValue(
-            source.signatureName,
-            invoice.signatureName,
-            ""
-        ),
-
-        signatureContent: firstValue(
-            source.signatureContent,
-            invoice.signatureContent,
-            ""
-        ),
-
-        stamp: firstValue(
-            source.stamp,
-            source.stampUrl,
-            invoice.stamp,
-            invoice.stampUrl,
-            ""
-        ),
-    };
-};
-
-// Used only for displaying signature content as text.
-// Do not inject API-provided HTML directly into the document.
-const signatureContentToText = (content) => {
-    if (!content) return "";
-
-    return String(content)
-        .replace(/<br\s*\/?>/gi, "\n")
-        .replace(/<\/(div|p|li)>/gi, "\n")
-        .replace(/<[^>]*>/g, "")
-        .replace(/&nbsp;/gi, " ")
-        .replace(/&amp;/gi, "&")
-        .replace(/&lt;/gi, "<")
-        .replace(/&gt;/gi, ">")
-        .replace(/&quot;/gi, '"')
-        .replace(/&#39;/gi, "'")
-        .trim();
-};
-
-/*
- * ============================================================
- * TAX HELPERS
- * ============================================================
- */
-
-const getTaxMaster = (taxMasterId, taxMasters = []) => {
-    if (!taxMasterId || !Array.isArray(taxMasters)) return null;
-
-    return (
-        taxMasters.find(
-            (tax) => String(tax.id) === String(taxMasterId)
-        ) || null
-    );
-};
-
-const getItemTaxBreakdown = (item, taxMasters = []) => {
-    const quantity = Number(item?.quantity) || 0;
-    const unitPrice = Number(item?.unitPrice) || 0;
-    const discount = Number(item?.discountAmount) || 0;
-
-    const grossAmount = quantity * unitPrice;
-
-    const taxableAmount = Math.max(
-        grossAmount - discount,
-        0
-    );
-
-    const taxMaster =
-        item?.taxMaster ||
-        getTaxMaster(
-            item?.taxMasterId ||
-            item?.taxMaster?.id,
-            taxMasters
-        );
-
-    const taxType = String(
-        firstValue(
-            item?.taxType,
-            taxMaster?.taxType,
-            ""
-        )
-    ).toUpperCase();
-
-    const taxRate =
-        item?.taxRate != null
-            ? Number(item.taxRate) || 0
-            : Number(taxMaster?.taxRate) || 0;
-
-    const calculatedTaxAmount =
-        (taxableAmount * taxRate) / 100;
-
-    const taxAmount =
-        item?.taxAmount != null
-            ? Number(item.taxAmount) || 0
-            : calculatedTaxAmount;
-
-    let cgstAmount = 0;
-    let sgstAmount = 0;
-    let igstAmount = 0;
-
-    if (taxType === "IGST") {
-        igstAmount =
-            item?.igstAmount != null
-                ? Number(item.igstAmount) || 0
-                : taxAmount;
-    } else if (
-        taxType === "CGST" ||
-        taxType === "SGST" ||
-        taxType === "CGST_SGST" ||
-        taxType === "CGST+SGST" ||
-        taxType === "GST"
-    ) {
-        cgstAmount =
-            item?.cgstAmount != null
-                ? Number(item.cgstAmount) || 0
-                : taxAmount / 2;
-
-        sgstAmount =
-            item?.sgstAmount != null
-                ? Number(item.sgstAmount) || 0
-                : taxAmount / 2;
-    } else {
-        cgstAmount = Number(item?.cgstAmount) || 0;
-        sgstAmount = Number(item?.sgstAmount) || 0;
-        igstAmount = Number(item?.igstAmount) || 0;
-    }
-
-    const calculatedTaxTotal =
-        cgstAmount + sgstAmount + igstAmount;
-
-    return {
-        grossAmount,
-        taxableAmount,
-        taxAmount: calculatedTaxTotal || taxAmount,
-        taxRate,
-        taxType,
-        cgstAmount,
-        sgstAmount,
-        igstAmount,
-        totalAmount: taxableAmount + (
-            calculatedTaxTotal || taxAmount
-        ),
-    };
-};
-
-/*
- * ============================================================
- * STYLES
- * ============================================================
- */
-
-const S = {
-    page: (preview) => ({
-        position: preview ? "relative" : "fixed",
-        left: preview ? "auto" : "-10000px",
-        top: "0",
-        width: "794px",
-        minHeight: "1123px",
-        margin: preview ? "0 auto" : "0",
-        padding: "34px 38px 60px 38px",
-        boxSizing: "border-box",
-        background: "#ffffff",
-        color: "#1a1a1a",
-        fontFamily:
-            "'Inter', 'Helvetica Neue', Arial, Helvetica, sans-serif",
-        fontSize: "11px",
-        lineHeight: "1.4",
-        overflow: preview ? "visible" : "hidden",
-        boxShadow: preview
-            ? "0 2px 12px rgba(0,0,0,0.12)"
-            : "none",
-    }),
-
-    rowBetween: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-    },
-
-    th: (align = "left") => ({
-        background: "#000000",
-        color: "#ffffff",
-        fontWeight: "700",
-        fontSize: "11px",
-        padding: "6px 10px",
-        textAlign: align,
-    }),
-
-    td: (align = "left", extra = {}) => ({
-        padding: "8px 10px 3px",
-        fontSize: "12px",
-        textAlign: align,
-        verticalAlign: "top",
-        ...extra,
-    }),
-};
-
-/*
- * ============================================================
- * COMPONENT
- * ============================================================
- */
+import {
+    firstValue,
+    getInvoiceTemplateData,
+} from "../../utils/invoiceTemplateHelpers";
 
 export default function InvoiceTemplate1({
     invoice,
@@ -681,336 +13,214 @@ export default function InvoiceTemplate1({
 }) {
     if (!invoice) return null;
 
-    const items = getInvoiceItems(invoice);
+    const {
+        company,
+        bank,
+        bankRows,
+        items,
+        breakdowns,
+        totalQuantity,
+        currency,
+        symbol,
+        fmt,
+        taxableTotal,
+        cgstTotal,
+        sgstTotal,
+        igstTotal,
+        grandTotal,
+        hasTax,
+        hasIgst,
+        isPaid,
+        partyName,
+        partyAddress,
+        partyEmail,
+        partyPhone,
+        partyGstin,
+        invoiceNumber,
+        invoiceDate,
+        dueDate,
+        placeOfSupply,
+        logo,
+        qrCode,
+        signature,
+        stamp,
+        signatureText,
+        amountInWords: totalInWords,
+    } = getInvoiceTemplateData(invoice, taxMasters);
 
-    const company = resolveCompany(invoice);
-    const bank = company.bank || {};
+    const companyAddress = [
+        company.addressLine1,
+        company.addressLine2,
+        [
+            company.city,
+            company.state,
+            company.country,
+            company.pincode,
+        ].filter(Boolean).join(", "),
+    ].filter(Boolean);
 
-    const currency = getCurrencyCode(invoice);
-
-    const symbol = firstValue(
-        invoice.currencySymbol,
-        typeof invoice.currency === "object"
-            ? invoice.currency.symbol
-            : null,
-        CURRENCY_SYMBOLS[currency],
-        `${currency} `
-    );
-
-    const fmt = (value) => money(value, currency);
-
-    const totalQuantity = items.reduce(
-        (sum, item) =>
-            sum + (Number(item?.quantity) || 0),
-        0
-    );
-
-    const breakdowns = items.map((item) =>
-        getItemTaxBreakdown(item, taxMasters)
-    );
-
-    const taxableTotal = breakdowns.reduce(
-        (sum, breakdown) =>
-            sum + breakdown.taxableAmount,
-        0
-    );
-
-    const cgstTotal = breakdowns.reduce(
-        (sum, breakdown) =>
-            sum + breakdown.cgstAmount,
-        0
-    );
-
-    const sgstTotal = breakdowns.reduce(
-        (sum, breakdown) =>
-            sum + breakdown.sgstAmount,
-        0
-    );
-
-    const igstTotal = breakdowns.reduce(
-        (sum, breakdown) =>
-            sum + breakdown.igstAmount,
-        0
-    );
-
-    const taxTotal =
-        cgstTotal + sgstTotal + igstTotal;
-
-    const shippingAmount =
-        Number(invoice.shippingAmount) || 0;
-
-    const calculatedGrandTotal =
-        taxableTotal + taxTotal + shippingAmount;
-
-    const grandTotal =
-        invoice.grandTotal != null &&
-            invoice.grandTotal !== ""
-            ? Number(invoice.grandTotal) || 0
-            : calculatedGrandTotal;
-
-    const status = String(
-        invoice.status || ""
-    ).toUpperCase();
-
-    const isPaid = status === "PAID";
-
-    const hasIgst = igstTotal > 0;
-    const hasTax = taxTotal > 0;
-
-    const logo = company.logo;
-
-    const qrCode = company.upiQrCode;
-
-    const signature = company.signature;
-
-    const stamp = company.stamp;
-
-    const signatureText = signatureContentToText(
-        company.signatureContent
-    );
-
-    const partyGstin = resolvePartyGstin(invoice);
-
-    const partyAddress = resolvePartyAddress(invoice);
-
-    const partyName = resolvePartyName(invoice);
-
-    const bankRows = [
-        ["Bank", bank.bankName],
-        ["Account Holder", bank.accountHolder],
-        ["Account #", bank.accountNumber],
-        ["IFSC Code", bank.ifscNumber],
-        ["Branch", bank.branchName],
-        ["SWIFT Code", bank.swiftCode],
-    ].filter(([, value]) => value);
-
-    const invoiceNumber = firstValue(
-        invoice.invoiceNumber,
-        invoice.invoiceNo,
-        "-"
-    );
-
-    const invoiceDate = formatDate(
-        firstValue(invoice.invoiceDate, invoice.date)
-    );
-
-    const dueDate = invoice.dueDate
-        ? formatDate(invoice.dueDate)
-        : null;
-
-    const placeOfSupply = firstValue(
-        invoice.placeOfSupply,
-        invoice.partyState,
-        invoice.customer?.state,
-        "-"
-    );
+    const pageClass = preview
+        ? "relative mx-auto"
+        : "fixed left-[-10000px] top-0";
 
     return (
         <div
             id="invoice-template-4"
-            style={S.page(preview)}
+            className={`
+                ${pageClass}
+                box-border
+                min-h-[1123px]
+                w-[794px]
+                overflow-hidden
+                bg-white
+                px-[38px]
+                pt-[34px]
+                pb-[60px]
+                font-['Inter',Helvetica,Arial,sans-serif]
+                text-[11px]
+                leading-[1.4]
+                text-[#1a1a1a]
+                ${preview ? "shadow-[0_2px_12px_rgba(0,0,0,0.12)]" : ""}
+            `}
         >
-            {/* =====================================================
-                HEADER
-            ===================================================== */}
-
-            <div
-                style={{
-                    ...S.rowBetween,
-                    paddingBottom: "12px",
-                    borderBottom: "1.5px solid #111111",
-                }}
-            >
-                <div style={{ width: "230px" }}>
+            {/* HEADER */}
+            <div className="flex items-start justify-between border-b-[1.5px] border-[#111] pb-3">
+                <div className="w-[230px]">
                     {logo ? (
                         <img
                             src={logo}
                             alt="Company Logo"
-                            style={{
-                                display: "block",
-                                maxWidth: "100%",
-                                maxHeight: "95px",
-                                objectFit: "contain",
-                            }}
+                            className="block max-h-[95px] max-w-full object-contain"
                         />
                     ) : (
-                        <div style={{ height: "60px" }} />
+                        <div className="h-[60px]" />
                     )}
 
                     {(company.tagline || currency !== "INR") && (
-                        <div
-                            style={{
-                                marginTop: "6px",
-                                fontSize: "11px",
-                                fontWeight: "700",
-                                letterSpacing: "3px",
-                            }}
-                        >
-                            {invoice.taxType || "MULTI CURRENCY"}
+                        <div className="mt-1.5 text-[11px] font-bold tracking-[3px]">
+                            {company.tagline || "MULTI CURRENCY"}
                         </div>
                     )}
                 </div>
 
-                <div
-                    style={{
-                        textAlign: "right",
-                        fontSize: "11px",
-                        lineHeight: "1.5",
-                        color: "#333333",
-                        maxWidth: "470px",
-                    }}
-                >
-                    <div
-                        style={{
-                            fontSize: "21px",
-                            fontWeight: "800",
-                            color: "#111111",
-                            marginBottom: "3px",
-                            letterSpacing: "-0.2px",
-                        }}
-                    >
+                <div className="max-w-[470px] text-right text-[11px] leading-[1.5] text-[#333]">
+                    <div className="mb-[3px] text-[18px] font-black text-[#111]">
                         {company.name || "-"}
                     </div>
 
-                    {company.companyCode && (
-                        <div>{company.companyCode}</div>
-                    )}
+                    {company.legalName &&
+                        company.legalName !== company.name && (
+                            <div className="font-semibold">
+                                {company.legalName}
+                            </div>
+                        )}
 
                     {company.gstin && (
-                        <div
-                            style={{
-                                fontWeight: "700",
-                                color: "#111111",
-                            }}
-                        >
-                            GSTIN {company.gstin}
+                        <div className="font-bold text-[#111]">
+                            GSTIN: {company.gstin}
                         </div>
                     )}
 
-                    {company.addressLines.map((line, index) => (
-                        <div key={index}>{line}</div>
-                    ))}
+                    {company.panNumber && (
+                        <div>
+                            <strong>PAN:</strong> {company.panNumber}
+                        </div>
+                    )}
+
+                    {company.tanNumber && (
+                        <div>
+                            <strong>TAN:</strong> {company.tanNumber}
+                        </div>
+                    )}
+
+                    {companyAddress.length > 0 && (
+                        <div className="font-medium text-[#111]">
+                            {companyAddress.map((line, index) => (
+                                <div key={index}>{line}</div>
+                            ))}
+                        </div>
+                    )}
 
                     {company.contact && (
                         <div>
-                            <strong
-                                style={{ color: "#111111" }}
-                            >
-                                Mobile
-                            </strong>{" "}
+                            <strong className="text-[#111]">Phone:</strong>{" "}
                             {company.contact}
+                        </div>
+                    )}
+
+                    {company.alternatePhone && (
+                        <div>
+                            <strong className="text-[#111]">
+                                Alternate Phone:
+                            </strong>{" "}
+                            {company.alternatePhone}
                         </div>
                     )}
 
                     {company.email && (
                         <div>
-                            <strong
-                                style={{ color: "#111111" }}
-                            >
-                                Email
-                            </strong>{" "}
+                            <strong className="text-[#111]">Email:</strong>{" "}
                             {company.email}
                         </div>
                     )}
 
                     {company.website && (
                         <div>
-                            <strong
-                                style={{ color: "#111111" }}
-                            >
-                                Website
-                            </strong>{" "}
+                            <strong className="text-[#111]">Website:</strong>{" "}
                             {company.website}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* =====================================================
-                BILL TO + INVOICE META
-            ===================================================== */}
+            {/* BILL TO + INVOICE META */}
+            <div className="flex justify-between px-[6px] py-[14px]">
+                <div className="max-w-[340px]">
+                    <div className="mb-2 font-bold">Bill To:</div>
 
-            <div
-                style={{
-                    ...S.rowBetween,
-                    padding: "14px 6px 14px",
-                }}
-            >
-                <div style={{ maxWidth: "340px" }}>
-                    <div
-                        style={{
-                            fontWeight: "700",
-                            marginBottom: "8px",
-                        }}
-                    >
-                        Bill To:
-                    </div>
-
-                    <div
-                        style={{
-                            fontWeight: "700",
-                            fontSize: "13px",
-                        }}
-                    >
+                    <div className="text-[13px] font-bold">
                         {partyName}
                     </div>
 
                     {partyAddress && (
-                        <div
-                            style={{
-                                marginTop: "3px",
-                                whiteSpace: "pre-line",
-                                color: "#333333",
-                            }}
-                        >
-                            {typeof partyAddress === "string"
-                                ? partyAddress
-                                : ""}
+                        <div className="mt-[3px] whitespace-pre-line leading-[1.6] text-[#333]">
+                            {partyAddress}
                         </div>
                     )}
 
                     {partyGstin && (
-                        <div
-                            style={{
-                                marginTop: "2px",
-                                color: "#333333",
-                            }}
-                        >
+                        <div className="mt-[3px]">
                             GSTIN: {partyGstin}
+                        </div>
+                    )}
+
+                    {partyEmail && (
+                        <div className="mt-[3px]">
+                            Email: {partyEmail}
+                        </div>
+                    )}
+
+                    {partyPhone && (
+                        <div className="mt-[3px]">
+                            Phone: {partyPhone}
                         </div>
                     )}
                 </div>
 
-                <table style={{ borderCollapse: "collapse" }}>
+                <table className="border-collapse">
                     <tbody>
                         {[
                             ["Invoice #:", invoiceNumber],
                             ["Invoice Date:", invoiceDate],
                             ["Place of Supply:", placeOfSupply],
                             ["Currency:", currency],
-                            ...(dueDate
-                                ? [["Due Date:", dueDate]]
-                                : []),
+                            ...(dueDate ? [["Due Date:", dueDate]] : []),
                         ].map(([label, value]) => (
                             <tr key={label}>
-                                <td
-                                    style={{
-                                        padding: "3px 80px 3px 0",
-                                        fontWeight: "700",
-                                        textAlign: "right",
-                                        color: "#333333",
-                                    }}
-                                >
+                                <td className="whitespace-nowrap py-[3px] pr-[80px] text-right font-bold text-[#333]">
                                     {label}
                                 </td>
-
-                                <td
-                                    style={{
-                                        padding: "3px 0",
-                                        fontWeight: "700",
-                                        textAlign: "right",
-                                    }}
-                                >
+                                <td className="py-[3px] text-right font-bold">
                                     {value}
                                 </td>
                             </tr>
@@ -1019,33 +229,27 @@ export default function InvoiceTemplate1({
                 </table>
             </div>
 
-            {/* =====================================================
-                ITEMS
-            ===================================================== */}
-
-            <table
-                style={{
-                    width: "100%",
-                    borderCollapse: "collapse",
-                    tableLayout: "fixed",
-                }}
-            >
+            {/* ITEMS */}
+            <table className="w-full table-fixed border-collapse">
                 <colgroup>
-                    <col style={{ width: "5%" }} />
-                    <col style={{ width: "45%" }} />
-                    <col style={{ width: "20%" }} />
-                    <col style={{ width: "30%" }} />
+                    <col className="w-[5%]" />
+                    <col className="w-[45%]" />
+                    <col className="w-[20%]" />
+                    <col className="w-[30%]" />
                 </colgroup>
 
                 <thead>
                     <tr>
-                        <th style={S.th("left")}>#</th>
-
-                        <th style={S.th("left")}>Item</th>
-
-                        <th style={S.th("center")}>HSN/SAC</th>
-
-                        <th style={S.th("right")}>
+                        <th className="bg-black px-[10px] py-[6px] text-left text-[11px] font-bold text-white">
+                            #
+                        </th>
+                        <th className="bg-black px-[10px] py-[6px] text-left text-[11px] font-bold text-white">
+                            Item
+                        </th>
+                        <th className="bg-black px-[10px] py-[6px] text-center text-[11px] font-bold text-white">
+                            HSN/SAC
+                        </th>
+                        <th className="bg-black px-[10px] py-[6px] text-right text-[11px] font-bold text-white">
                             Amount ({String(symbol).trim()})
                         </th>
                     </tr>
@@ -1073,68 +277,78 @@ export default function InvoiceTemplate1({
                             "-"
                         );
 
-                        const quantity =
-                            Number(item.quantity) || 0;
+                        const quantity = Number(item.quantity) || 0;
+                        const unitPrice = Number(item.unitPrice) || 0;
 
-                        const unitPrice =
-                            Number(item.unitPrice) || 0;
+                        const unitName = firstValue(
+                            item.unitName,
+                            item.unit?.unitName,
+                            item.unit?.name,
+                            ""
+                        );
+
+                        const sizeName = firstValue(
+                            item.sizeName,
+                            item.size?.sizeName,
+                            item.size?.name,
+                            ""
+                        );
+
+                        const description = firstValue(item.description, "");
+
+                        const itemDetails = [
+                            `Qty: ${quantity}`,
+                            unitName,
+                            sizeName,
+                        ].filter(Boolean).join(" | ");
 
                         return (
                             <React.Fragment
                                 key={item.id || item.itemId || index}
                             >
                                 <tr>
-                                    <td style={S.td("left")}>
+                                    <td className="px-[10px] pt-2 pb-[3px] text-left align-top text-xs">
                                         {index + 1}
                                     </td>
 
-                                    <td
-                                        style={S.td("left", {
-                                            fontWeight: "700",
-                                        })}
-                                    >
+                                    <td className="px-[10px] pt-2 pb-[3px] text-left align-top text-xs font-bold">
                                         {itemName}
                                     </td>
 
-                                    <td style={S.td("center")}>
+                                    <td className="px-[10px] pt-2 pb-[3px] text-center align-top text-xs">
                                         {hsnCode}
                                     </td>
 
-                                    <td style={S.td("right")}>
-                                        {fmt(
-                                            breakdown.taxableAmount
-                                        )}
+                                    <td className="px-[10px] pt-2 pb-[3px] text-right align-top text-xs">
+                                        {fmt(breakdown.taxableAmount)}
                                     </td>
                                 </tr>
 
                                 <tr>
                                     <td
                                         colSpan={4}
-                                        style={{
-                                            padding:
-                                                "5px 10px 10px 42px",
-                                            borderBottom:
-                                                "1px solid #c8d4d4",
-                                            fontSize: "11px",
-                                            color: "#333333",
-                                            whiteSpace: "pre-line",
-                                        }}
+                                        className="whitespace-pre-line border-b border-[#c8d4d4] py-[5px] pr-[10px] pb-[10px] pl-[42px] text-[11px] text-[#333]"
                                     >
-                                        {item.description ||
-                                            (quantity > 1
-                                                ? `Qty ${quantity} × ${fmt(
-                                                    unitPrice
-                                                )}`
-                                                : "\u00A0")}
+                                        {description && description !== itemName && (
+                                            <div>{description}</div>
+                                        )}
+
+                                        <div>
+                                            {itemDetails} | Rate: {symbol}
+                                            {fmt(unitPrice)}
+                                        </div>
+
+                                        {Number(item.discountAmount) > 0 && (
+                                            <div>
+                                                Discount: {symbol}
+                                                {fmt(item.discountAmount)}
+                                            </div>
+                                        )}
 
                                         {breakdown.taxRate > 0 && (
-                                            <span
-                                                style={{
-                                                    marginLeft: "8px",
-                                                }}
-                                            >
-                                                (Tax {breakdown.taxRate}%)
-                                            </span>
+                                            <div>
+                                                Tax: {breakdown.taxRate}%
+                                            </div>
                                         )}
                                     </td>
                                 </tr>
@@ -1144,23 +358,10 @@ export default function InvoiceTemplate1({
                 </tbody>
             </table>
 
-            {/* =====================================================
-                TAX ROWS
-            ===================================================== */}
-
+            {/* TAX ROWS */}
             {hasTax && (
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "flex-end",
-                    }}
-                >
-                    <div
-                        style={{
-                            width: "250px",
-                            padding: "6px 8px 0 0",
-                        }}
-                    >
+                <div className="flex justify-end">
+                    <div className="w-[250px] pr-2 pt-[6px]">
                         <TotalLine
                             label="Taxable Amount"
                             value={`${symbol}${fmt(taxableTotal)}`}
@@ -1177,7 +378,6 @@ export default function InvoiceTemplate1({
                                     label="CGST"
                                     value={`${symbol}${fmt(cgstTotal)}`}
                                 />
-
                                 <TotalLine
                                     label="SGST"
                                     value={`${symbol}${fmt(sgstTotal)}`}
@@ -1188,194 +388,71 @@ export default function InvoiceTemplate1({
                 </div>
             )}
 
-            {/* =====================================================
-                TOTAL
-            ===================================================== */}
-
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                }}
-            >
-                <div
-                    style={{
-                        width: "250px",
-                        borderTop: "3px double #bbbbbb",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "baseline",
-                        padding: "6px 8px 3px 8px",
-                        boxSizing: "border-box",
-                    }}
-                >
-                    <span
-                        style={{
-                            fontSize: "16px",
-                            fontWeight: "700",
-                        }}
-                    >
-                        Total
-                    </span>
-
-                    <span
-                        style={{
-                            fontSize: "19px",
-                            fontWeight: "800",
-                        }}
-                    >
-                        {symbol}
-                        {fmt(grandTotal)}
+            {/* TOTAL */}
+            <div className="flex justify-end">
+                <div className="flex w-[250px] items-baseline justify-between border-t-[3px] border-double border-[#bbb] box-border px-2 py-[6px]">
+                    <span className="text-base font-bold">Total</span>
+                    <span className="text-[19px] font-extrabold">
+                        {symbol}{fmt(grandTotal)}
                     </span>
                 </div>
             </div>
 
             {/* ITEMS COUNT + AMOUNT IN WORDS */}
-
-            <div
-                style={{
-                    ...S.rowBetween,
-                    alignItems: "center",
-                    borderBottom: "1.5px solid #111111",
-                    padding: "2px 6px 4px",
-                    fontSize: "10px",
-                    color: "#444444",
-                }}
-            >
+            <div className="flex items-center justify-between border-b-[1.5px] border-[#111] px-[6px] py-[2px] pb-1 text-[10px] text-[#444]">
                 <span>
-                    Total Items / Qty : {items.length} /{" "}
-                    {totalQuantity}
+                    Total Items / Qty : {items.length} / {totalQuantity}
                 </span>
 
                 <span>
-                    Total amount (in words):{" "}
-                    {amountInWords(grandTotal, currency)}
+                    Total amount (in words): {totalInWords}
                 </span>
             </div>
 
             {/* AMOUNT PAYABLE */}
-
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    gap: "36px",
-                    padding: "3px 8px 0 0",
-                    fontWeight: "700",
-                    fontSize: "12px",
-                    color: "#333333",
-                }}
-            >
+            <div className="flex justify-end gap-9 pr-2 pt-[3px] text-xs font-bold text-[#333]">
                 <span>
                     {isPaid && (
-                        <span
-                            style={{
-                                color: "#16a34a",
-                                marginRight: "4px",
-                            }}
-                        >
-                            ✓
-                        </span>
+                        <span className="mr-1 text-green-600">✓</span>
                     )}
-
-                    {isPaid
-                        ? "Amount Paid:"
-                        : "Amount Payable:"}
+                    {isPaid ? "Amount Paid:" : "Amount Payable:"}
                 </span>
 
-                <span>
-                    {symbol} {fmt(grandTotal)}
-                </span>
+                <span>{symbol} {fmt(grandTotal)}</span>
             </div>
 
-            {/* =====================================================
-                UPI / BANK / SIGNATORY
-            ===================================================== */}
-
-            <div
-                style={{
-                    display: "flex",
-                    gap: "36px",
-                    marginTop: "22px",
-                }}
-            >
+            {/* UPI / BANK / SIGNATORY */}
+            <div className="mt-[22px] flex gap-9">
                 {/* UPI */}
-
-                <div style={{ width: "120px" }}>
-                    <div
-                        style={{
-                            fontWeight: "700",
-                            marginBottom: "4px",
-                        }}
-                    >
-                        Pay using UPI:
-                    </div>
+                <div className="w-[120px]">
+                    <div className="mb-1 font-bold">Pay using UPI:</div>
 
                     {qrCode ? (
                         <img
                             src={qrCode}
                             alt="UPI QR"
-                            style={{
-                                display: "block",
-                                width: "115px",
-                                height: "115px",
-                                objectFit: "contain",
-                            }}
+                            className="block h-[115px] w-[115px] object-contain"
                         />
                     ) : (
-                        <div
-                            style={{
-                                width: "115px",
-                                height: "115px",
-                                border: "1px dashed #9ca3af",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: "9px",
-                                color: "#6b7280",
-                            }}
-                        >
+                        <div className="flex h-[115px] w-[115px] items-center justify-center border border-dashed border-gray-400 text-[9px] text-gray-500">
                             UPI QR
                         </div>
                     )}
                 </div>
 
                 {/* BANK */}
-
-                <div style={{ flex: 1 }}>
-                    <div
-                        style={{
-                            fontWeight: "700",
-                            marginBottom: "4px",
-                        }}
-                    >
-                        Bank Details:
-                    </div>
+                <div className="flex-1">
+                    <div className="mb-1 font-bold">Bank Details:</div>
 
                     {bankRows.length > 0 ? (
-                        <table
-                            style={{ borderCollapse: "collapse" }}
-                        >
+                        <table className="border-collapse">
                             <tbody>
                                 {bankRows.map(([label, value]) => (
                                     <tr key={label}>
-                                        <td
-                                            style={{
-                                                padding:
-                                                    "3px 12px 3px 0",
-                                                color: "#333333",
-                                                whiteSpace: "nowrap",
-                                            }}
-                                        >
+                                        <td className="whitespace-nowrap py-[3px] pr-3 text-[#333] font-bold">
                                             {label}:
                                         </td>
-
-                                        <td
-                                            style={{
-                                                padding: "3px 0",
-                                                fontWeight: "700",
-                                            }}
-                                        >
+                                        <td className="py-[3px] font-medium">
                                             {value}
                                         </td>
                                     </tr>
@@ -1383,78 +460,34 @@ export default function InvoiceTemplate1({
                             </tbody>
                         </table>
                     ) : (
-                        <div
-                            style={{
-                                fontSize: "10px",
-                                color: "#6b7280",
-                            }}
-                        >
+                        <div className="text-[10px] text-gray-500">
                             Bank details not provided.
                         </div>
                     )}
                 </div>
 
                 {/* SIGNATORY */}
+                <div className="flex w-[200px] flex-col items-end text-right text-[10px] text-[#444]">
+                    <div>For {company.name || ""}</div>
 
-                <div
-                    style={{
-                        width: "200px",
-                        textAlign: "right",
-                        fontSize: "10px",
-                        color: "#444444",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "flex-end",
-                    }}
-                >
-                    <div>
-                        For {company.name || ""}
-                    </div>
-
-                    <div
-                        style={{
-                            width: "90px",
-                            minHeight: "70px",
-                            margin: "10px 0 12px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                        }}
-                    >
+                    <div className="my-[10px] mb-3 flex min-h-[70px] w-[90px] items-center justify-center">
                         {(stamp || signature) && (
                             <img
                                 src={stamp || signature}
                                 alt="Seal / Signature"
-                                style={{
-                                    width: "90px",
-                                    height: "90px",
-                                    objectFit: "contain",
-                                }}
+                                className="h-[90px] w-[90px] object-contain"
                             />
                         )}
 
                         {!stamp && !signature && signatureText && (
-                            <div
-                                style={{
-                                    width: "100%",
-                                    whiteSpace: "pre-line",
-                                    overflowWrap: "anywhere",
-                                    textAlign: "right",
-                                    fontSize: "9px",
-                                }}
-                            >
+                            <div className="w-full whitespace-pre-line break-words text-right text-[9px]">
                                 {signatureText}
                             </div>
                         )}
                     </div>
 
                     {company.signatureName && (
-                        <div
-                            style={{
-                                fontWeight: "700",
-                                marginBottom: "3px",
-                            }}
-                        >
+                        <div className="mb-[3px] font-bold">
                             {company.signatureName}
                         </div>
                     )}
@@ -1463,83 +496,36 @@ export default function InvoiceTemplate1({
                 </div>
             </div>
 
-            {/* =====================================================
-                NOTES / TERMS
-            ===================================================== */}
-
+            {/* NOTES / TERMS */}
             {(invoice.notes || invoice.termsAndConditions) && (
-                <div
-                    style={{
-                        marginTop: "18px",
-                        fontSize: "10px",
-                        color: "#333333",
-                    }}
-                >
+                <div className="mt-[18px] text-[10px] text-[#333]">
                     {invoice.notes && (
-                        <div
-                            style={{
-                                marginBottom: "8px",
-                                whiteSpace: "pre-line",
-                            }}
-                        >
-                            <strong>Notes:</strong>{" "}
-                            {invoice.notes}
+                        <div className="mb-2 whitespace-pre-line">
+                            <strong>Notes:</strong> {invoice.notes}
                         </div>
                     )}
 
                     {invoice.termsAndConditions && (
-                        <div style={{ whiteSpace: "pre-line" }}>
-                            <strong>
-                                Terms and Conditions:
-                            </strong>
-
+                        <div className="whitespace-pre-line">
+                            <strong>Terms and Conditions:</strong>
                             {"\n"}
-
                             {invoice.termsAndConditions}
                         </div>
                     )}
                 </div>
             )}
 
-            {/* =====================================================
-                PAGE FOOTER
-            ===================================================== */}
-
-            <div
-                style={{
-                    position: "absolute",
-                    left: "38px",
-                    bottom: "26px",
-                    fontSize: "10px",
-                    fontWeight: "700",
-                    color: "#222222",
-                }}
-            >
-                Page 1 / 1 &nbsp;•&nbsp; This is a digitally signed
-                document.
+            {/* FOOTER */}
+            <div className="absolute bottom-[26px] left-[38px] text-[10px] font-bold text-[#222]">
+                Page 1 / 1 &nbsp;•&nbsp; This is a digitally signed document.
             </div>
         </div>
     );
 }
 
-/*
- * ============================================================
- * TOTAL LINE
- * ============================================================
- */
-
 function TotalLine({ label, value }) {
     return (
-        <div
-            style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "2px 0 2px 6px",
-                fontSize: "11px",
-                fontWeight: "700",
-                color: "#333333",
-            }}
-        >
+        <div className="flex justify-between py-[2px] pl-[6px] text-[11px] font-bold text-[#333]">
             <span>{label}</span>
             <span>{value}</span>
         </div>

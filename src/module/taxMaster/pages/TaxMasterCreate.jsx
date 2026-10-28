@@ -405,15 +405,22 @@ export default function TaxMasterCreate() {
     useEffect(() => {
         if (
             modal.open &&
-            modal.type === "addTaxMaster" &&
-            modal.data?.taxName
+            modal.type === "addTaxMaster"
         ) {
+            dispatch(resetTaxMasterForm());
+
             dispatch(
                 setTaxMasterField({
                     field: "taxName",
-                    value: modal.data.taxName,
+                    value:
+                        modal.data?.initialValue ??
+                        modal.data?.taxName ??
+                        "",
                 })
             );
+
+            setErrors({});
+            setActiveTab("tax");
         }
     }, [modal.open, modal.type, modal.data, dispatch]);
 
@@ -839,26 +846,47 @@ export default function TaxMasterCreate() {
                 const createdTaxMaster =
                     response?.data?.data ??
                     response?.data ??
+                    response?.result?.data ??
                     response?.result ??
                     response;
 
                 const createdTaxId =
                     createdTaxMaster?.id ??
+                    createdTaxMaster?.taxMasterId ??
                     createdTaxMaster?.taxId;
+
+                console.log("Created Tax Master:", createdTaxMaster);
+                console.log("Created Tax ID:", createdTaxId);
+                console.log("Tax Modal Data:", modal.data);
 
                 if (
                     modal.data?.selectAfterCreate &&
-                    createdTaxId
+                    createdTaxId != null
                 ) {
-                    dispatch(
-                        setCreatedTaxMasterSelection({
-                            item: {
-                                ...createdTaxMaster,
-                                id: createdTaxId,
-                            },
-                            targetField: modal.data.targetField,
-                        })
+                    const selectionData = {
+                        item: {
+                            ...createdTaxMaster,
+                            id: createdTaxId,
+                        },
+                        targetField: modal.data.targetField,
+                        rowIndex: modal.data.rowIndex,
+                    };
+
+                    console.log(
+                        "Dispatching Created Tax Selection:",
+                        selectionData
                     );
+
+                    dispatch(
+                        setCreatedTaxMasterSelection(selectionData)
+                    );
+                } else {
+                    console.warn("Tax auto-selection skipped:", {
+                        selectAfterCreate: modal.data?.selectAfterCreate,
+                        createdTaxId,
+                        targetField: modal.data?.targetField,
+                        rowIndex: modal.data?.rowIndex,
+                    });
                 }
 
                 toast.success("Tax master created successfully");

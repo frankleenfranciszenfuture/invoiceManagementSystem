@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 
 import { closeModal } from "../../module/ui/uiSlice";
 
+import CreateCustomer from "../../module/customer/pages/CustomerCreateModal";
 import AddContactPerson from "../../module/customer/overviewCard/model/AddContactPerson";
 
 import TaxMasterCreate from "../../module/taxMaster/pages/TaxMasterCreate";
@@ -19,8 +20,9 @@ import RoleCreate from "../../module/role/pages/RoleCreate";
 import BankAccountCreate from "../../module/bankAccount/pages/BankAccountCreate";
 import CompanyCreate from "../../module/company/pages/CompanyCreate";
 import UserCreate from "../../module/users/pages/UserCreate";
-import EmailSignatureCreate from "../../module/emailSignature/pages/EmailSignatureCreateSimple";
-
+import EmailSignatureCreate from "../../module/emailSignature/pages/EmailSignatureCreate";
+import CurrencyModel from "../../module/currency/pages/CurrencyModel";
+import SalesPersonCreateModel from "../../module/salesPerson/pages/SalesPersonCreateModel";
 export default function Modal() {
 
     const dispatch = useDispatch();
@@ -37,7 +39,13 @@ export default function Modal() {
     const modalMap = {
 
         // CUSTOMER
+        addCustomer: CreateCustomer,
+        editCustomer: CreateCustomer,
         addContactPerson: AddContactPerson,
+
+        //CURRENCY
+        addCurrency: CurrencyModel,
+        editCurrency: CurrencyModel,
 
         // TAX MASTER
         addTaxMaster: TaxMasterCreate,
@@ -95,6 +103,10 @@ export default function Modal() {
         addEmailSignature: EmailSignatureCreate,
         editEmailSignature: EmailSignatureCreate,
 
+
+        //salesPerson
+        addSalesPerson: SalesPersonCreateModel,
+        editSalesPerson: SalesPersonCreateModel,
     };
 
 
@@ -173,6 +185,14 @@ export default function Modal() {
 
 
     const modalSizeClass = {
+
+        addCustomer: "w-[1050px] max-w-[92vw] h-[90vh] max-h-[90vh]",
+        editCustomer: "w-[1050px] max-w-[92vw] h-[90vh] max-h-[90vh]",
+
+        //Currency
+        addCurrency: "w-[950px] max-w-[92vw] max-h-[85vh]",
+        editCurrency: "w-[950px] max-w-[92vw] max-h-[85vh]",
+
         // Invoice
         addInvoice: "w-[1050px] max-w-[92vw] h-[90vh] max-h-[90vh]",
         editInvoice: "w-[1050px] max-w-[92vw] h-[90vh] max-h-[90vh]",
@@ -180,6 +200,7 @@ export default function Modal() {
         // Email Signature
         addEmailSignature: "w-[850px] max-w-[92vw] max-h-[85vh]",
         editEmailSignature: "w-[850px] max-w-[92vw] max-h-[85vh]",
+
 
         // Product
         addProduct: "w-[800px] max-w-[92vw] max-h-[82vh]",
@@ -206,12 +227,16 @@ export default function Modal() {
         editTaxMaster: "w-[700px] max-w-[92vw] max-h-[78vh]",
 
         // Bank Account
-        addBankAccount: "w-[800px] max-w-[92vw] max-h-[82vh]",
-        editBankAccount: "w-[800px] max-w-[92vw] max-h-[82vh]",
+        addBankAccount: "w-[950px] max-w-[92vw] max-h-[82vh]",
+        editBankAccount: "w-[950px] max-w-[92vw] max-h-[82vh]",
 
         // Company
         addCompany: "w-[800px] max-w-[92vw] max-h-[82vh]",
         editCompany: "w-[800px] max-w-[92vw] max-h-[82vh]",
+
+        // SalesPerson
+        addSalesPerson: "w-[800px] max-w-[92vw] max-h-[82vh]",
+        editSalesPerson: "w-[800px] max-w-[92vw] max-h-[82vh]",
 
         // Role
         addRole: "w-[760px] max-w-[92vw] max-h-[80vh]",
@@ -420,7 +445,7 @@ export default function Modal() {
         bg-white
         shadow-2xl
         left-20
-        top-5
+        top-2
         max-h-[calc(100vh-2rem)]
 
         ${modalSizeClass[type] || "w-[700px] max-w-[80vw] max-h-[75vh]"}
@@ -440,7 +465,7 @@ export default function Modal() {
                         }}
                         className="
             absolute
-            right-3
+            right-5
             top-3
             z-[100]
 

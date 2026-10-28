@@ -40,6 +40,7 @@ import {
 const TABS = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "details", label: "Invoice Details", icon: FileText },
+    { id: "companyDetails", label: "Company Details", icon: FileText },
     { id: "preview", label: "Preview", icon: View },
     { id: "parties", label: "Customer & Address", icon: Users },
     { id: "items", label: "Invoice Items", icon: Package },
@@ -48,6 +49,24 @@ const TABS = [
 ];
 
 const FIELD_GROUPS = {
+    companyDetails: [
+        ["companyName", "Company Name"],
+        ["legalName", "Legal Name"],
+        ["companyCode", "Company Code"],
+        ["gstNumber", "Gst Number"],
+        ["email", "Email"],
+        ["phone", "Phone"],
+        ["website", "Website"],
+        ["addressLine1", "AddressLine1"],
+        ["addressLine2", "AddressLine2"],
+        ["city", "City"],
+        ["state", "State"],
+        ["country", "Country"],
+        ["pincode", "Pincode"]
+        ["termsAndConditions", "Terms and conditions", "textarea"],
+        ["notes", "Notes", "textarea"],
+    ],
+
     details: [
         ["invoiceNumber", "Invoice number"],
         ["invoiceType", "Invoice type"],
@@ -302,6 +321,67 @@ function InvoiceCompanyBankSignature({ invoice }) {
         invoice?.company?.code ||
         "";
 
+    const companyGstNumber =
+        invoice?.gstNumber ||
+        invoice?.company?.gstNumber ||
+        invoice?.company?.gstNumber ||
+        "";
+
+    const companyAddressLine1 =
+        invoice?.addressLine1 ||
+        invoice?.company?.addressLine1 ||
+        invoice?.company?.addressLine1 ||
+        "";
+
+    const companyAddressLine2 =
+        invoice?.addressLine2 ||
+        invoice?.company?.addressLine2 ||
+        invoice?.company?.addressLine2 ||
+        "";
+
+    const companyCity =
+        invoice?.city ||
+        invoice?.company?.city ||
+        invoice?.company?.city ||
+        "";
+
+    const companyState =
+        invoice?.state ||
+        invoice?.company?.state ||
+        invoice?.company?.state ||
+        "";
+
+    const companyCountry =
+        invoice?.country ||
+        invoice?.company?.country ||
+        invoice?.company?.country ||
+        "";
+
+    const companyPincode =
+        invoice?.pincode ||
+        invoice?.company?.pincode ||
+        invoice?.company?.pincode ||
+        "";
+
+    const companyPhone =
+        invoice?.phone ||
+        invoice?.company?.phone ||
+        invoice?.company?.phone ||
+        "";
+
+    const companyEmail =
+        invoice?.email ||
+        invoice?.company?.email ||
+        invoice?.company?.email ||
+        "";
+
+    const companyWebsite =
+        invoice?.website ||
+        invoice?.company?.website ||
+        invoice?.company?.website ||
+        "";
+
+
     const logoUrl =
         invoice?.logo ||
         invoice?.companyLogo ||
@@ -344,40 +424,97 @@ function InvoiceCompanyBankSignature({ invoice }) {
             description="Company identity and payment details associated with this invoice"
             className="xl:col-span-2"
         >
-            <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-3">
-                {/* Company */}
-                <div className="flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                    {logoUrl ? (
-                        <img
-                            src={logoUrl}
-                            alt={companyName || "Company logo"}
-                            className="h-16 w-16 shrink-0 rounded-lg border border-slate-200 bg-white p-1 object-contain"
-                            onError={(event) => {
-                                event.currentTarget.style.display = "none";
-                            }}
-                        />
-                    ) : (
-                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                            <Building2 size={26} />
-                        </div>
+            <div className="mb-2 flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                {logoUrl ? (
+                    <img
+                        src={logoUrl}
+                        alt={companyName || "Company logo"}
+                        className="h-16 w-16 shrink-0 rounded-lg border border-slate-200 bg-white p-1 object-contain"
+                        onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                        }}
+                    />
+                ) : (
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                        <Building2 size={26} />
+                    </div>
+                )}
+
+                <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Company Details
+
+                    </p>
+
+                    <p className="mt-2 break-words text-sm font-semibold text-slate-800">
+                        {companyName || "Company name unavailable"}
+
+                    </p>
+
+                    {companyCode && (
+                        <p className="mt-1 break-words text-xs text-slate-500">
+                            Company Code : {companyCode}
+                        </p>
                     )}
 
-                    <div className="min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                            Company Details
-                        </p>
+                    {companyAddressLine1 && (
+                        <p className="mt-1 break-words text-xs text-slate-500">
+                            Address : {companyAddressLine1} {companyAddressLine2}
 
-                        <p className="mt-2 break-words text-sm font-semibold text-slate-800">
-                            {companyName || "Company name unavailable"}
                         </p>
+                    )}
 
-                        {companyCode && (
-                            <p className="mt-1 break-words text-xs text-slate-500">
-                                Code: {companyCode}
-                            </p>
-                        )}
-                    </div>
+
+
+                    {(companyCity || companyState || companyCountry) && (
+                        <p className="mt-1 break-words text-xs text-gray-500">
+                            {companyCity && (
+                                <span className="text-gray-400">
+                                    City: <span className="font-medium text-blue-400">{companyCity}</span>
+                                </span>
+                            )}
+
+                            {companyState && (
+                                <span className="ml-2 text-gray-400">
+                                    State: <span className="font-medium text-blue-400">{companyState}</span>
+                                </span>
+                            )}
+
+                            {companyCountry && (
+                                <span className="ml-2 text-gray-400">
+                                    Country: <span className="font-medium text-blue-400">{companyCountry}</span>
+                                </span>
+                            )}
+                        </p>
+                    )}
+
+                    {(companyPhone || companyEmail || companyWebsite) && (
+                        <p className="mt-1 break-words text-xs text-gray-500 font-semibold">
+                            {companyPhone && (
+                                <span className="text-gray-400">
+                                    Mobile: <span className="font-medium text-blue-400">{companyPhone}</span>
+                                </span>
+                            )}
+
+                            {companyEmail && (
+                                <span className="ml-2 text-gray-400">
+                                    State: <span className="font-medium text-blue-400">{companyEmail}</span>
+                                </span>
+                            )}
+
+                            {companyWebsite && (
+                                <span className="ml-2 text-gray-400">
+                                    Country: <span className="font-medium text-blue-400">{companyWebsite}</span>
+                                </span>
+                            )}
+                        </p>
+                    )}
                 </div>
+            </div>
+
+            <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
+                {/* Company */}
+
 
                 {/* Bank */}
                 <div className="flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
@@ -1256,7 +1393,8 @@ export default function InvoiceprofileOverview() {
                             <button
                                 type="button"
                                 onClick={handlePreview}
-                                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 
+                                px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
                             >
                                 <View size={14} />
                                 Open Preview Page
@@ -1280,14 +1418,14 @@ export default function InvoiceprofileOverview() {
                         />
                     </div>
 
-                    <div className="w-full min-w-0 overflow-auto rounded-lg bg-slate-100 p-2 sm:p-4">
+                    {/* <div className="w-full min-w-0 overflow-auto rounded-lg bg-slate-100 p-2 sm:p-4">
                         <div className="mx-auto w-full max-w-[950px] bg-white shadow-md">
                             <InvoiceTemplate1
                                 invoice={currentInvoice}
                                 preview={true}
                             />
                         </div>
-                    </div>
+                    </div> */}
                 </Section>
             )}
 
