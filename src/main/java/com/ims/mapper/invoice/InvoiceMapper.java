@@ -3,6 +3,9 @@ package com.ims.mapper.invoice;
 import com.ims.dtos.invoice.InvoiceResponse;
 import com.ims.entity.InvoiceEntity;
 import com.ims.mapper.audit.AuditMapper;
+import com.ims.mapper.company.CompanyMapper;
+import com.ims.mapper.customer.CustomerMapper;
+import com.ims.mapper.party.PartyMapper;
 import com.ims.mapper.salesPerson.SalesPersonMapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -14,7 +17,10 @@ import java.util.List;
         uses = {
                 AuditMapper.class,
                 InvoiceItemMapper.class,
-                SalesPersonMapper.class
+                SalesPersonMapper.class,
+                CompanyMapper.class,
+                CustomerMapper.class,
+                PartyMapper.class,
         }
 )
 public interface InvoiceMapper {
@@ -22,6 +28,9 @@ public interface InvoiceMapper {
     // =====================================================
     // ENTITY -> RESPONSE
     // =====================================================
+    // CUSTOMER DETAILS
+    @Mapping(target = "customer", source = "customer")
+
 
     @Mapping(
             target = "customerId",
@@ -42,6 +51,9 @@ public interface InvoiceMapper {
     @Mapping(
             target = "salesPersonName",
             source = "salesPerson.salesPersonName")
+
+    // COMPANY DETAILS
+    @Mapping(target = "company", source = "companyDetails")
 
     @Mapping(
             target = "companyId",

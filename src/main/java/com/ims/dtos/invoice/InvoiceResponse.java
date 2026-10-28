@@ -1,6 +1,9 @@
 package com.ims.dtos.invoice;
 
 import com.ims.dtos.common.BaseResponse;
+import com.ims.dtos.company.CompanyResponse;
+import com.ims.dtos.customer.CustomerResponse;
+import com.ims.dtos.party.PartyResponse;
 import com.ims.entity.Currency;
 import com.ims.entity.ExchangeRate;
 import com.ims.entity.SalesPersonEntity;
@@ -50,7 +53,7 @@ public class InvoiceResponse extends BaseResponse {
 
     private String customerName;
 
-
+    private CustomerResponse customer;
     // =====================================================
     // DATES
     // =====================================================
@@ -83,6 +86,7 @@ public class InvoiceResponse extends BaseResponse {
     private String companyName;
     private String companyCode;
 
+    private CompanyResponse company;
 
     private Long bankAccountId;
     private String accountNumber;
