@@ -76,4 +76,6 @@ public interface CompanyRepository
     void clearDefaultCompany(
             @Param("excludeId") Long excludeId
     );
+
+    Optional<CompanyDetails> findFirstByActiveTrueAndIsDefaultTrueOrderByIdAsc();
 }

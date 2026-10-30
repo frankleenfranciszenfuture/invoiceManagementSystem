@@ -177,6 +177,24 @@ public class PartyEntity extends BaseEntity {
     @Builder.Default
     private BigDecimal outstandingCredit = BigDecimal.ZERO;
 
+    @Column(
+            name = "outstanding_receivable",
+            nullable = false,
+            precision = 19,
+            scale = 2
+    )
+    @Builder.Default
+    private BigDecimal outstandingReceivable = BigDecimal.ZERO;
+
+    @Column(
+            name = "outstanding_payable",
+            nullable = false,
+            precision = 19,
+            scale = 2
+    )
+    @Builder.Default
+    private BigDecimal outstandingPayable = BigDecimal.ZERO;
+
     // =====================================================
     // PAYMENT TERMS
     // =====================================================

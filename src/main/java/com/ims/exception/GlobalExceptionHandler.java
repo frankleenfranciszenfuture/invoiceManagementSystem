@@ -142,6 +142,14 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalState(
+            IllegalStateException ex) {
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.failure(ex.getMessage()));
+    }
+
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ApiResponse<Void>> handleMissingServletRequestParameter(
             MissingServletRequestParameterException ex) {
@@ -326,7 +334,6 @@ public class GlobalExceptionHandler {
                 ApiResponse.failure(message)
         );
     }
-
 
     /**
      * Validation erros Handleing

@@ -3,12 +3,10 @@ package com.ims.repository;
 import com.ims.entity.PartyEntity;
 import com.ims.enums.PartyType;
 import com.ims.enums.Status;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.EntityGraph;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
@@ -161,6 +159,18 @@ public interface PartyRepository extends
         WHERE p.id = :id
     """)
     Optional<PartyEntity> findByIdForAudit(
+            @Param("id") Long id
+    );
+
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT p
+            FROM PartyEntity p
+            WHERE p.id = :id
+            AND p.active = true
+            """)
+    Optional<PartyEntity> findActivePartyByIdForUpdate(
             @Param("id") Long id
     );
 }

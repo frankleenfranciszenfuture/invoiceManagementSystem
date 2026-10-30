@@ -5,6 +5,7 @@ import com.ims.enums.BankAccountType;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -124,6 +125,14 @@ public class BankAccount extends BaseEntity {
             length = 20
     )
     private BankAccountStatus status;
+
+    @Column(
+            name = "opening_balance",
+            nullable = false,
+            precision = 19,
+            scale = 2
+    )
+    private BigDecimal openingBalance = BigDecimal.ZERO;
 
     @Column(
             name = "active",

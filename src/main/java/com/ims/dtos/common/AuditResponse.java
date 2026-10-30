@@ -15,8 +15,10 @@ import java.time.LocalDateTime;
 public class AuditResponse {
 
     private LocalDateTime createdAt;
-    private String createdBy;
-
     private LocalDateTime updatedAt;
-    private String updatedBy;
+
+    private Long createdBy;
+    private Long updatedBy;
+
+    private Boolean active;
 }
