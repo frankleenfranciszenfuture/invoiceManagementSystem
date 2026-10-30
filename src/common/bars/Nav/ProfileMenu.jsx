@@ -25,6 +25,8 @@ import {
     GraduationCap,
     Sparkles,
     ChevronRight,
+    Wallet,
+    Settings,
 } from "lucide-react";
 
 /* =========================================================
@@ -32,6 +34,24 @@ import {
    ========================================================= */
 
 const shortcuts = [
+    {
+        icon: Package,
+        title: "Inventory",
+        sub: "Manage Stock",
+        to: "/inventory",
+    },
+    {
+        icon: Wallet,
+        title: "Payments",
+        sub: "Manage Payments",
+        to: "/payments",
+    },
+    {
+        icon: Settings,
+        title: "Settings",
+        sub: "Preferences",
+        to: "/settings",
+    },
     {
         icon: FileText,
         title: "Help",
@@ -140,6 +160,23 @@ export default function ProfileMenu({ buttonRef }) {
     }, [user, isAuthenticated]);
 
     /* =====================================================
+       OPEN MODULE IN NEW TAB
+       ===================================================== */
+
+    const handleShortcutClick = (item) => {
+
+        if (!item.to) return;
+
+        window.open(
+            item.to,
+            "_blank",
+            "noopener,noreferrer"
+        );
+
+        dispatch(closeProfileMenu());
+    };
+
+    /* =====================================================
        LOGOUT
        ===================================================== */
 
@@ -150,12 +187,10 @@ export default function ProfileMenu({ buttonRef }) {
         try {
 
             /*
-             * IMPORTANT:
-             *
              * Call backend /logout first.
-             *
-             * This expires the HttpOnly jwt cookie.
+             * This expires the HttpOnly JWT cookie.
              */
+
             const result =
                 await dispatch(
                     logoutUser()
@@ -174,9 +209,10 @@ export default function ProfileMenu({ buttonRef }) {
             );
 
             /*
-             * Even if backend logout fails,
-             * clear Redux authentication state.
+             * Clear Redux authentication state
+             * even if backend logout fails.
              */
+
             dispatch(logout());
         }
 
@@ -184,10 +220,6 @@ export default function ProfileMenu({ buttonRef }) {
            CLEAR OLD LOCAL STORAGE TOKENS
            ================================================= */
 
-        /*
-         * These are kept only for cleaning up tokens
-         * created by the previous authentication implementation.
-         */
         localStorage.removeItem("token");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("posToken");
@@ -268,6 +300,7 @@ export default function ProfileMenu({ buttonRef }) {
                     {/* CLOSE BUTTON */}
 
                     <button
+                        type="button"
                         onClick={() =>
                             dispatch(closeProfileMenu())
                         }
@@ -334,6 +367,7 @@ export default function ProfileMenu({ buttonRef }) {
                     <div className="mt-5 flex items-center justify-between">
 
                         <button
+                            type="button"
                             className="
                                 rounded
                                 border
@@ -349,6 +383,7 @@ export default function ProfileMenu({ buttonRef }) {
                         </button>
 
                         <button
+                            type="button"
                             onClick={handleLogout}
                             disabled={loading}
                             className="
@@ -388,6 +423,10 @@ export default function ProfileMenu({ buttonRef }) {
                         return (
                             <button
                                 key={item.title}
+                                type="button"
+                                onClick={() =>
+                                    handleShortcutClick(item)
+                                }
                                 className="
                                     flex
                                     flex-col
@@ -395,11 +434,21 @@ export default function ProfileMenu({ buttonRef }) {
                                     gap-2
                                     rounded-lg
                                     p-2
+                                    transition
                                     hover:bg-gray-50
+                                    focus:outline-none
+                                    focus:ring-2
+                                    focus:ring-blue-400
                                 "
                             >
 
-                                <div className="rounded-lg bg-gray-100 p-3">
+                                <div className="
+                                    rounded-lg
+                                    bg-gray-100
+                                    p-3
+                                    transition
+                                    hover:bg-blue-50
+                                ">
 
                                     <Icon
                                         size={24}
@@ -408,14 +457,18 @@ export default function ProfileMenu({ buttonRef }) {
 
                                 </div>
 
-                                <div className="text-center text-sm text-gray-700">
+                                <div className="
+                                    text-center
+                                    text-sm
+                                    text-gray-700
+                                ">
 
-                                    <div>
+                                    <div className="font-medium">
                                         {item.title}
                                     </div>
 
                                     {item.sub && (
-                                        <div>
+                                        <div className="text-xs text-gray-500">
                                             {item.sub}
                                         </div>
                                     )}
@@ -435,6 +488,7 @@ export default function ProfileMenu({ buttonRef }) {
                 <div className="px-5">
 
                     <button
+                        type="button"
                         className="
                             flex
                             w-full
@@ -479,6 +533,7 @@ export default function ProfileMenu({ buttonRef }) {
                     <div className="space-y-4">
 
                         <button
+                            type="button"
                             className="
                                 flex
                                 items-center
@@ -492,6 +547,7 @@ export default function ProfileMenu({ buttonRef }) {
                         </button>
 
                         <button
+                            type="button"
                             className="
                                 flex
                                 items-center
@@ -505,6 +561,7 @@ export default function ProfileMenu({ buttonRef }) {
                         </button>
 
                         <button
+                            type="button"
                             className="
                                 flex
                                 items-center

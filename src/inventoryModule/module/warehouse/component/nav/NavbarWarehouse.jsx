@@ -1,0 +1,369 @@
+import React, {
+    useState,
+    useEffect,
+    useRef,
+} from "react";
+
+import {
+    useDispatch,
+    useSelector,
+} from "react-redux";
+
+import { useNavigate } from "react-router-dom";
+
+import {
+    Plus,
+    ChevronDown,
+    Home,
+    Settings,
+} from "lucide-react";
+
+import {
+    setWarehousesStatus,
+    setSelectedWarehousesView,
+} from "../../slices/warehouseViewSlice";
+
+import { openModal } from "../../../../../module/ui/uiSlice";
+
+export default function NavbarWarehouse() {
+
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+
+    const [dropdownOpen, setDropdownOpen] =
+        useState(false);
+
+    const dropdownOpenRef = useRef(null);
+
+    // ============================================================
+    // WAREHOUSE VIEW STATE
+    // ============================================================
+
+    const EMPTY_ARRAY = [];
+
+    const selectedWarehouseView = useSelector(
+        (state) =>
+            state.warehouseView?.selectedWarehouseView
+    );
+
+    const views = useSelector(
+        (state) =>
+            state.warehouseView?.views ?? EMPTY_ARRAY
+    );
+
+    const warehouseStatus = useSelector(
+        (state) =>
+            state.warehouseView?.warehouseStatus
+    );
+
+    // ============================================================
+    // CLICK OUTSIDE
+    // ============================================================
+
+    useEffect(() => {
+
+        const handleClickOutside = (e) => {
+
+            if (
+                dropdownOpenRef.current &&
+                !dropdownOpenRef.current.contains(e.target)
+            ) {
+                setDropdownOpen(false);
+            }
+
+        };
+
+        document.addEventListener(
+            "mousedown",
+            handleClickOutside
+        );
+
+        return () => {
+            document.removeEventListener(
+                "mousedown",
+                handleClickOutside
+            );
+        };
+
+    }, []);
+
+    // ============================================================
+    // OPEN WAREHOUSE CREATE MODAL
+    // ============================================================
+
+    const handleNewWarehouse = () => {
+
+        setDropdownOpen(false);
+
+        dispatch(
+            openModal({
+                type: "addWarehouse",
+            })
+        );
+
+    };
+
+    // ============================================================
+    // STATUS VIEW CHANGE
+    // ============================================================
+
+    const handleViewChange = (view) => {
+
+        dispatch(
+            setSelectedWarehousesView(view.label)
+        );
+
+        dispatch(
+            setWarehousesStatus(view.value)
+        );
+
+        navigate(
+            `/inventory/warehouses?warehouseStatus=${view.value}`
+        );
+
+        setDropdownOpen(false);
+
+    };
+
+    // ============================================================
+    // RENDER
+    // ============================================================
+
+    return (
+
+        <div
+            className="
+                h-[60px]
+                border
+                border-gray-100
+                rounded-md
+                flex
+                items-center
+                justify-between
+                bg-white
+                px-2
+                py-2
+            "
+        >
+
+            {/* =====================================================
+                LEFT - WAREHOUSE STATUS FILTER
+            ====================================================== */}
+
+            <div className="flex items-center gap-2">
+
+                {/* HOME */}
+
+                <div className="flex items-center gap-2">
+
+                    <button
+                        type="button"
+                        onClick={() => navigate("/")}
+                        className="
+                            flex
+                            items-center
+                            justify-center
+                            rounded-md
+                            border
+                            border-blue-300
+                            bg-white
+                            p-2
+                            text-[#0095FD]
+                            hover:bg-[#0095FD]/20
+                            transition
+                        "
+                        title="Home"
+                    >
+                        <Home size={18} />
+                    </button>
+
+                </div>
+
+                {/* WAREHOUSE STATUS FILTER */}
+
+                <div
+                    ref={dropdownOpenRef}
+                    className="relative"
+                >
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setDropdownOpen((prev) => !prev)
+                        }
+                        className="
+                            flex
+                            items-center
+                            gap-1
+                            rounded-md
+                            bg-[#0095FD]
+                            px-3
+                            py-2
+                            cursor-pointer
+                            hover:bg-[#0095FD]/90
+                        "
+                    >
+
+                        <h2 className="font-semibold text-gray-100">
+                            {selectedWarehouseView || "All Warehouses"}
+                        </h2>
+
+                        <ChevronDown
+                            size={14}
+                            className={`
+                                text-gray-100
+                                transition
+                                ${dropdownOpen ? "rotate-180" : ""}
+                            `}
+                        />
+
+                    </button>
+
+                    {dropdownOpen && (
+
+                        <div
+                            className="
+                                absolute
+                                left-0
+                                mt-2
+                                w-72
+                                rounded-md
+                                border
+                                border-gray-200
+                                bg-white
+                                shadow-lg
+                                z-50
+                            "
+                        >
+
+                            <div className="max-h-72 overflow-y-auto">
+
+                                {views.map((view) => (
+
+                                    <button
+                                        type="button"
+                                        key={view.value}
+                                        onClick={() =>
+                                            handleViewChange(view)
+                                        }
+                                        className="
+                                            w-full
+                                            px-5
+                                            py-4
+                                            border-b
+                                            border-gray-50
+                                            text-left
+                                            text-sm
+                                            hover:bg-[#0095FD]/90
+                                            hover:text-white
+                                            rounded-md
+                                        "
+                                    >
+                                        {view.label}
+                                    </button>
+
+                                ))}
+
+                            </div>
+
+                            <button
+                                type="button"
+                                className="
+                                    w-full
+                                    border-t
+                                    border-gray-200
+                                    px-4
+                                    py-3
+                                    text-left
+                                    text-gray-500
+                                    bg-[#0095FD]/20
+                                    hover:text-white
+                                    hover:bg-[#0095FD]/80
+                                    rounded-md
+                                "
+                                onClick={handleNewWarehouse}
+                            >
+                                + New Warehouse
+                            </button>
+
+                        </div>
+
+                    )}
+
+                </div>
+
+            </div>
+
+            {/* =====================================================
+                RIGHT
+            ====================================================== */}
+
+            <div className="flex items-center gap-2">
+
+                {/* =================================================
+                    NEW WAREHOUSE
+                ================================================== */}
+
+                <div
+                    className="
+                        flex
+                        overflow-hidden
+                        rounded-md
+                        border-blue-100
+                        shadow-sm
+                    "
+                >
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            navigate("/inventory/warehouses/newSimple")
+                        }
+                        className="
+                            flex
+                            items-center
+                            gap-1
+                            bg-[#0095FD]
+                            px-3
+                            py-2
+                            text-sm
+                            font-medium
+                            text-white
+                            hover:bg-[#0095FD]/90
+                        "
+                        title="New Warehouse"
+                    >
+
+                        <Plus size={14} />
+
+                    </button>
+
+                </div>
+
+                {/* =================================================
+                    SETTINGS
+                ================================================== */}
+
+                <button
+                    type="button"
+                    onClick={() => navigate("/settings")}
+                    className="
+                        rounded-md
+                        border
+                        border-gray-300
+                        p-2
+                        text-[#0095FD]
+                        hover:bg-[#0095FD]/20
+                    "
+                    title="Settings"
+                >
+
+                    <Settings size={18} />
+
+                </button>
+
+            </div>
+
+        </div>
+    );
+}

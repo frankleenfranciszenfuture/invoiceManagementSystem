@@ -40,7 +40,6 @@ import {
 const TABS = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "details", label: "Invoice Details", icon: FileText },
-    { id: "companyDetails", label: "Company Details", icon: FileText },
     { id: "preview", label: "Preview", icon: View },
     { id: "parties", label: "Customer & Address", icon: Users },
     { id: "items", label: "Invoice Items", icon: Package },

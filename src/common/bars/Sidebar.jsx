@@ -21,6 +21,7 @@ import {
     Building2,
     BoxIcon,
     BadgeJapaneseYen,
+    PaintBucket,
 } from "lucide-react";
 
 // ============================================================
@@ -111,6 +112,14 @@ const NAV = [
         moduleName: "Settings",
         icon: Settings,
         to: "/settings",
+        dropdown: true,
+    },
+
+    {
+        label: "Inventory",
+        moduleName: "Inventory",
+        icon: BoxIcon,
+        to: "/inventory",
         dropdown: true,
     },
 ];
@@ -205,6 +214,82 @@ const SETTINGS_NAV = [
     },
 ];
 
+
+const INVENTORY_NAV = [
+    {
+        label: "Inventory Dashboard",
+        moduleName: "Inventory",
+        icon: LayoutDashboard,
+        to: "/inventory",
+    },
+
+    {
+        label: "Warehouse",
+        moduleName: "Warehouse",
+        icon: Building2,
+        to: "/inventory/warehouses",
+    },
+
+    {
+        label: "SaleOrder",
+        moduleName: "SaleOrder",
+        icon: PaintBucket,
+        to: "/inventory/saleOrder/create",
+    },
+    {
+        label: "Stock Adjustment",
+        moduleName: "Stock Adjustment",
+        icon: Package,
+        to: "/inventory/adjustments",
+    },
+    {
+        label: "Stock Transfer",
+        moduleName: "Stock Transfer",
+        icon: Package,
+        to: "/inventory/transfers",
+    },
+    {
+        label: "Stock History",
+        moduleName: "Stock History",
+        icon: FileText,
+        to: "/inventory/history",
+    },
+];
+
+
+const PAYMENT_NAV = [
+    {
+        label: "Payment Dashboard",
+        moduleName: "Payments",
+        icon: LayoutDashboard,
+        to: "/payments",
+    },
+    {
+        label: "All Payments",
+        moduleName: "Payments",
+        icon: Wallet,
+        to: "/payments/list",
+    },
+    {
+        label: "Customer Receipts",
+        moduleName: "Customer Receipts",
+        icon: Wallet,
+        to: "/payments/receipts",
+    },
+    {
+        label: "Party Payments",
+        moduleName: "Party Payments",
+        icon: Wallet,
+        to: "/payments/party-payments",
+    },
+    {
+        label: "Bank Transactions",
+        moduleName: "Bank Transactions",
+        icon: Building2,
+        to: "/payments/bank-transactions",
+    },
+];
+
 // ============================================================
 // HELPERS
 // ============================================================
@@ -263,6 +348,29 @@ const getInitials = (name) =>
         .map((part) => part[0].toUpperCase())
         .join("");
 
+const getModuleTitle = ({
+    isSettingsArea,
+    isInventoryArea,
+    isPaymentArea,
+}) => {
+    if (isInventoryArea) return "Inventory";
+    if (isPaymentArea) return "Payments";
+    if (isSettingsArea) return "Settings";
+
+    return "InvoicePro";
+};
+
+const getModuleIcon = ({
+    isSettingsArea,
+    isInventoryArea,
+    isPaymentArea,
+}) => {
+    if (isInventoryArea) return BoxIcon;
+    if (isPaymentArea) return Wallet;
+    if (isSettingsArea) return Settings;
+
+    return FileText;
+};
 // ============================================================
 // PERMISSION HELPERS
 // ============================================================
@@ -511,6 +619,14 @@ const Sidebar = ({ onLogout }) => {
         pathname === "/settings" ||
         pathname.startsWith("/settings/");
 
+    const isInventoryArea =
+        pathname === "/inventory" ||
+        pathname.startsWith("/inventory/");
+
+    const isPaymentArea =
+        pathname === "/payments" ||
+        pathname.startsWith("/payments/");
+
     // --------------------------------------------------------
     // ROUTE HELPERS
     // --------------------------------------------------------
@@ -527,27 +643,50 @@ const Sidebar = ({ onLogout }) => {
 
     const isNavItemActive = React.useCallback(
         (item) => {
-            if (!isSettingsArea) {
+            // Settings navigation
+            if (isSettingsArea) {
+                if (item.label === "General Settings") {
+                    return pathname === "/settings";
+                }
+
+                if (item.label === "Products") {
+                    return SETTINGS_PRODUCT_PATHS.some(
+                        (path) =>
+                            pathname === path ||
+                            pathname.startsWith(`${path}/`)
+                    );
+                }
+
                 return isActiveRoute(item.to);
             }
 
-            // General Settings: exact route only
-            if (item.label === "General Settings") {
-                return pathname === "/settings";
+            // Inventory navigation
+            if (isInventoryArea) {
+                if (item.to === "/inventory") {
+                    return pathname === "/inventory";
+                }
+
+                return isActiveRoute(item.to);
             }
 
-            // Products: only product settings routes
-            if (item.label === "Products") {
-                return SETTINGS_PRODUCT_PATHS.some(
-                    (path) =>
-                        pathname === path ||
-                        pathname.startsWith(`${path}/`)
-                );
+            // Payments navigation
+            if (isPaymentArea) {
+                if (item.to === "/payments") {
+                    return pathname === "/payments";
+                }
+
+                return isActiveRoute(item.to);
             }
 
             return isActiveRoute(item.to);
         },
-        [isSettingsArea, isActiveRoute, pathname]
+        [
+            isSettingsArea,
+            isInventoryArea,
+            isPaymentArea,
+            isActiveRoute,
+            pathname,
+        ]
     );
 
     // --------------------------------------------------------
@@ -557,7 +696,11 @@ const Sidebar = ({ onLogout }) => {
     const currentNav = React.useMemo(() => {
         const sourceNav = isSettingsArea
             ? SETTINGS_NAV
-            : NAV;
+            : isInventoryArea
+                ? INVENTORY_NAV
+                : isPaymentArea
+                    ? PAYMENT_NAV
+                    : NAV;
 
         return sourceNav
             .filter((item) =>
@@ -574,7 +717,12 @@ const Sidebar = ({ onLogout }) => {
                     )
                     : undefined,
             }));
-    }, [isSettingsArea, hasPermission]);
+    }, [
+        isSettingsArea,
+        isInventoryArea,
+        isPaymentArea,
+        hasPermission,
+    ]);
 
     // --------------------------------------------------------
     // NAVIGATION HANDLER
@@ -599,25 +747,37 @@ const Sidebar = ({ onLogout }) => {
     // --------------------------------------------------------
 
     React.useEffect(() => {
-        if (!isSettingsArea) {
-            const activeItem = NAV.find(
-                (item) =>
-                    item.children?.length &&
-                    isActiveRoute(item.to)
+        if (isSettingsArea) {
+            const productPage = SETTINGS_PRODUCT_PATHS.some(
+                (path) =>
+                    pathname === path ||
+                    pathname.startsWith(`${path}/`)
             );
 
-            setOpenMenu(activeItem?.label ?? null);
+            setOpenMenu(productPage ? "Products" : null);
             return;
         }
 
-        const productPage = SETTINGS_PRODUCT_PATHS.some(
-            (path) =>
-                pathname === path ||
-                pathname.startsWith(`${path}/`)
+        if (isInventoryArea || isPaymentArea) {
+            setOpenMenu(null);
+            return;
+        }
+
+        const activeItem = NAV.find(
+            (item) =>
+                item.children?.length &&
+                isActiveRoute(item.to)
         );
 
-        setOpenMenu(productPage ? "Products" : null);
-    }, [pathname, isSettingsArea, isActiveRoute]);
+        setOpenMenu(activeItem?.label ?? null);
+
+    }, [
+        pathname,
+        isSettingsArea,
+        isInventoryArea,
+        isPaymentArea,
+        isActiveRoute,
+    ]);
 
     // --------------------------------------------------------
     // PARENT MENU CLICK
@@ -692,6 +852,18 @@ const Sidebar = ({ onLogout }) => {
         currentUser?.profileImage ||
         currentUser?.imageUrl;
 
+    //module name change
+    const moduleTitle = getModuleTitle({
+        isSettingsArea,
+        isInventoryArea,
+        isPaymentArea,
+    });
+
+    const ModuleIcon = getModuleIcon({
+        isSettingsArea,
+        isInventoryArea,
+        isPaymentArea,
+    });
     // --------------------------------------------------------
     // RENDER
     // --------------------------------------------------------
@@ -747,35 +919,60 @@ const Sidebar = ({ onLogout }) => {
 
                 {/* USER HEADER */}
 
-                <div
-                    className={`
-                        px-4 pb-4 pt-5
-                        ${open ? "" : "flex justify-center px-0"}
-                    `}
-                >
+                <div className="px-4 pb-4 pt-5">
                     <div
                         className={`
-                            flex items-center gap-3
-                            ${open ? "border-b border-gray-400 pb-4" : ""}
-                        `}
+            flex flex-col gap-3
+            ${open ? "border-b border-gray-400 pb-4" : "items-center"}
+        `}
                     >
-                        {isSettingsArea ? (
+                        {/* BRAND / MODULE TITLE */}
+
+                        <div
+                            className={`
+                flex items-center gap-3
+                ${open ? "" : "justify-center"}
+            `}
+                        >
+                            <ModuleIcon
+                                className="
+                    h-10 w-10 shrink-0
+                    rounded-2xl p-2
+                    bg-gradient-to-br
+                    from-[#6366F1] to-[#166534]
+                    text-[#FCF7F8] shadow-md
+                "
+                            />
+
+                            {open && (
+                                <div className="min-w-0 leading-tight">
+                                    <p className="truncate text-base font-semibold text-[#F5F5F5]">
+                                        Zenfuture Tech
+                                    </p>
+
+                                    <p className="truncate text-base text-[#F5F5F5]">
+                                        {moduleTitle}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* BACK TO MAIN MENU */}
+
+                        {(isSettingsArea) && (
                             <button
                                 type="button"
                                 onClick={() => goTo("/dashboard")}
                                 title="Back to Main Menu"
                                 className={`
-                                    flex min-w-0 items-center gap-2
-                                    rounded-lg text-sm font-semibold
-                                    text-white transition
-                                    hover:text-lime-300
-                                    ${open ? "w-full" : "justify-center"}
-                                `}
+                    flex items-center gap-2
+                    rounded-lg text-sm font-semibold
+                    text-white transition
+                    hover:text-lime-300
+                    ${open ? "w-full px-1" : "justify-center"}
+                `}
                             >
-                                <ChevronLeft
-                                    size={22}
-                                    className="shrink-0"
-                                />
+                                <ChevronLeft size={18} className="shrink-0" />
 
                                 {open && (
                                     <span className="truncate">
@@ -783,30 +980,6 @@ const Sidebar = ({ onLogout }) => {
                                     </span>
                                 )}
                             </button>
-                        ) : (
-                            <>
-                                <FileText
-                                    className="
-                                        h-10 w-10 shrink-0
-                                        rounded-2xl px-3
-                                        bg-gradient-to-br
-                                        from-[#6366F1] to-[#166534]
-                                        text-[#FCF7F8] shadow-md
-                                    "
-                                />
-
-                                {open && (
-                                    <div className="min-w-0 leading-tight">
-                                        <p className="truncate text-base font-semibold text-[#F5F5F5]">
-                                            Zenfuture Tech
-                                        </p>
-
-                                        <p className="text-base text-[#F5F5F5]">
-                                            InvoicePro
-                                        </p>
-                                    </div>
-                                )}
-                            </>
                         )}
                     </div>
                 </div>

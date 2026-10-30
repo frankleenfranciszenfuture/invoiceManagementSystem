@@ -52,6 +52,13 @@ import partyViewReducer from "../module/parties/slices/partyViewSlice";
 import clearanceReducer from "../module/clearnaceOutStandingParties/slices/clearanceSlice";
 import clearanceViewReducer from "../module/clearnaceOutStandingParties/slices/clearanceViewSlice";
 
+import inventoryDashboardReducer from "../inventoryModule/slices/inventoryDashboardSlice";
+import inventoryReducer from "../inventoryModule/slices/inventorySlice";
+
+import warehouseReducer from "../inventoryModule/module/warehouse/slices/warehouseSlice";
+import warehousesViewReducer from "../inventoryModule/module/warehouse/slices/warehouseViewSlice";
+
+import salesOrderReducer from "../inventoryModule/module/saleOrder/slices/salesOrderSlice";
 import paginationReducer from "../common/pagination/slices/paginationSlice";
 import menuPermissionReducer from "../module/menuPermission/slices/menuPermissionSlice";
 
@@ -136,6 +143,17 @@ export const store = configureStore({
     //clearance
     clearance: clearanceReducer,
     clearanceView: clearanceViewReducer,
+
+    // inventoryDashboard
+    inventoryDashboard: inventoryDashboardReducer,
+    inventory: inventoryReducer,
+
+    //warehouse
+    warehouse: warehouseReducer,
+    warehousesView: warehousesViewReducer,
+
+    //saleOrder
+    salesOrder: salesOrderReducer,
 
     //pagniation
     pagination: paginationReducer,

@@ -132,6 +132,12 @@ import SizeProfileView from "./module/sizes/pages/SizeProfileView";
 import CategoryProfileView from "./module/category/pages/CategoryProfileView";
 import CustomerCreateModal from "./module/customer/pages/CustomerCreateModal";
 import CurrencyModel from "./module/currency/pages/CurrencyModel";
+import InventoryDashbaord from "./inventoryModule/inventory/pages/InventoryDashbaord";
+import InventoryOpeningStock from "./inventoryModule/module/openingStock/pages/InventoryOpeningStock";
+import WarehouseDashboard from "./inventoryModule/module/warehouse/pages/WarehouseDashboard";
+import WarehouseCreate from "./inventoryModule/module/warehouse/pages/WarehouseCreate";
+import InventoryStockAdjustment from "./inventoryModule/module/openingStock/pages/InventoryStockAdjustment";
+import SalesOrderCreate from "./inventoryModule/module/saleOrder/pages/SalesOrderCreate";
 
 
 
@@ -743,6 +749,50 @@ function AppContent() {
           path="/settings"
           element={<SettingsDashboard />}
         />
+
+        {/* =================================================
+                    inventory
+            ================================================= */}
+
+        <Route
+          path="/inventory"
+          element={<InventoryDashbaord />}
+        />
+
+        <Route
+          path="/inventory/openStock"
+          element={<InventoryOpeningStock />}
+        />
+
+
+        <Route
+          path="/inventory/adjustmentStock"
+          element={<InventoryStockAdjustment />}
+        />
+
+
+        <Route
+          path="/inventory/warehouses"
+          element={<WarehouseDashboard />}
+        />
+
+        <Route
+          path="/inventory/warehouses/newSimple"
+          element={<WarehouseCreate />}
+        />
+
+        <Route
+          path="/inventory/warehouses/edit/:id"
+          element={<WarehouseCreate />}
+        />
+
+        {/* SaleOrder */}
+
+        <Route
+          path="/inventory/saleOrder/create"
+          element={<SalesOrderCreate />}
+        />
+
 
       </Route>
 
