@@ -22,6 +22,7 @@ import {
     BoxIcon,
     BadgeJapaneseYen,
     PaintBucket,
+    BadgeTurkishLira,
 } from "lucide-react";
 
 // ============================================================
@@ -234,8 +235,16 @@ const INVENTORY_NAV = [
         label: "SaleOrder",
         moduleName: "SaleOrder",
         icon: PaintBucket,
-        to: "/inventory/saleOrder/create",
+        to: "/inventory/salesOrders",
     },
+
+    {
+        label: "PurchaseOrder",
+        moduleName: "PurchaseOrder",
+        icon: BadgeTurkishLira,
+        to: "/inventory/purchaseOrder",
+    },
+
     {
         label: "Stock Adjustment",
         moduleName: "Stock Adjustment",

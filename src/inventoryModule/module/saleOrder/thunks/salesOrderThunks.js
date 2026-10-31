@@ -1,30 +1,37 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../../../api/api";
 
-/* -------------------------------------------------------------------------- */
-/*                                  ERROR                                     */
-/* -------------------------------------------------------------------------- */
+/* ============================================================
+   ERROR HANDLER
+============================================================ */
 
 const handleError = (error, fallbackMessage) => {
   return (
-    error.response?.data?.message ||
-    error.response?.data?.error ||
-    error.message ||
+    error?.response?.data?.message ||
+    error?.response?.data?.error ||
+    error?.message ||
     fallbackMessage
   );
 };
 
-/* -------------------------------------------------------------------------- */
-/*                              CREATE SALE ORDER                             */
-/* -------------------------------------------------------------------------- */
+/* ============================================================
+   RESPONSE HANDLER
+============================================================ */
+
+const getResponseData = (response) => {
+  return response?.data?.data ?? response?.data ?? null;
+};
+
+/* ============================================================
+   CREATE SALES ORDER
+============================================================ */
 
 export const createSalesOrder = createAsyncThunk(
   "salesOrder/createSalesOrder",
   async (data, { rejectWithValue }) => {
     try {
       const response = await api.post("/sale-orders", data);
-
-      return response.data.data;
+      return getResponseData(response);
     } catch (error) {
       return rejectWithValue(
         handleError(error, "Failed to create sales order"),
@@ -33,58 +40,70 @@ export const createSalesOrder = createAsyncThunk(
   },
 );
 
-/* -------------------------------------------------------------------------- */
-/*                           FETCH SALE ORDER BY ID                           */
-/* -------------------------------------------------------------------------- */
+/* ============================================================
+   FETCH SALES ORDER BY ID
+============================================================ */
 
 export const fetchSalesOrderById = createAsyncThunk(
   "salesOrder/fetchSalesOrderById",
   async (id, { rejectWithValue }) => {
     try {
       const response = await api.get(`/sale-orders/${id}`);
-
-      return response.data.data;
+      return getResponseData(response);
     } catch (error) {
       return rejectWithValue(handleError(error, "Failed to fetch sales order"));
     }
   },
 );
 
-/* -------------------------------------------------------------------------- */
-/*                          FETCH ALL SALE ORDERS                             */
-/* -------------------------------------------------------------------------- */
+/* ============================================================
+   FETCH ALL SALES ORDERS
+============================================================ */
 
 export const fetchAllSalesOrders = createAsyncThunk(
   "salesOrder/fetchAllSalesOrders",
   async (filters = {}, { rejectWithValue }) => {
     try {
+      const params = {
+        orderNo: filters.orderNo || undefined,
+        partyType: filters.partyType || undefined,
+        customerId: filters.customerId || undefined,
+        partyId: filters.partyId || undefined,
+        warehouseId: filters.warehouseId || undefined,
+        salesOrderStatus:
+          filters.salesOrderStatus === "ALL"
+            ? undefined
+            : filters.salesOrderStatus || undefined,
+        fromDate: filters.fromDate || undefined,
+        toDate: filters.toDate || undefined,
+        page: filters.page ?? 0,
+        size: filters.size ?? 10,
+        sort: filters.sort || undefined,
+      };
+
       const response = await api.get("/sale-orders", {
-        params: {
-          orderNo: filters.orderNo || undefined,
-
-          partyType: filters.partyType || undefined,
-
-          customerId: filters.customerId || undefined,
-
-          partyId: filters.partyId || undefined,
-
-          warehouseId: filters.warehouseId || undefined,
-
-          salesOrderStatus: filters.salesOrderStatus || undefined,
-
-          fromDate: filters.fromDate || undefined,
-
-          toDate: filters.toDate || undefined,
-
-          page: filters.page ?? 0,
-
-          size: filters.size ?? 10,
-
-          sort: filters.sort || undefined,
-        },
+        params,
       });
 
-      return response.data.data;
+      // Your API response: response.data.data
+      const result = response.data?.data;
+
+      if (Array.isArray(result?.content)) {
+        return result;
+      }
+
+      if (Array.isArray(result)) {
+        return {
+          content: result,
+          pageNumber: 0,
+          pageSize: result.length,
+          totalElements: result.length,
+          totalPages: 1,
+          last: true,
+        };
+      }
+
+      throw new Error("Invalid sales order response from server");
     } catch (error) {
       return rejectWithValue(
         handleError(error, "Failed to fetch sales orders"),
@@ -93,17 +112,16 @@ export const fetchAllSalesOrders = createAsyncThunk(
   },
 );
 
-/* -------------------------------------------------------------------------- */
-/*                              UPDATE SALE ORDER                             */
-/* -------------------------------------------------------------------------- */
+/* ============================================================
+   UPDATE SALES ORDER
+============================================================ */
 
 export const updateSalesOrder = createAsyncThunk(
   "salesOrder/updateSalesOrder",
   async ({ id, data }, { rejectWithValue }) => {
     try {
       const response = await api.put(`/sale-orders/${id}`, data);
-
-      return response.data.data;
+      return getResponseData(response);
     } catch (error) {
       return rejectWithValue(
         handleError(error, "Failed to update sales order"),
@@ -112,17 +130,16 @@ export const updateSalesOrder = createAsyncThunk(
   },
 );
 
-/* -------------------------------------------------------------------------- */
-/*                             DISPATCH SALE ORDER                            */
-/* -------------------------------------------------------------------------- */
+/* ============================================================
+   DISPATCH SALES ORDER
+============================================================ */
 
 export const dispatchSalesOrder = createAsyncThunk(
   "salesOrder/dispatchSalesOrder",
   async (id, { rejectWithValue }) => {
     try {
       const response = await api.patch(`/sale-orders/${id}/dispatch`);
-
-      return response.data.data;
+      return getResponseData(response);
     } catch (error) {
       return rejectWithValue(
         handleError(error, "Failed to dispatch sales order"),
@@ -131,17 +148,16 @@ export const dispatchSalesOrder = createAsyncThunk(
   },
 );
 
-/* -------------------------------------------------------------------------- */
-/*                              CONFIRM SALE ORDER                            */
-/* -------------------------------------------------------------------------- */
+/* ============================================================
+   CONFIRM SALES ORDER
+============================================================ */
 
 export const confirmSalesOrder = createAsyncThunk(
   "salesOrder/confirmSalesOrder",
   async (id, { rejectWithValue }) => {
     try {
       const response = await api.patch(`/sale-orders/${id}/confirm`);
-
-      return response.data.data;
+      return getResponseData(response);
     } catch (error) {
       return rejectWithValue(
         handleError(error, "Failed to confirm sales order"),
@@ -150,17 +166,16 @@ export const confirmSalesOrder = createAsyncThunk(
   },
 );
 
-/* -------------------------------------------------------------------------- */
-/*                               CANCEL SALE ORDER                            */
-/* -------------------------------------------------------------------------- */
+/* ============================================================
+   CANCEL SALES ORDER
+============================================================ */
 
 export const cancelSalesOrder = createAsyncThunk(
   "salesOrder/cancelSalesOrder",
   async (id, { rejectWithValue }) => {
     try {
       const response = await api.patch(`/sale-orders/${id}/cancel`);
-
-      return response.data.data;
+      return getResponseData(response);
     } catch (error) {
       return rejectWithValue(
         handleError(error, "Failed to cancel sales order"),
@@ -169,9 +184,9 @@ export const cancelSalesOrder = createAsyncThunk(
   },
 );
 
-/* -------------------------------------------------------------------------- */
-/*                               DELETE SALE ORDER                            */
-/* -------------------------------------------------------------------------- */
+/* ============================================================
+   DELETE SALES ORDER
+============================================================ */
 
 export const deleteSalesOrder = createAsyncThunk(
   "salesOrder/deleteSalesOrder",
@@ -181,7 +196,7 @@ export const deleteSalesOrder = createAsyncThunk(
 
       return {
         id,
-        response: response.data.data,
+        response: getResponseData(response),
       };
     } catch (error) {
       return rejectWithValue(

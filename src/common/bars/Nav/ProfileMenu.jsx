@@ -57,28 +57,12 @@ const shortcuts = [
         title: "Help",
         sub: "Documents",
     },
+
     {
-        icon: MessageSquare,
-        title: "FAQs",
-    },
-    {
-        icon: Monitor,
-        title: "Forum",
-    },
-    {
-        icon: PlayCircle,
-        title: "Video",
-        sub: "Tutorials",
-    },
-    {
-        icon: Globe,
-        title: "Explore",
-        sub: "Features",
-    },
-    {
-        icon: Package,
-        title: "Migration",
-        sub: "Guide",
+        icon: FileText,
+        title: "Invoice",
+        sub: "invoicePro",
+        to: "/dashboard",
     },
 ];
 

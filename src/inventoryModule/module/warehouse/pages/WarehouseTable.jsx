@@ -198,7 +198,7 @@ export default function WarehouseTable({ warehouses }) {
 
         dispatch(setExistingWarehouse(warehouse));
 
-        navigate(`/settings/warehouses/view/${warehouse.id}`);
+        navigate(`/inventory/warehouses/view/${warehouse.id}`);
     };
 
     /* =====================================================

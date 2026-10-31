@@ -58,9 +58,43 @@ const today = () => {
     return `${year}-${month}-${day}`;
 };
 
-const formatDateForInput = (value) => {
-    if (!value) return "";
-    return String(value).slice(0, 10);
+const formatDateForInput = (date) => {
+    if (!date) return "";
+
+    // API date string: YYYY-MM-DD or ISO date-time
+    if (typeof date === "string") {
+        const value = date.trim();
+
+        if (!value) return "";
+
+        // Preserve the date portion without timezone conversion
+        const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+
+        if (match) return match[1];
+
+        const parsedDate = new Date(value);
+
+        if (isNaN(parsedDate.getTime())) return "";
+
+        const year = parsedDate.getFullYear();
+        const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+        const day = String(parsedDate.getDate()).padStart(2, "0");
+
+        return `${year}-${month}-${day}`;
+    }
+
+    // JavaScript Date object
+    if (date instanceof Date) {
+        if (isNaN(date.getTime())) return "";
+
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+
+        return `${year}-${month}-${day}`;
+    }
+
+    return "";
 };
 
 const formatDateForDisplay = (value) => {
@@ -1066,13 +1100,19 @@ export default function SalesOrderCreate({ onClose }) {
                 navigate("/sale-orders");
             }
         } catch (error) {
-            toast.error(
-                error?.message ||
-                error?.data?.message ||
-                "Unable to save sales order"
-            );
+            console.log("Backend error:", error);
+
+            const message =
+                typeof error === "string"
+                    ? error
+                    : error?.message ||
+                    error?.data?.message ||
+                    "Unable to save purchase order";
+
+            toast.error(message);
         }
     };
+
 
     const handleSaveDraft = () => handleSubmit("DRAFT");
     const handleSave = () => handleSubmit("SAVE");
@@ -1081,7 +1121,7 @@ export default function SalesOrderCreate({ onClose }) {
         if (onClose) {
             onClose();
         } else {
-            navigate("/sale-orders");
+            navigate("/inventory/salesOrders");
         }
     };
 
@@ -1512,6 +1552,7 @@ export default function SalesOrderCreate({ onClose }) {
                         </label>
 
                         <div className="w-full max-w-[350px]">
+
                             <DatePicker
                                 selected={
                                     formData.orderDate

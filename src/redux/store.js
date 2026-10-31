@@ -59,6 +59,10 @@ import warehouseReducer from "../inventoryModule/module/warehouse/slices/warehou
 import warehousesViewReducer from "../inventoryModule/module/warehouse/slices/warehouseViewSlice";
 
 import salesOrderReducer from "../inventoryModule/module/saleOrder/slices/salesOrderSlice";
+import saleOrderViewReducer from "../inventoryModule/module/saleOrder/slices/saleOrderViewSlice";
+
+import purchaseOrderReducer from "../inventoryModule/module/purchaseOrder/slices/purchaseOrderSlice";
+import purchaseOrderViewReducer from "../inventoryModule/module/purchaseOrder/slices/purchaseOrderViewSlice";
 import paginationReducer from "../common/pagination/slices/paginationSlice";
 import menuPermissionReducer from "../module/menuPermission/slices/menuPermissionSlice";
 
@@ -154,7 +158,11 @@ export const store = configureStore({
 
     //saleOrder
     salesOrder: salesOrderReducer,
+    saleOrderView: saleOrderViewReducer,
 
+    //purchaseOrder
+    purchaseOrder: purchaseOrderReducer,
+    purchaseOrderView: purchaseOrderViewReducer,
     //pagniation
     pagination: paginationReducer,
 

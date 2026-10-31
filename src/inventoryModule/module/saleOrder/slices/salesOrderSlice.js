@@ -12,6 +12,43 @@ import {
 } from "../thunks/salesOrderThunks";
 
 /* -------------------------------------------------------------------------- */
+/*                           EMPTY SALE ORDER                                 */
+/* -------------------------------------------------------------------------- */
+
+export const emptySaleOrder = {
+  partyType: "CUSTOMER",
+  customerId: null,
+  partyId: null,
+  warehouseId: null,
+
+  orderDate: new Date().toISOString().split("T")[0],
+  expectedDeliveryDate: "",
+
+  currencyId: null,
+
+  discountType: "PERCENTAGE",
+  discountValue: 0,
+
+  notes: "",
+
+  items: [
+    {
+      productId: null,
+      description: "",
+      unitId: null,
+      sizeId: null,
+      quantity: 1,
+      baseUnitPrice: 0,
+
+      discountType: "AMOUNT",
+      discountValue: 0,
+
+      taxMasterId: null,
+    },
+  ],
+};
+
+/* -------------------------------------------------------------------------- */
 /*                              INITIAL STATE                                 */
 /* -------------------------------------------------------------------------- */
 
@@ -19,6 +56,16 @@ const initialState = {
   salesOrders: [],
   salesOrder: null,
 
+  // Existing selected/editing sales order
+  exsistingSaleOrder: null,
+
+  // Default sales order form
+  emptySaleOrder: {
+    ...emptySaleOrder,
+    items: emptySaleOrder.items.map((item) => ({ ...item })),
+  },
+
+  // Pagination
   pagination: {
     pageNumber: 0,
     pageSize: 10,
@@ -27,9 +74,11 @@ const initialState = {
     last: true,
   },
 
+  // Loading states
   loading: false,
   actionLoading: false,
 
+  // Error states
   error: null,
   actionError: null,
 };
@@ -38,6 +87,7 @@ const initialState = {
 /*                              HELPER FUNCTIONS                              */
 /* -------------------------------------------------------------------------- */
 
+// Update an existing sales order in the list and selected order
 const updateOrderInList = (state, updatedOrder) => {
   if (!updatedOrder?.id) return;
 
@@ -54,10 +104,18 @@ const updateOrderInList = (state, updatedOrder) => {
   }
 };
 
+// Reset error messages
 const resetErrors = (state) => {
   state.error = null;
   state.actionError = null;
 };
+
+// Create a fresh empty sales order form
+const createEmptySaleOrder = () => ({
+  ...emptySaleOrder,
+  orderDate: new Date().toISOString().split("T")[0],
+  items: emptySaleOrder.items.map((item) => ({ ...item })),
+});
 
 /* -------------------------------------------------------------------------- */
 /*                                  SLICE                                     */
@@ -72,8 +130,7 @@ const salesOrderSlice = createSlice({
     /* ------------------------- CLEAR ERRORS -------------------------- */
 
     clearSalesOrderError: (state) => {
-      state.error = null;
-      state.actionError = null;
+      resetErrors(state);
     },
 
     /* ------------------------- CLEAR SELECTED ------------------------ */
@@ -100,6 +157,33 @@ const salesOrderSlice = createSlice({
 
     setSalesOrder: (state, action) => {
       state.salesOrder = action.payload;
+    },
+
+    /* ------------------------- SET EXISTING -------------------------- */
+
+    setExsistingSaleOrder: (state, action) => {
+      state.exsistingSaleOrder = action.payload;
+    },
+
+    /* ------------------------- CLEAR EXISTING ------------------------ */
+
+    clearExsistingSaleOrder: (state) => {
+      state.exsistingSaleOrder = null;
+    },
+
+    /* ------------------------- RESET EMPTY FORM ---------------------- */
+
+    resetEmptySaleOrder: (state) => {
+      state.emptySaleOrder = createEmptySaleOrder();
+    },
+
+    /* ------------------------- UPDATE EMPTY FORM --------------------- */
+
+    setEmptySaleOrder: (state, action) => {
+      state.emptySaleOrder = {
+        ...state.emptySaleOrder,
+        ...action.payload,
+      };
     },
 
     /* ------------------------- RESET STATE --------------------------- */
@@ -175,24 +259,22 @@ const salesOrderSlice = createSlice({
       .addCase(fetchAllSalesOrders.fulfilled, (state, action) => {
         state.loading = false;
 
-        state.salesOrders = action.payload?.content || [];
+        state.salesOrders = action.payload?.content ?? [];
 
         state.pagination = {
           pageNumber: action.payload?.pageNumber ?? 0,
-
           pageSize: action.payload?.pageSize ?? 10,
-
           totalElements: action.payload?.totalElements ?? 0,
-
           totalPages: action.payload?.totalPages ?? 0,
-
           last: action.payload?.last ?? true,
         };
+
+        state.error = null;
       })
 
       .addCase(fetchAllSalesOrders.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || "Failed to fetch sales orders";
+        state.error = action.payload || action.error?.message;
       })
 
       /* ============================================================= */
@@ -206,7 +288,6 @@ const salesOrderSlice = createSlice({
 
       .addCase(updateSalesOrder.fulfilled, (state, action) => {
         state.actionLoading = false;
-
         state.salesOrder = action.payload;
 
         updateOrderInList(state, action.payload);
@@ -289,7 +370,9 @@ const salesOrderSlice = createSlice({
       .addCase(deleteSalesOrder.fulfilled, (state, action) => {
         state.actionLoading = false;
 
-        const deletedId = action.payload.id;
+        const deletedId = action.payload?.id;
+
+        if (!deletedId) return;
 
         state.salesOrders = state.salesOrders.filter(
           (order) => order.id !== deletedId,
@@ -297,6 +380,10 @@ const salesOrderSlice = createSlice({
 
         if (state.salesOrder?.id === deletedId) {
           state.salesOrder = null;
+        }
+
+        if (state.exsistingSaleOrder?.id === deletedId) {
+          state.exsistingSaleOrder = null;
         }
 
         state.pagination.totalElements = Math.max(
@@ -321,6 +408,10 @@ export const {
   clearSalesOrder,
   clearSalesOrders,
   setSalesOrder,
+  setExsistingSaleOrder,
+  clearExsistingSaleOrder,
+  resetEmptySaleOrder,
+  setEmptySaleOrder,
   resetSalesOrderState,
 } = salesOrderSlice.actions;
 

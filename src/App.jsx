@@ -138,6 +138,14 @@ import WarehouseDashboard from "./inventoryModule/module/warehouse/pages/Warehou
 import WarehouseCreate from "./inventoryModule/module/warehouse/pages/WarehouseCreate";
 import InventoryStockAdjustment from "./inventoryModule/module/openingStock/pages/InventoryStockAdjustment";
 import SalesOrderCreate from "./inventoryModule/module/saleOrder/pages/SalesOrderCreate";
+import SaleOrderDashboard from "./inventoryModule/module/saleOrder/pages/SaleOrderDashboard";
+import SaleOrderTable from "./inventoryModule/module/saleOrder/pages/SaleOrderTable";
+import SalesOrderOverview from "./inventoryModule/module/saleOrder/pages/SalesOrderOverview";
+import PurchaseOrderCreate from "./inventoryModule/module/purchaseOrder/pages/PurchaseOrderCreate";
+import PurchaseOrderDashboard from "./inventoryModule/module/purchaseOrder/pages/PurchaseOrderDashboard";
+import PurchaseOrderViewDetails from "./inventoryModule/module/purchaseOrder/pages/PurchaseOrderViewDetails";
+import SaleOrderViewDetails from "./inventoryModule/module/saleOrder/pages/SaleOrderViewDetails";
+import WarehouseViewDetails from "./inventoryModule/module/warehouse/pages/WarehouseViewDetails";
 
 
 
@@ -786,13 +794,63 @@ function AppContent() {
           element={<WarehouseCreate />}
         />
 
+        <Route
+          path="/inventory/warehouses/view/:id"
+          element={<WarehouseViewDetails />}
+        />
+
         {/* SaleOrder */}
+
+        <Route
+          path="/inventory/salesOrders"
+          element={<SaleOrderDashboard />}
+        />
+
+        <Route
+          path="/inventory/salesOrders/tab"
+          element={<SaleOrderTable />}
+        />
 
         <Route
           path="/inventory/saleOrder/create"
           element={<SalesOrderCreate />}
         />
 
+        <Route
+          path="/inventory/saleOrder/view/:id"
+          element={<SaleOrderViewDetails />}
+        />
+
+        <Route
+          path="/inventory/saleOrder/edit/:id"
+          element={<SalesOrderCreate />}
+        />
+
+
+        {/* PurchaseOrder */}
+
+        <Route
+          path="/inventory/purchaseOrder/create"
+          element={<PurchaseOrderCreate />}
+        />
+        <Route
+          path="/inventory/purchaseOrder"
+          element={<PurchaseOrderDashboard />}
+        />
+        <Route
+          path="/inventory/purchaseOrder/edit/:id"
+          element={<PurchaseOrderCreate />}
+        />
+
+        <Route
+          path="/inventory/purchaseOrder/edit1/:id"
+          element={<PurchaseOrderCreate />}
+        />
+
+        <Route
+          path="/inventory/purchaseOrder/view/:id"
+          element={<PurchaseOrderViewDetails />}
+        />
 
       </Route>
 

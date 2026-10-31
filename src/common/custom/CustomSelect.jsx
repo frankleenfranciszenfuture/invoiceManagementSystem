@@ -156,7 +156,7 @@ export default function CustomSelect({
                 }}
                 className={`
                     flex w-full items-center justify-between gap-3 p-2 py-2
-                    rounded-md border border-gray-300 bg-white
+                    rounded-md border border-gray-100 bg-white
                     text-left text-gray-500 text-sm
                     outline-none transition
                     focus:border-[#0095FD]

@@ -23,6 +23,8 @@ import UserCreate from "../../module/users/pages/UserCreate";
 import EmailSignatureCreate from "../../module/emailSignature/pages/EmailSignatureCreate";
 import CurrencyModel from "../../module/currency/pages/CurrencyModel";
 import SalesPersonCreateModel from "../../module/salesPerson/pages/SalesPersonCreateModel";
+import { addGoodsReceiptItem } from "../../inventoryModule/module/purchaseOrder/slices/purchaseOrderSlice";
+import CreateGoodsReceiptModel from "../../inventoryModule/module/purchaseOrder/pages/CreateGoodsReceiptModel";
 export default function Modal() {
 
     const dispatch = useDispatch();
@@ -107,6 +109,11 @@ export default function Modal() {
         //salesPerson
         addSalesPerson: SalesPersonCreateModel,
         editSalesPerson: SalesPersonCreateModel,
+
+
+        //purchaseOrderGoodsReceipt
+        createGoodsReceipt: CreateGoodsReceiptModel,
+        editGoodsReceipt: CreateGoodsReceiptModel
     };
 
 
@@ -245,6 +252,10 @@ export default function Modal() {
         // User
         addUser: "w-[800px] max-w-[92vw] max-h-[82vh]",
         editUser: "w-[800px] max-w-[92vw] max-h-[82vh]",
+
+        //PurchaseOrderGoodsReceipt
+        createGoodsReceipt: "w-[900px] max-w-[92vw] max-h-[82vh]",
+        editGoodsReceipt: "w-[900px] max-w-[92vw] max-h-[82vh]",
 
         // Permissions
         addRolePermission: "w-[800px] max-w-[92vw] max-h-[82vh]",
