@@ -11,6 +11,9 @@ public interface CurrencyRepository
         extends JpaRepository<Currency, Long>,
         JpaSpecificationExecutor<Currency> {
 
+
+    Optional<Currency> findByIdAndActiveTrue(Long id);
+
     Optional<Currency> findByCurrencyCodeIgnoreCase(String currencyCode);
 
     boolean existsByCurrencyCodeIgnoreCase(String currencyCode);

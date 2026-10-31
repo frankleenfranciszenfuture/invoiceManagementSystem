@@ -71,6 +71,21 @@ public class SaleOrderValidation {
                 );
             }
         }
+
+        if (partyType == SaleOrderPartyType.BOTH) {
+
+            if (partyId == null) {
+                throw new IllegalArgumentException(
+                        "Party is required"
+                );
+            }
+
+            if (customerId != null) {
+                throw new IllegalArgumentException(
+                        "Customer ID is not allowed for PARTY orders"
+                );
+            }
+        }
     }
 
     // --------------------------------------------------

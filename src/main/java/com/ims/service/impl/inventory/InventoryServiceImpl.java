@@ -927,6 +927,280 @@ public class InventoryServiceImpl implements InventoryService {
                 .build();
     }
 
+// =====================================================
+// RECEIVE PURCHASE GOODS
+// Add received quantities to inventory.
+// Creates PURCHASE / PURCHASE_RECEIPT transactions.
+// =====================================================
+
+    @Override
+    @Transactional
+    public void receivePurchaseGoodsReceipt(
+            PurchaseOrderGoodsReceiptEntity goodsReceipt
+    ) {
+
+        if (goodsReceipt == null || goodsReceipt.getId() == null) {
+            throw new BadRequestException(
+                    "Valid Goods Receipt is required."
+            );
+        }
+
+        if (goodsReceipt.getPurchaseOrder() == null) {
+            throw new BadRequestException(
+                    "Purchase Order is required for Goods Receipt."
+            );
+        }
+
+        if (goodsReceipt.getWarehouse() == null
+                || goodsReceipt.getWarehouse().getId() == null) {
+
+            throw new BadRequestException(
+                    "Warehouse is required for Goods Receipt."
+            );
+        }
+
+        if (goodsReceipt.getItems() == null
+                || goodsReceipt.getItems().isEmpty()) {
+
+            throw new BadRequestException(
+                    "Goods Receipt must contain at least one item."
+            );
+        }
+
+        Long receiptId = goodsReceipt.getId();
+
+        Long warehouseId = goodsReceipt.getWarehouse().getId();
+
+        /*
+         * Prevent duplicate inventory processing.
+         *
+         * A receipt must generate inventory transactions only once.
+         */
+        boolean alreadyProcessed =
+                transactionRepository
+                        .existsByReferenceTypeAndReferenceIdAndMovementType(
+                                InventoryReferenceType.PURCHASE_RECEIPT,
+                                receiptId,
+                                InventoryMovementType.PURCHASE
+                        );
+
+        if (alreadyProcessed) {
+            throw new BadRequestException(
+                    "Inventory has already been updated for Goods Receipt: "
+                            + goodsReceipt.getReceiptNo()
+            );
+        }
+
+        List<PurchaseOrderGoodsReceiptItemEntity> receiptItems =
+                goodsReceipt.getItems()
+                        .stream()
+                        .filter(item ->
+                                Boolean.TRUE.equals(item.getActive())
+                        )
+                        .toList();
+
+        if (receiptItems.isEmpty()) {
+            throw new BadRequestException(
+                    "Goods Receipt must contain at least one active item."
+            );
+        }
+
+        /*
+         * STEP 1:
+         * Validate all receipt items before changing stock.
+         */
+        for (PurchaseOrderGoodsReceiptItemEntity receiptItem : receiptItems) {
+
+            if (receiptItem.getPurchaseOrderItem() == null) {
+                throw new BadRequestException(
+                        "Purchase Order item is required in Goods Receipt."
+                );
+            }
+
+            PurchaseOrderItemEntity purchaseOrderItem =
+                    receiptItem.getPurchaseOrderItem();
+
+            if (purchaseOrderItem.getProduct() == null
+                    || purchaseOrderItem.getProduct().getId() == null) {
+
+                throw new BadRequestException(
+                        "Product is required for Goods Receipt item."
+                );
+            }
+
+            if (purchaseOrderItem.getUnit() == null
+                    || purchaseOrderItem.getUnit().getId() == null) {
+
+                throw new BadRequestException(
+                        "Unit is required for product: "
+                                + purchaseOrderItem.getProduct().getProductName()
+                );
+            }
+
+            BigDecimal receivedQuantity =
+                    receiptItem.getReceivedQuantity();
+
+            if (receivedQuantity == null
+                    || receivedQuantity.signum() <= 0) {
+
+                throw new BadRequestException(
+                        "Received quantity must be greater than zero."
+                );
+            }
+
+            BigDecimal receivedUnitCost =
+                    receiptItem.getReceivedUnitCost();
+
+            if (receivedUnitCost == null
+                    || receivedUnitCost.signum() < 0) {
+
+                throw new BadRequestException(
+                        "Received unit cost must be zero or greater."
+                );
+            }
+        }
+
+        /*
+         * STEP 2:
+         * Process each received item.
+         *
+         * getOrCreateStock() uses findStockForUpdate().
+         * Existing stock rows are locked before updating.
+         */
+        for (PurchaseOrderGoodsReceiptItemEntity receiptItem : receiptItems) {
+
+            PurchaseOrderItemEntity purchaseOrderItem =
+                    receiptItem.getPurchaseOrderItem();
+
+            ProductEntity product =
+                    purchaseOrderItem.getProduct();
+
+            UnitEntity unit =
+                    purchaseOrderItem.getUnit();
+
+            SizeEntity size =
+                    purchaseOrderItem.getSize();
+
+            BigDecimal receivedQuantity =
+                    scale(receiptItem.getReceivedQuantity());
+
+            BigDecimal receivedUnitCost =
+                    scale(receiptItem.getReceivedUnitCost());
+
+            /*
+             * Get or create stock using:
+             * Product + Warehouse + Unit + Size.
+             */
+            InventoryStockEntity stock = getOrCreateStock(
+                    product,
+                    goodsReceipt.getWarehouse(),
+                    unit,
+                    size
+            );
+
+            BigDecimal oldQuantity =
+                    valueOrZero(stock.getQuantity());
+
+            BigDecimal oldReservedQuantity =
+                    valueOrZero(stock.getReservedQuantity());
+
+            BigDecimal oldAverageCost =
+                    valueOrZero(stock.getAverageCost());
+
+            /*
+             * Calculate new quantity.
+             */
+            BigDecimal newQuantity = scale(
+                    oldQuantity.add(receivedQuantity)
+            );
+
+            /*
+             * Calculate weighted average cost.
+             *
+             * Example:
+             * Existing: 10 units x INR 100
+             * Received: 5 units x INR 120
+             *
+             * New average = (1000 + 600) / 15
+             *             = INR 106.6667
+             */
+            BigDecimal newAverageCost =
+                    calculateWeightedAverageCost(
+                            oldQuantity,
+                            oldAverageCost,
+                            receivedQuantity,
+                            receivedUnitCost
+                    );
+
+            /*
+             * Reserved quantity remains unchanged.
+             */
+            BigDecimal newAvailableQuantity = scale(
+                    newQuantity.subtract(oldReservedQuantity)
+            );
+
+            if (newAvailableQuantity.signum() < 0) {
+                throw new BadRequestException(
+                        "Available stock cannot become negative for product: "
+                                + product.getProductName()
+                );
+            }
+
+            /*
+             * Update inventory stock.
+             */
+            stock.setQuantity(newQuantity);
+
+            stock.setReservedQuantity(
+                    scale(oldReservedQuantity)
+            );
+
+            stock.setAvailableQuantity(newAvailableQuantity);
+
+            stock.setAverageCost(newAverageCost);
+
+            baseEntityUtil.prepareForUpdate(stock);
+
+            stockRepository.save(stock);
+
+            /*
+             * Create inventory transaction.
+             *
+             * Quantity In  = received quantity
+             * Quantity Out = zero
+             * Balance After = updated stock quantity
+             * Unit Cost = actual received unit cost in INR
+             */
+            InventoryTransactionEntity transaction =
+                    createTransaction(
+                            stock,
+                            InventoryMovementType.PURCHASE,
+                            InventoryReferenceType.PURCHASE_RECEIPT,
+                            receiptId,
+                            receivedQuantity,
+                            BigDecimal.ZERO,
+                            newQuantity,
+                            receivedUnitCost,
+                            goodsReceipt.getReceiptDate() != null
+                                    ? goodsReceipt.getReceiptDate().atStartOfDay()
+                                    : LocalDateTime.now(),
+                            "Goods received against Purchase Order: "
+                                    + goodsReceipt.getPurchaseOrder().getOrderNo()
+                                    + ", Receipt: "
+                                    + goodsReceipt.getReceiptNo()
+                    );
+
+            baseEntityUtil.prepareForCreate(transaction);
+
+            transactionRepository.save(transaction);
+        }
+
+        log.info(
+                "Inventory updated successfully for Goods Receipt: {}, Purchase Order: {}",
+                goodsReceipt.getReceiptNo(),
+                goodsReceipt.getPurchaseOrder().getOrderNo()
+        );
+    }
 
     private void validateDashboardDateRange(
             InventoryDashboardFilter filter

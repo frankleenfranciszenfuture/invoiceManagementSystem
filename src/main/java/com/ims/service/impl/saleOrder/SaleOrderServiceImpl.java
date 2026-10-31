@@ -571,7 +571,14 @@ public class SaleOrderServiceImpl implements SaleOrderService {
             party = saleOrderValidation.validateParty(
                     request.getPartyId()
             );
+
+        }else if (request.getPartyType() == SaleOrderPartyType.BOTH) {
+
+            party = saleOrderValidation.validateParty(
+                    request.getPartyId()
+            );
         }
+
 
         WarehouseEntity warehouse =
                 saleOrderValidation.validateWarehouse(

@@ -2,6 +2,7 @@ package com.ims.service.serviceInterface.inventory;
 
 import com.ims.dtos.inventory.*;
 
+import com.ims.entity.PurchaseOrderGoodsReceiptEntity;
 import com.ims.entity.SalesOrderEntity;
 import com.ims.enums.InventoryMovementType;
 import com.ims.enums.InventoryReferenceType;
@@ -139,5 +140,9 @@ public interface InventoryService {
 
     InventoryDashboardResponse getInventoryDashboard(
             InventoryDashboardFilter filter
+    );
+
+    void receivePurchaseGoodsReceipt(
+            PurchaseOrderGoodsReceiptEntity goodsReceipt
     );
 }
