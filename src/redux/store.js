@@ -63,6 +63,12 @@ import saleOrderViewReducer from "../inventoryModule/module/saleOrder/slices/sal
 
 import purchaseOrderReducer from "../inventoryModule/module/purchaseOrder/slices/purchaseOrderSlice";
 import purchaseOrderViewReducer from "../inventoryModule/module/purchaseOrder/slices/purchaseOrderViewSlice";
+
+import expenseReducer from "../inventoryModule/module/expenses/slices/expenseSlice";
+import expensesViewReducer from "../inventoryModule/module/expenses/slices/expensesViewSlice";
+import expenseCategoryReducer from "../inventoryModule/module/expenses/slices/expenseCategorySlice";
+import expenseCategoryViewReducer from "../inventoryModule/module/expenses/slices/expenseCategoryViewSlice";
+
 import paginationReducer from "../common/pagination/slices/paginationSlice";
 import menuPermissionReducer from "../module/menuPermission/slices/menuPermissionSlice";
 
@@ -160,9 +166,18 @@ export const store = configureStore({
     salesOrder: salesOrderReducer,
     saleOrderView: saleOrderViewReducer,
 
+    //expenses
+    expense: expenseReducer,
+    expensesView: expensesViewReducer,
+
+    //expensesCategroy
+    expenseCategory: expenseCategoryReducer,
+    expenseCategoryView: expenseCategoryViewReducer,
+
     //purchaseOrder
     purchaseOrder: purchaseOrderReducer,
     purchaseOrderView: purchaseOrderViewReducer,
+
     //pagniation
     pagination: paginationReducer,
 

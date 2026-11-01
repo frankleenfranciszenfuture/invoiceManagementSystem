@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
@@ -25,7 +25,28 @@ import {
 
 import Pagination from "../../../../common/pagination/table/Pagination";
 
-export default function WarehouseTable({ warehouses }) {
+const EMPTY_ARRAY = [];
+
+const AVATAR_COLORS = [
+    "bg-pink-500 text-white",
+    "bg-green-500 text-white",
+    "bg-blue-500 text-white",
+    "bg-purple-500 text-white",
+    "bg-orange-500 text-white",
+    "bg-cyan-500 text-white",
+    "bg-indigo-500 text-white",
+];
+
+const STATUS_COLORS = {
+    ACTIVE: "bg-green-100 text-green-700",
+    INACTIVE: "bg-gray-100 text-gray-700",
+    DRAFT: "bg-yellow-100 text-yellow-700",
+};
+
+export default function WarehouseTable({
+    warehouses,
+    fetchParams = {},
+}) {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
@@ -34,7 +55,7 @@ export default function WarehouseTable({ warehouses }) {
     ===================================================== */
 
     const {
-        warehouses: reduxWarehouses = [],
+        warehouses: reduxWarehouses = EMPTY_ARRAY,
         loading,
         error,
         pagination = {},
@@ -60,7 +81,7 @@ export default function WarehouseTable({ warehouses }) {
     );
 
     const permissions = useSelector(
-        (state) => state.menuPermission?.userPermissions || []
+        (state) => state.menuPermission?.userPermissions || EMPTY_ARRAY
     );
 
     /* =====================================================
@@ -85,74 +106,116 @@ export default function WarehouseTable({ warehouses }) {
        PERMISSION CHECK
     ===================================================== */
 
-    const hasPermission = (moduleName, actionName) => {
-        if (hasFullAccess) return true;
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
+            if (hasFullAccess) return true;
 
-        if (!Array.isArray(permissions)) return false;
+            if (!Array.isArray(permissions)) return false;
 
-        const requestedModule = String(moduleName).trim().toLowerCase();
-        const requestedAction = String(actionName).trim().toUpperCase();
+            const requestedModule = String(moduleName)
+                .trim()
+                .toLowerCase();
 
-        return permissions.some((permission) => {
-            const permissionModule = String(
-                permission?.moduleName ||
-                permission?.module?.moduleName ||
-                permission?.module?.name ||
-                ""
-            ).trim().toLowerCase();
+            const requestedAction = String(actionName)
+                .trim()
+                .toUpperCase();
 
-            if (permissionModule !== requestedModule) return false;
+            return permissions.some((permission) => {
+                const permissionModule = String(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                )
+                    .trim()
+                    .toLowerCase();
 
-            if (permission?.active === false) return false;
+                if (permissionModule !== requestedModule) {
+                    return false;
+                }
 
-            if (
-                String(permission?.status || "").toUpperCase() ===
-                "INACTIVE"
-            ) {
-                return false;
-            }
+                if (permission?.active === false) {
+                    return false;
+                }
 
-            if (Array.isArray(permission?.actions)) {
-                return permission.actions.some((action) => {
-                    const permissionAction = String(
-                        action?.actionName ||
-                        action?.action?.actionName ||
-                        action?.action?.name ||
-                        ""
-                    ).trim().toUpperCase();
+                if (
+                    String(permission?.status || "").toUpperCase() ===
+                    "INACTIVE"
+                ) {
+                    return false;
+                }
 
-                    const allowed =
-                        action?.allowed === true ||
-                        action?.allowed === "true";
+                if (Array.isArray(permission?.actions)) {
+                    return permission.actions.some((action) => {
+                        const permissionAction = String(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            ""
+                        )
+                            .trim()
+                            .toUpperCase();
 
-                    return (
-                        permissionAction === requestedAction &&
-                        allowed
-                    );
-                });
-            }
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
 
-            const permissionAction = String(
-                permission?.actionName ||
-                permission?.action?.actionName ||
-                permission?.action?.name ||
-                ""
-            ).trim().toUpperCase();
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
+                }
 
-            const allowed =
-                permission?.allowed === true ||
-                permission?.allowed === "true";
+                const permissionAction = String(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
 
-            return (
-                permissionAction === requestedAction &&
-                allowed
-            );
-        });
-    };
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction === requestedAction &&
+                    allowed
+                );
+            });
+        },
+        [hasFullAccess, permissions]
+    );
 
     const canViewWarehouse = hasPermission("Warehouses", "VIEW");
     const canEditWarehouse = hasPermission("Warehouses", "EDIT");
     const canDeleteWarehouse = hasPermission("Warehouses", "DELETE");
+
+    /* =====================================================
+       FETCH PARAMS
+    ===================================================== */
+
+    const getFetchParams = useCallback(
+        (page, size) => ({
+            ...fetchParams,
+            page,
+            size,
+        }),
+        [fetchParams]
+    );
+
+    const refreshWarehouses = useCallback(
+        (page = pageNumber, size = pageSize) => {
+            dispatch(
+                fetchAllWarehouse(
+                    getFetchParams(page, size)
+                )
+            );
+        },
+        [dispatch, getFetchParams, pageNumber, pageSize]
+    );
 
     /* =====================================================
        DELETE WAREHOUSE
@@ -160,23 +223,29 @@ export default function WarehouseTable({ warehouses }) {
 
     const handleDelete = async (id) => {
         if (!canDeleteWarehouse) {
-            toast.error("You do not have permission to delete Warehouse.");
+            toast.error(
+                "You do not have permission to delete Warehouse."
+            );
             return;
         }
 
-        if (!window.confirm("Delete this Warehouse?")) return;
+        if (!window.confirm("Delete this Warehouse?")) {
+            return;
+        }
 
         try {
             await dispatch(deleteWarehouse(id)).unwrap();
 
             toast.success("Warehouse deleted successfully");
 
-            dispatch(
-                fetchAllWarehouse({
-                    page: pageNumber,
-                    size: pageSize,
-                })
-            );
+            const remainingItems = currentWarehouses.length - 1;
+
+            const nextPage =
+                remainingItems === 0 && pageNumber > 0
+                    ? pageNumber - 1
+                    : pageNumber;
+
+            refreshWarehouses(nextPage, pageSize);
         } catch (error) {
             toast.error(
                 typeof error === "string"
@@ -192,7 +261,9 @@ export default function WarehouseTable({ warehouses }) {
 
     const handleView = (warehouse) => {
         if (!canViewWarehouse) {
-            toast.error("You do not have permission to view Warehouses.");
+            toast.error(
+                "You do not have permission to view Warehouses."
+            );
             return;
         }
 
@@ -207,7 +278,9 @@ export default function WarehouseTable({ warehouses }) {
 
     const handleEdit = (warehouse) => {
         if (!canEditWarehouse) {
-            toast.error("You do not have permission to edit Warehouse.");
+            toast.error(
+                "You do not have permission to edit Warehouse."
+            );
             return;
         }
 
@@ -222,7 +295,7 @@ export default function WarehouseTable({ warehouses }) {
 
     const initials = (name = "") => {
         return (
-            name
+            String(name)
                 .split(" ")
                 .filter(Boolean)
                 .map((word) => word[0])
@@ -236,35 +309,25 @@ export default function WarehouseTable({ warehouses }) {
        AVATAR COLORS
     ===================================================== */
 
-    const avatarColors = [
-        "bg-pink-500 text-white",
-        "bg-green-500 text-white",
-        "bg-blue-500 text-white",
-        "bg-purple-500 text-white",
-        "bg-orange-500 text-white",
-        "bg-cyan-500 text-white",
-        "bg-indigo-500 text-white",
-    ];
-
     const getAvatarColor = (name = "") => {
-        const index =
-            name.split("").reduce(
+        const index = String(name)
+            .split("")
+            .reduce(
                 (acc, char) => acc + char.charCodeAt(0),
                 0
-            ) % avatarColors.length;
+            ) % AVATAR_COLORS.length;
 
-        return avatarColors[index];
+        return AVATAR_COLORS[index];
     };
 
     /* =====================================================
-       STATUS COLORS
+       SORTING
     ===================================================== */
 
-    const statusColor = {
-        ACTIVE: "bg-green-100 text-green-700",
-        INACTIVE: "bg-gray-100 text-gray-700",
-        DRAFT: "bg-yellow-100 text-yellow-700",
-    };
+    const sortedWarehouses = useMemo(
+        () => [...currentWarehouses],
+        [currentWarehouses]
+    );
 
     /* =====================================================
        LOADING
@@ -273,7 +336,9 @@ export default function WarehouseTable({ warehouses }) {
     if (loading && !currentWarehouses.length) {
         return (
             <div className="flex items-center justify-center py-10">
-                <p className="text-gray-500">Loading warehouses...</p>
+                <p className="text-gray-500">
+                    Loading warehouses...
+                </p>
             </div>
         );
     }
@@ -286,6 +351,14 @@ export default function WarehouseTable({ warehouses }) {
         return (
             <div className="rounded-xl border border-red-200 bg-white p-8 text-center">
                 <p className="text-red-500">{error}</p>
+
+                <button
+                    type="button"
+                    onClick={() => refreshWarehouses()}
+                    className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+                >
+                    Retry
+                </button>
             </div>
         );
     }
@@ -341,110 +414,114 @@ export default function WarehouseTable({ warehouses }) {
                 </thead>
 
                 <tbody>
-                    {[...currentWarehouses]
-                        .sort((a, b) => (a.id || 0) - (b.id || 0))
-                        .map((warehouse, index) => (
-                            <tr
-                                key={warehouse.id || index}
-                                className="
-                                    cursor-pointer border-b border-gray-100
-                                    text-xs transition-colors hover:bg-gray-50
-                                "
-                            >
-                                {/* WAREHOUSE */}
+                    {sortedWarehouses.map((warehouse) => (
+                        <tr
+                            key={warehouse.id}
+                            className="
+                                cursor-pointer border-b border-gray-100
+                                text-xs transition-colors hover:bg-gray-50
+                            "
+                        >
+                            {/* WAREHOUSE */}
 
-                                <td className="overflow-hidden px-3 py-3">
-                                    <div className="flex min-w-0 items-center gap-2">
-                                        <div
-                                            className={`
-                                                flex h-9 w-9 min-w-[36px]
-                                                items-center justify-center
-                                                rounded-full text-sm font-bold
-                                                ${getAvatarColor(warehouse.warehouseName)}
-                                            `}
-                                        >
-                                            {initials(warehouse.warehouseName)}
-                                        </div>
-
-                                        <div className="min-w-0">
-                                            <p
-                                                className="truncate font-medium text-gray-800"
-                                                title={warehouse.warehouseName || ""}
-                                            >
-                                                {warehouse.warehouseName || "—"}
-                                            </p>
-
-                                            <p className="text-xs text-gray-500">
-                                                {warehouse.warehouseCode || "—"}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                {/* CONTACT PERSON */}
-
-                                <td className="px-3 py-3">
-                                    <p className="font-medium text-gray-700">
-                                        {warehouse.contactPerson || "—"}
-                                    </p>
-
-                                    <p
-                                        className="truncate text-xs text-gray-500"
-                                        title={warehouse.email || ""}
-                                    >
-                                        {warehouse.email || "—"}
-                                    </p>
-                                </td>
-
-                                {/* PHONE */}
-
-                                <td className="px-3 py-3">
-                                    <div className="flex items-center gap-2 text-gray-700">
-                                        <Phone size={13} className="text-gray-400" />
-                                        {warehouse.phone || "—"}
-                                    </div>
-                                </td>
-
-                                {/* LOCATION */}
-
-                                <td className="px-3 py-3">
-                                    <div className="flex items-center gap-2 text-gray-700">
-                                        <MapPin size={14} className="shrink-0 text-gray-400" />
-
-                                        <div className="min-w-0">
-                                            <p className="truncate font-medium">
-                                                {warehouse.city || "—"}
-                                            </p>
-
-                                            <p className="truncate text-xs text-gray-500">
-                                                {warehouse.state || ""}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                {/* STATUS */}
-
-                                <td className="px-3 py-3">
-                                    <span
+                            <td className="overflow-hidden px-3 py-3">
+                                <div className="flex min-w-0 items-center gap-2">
+                                    <div
                                         className={`
-                                            inline-block rounded-full px-2 py-1
-                                            text-xs font-medium
-                                            ${statusColor[
-                                            String(warehouse.status || "").toUpperCase()
-                                            ] || "bg-gray-100 text-gray-700"}
+                                            flex h-9 w-9 min-w-[36px]
+                                            items-center justify-center
+                                            rounded-full text-sm font-bold
+                                            ${getAvatarColor(warehouse.warehouseName)}
                                         `}
                                     >
-                                        {warehouse.status || "—"}
-                                    </span>
-                                </td>
+                                        {initials(warehouse.warehouseName)}
+                                    </div>
 
-                                {/* ACTIONS */}
+                                    <div className="min-w-0">
+                                        <p
+                                            className="truncate font-medium text-gray-800"
+                                            title={warehouse.warehouseName || ""}
+                                        >
+                                            {warehouse.warehouseName || "—"}
+                                        </p>
 
-                                <td className="px-4 py-3">
-                                    <div className="flex items-center justify-end gap-2">
-                                        {/* VIEW */}
+                                        <p className="text-xs text-gray-500">
+                                            {warehouse.warehouseCode || "—"}
+                                        </p>
+                                    </div>
+                                </div>
+                            </td>
 
+                            {/* CONTACT PERSON */}
+
+                            <td className="px-3 py-3">
+                                <p className="font-medium text-gray-700">
+                                    {warehouse.contactPerson || "—"}
+                                </p>
+
+                                <p
+                                    className="truncate text-xs text-gray-500"
+                                    title={warehouse.email || ""}
+                                >
+                                    {warehouse.email || "—"}
+                                </p>
+                            </td>
+
+                            {/* PHONE */}
+
+                            <td className="px-3 py-3">
+                                <div className="flex items-center gap-2 text-gray-700">
+                                    <Phone
+                                        size={13}
+                                        className="text-gray-400"
+                                    />
+                                    {warehouse.phone || "—"}
+                                </div>
+                            </td>
+
+                            {/* LOCATION */}
+
+                            <td className="px-3 py-3">
+                                <div className="flex items-center gap-2 text-gray-700">
+                                    <MapPin
+                                        size={14}
+                                        className="shrink-0 text-gray-400"
+                                    />
+
+                                    <div className="min-w-0">
+                                        <p className="truncate font-medium">
+                                            {warehouse.city || "—"}
+                                        </p>
+
+                                        <p className="truncate text-xs text-gray-500">
+                                            {warehouse.state || ""}
+                                        </p>
+                                    </div>
+                                </div>
+                            </td>
+
+                            {/* STATUS */}
+
+                            <td className="px-3 py-3">
+                                <span
+                                    className={`
+                                        inline-block rounded-full px-2 py-1
+                                        text-xs font-medium
+                                        ${STATUS_COLORS[
+                                        String(warehouse.status || "").toUpperCase()
+                                        ] || "bg-gray-100 text-gray-700"
+                                        }
+                                    `}
+                                >
+                                    {warehouse.status || "—"}
+                                </span>
+                            </td>
+
+                            {/* ACTIONS */}
+
+                            <td className="px-4 py-3">
+                                <div className="flex items-center justify-end gap-2">
+                                    {canViewWarehouse && (
                                         <button
                                             type="button"
                                             onClick={(e) => {
@@ -460,9 +537,9 @@ export default function WarehouseTable({ warehouses }) {
                                         >
                                             <Eye size={16} />
                                         </button>
+                                    )}
 
-                                        {/* EDIT */}
-
+                                    {canEditWarehouse && (
                                         <button
                                             type="button"
                                             onClick={(e) => {
@@ -478,9 +555,9 @@ export default function WarehouseTable({ warehouses }) {
                                         >
                                             <Edit size={16} />
                                         </button>
+                                    )}
 
-                                        {/* DELETE */}
-
+                                    {canDeleteWarehouse && (
                                         <button
                                             type="button"
                                             onClick={(e) => {
@@ -496,10 +573,11 @@ export default function WarehouseTable({ warehouses }) {
                                         >
                                             <Trash2 size={16} />
                                         </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
+                                    )}
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
                 </tbody>
             </table>
 
@@ -513,20 +591,13 @@ export default function WarehouseTable({ warehouses }) {
                 loading={loading}
                 label="warehouses"
                 onPageChange={(nextPage) => {
-                    dispatch(
-                        fetchAllWarehouse({
-                            page: nextPage,
-                            size: Number(pageSize) || 20,
-                        })
+                    refreshWarehouses(
+                        nextPage,
+                        Number(pageSize) || 20
                     );
                 }}
                 onPageSizeChange={(nextSize) => {
-                    dispatch(
-                        fetchAllWarehouse({
-                            page: 0,
-                            size: nextSize,
-                        })
-                    );
+                    refreshWarehouses(0, nextSize);
                 }}
             />
         </div>

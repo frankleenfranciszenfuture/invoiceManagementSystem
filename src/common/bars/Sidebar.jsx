@@ -23,6 +23,7 @@ import {
     BadgeJapaneseYen,
     PaintBucket,
     BadgeTurkishLira,
+    Box,
 } from "lucide-react";
 
 // ============================================================
@@ -229,6 +230,13 @@ const INVENTORY_NAV = [
         moduleName: "Warehouse",
         icon: Building2,
         to: "/inventory/warehouses",
+    },
+
+    {
+        label: "Expenses",
+        moduleName: "Expenses",
+        icon: Box,
+        to: "/inventory/expenses",
     },
 
     {

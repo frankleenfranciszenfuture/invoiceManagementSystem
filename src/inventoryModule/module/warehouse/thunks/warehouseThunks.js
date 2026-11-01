@@ -6,11 +6,13 @@ import api from "../../../../api/api";
  */
 export const fetchAllWarehouse = createAsyncThunk(
   "warehouse/fetchWarehouse",
-  async (_, { rejectWithValue }) => {
+  async (filters = {}, { rejectWithValue }) => {
     try {
-      const res = await api.get("/warehouses");
+      const res = await api.get("/warehouses", {
+        params: filters,
+      });
 
-      console.log("Warehouse:", res.data);
+      console.log("Warehouse API Response:", res.data);
 
       return res.data;
     } catch (error) {
@@ -18,7 +20,6 @@ export const fetchAllWarehouse = createAsyncThunk(
     }
   },
 );
-
 /**
  * Fetch warehouse by ID
  */

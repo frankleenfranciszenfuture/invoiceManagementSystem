@@ -29,39 +29,21 @@ const warehousesViewSlice = createSlice({
   initialState,
 
   reducers: {
-    /* =====================================================
-           SEARCH
-        ===================================================== */
-
     setSearch(state, action) {
       state.search = action.payload;
     },
-
-    /* =====================================================
-           SELECTED VIEW
-        ===================================================== */
 
     setSelectedWarehousesView(state, action) {
       state.selectedWarehousesView = action.payload;
     },
 
-    /* =====================================================
-           BANK ACCOUNT STATUS
-        ===================================================== */
-
     setWarehousesStatus(state, action) {
       state.warehousesStatus = action.payload;
     },
 
-    /* =====================================================
-           RESET VIEW
-        ===================================================== */
-
     resetWarehousesView(state) {
       state.selectedWarehousesView = "All Warehouses";
-
       state.warehousesStatus = "ALL";
-
       state.search = "";
     },
   },

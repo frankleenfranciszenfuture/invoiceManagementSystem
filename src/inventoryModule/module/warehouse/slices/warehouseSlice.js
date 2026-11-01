@@ -117,15 +117,21 @@ const warehouseSlice = createSlice({
 
         const response = action.payload?.data ?? {};
 
-        state.warehouses = Array.isArray(response.content)
-          ? response.content
-          : [];
+        // Support both Page response and direct array response
+        const warehouseList = Array.isArray(response)
+          ? response
+          : Array.isArray(response.content)
+            ? response.content
+            : [];
 
+        state.warehouses = warehouseList;
+
+        // Pagination
         state.pagination = {
           pageNumber: response.pageNumber ?? 0,
           pageSize: response.pageSize ?? 20,
-          totalElements: response.totalElements ?? 0,
-          totalPages: response.totalPages ?? 0,
+          totalElements: response.totalElements ?? warehouseList.length,
+          totalPages: response.totalPages ?? 1,
           last: response.last ?? true,
         };
 

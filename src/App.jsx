@@ -146,6 +146,10 @@ import PurchaseOrderDashboard from "./inventoryModule/module/purchaseOrder/pages
 import PurchaseOrderViewDetails from "./inventoryModule/module/purchaseOrder/pages/PurchaseOrderViewDetails";
 import SaleOrderViewDetails from "./inventoryModule/module/saleOrder/pages/SaleOrderViewDetails";
 import WarehouseViewDetails from "./inventoryModule/module/warehouse/pages/WarehouseViewDetails";
+import ExpenseCreate from "./inventoryModule/module/expenses/pages/ExpenseCreate";
+import ExpenseDashboard from "./inventoryModule/module/expenses/pages/ExpenseDashboard";
+import ExpenseViewDetails from "./inventoryModule/module/expenses/pages/ExpenseViewDetails";
+import ExpenseCategoryViewDetails from "./inventoryModule/module/expenses/pages/ExpenseCategoryViewDetails";
 
 
 
@@ -785,7 +789,7 @@ function AppContent() {
         />
 
         <Route
-          path="/inventory/warehouses/newSimple"
+          path="/inventory/warehouses/create"
           element={<WarehouseCreate />}
         />
 
@@ -798,6 +802,48 @@ function AppContent() {
           path="/inventory/warehouses/view/:id"
           element={<WarehouseViewDetails />}
         />
+
+
+        {/* Expenses */}
+
+        <Route
+          path="/inventory/expenses"
+          element={<ExpenseDashboard />}
+        />
+
+        <Route
+          path="/inventory/expenses/create"
+          element={<ExpenseCreate />}
+        />
+
+        <Route
+          path="/inventory/expenses/edit/:id"
+          element={<ExpenseCreate />}
+        />
+
+        <Route
+          path="/inventory/expenses/view/:id"
+          element={<ExpenseViewDetails />}
+        />
+
+        <Route
+          path="inventory/expenses-categories/view/:id"
+          element={<ExpenseCategoryViewDetails />}
+        />
+
+
+        {/* Warehouse */}
+
+        <Route
+          path="/inventory/warehouses/edit/:id"
+          element={<WarehouseCreate />}
+        />
+
+        <Route
+          path="/inventory/warehouses/view/:id"
+          element={<WarehouseViewDetails />}
+        />
+
 
         {/* SaleOrder */}
 

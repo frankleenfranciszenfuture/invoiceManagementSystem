@@ -23,8 +23,9 @@ import UserCreate from "../../module/users/pages/UserCreate";
 import EmailSignatureCreate from "../../module/emailSignature/pages/EmailSignatureCreate";
 import CurrencyModel from "../../module/currency/pages/CurrencyModel";
 import SalesPersonCreateModel from "../../module/salesPerson/pages/SalesPersonCreateModel";
-import { addGoodsReceiptItem } from "../../inventoryModule/module/purchaseOrder/slices/purchaseOrderSlice";
 import CreateGoodsReceiptModel from "../../inventoryModule/module/purchaseOrder/pages/CreateGoodsReceiptModel";
+import ExpenseCategoryCreate from "../../inventoryModule/module/expenses/pages/ExpenseCategoryCreate";
+
 export default function Modal() {
 
     const dispatch = useDispatch();
@@ -113,7 +114,11 @@ export default function Modal() {
 
         //purchaseOrderGoodsReceipt
         createGoodsReceipt: CreateGoodsReceiptModel,
-        editGoodsReceipt: CreateGoodsReceiptModel
+        editGoodsReceipt: CreateGoodsReceiptModel,
+
+        //expenseCategroy
+        addExpenseCategory: ExpenseCategoryCreate,
+        editExpenseCategory: ExpenseCategoryCreate,
     };
 
 
@@ -256,6 +261,11 @@ export default function Modal() {
         //PurchaseOrderGoodsReceipt
         createGoodsReceipt: "w-[900px] max-w-[92vw] max-h-[82vh]",
         editGoodsReceipt: "w-[900px] max-w-[92vw] max-h-[82vh]",
+
+        //PurchaseOrderGoodsReceipt
+        addExpenseCategory: "w-[900px] max-w-[92vw] max-h-[82vh]",
+        editExpenseCategory: "w-[900px] max-w-[92vw] max-h-[82vh]",
+
 
         // Permissions
         addRolePermission: "w-[800px] max-w-[92vw] max-h-[82vh]",
