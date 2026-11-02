@@ -1,182 +1,107 @@
 package com.ims.utils.specification;
 
-import com.ims.dtos.payment.PaymentFilterDTO;
 import com.ims.entity.PaymentEntity;
-import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.JoinType;
-import jakarta.persistence.criteria.Predicate;
+import com.ims.enums.PaymentDirection;
+import com.ims.enums.PaymentMethod;
+import com.ims.enums.PaymentStatus;
+import com.ims.enums.PaymentType;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 
 public final class PaymentSpecification {
 
     private PaymentSpecification() {
     }
 
-    public static Specification<PaymentEntity> withFilters(
-            PaymentFilterDTO filter
+    public static Specification<PaymentEntity> filter(
+            PaymentType paymentType,
+            PaymentDirection paymentDirection,
+            PaymentMethod paymentMethod,
+            PaymentStatus paymentStatus,
+            Long sourceId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            String search
     ) {
+        return (root, query, cb) -> {
 
-        return (root, query, criteriaBuilder) -> {
+            var predicates = cb.conjunction();
 
-            List<Predicate> predicates = new ArrayList<>();
-
-            // Active records only.
-            predicates.add(
-                    criteriaBuilder.isTrue(root.get("active"))
+            predicates.getExpressions().add(
+                    cb.isTrue(root.get("active"))
             );
 
-            if (filter == null) {
-                return criteriaBuilder.and(
-                        predicates.toArray(new Predicate[0])
+            if (paymentType != null) {
+                predicates.getExpressions().add(
+                        cb.equal(root.get("paymentType"), paymentType)
                 );
             }
 
-            // Search payment number, transaction reference and party details.
-            if (filter.getSearch() != null &&
-                    !filter.getSearch().trim().isEmpty()) {
+            if (paymentDirection != null) {
+                predicates.getExpressions().add(
+                        cb.equal(root.get("paymentDirection"), paymentDirection)
+                );
+            }
 
-                String search = "%"
-                        + filter.getSearch().trim().toLowerCase()
-                        + "%";
+            if (paymentMethod != null) {
+                predicates.getExpressions().add(
+                        cb.equal(root.get("paymentMethod"), paymentMethod)
+                );
+            }
 
-                Join<Object, Object> partyJoin =
-                        root.join("party", JoinType.LEFT);
+            if (paymentStatus != null) {
+                predicates.getExpressions().add(
+                        cb.equal(root.get("paymentStatus"), paymentStatus)
+                );
+            }
 
-                predicates.add(
-                        criteriaBuilder.or(
-                                criteriaBuilder.like(
-                                        criteriaBuilder.lower(
-                                                root.get("paymentNumber")
-                                        ),
-                                        search
+            if (sourceId != null) {
+                predicates.getExpressions().add(
+                        cb.equal(root.get("sourceId"), sourceId)
+                );
+            }
+
+            if (fromDate != null) {
+                predicates.getExpressions().add(
+                        cb.greaterThanOrEqualTo(
+                                root.get("paymentDate"),
+                                fromDate
+                        )
+                );
+            }
+
+            if (toDate != null) {
+                predicates.getExpressions().add(
+                        cb.lessThanOrEqualTo(
+                                root.get("paymentDate"),
+                                toDate
+                        )
+                );
+            }
+
+            if (search != null && !search.isBlank()) {
+                String value = "%" + search.trim().toLowerCase() + "%";
+
+                predicates.getExpressions().add(
+                        cb.or(
+                                cb.like(
+                                        cb.lower(root.get("paymentNumber")),
+                                        value
                                 ),
-                                criteriaBuilder.like(
-                                        criteriaBuilder.lower(
-                                                root.get("transactionReference")
-                                        ),
-                                        search
+                                cb.like(
+                                        cb.lower(root.get("sourceNumber")),
+                                        value
                                 ),
-                                criteriaBuilder.like(
-                                        criteriaBuilder.lower(
-                                                partyJoin.get("companyName")
-                                        ),
-                                        search
-                                ),
-                                criteriaBuilder.like(
-                                        criteriaBuilder.lower(
-                                                partyJoin.get("partyCode")
-                                        ),
-                                        search
+                                cb.like(
+                                        cb.lower(root.get("referenceNumber")),
+                                        value
                                 )
                         )
                 );
             }
 
-            // Party filter.
-            if (filter.getPartyId() != null) {
-
-                predicates.add(
-                        criteriaBuilder.equal(
-                                root.get("party").get("id"),
-                                filter.getPartyId()
-                        )
-                );
-            }
-
-            // Bank account filter.
-            if (filter.getBankAccountId() != null) {
-
-                predicates.add(
-                        criteriaBuilder.equal(
-                                root.get("bankAccount").get("id"),
-                                filter.getBankAccountId()
-                        )
-                );
-            }
-
-            // Payment direction.
-            if (filter.getDirection() != null) {
-
-                predicates.add(
-                        criteriaBuilder.equal(
-                                root.get("direction"),
-                                filter.getDirection()
-                        )
-                );
-            }
-
-            // Reference type.
-            if (filter.getReferenceType() != null) {
-
-                predicates.add(
-                        criteriaBuilder.equal(
-                                root.get("referenceType"),
-                                filter.getReferenceType()
-                        )
-                );
-            }
-
-            // Payment method.
-            if (filter.getPaymentMethod() != null) {
-
-                predicates.add(
-                        criteriaBuilder.equal(
-                                root.get("paymentMethod"),
-                                filter.getPaymentMethod()
-                        )
-                );
-            }
-
-            // Payment status.
-            if (filter.getStatus() != null) {
-
-                predicates.add(
-                        criteriaBuilder.equal(
-                                root.get("status"),
-                                filter.getStatus()
-                        )
-                );
-            }
-
-            // From date.
-            if (filter.getFromDate() != null) {
-
-                predicates.add(
-                        criteriaBuilder.greaterThanOrEqualTo(
-                                root.get("paymentDate"),
-                                filter.getFromDate()
-                        )
-                );
-            }
-
-            // To date.
-            if (filter.getToDate() != null) {
-
-                predicates.add(
-                        criteriaBuilder.lessThanOrEqualTo(
-                                root.get("paymentDate"),
-                                filter.getToDate()
-                        )
-                );
-            }
-
-            if (filter.getFromDate() != null &&
-                    filter.getToDate() != null &&
-                    filter.getFromDate().isAfter(filter.getToDate())) {
-
-                throw new IllegalArgumentException(
-                        "From date cannot be after to date"
-                );
-            }
-
-            return criteriaBuilder.and(
-                    predicates.toArray(new Predicate[0])
-            );
+            return predicates;
         };
     }
 }
-

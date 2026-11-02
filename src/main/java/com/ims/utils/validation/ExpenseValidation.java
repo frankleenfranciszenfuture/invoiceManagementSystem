@@ -30,13 +30,7 @@ public class ExpenseValidation {
             );
         }
 
-        if (dto.getExchangeRate() != null &&
-                dto.getExchangeRate().compareTo(BigDecimal.ZERO) <= 0) {
 
-            throw new BadRequestException(
-                    "Exchange rate must be greater than zero."
-            );
-        }
 
         // Tax is selected using taxMasterId.
         // Actual GST rates and tax amounts are validated/calculated

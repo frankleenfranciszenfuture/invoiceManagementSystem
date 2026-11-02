@@ -1,64 +1,72 @@
-
 package com.ims.dtos.payment;
 
-// Change this import to your actual BaseResponse package.
 import com.ims.dtos.common.BaseResponse;
-
-import com.ims.enums.PaymentMethod;
 import com.ims.enums.PaymentDirection;
-import com.ims.enums.PaymentReferenceType;
+import com.ims.enums.PaymentMethod;
 import com.ims.enums.PaymentStatus;
-
+import com.ims.enums.PaymentType;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Getter
-@Setter
+@Data
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 public class PaymentResponseDTO extends BaseResponse {
 
     private Long id;
 
     private String paymentNumber;
 
-    private PaymentDirection direction;
+    private PaymentType paymentType;
 
-    private PaymentReferenceType referenceType;
+    private PaymentDirection paymentDirection;
 
-    private Long referenceId;
+    private Long sourceId;
 
-    private Long partyId;
-
-    private String partyCode;
-
-    private String partyName;
-
-    private Long bankAccountId;
-
-    private String bankAccountName;
+    private String sourceNumber;
 
     private LocalDate paymentDate;
 
-    private BigDecimal amount;
+    private BigDecimal paymentAmount;
 
     private BigDecimal baseAmount;
 
     private BigDecimal exchangeRate;
 
+    private Long currencyId;
+
     private String currencyCode;
+
+    private String currencyName;
 
     private PaymentMethod paymentMethod;
 
-    private PaymentStatus status;
+    private Long bankAccountId;
 
-    private String transactionReference;
+    private String bankAccountName;
+
+    private Long cashAccountId;
+
+    private String cashAccountName;
+
+    private Long customerId;
+
+    private String customerName;
+
+    private Long partyId;
+
+    private String partyName;
+
+    private String referenceNumber;
 
     private String notes;
 
-    private Long bankTransactionId;
+    private PaymentStatus paymentStatus;
 
-    private String bankTransactionNumber;
+    private String reversalReason;
 }

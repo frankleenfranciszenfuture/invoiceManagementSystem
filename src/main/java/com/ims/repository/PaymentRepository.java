@@ -1,8 +1,8 @@
 package com.ims.repository;
 
 import com.ims.entity.PaymentEntity;
-import com.ims.enums.PaymentReferenceType;
 import com.ims.enums.PaymentStatus;
+import com.ims.enums.PaymentType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 public interface PaymentRepository extends
@@ -18,6 +20,8 @@ public interface PaymentRepository extends
 
     Optional<PaymentEntity> findByIdAndActiveTrue(Long id);
 
+    Optional<PaymentEntity> findByPaymentNumberIgnoreCase(String paymentNumber);
+
     boolean existsByPaymentNumberIgnoreCase(String paymentNumber);
 
     boolean existsByPaymentNumberIgnoreCaseAndIdNot(
@@ -25,39 +29,53 @@ public interface PaymentRepository extends
             Long id
     );
 
-    long countByStatusAndActiveTrue(PaymentStatus status);
-
     Page<PaymentEntity> findAllByActiveTrue(Pageable pageable);
 
-    /**
-     * Fetch payment details together with party, bank account,
-     * and associated bank transaction.
-     */
-    @Query("""
-        SELECT p
-        FROM PaymentEntity p
-        LEFT JOIN FETCH p.party
-        LEFT JOIN FETCH p.bankAccount
-        LEFT JOIN FETCH p.bankTransaction
-        WHERE p.id = :id
-          AND p.active = true
-        """)
-    Optional<PaymentEntity> findDetailedById(@Param("id") Long id);
-
-    /**
-     * Find active payments associated with a specific party.
-     */
-    Page<PaymentEntity> findAllByParty_IdAndActiveTrue(
-            Long partyId,
+    Page<PaymentEntity> findAllByPaymentTypeAndActiveTrue(
+            PaymentType paymentType,
             Pageable pageable
     );
 
-    /**
-     * Find payments associated with a particular order.
-     */
-    Page<PaymentEntity> findAllByReferenceTypeAndReferenceIdAndActiveTrue(
-            PaymentReferenceType referenceType,
-            Long referenceId,
+    Page<PaymentEntity> findAllByPaymentStatusAndActiveTrue(
+            PaymentStatus paymentStatus,
             Pageable pageable
+    );
+
+    List<PaymentEntity> findAllByPaymentTypeAndSourceIdAndActiveTrue(
+            PaymentType paymentType,
+            Long sourceId
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(p.paymentAmount), 0)
+        FROM PaymentEntity p
+        WHERE p.paymentType = :paymentType
+          AND p.sourceId = :sourceId
+          AND p.paymentStatus = :paymentStatus
+          AND p.active = true
+        """)
+    BigDecimal calculateCompletedPaymentAmount(
+            @Param("paymentType") PaymentType paymentType,
+            @Param("sourceId") Long sourceId,
+            @Param("paymentStatus") PaymentStatus paymentStatus
+    );
+
+    @Query("""
+        SELECT COUNT(p)
+        FROM PaymentEntity p
+        WHERE p.paymentType = :paymentType
+          AND p.sourceId = :sourceId
+          AND p.paymentStatus = :paymentStatus
+          AND p.active = true
+        """)
+    long countBySourceAndStatus(
+            @Param("paymentType") PaymentType paymentType,
+            @Param("sourceId") Long sourceId,
+            @Param("paymentStatus") PaymentStatus paymentStatus
+    );
+
+    boolean existsByIdAndPaymentStatus(
+            Long id,
+            PaymentStatus paymentStatus
     );
 }

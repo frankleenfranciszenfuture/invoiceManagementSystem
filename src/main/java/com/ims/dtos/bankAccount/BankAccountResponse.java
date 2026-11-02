@@ -3,12 +3,10 @@ package com.ims.dtos.bankAccount;
 import com.ims.dtos.common.BaseResponse;
 import com.ims.enums.BankAccountStatus;
 import com.ims.enums.BankAccountType;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @AllArgsConstructor
@@ -38,10 +36,13 @@ public class BankAccountResponse extends BaseResponse {
 
     private String description;
 
+    private BigDecimal openingBalance;
+
+    private BigDecimal currentBalance;
+
     private Boolean primaryAccount;
 
     private BankAccountStatus status;
 
     private Boolean active;
 }
-

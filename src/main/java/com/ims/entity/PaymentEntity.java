@@ -1,37 +1,31 @@
-
 package com.ims.entity;
 
 import com.ims.enums.PaymentDirection;
 import com.ims.enums.PaymentMethod;
-import com.ims.enums.PaymentReferenceType;
 import com.ims.enums.PaymentStatus;
+import com.ims.enums.PaymentType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+@EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(
         name = "payments",
-        indexes = {
-                @Index(name = "idx_payment_number", columnList = "payment_number"),
-                @Index(name = "idx_payment_date", columnList = "payment_date"),
-                @Index(name = "idx_payment_party", columnList = "party_id"),
-                @Index(name = "idx_payment_direction", columnList = "direction"),
-                @Index(name = "idx_payment_status", columnList = "status"),
-                @Index(name = "idx_payment_reference",
-                        columnList = "reference_type, reference_id")
-        },
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_payment_number",
                         columnNames = "payment_number"
                 )
+        },
+        indexes = {
+                @Index(name = "idx_payment_type_source", columnList = "payment_type, source_id"),
+                @Index(name = "idx_payment_date", columnList = "payment_date"),
+                @Index(name = "idx_payment_status", columnList = "payment_status"),
+                @Index(name = "idx_payment_direction", columnList = "payment_direction")
         }
 )
 @Getter
@@ -48,42 +42,62 @@ public class PaymentEntity extends BaseEntity {
     @Column(
             name = "payment_number",
             nullable = false,
+            unique = true,
             length = 50
     )
     private String paymentNumber;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private PaymentDirection direction;
+    @Column(name = "payment_type", nullable = false, length = 30)
+    private PaymentType paymentType;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "reference_type", nullable = false, length = 30)
-    private PaymentReferenceType referenceType;
+    @Column(name = "payment_direction", nullable = false, length = 20)
+    private PaymentDirection paymentDirection;
 
-    @Column(name = "reference_id")
-    private Long referenceId;
+    /*
+     * Source document reference.
+     *
+     * SALES    -> SalesOrderEntity.id
+     * PURCHASE -> PurchaseOrderEntity.id
+     * EXPENSE  -> ExpenseEntity.id
+     */
+    @Column(name = "source_id", nullable = false)
+    private Long sourceId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "party_id", nullable = false)
-    private PartyEntity party;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "bank_account_id")
-    private BankAccount bankAccount;
+    @Column(name = "source_number", length = 100)
+    private String sourceNumber;
 
     @Column(name = "payment_date", nullable = false)
     private LocalDate paymentDate;
 
-    @Column(nullable = false, precision = 19, scale = 4)
-    private BigDecimal amount;
+    @Column(
+            name = "payment_amount",
+            nullable = false,
+            precision = 19,
+            scale = 4
+    )
+    private BigDecimal paymentAmount;
 
-    // Payment amount converted to INR.
-    @Column(name = "base_amount", nullable = false, precision = 19, scale = 2)
+    @Column(
+            name = "base_amount",
+            nullable = false,
+            precision = 19,
+            scale = 2
+    )
     private BigDecimal baseAmount;
 
-    // INR value of one unit of payment currency.
-    @Column(name = "exchange_rate", nullable = false, precision = 19, scale = 8)
+    @Column(
+            name = "exchange_rate",
+            nullable = false,
+            precision = 19,
+            scale = 8
+    )
     private BigDecimal exchangeRate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "currency_id", nullable = false)
+    private Currency currency;
 
     @Column(name = "currency_code", nullable = false, length = 10)
     private String currencyCode;
@@ -92,24 +106,33 @@ public class PaymentEntity extends BaseEntity {
     @Column(name = "payment_method", nullable = false, length = 30)
     private PaymentMethod paymentMethod;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private PaymentStatus status;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bank_account_id")
+    private BankAccount bankAccount;
 
-    @Column(name = "transaction_reference", length = 100)
-    private String transactionReference;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cash_account_id")
+    private CashAccountEntity cashAccount;
 
-    @Column(columnDefinition = "TEXT")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private CustomerEntity customer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "party_id")
+    private PartyEntity party;
+
+    @Column(name = "reference_number", length = 100)
+    private String referenceNumber;
+
+    @Column(length = 1000)
     private String notes;
 
-    /**
-     * Bank transaction created for this payment.
-     * A payment can have one original bank transaction.
-     */
-    @OneToOne(
-            mappedBy = "payment",
-            fetch = FetchType.LAZY,
-            cascade = CascadeType.ALL
-    )
-    private BankTransactionEntity bankTransaction;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false, length = 30)
+    @Builder.Default
+    private PaymentStatus paymentStatus = PaymentStatus.COMPLETED;
+
+    @Column(name = "reversal_reason", length = 500)
+    private String reversalReason;
 }

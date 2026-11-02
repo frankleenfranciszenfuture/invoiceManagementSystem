@@ -1,54 +1,42 @@
 package com.ims.service.serviceInterface.payment;
 
 
-import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
-import com.ims.dtos.payment.PaymentFilterDTO;
 import com.ims.dtos.payment.PaymentRequestDTO;
 import com.ims.dtos.payment.PaymentResponseDTO;
+import com.ims.enums.PaymentDirection;
+import com.ims.enums.PaymentMethod;
+import com.ims.enums.PaymentStatus;
+import com.ims.enums.PaymentType;
 
-import org.springframework.data.domain.Pageable;
+import java.time.LocalDate;
+import java.util.List;
 
 public interface PaymentService {
 
-    /**
-     * Create a new payment.
-     */
-    ApiResponse<PaymentResponseDTO> createPayment(
-            PaymentRequestDTO request
+    PaymentResponseDTO createPayment(PaymentRequestDTO request);
+
+    PaymentResponseDTO getPaymentById(Long id);
+
+    PageResponse<PaymentResponseDTO> getAllPayments(
+            int page,
+            int size,
+            String sortBy,
+            String sortDirection,
+            PaymentType paymentType,
+            PaymentDirection paymentDirection,
+            PaymentMethod paymentMethod,
+            PaymentStatus paymentStatus,
+            Long sourceId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            String search
     );
 
-    /**
-     * Get payment details by ID.
-     */
-    ApiResponse<PaymentResponseDTO> getPaymentById(
-            Long paymentId
+    List<PaymentResponseDTO> getPaymentsBySource(
+            PaymentType paymentType,
+            Long sourceId
     );
 
-    /**
-     * Get all payments with dynamic filters and pagination.
-     */
-    ApiResponse<PageResponse<PaymentResponseDTO>> getAllPayments(
-            PaymentFilterDTO filter,
-            Pageable pageable
-    );
-
-    /**
-     * Complete a pending payment.
-     *
-     * For example, clear a pending cheque payment.
-     */
-    ApiResponse<PaymentResponseDTO> completePayment(
-            Long paymentId
-    );
-
-    /**
-     * Cancel a payment.
-     *
-     * Completed payments must reverse their accounting
-     * and bank transaction effects.
-     */
-    ApiResponse<PaymentResponseDTO> cancelPayment(
-            Long paymentId
-    );
+    PaymentResponseDTO reversePayment(Long id, String reason);
 }

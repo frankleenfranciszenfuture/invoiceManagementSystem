@@ -1363,23 +1363,21 @@ public class SaleOrderServiceImpl implements SaleOrderService {
     // =====================================================
 
     @Override
+    @Transactional(readOnly = true)
     public void allocatePayment(PaymentEntity payment) {
 
         validateSaleOrderPayment(payment);
 
         SalesOrderEntity salesOrder =
                 salesOrderRepository.findActiveByIdForUpdate(
-                        payment.getReferenceId()
+                        payment.getSourceId()
                 ).orElseThrow(() ->
                         new ResourceNotFoundException(
-                                "Sales order not found with ID: "
-                                        + payment.getReferenceId()
+                                "Sales order not found with ID: " + payment.getSourceId()
                         )
                 );
 
-        if (salesOrder.getSalesOrderStatus() ==
-                SaleOrderStatus.CANCELLED) {
-
+        if (salesOrder.getSalesOrderStatus() == SaleOrderStatus.CANCELLED) {
             throw new BadRequestException(
                     "Cannot allocate payment to a cancelled sales order."
             );
@@ -1395,48 +1393,43 @@ public class SaleOrderServiceImpl implements SaleOrderService {
         validateSaleOrderPayment(payment);
 
         salesOrderRepository.findActiveByIdForUpdate(
-                payment.getReferenceId()
+                payment.getSourceId()
         ).orElseThrow(() ->
                 new ResourceNotFoundException(
                         "Sales order not found with ID: "
-                                + payment.getReferenceId()
+                                + payment.getSourceId()
                 )
         );
 
-        // Reverse the separate payment allocation/accounting record
-        // through the payment module.
-        // Do not update SalesOrderEntity payment balances.
+        // Payment allocation is maintained separately.
+        // Do not update payment balances on SalesOrderEntity.
     }
 
     private void validateSaleOrderPayment(PaymentEntity payment) {
 
         if (payment == null) {
+            throw new BadRequestException("Payment details are required.");
+        }
+
+        if (payment.getPaymentType() != PaymentType.SALES) {
             throw new BadRequestException(
-                    "Payment is required."
+                    "Invalid payment type for sales order."
             );
         }
 
-        if (payment.getReferenceType() !=
-                PaymentReferenceType.SALE_ORDER) {
-
-            throw new BadRequestException(
-                    "Payment reference must be SALE_ORDER."
-            );
-        }
-
-        if (payment.getReferenceId() == null) {
+        if (payment.getSourceId() == null) {
             throw new BadRequestException(
                     "Sales order reference ID is required."
             );
         }
 
-        if (payment.getDirection() != PaymentDirection.RECEIVED) {
+        if (payment.getPaymentDirection() != PaymentDirection.RECEIVED) {
             throw new BadRequestException(
                     "Sales order payment direction must be RECEIVED."
             );
         }
 
-        if (payment.getStatus() != PaymentStatus.COMPLETED) {
+        if (payment.getPaymentStatus() != PaymentStatus.COMPLETED) {
             throw new BadRequestException(
                     "Only completed payments can be allocated."
             );

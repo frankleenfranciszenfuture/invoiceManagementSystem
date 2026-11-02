@@ -21,6 +21,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -119,6 +121,17 @@ public class BankAccountServiceImpl
                 request.getDescription()
         );
 
+        // =================================================
+        // 7. OPENING BALANCE & CURRENT BALANCE
+        // =================================================
+
+        BigDecimal openingBalance = request.getOpeningBalance() != null
+                ? request.getOpeningBalance()
+                : BigDecimal.ZERO;
+
+        bankAccount.setOpeningBalance(openingBalance);
+
+        bankAccount.setCurrentBalance(openingBalance);
         // =================================================
         // 7. PRIMARY ACCOUNT
         // =================================================

@@ -135,6 +135,14 @@ public class BankAccount extends BaseEntity {
     private BigDecimal openingBalance = BigDecimal.ZERO;
 
     @Column(
+            name = "current_balance",
+            nullable = false,
+            precision = 19,
+            scale = 2
+    )
+    private BigDecimal currentBalance = BigDecimal.ZERO;
+
+    @Column(
             name = "active",
             nullable = false
     )
