@@ -69,7 +69,15 @@ import expensesViewReducer from "../inventoryModule/module/expenses/slices/expen
 import expenseCategoryReducer from "../inventoryModule/module/expenses/slices/expenseCategorySlice";
 import expenseCategoryViewReducer from "../inventoryModule/module/expenses/slices/expenseCategoryViewSlice";
 
+import paymentReducer from "../inventoryModule/module/payment/slices/paymentSlice";
+import paymentsViewReducer from "../inventoryModule/module/payment/slices/paymentsViewSlice";
+
+//cashAccount
+import cashAccountReducer from "../inventoryModule/module/cashAccount/slices/cashAccountSlice";
+import cashAccountsViewReducer from "../inventoryModule/module/cashAccount/slices/cashAccountsViewSlice";
+
 import paginationReducer from "../common/pagination/slices/paginationSlice";
+
 import menuPermissionReducer from "../module/menuPermission/slices/menuPermissionSlice";
 
 export const store = configureStore({
@@ -177,6 +185,14 @@ export const store = configureStore({
     //purchaseOrder
     purchaseOrder: purchaseOrderReducer,
     purchaseOrderView: purchaseOrderViewReducer,
+
+    //payments
+    payment: paymentReducer,
+    paymentsView: paymentsViewReducer,
+
+    //cashAccount
+    cashAccount: cashAccountReducer,
+    cashAccountsView: cashAccountsViewReducer,
 
     //pagniation
     pagination: paginationReducer,

@@ -1,48 +1,30 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-  selectedProductView: "All Products",
-  productStatus: "ALL",
-  search: "",
-  views: [
-    { label: "All Products", value: "ALL" },
-    { label: "Active Products", value: "ACTIVE" },
-    { label: "Inactive Products", value: "INACTIVE" },
-    { label: "Draft Products", value: "DRAFT" },
-  ],
+  productsStatus: "ALL",
+  selectedProductsView: "All Products",
 };
 
-const productViewSlice = createSlice({
-  name: "productView",
-
+const productsViewSlice = createSlice({
+  name: "productsView",
   initialState,
-
   reducers: {
-    setSearch(state, action) {
-      state.search = action.payload;
+    setProductsStatus: (state, action) => {
+      state.productsStatus = action.payload;
     },
 
-    setSelectedProductView(state, action) {
-      state.selectedProductView = action.payload;
+    setSelectedProductsView: (state, action) => {
+      state.selectedProductsView = action.payload;
     },
 
-    setProductStatus(state, action) {
-      state.productStatus = action.payload;
-    },
-
-    resetProductView(state) {
-      state.selectedProductView = "All Products";
-      state.productStatus = "ALL";
-      state.search = "";
+    resetProductsView: (state) => {
+      state.productsStatus = "ALL";
+      state.selectedProductsView = "All Products";
     },
   },
 });
 
-export const {
-  setSearch,
-  setSelectedProductView,
-  setProductStatus,
-  resetProductView,
-} = productViewSlice.actions;
+export const { setProductsStatus, setSelectedProductsView, resetProductsView } =
+  productsViewSlice.actions;
 
-export default productViewSlice.reducer;
+export default productsViewSlice.reducer;

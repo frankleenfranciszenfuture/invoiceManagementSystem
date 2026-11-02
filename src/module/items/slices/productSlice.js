@@ -106,6 +106,10 @@ const productSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+
+    clearProductError: (state) => {
+      state.error = null;
+    },
     /* =====================================================
        CLEAR PRODUCT STATE
     ===================================================== */
@@ -687,6 +691,7 @@ export const {
   clearCreatedSubCategorySelection,
   setCreatedTaxMasterSelection,
   clearCreatedTaxMasterSelection,
+  clearProductError,
 } = productSlice.actions;
 
 /* =========================================================

@@ -2,6 +2,7 @@
 import React, {
     useEffect,
     useMemo,
+    useCallback,
 } from "react";
 
 import {
@@ -10,82 +11,84 @@ import {
 } from "react-redux";
 
 import {
-    useSearchParams,
-} from "react-router-dom";
-
-import {
-    Download,
     Plus,
+    Download,
+    Coins,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
-import CurrencyTable
-    from "./CurrencyTable";
-
-import NavbarCurrency
-    from "../components/bars/nav/NavbarCurrency";
+import CurrencyTable from "../pages/CurrencyTable";
+import NavbarCurrency from "../components/bars/nav/NavbarCurrency";
 
 import {
-    fetchAllCurrencies,
-} from "../thunks/currencyThunks";
-
-import {
-    getUserPermission,
-} from "../../menuPermission/thunks/menuPermissionThunks";
-
-import {
-    setCurrencyStatus,
-    setSelectedCurrencyView,
-} from "../slices/currencyViewSlice";
+    clearError,
+} from "../slices/currencySlice";
 
 import {
     openModal,
 } from "../../ui/uiSlice";
 
-import InvoiceSkeleton
-    from "../../../common/loader/InvoiceSkeleton";
+import {
+    getUserPermission,
+} from "../../menuPermission/thunks/menuPermissionThunks";
 
+import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
 
-// ============================================================
-// CURRENCY DASHBOARD
-// ============================================================
+import CurrencyOverview from "../../currency/pages/CurrencyOverview";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMPTY_ARRAY = [];
+
+/* =========================================================
+   NORMALIZE HELPERS
+========================================================= */
+
+const normalizeModule = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+const normalizeAction = (value) =>
+    String(value ?? "").trim().toUpperCase();
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function CurrencyDashboard() {
 
     const dispatch = useDispatch();
 
-    const [searchParams] =
-        useSearchParams();
-
-
-    // ============================================================
-    // AUTH STATE
-    // ============================================================
+    /* =====================================================
+       AUTH STATE
+    ===================================================== */
 
     const user = useSelector(
-        (state) =>
-            state.auth?.user
+        (state) => state.auth?.user
     );
 
     const isAuthenticated = useSelector(
-        (state) =>
-            state.auth?.isAuthenticated === true
+        (state) => state.auth?.isAuthenticated === true
     );
 
     const authChecking = useSelector(
-        (state) =>
-            state.auth?.authChecking === true
+        (state) => state.auth?.authChecking === true
     );
 
-
-    // ============================================================
-    // PERMISSION STATE
-    // ============================================================
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
 
     const permissions = useSelector(
-        (state) =>
-            state.menuPermission?.userPermissions || []
+        (state) => {
+            const value = state.menuPermission?.userPermissions;
+
+            return Array.isArray(value)
+                ? value
+                : EMPTY_ARRAY;
+        }
     );
 
     const permissionLoading = useSelector(
@@ -98,10 +101,9 @@ export default function CurrencyDashboard() {
             state.menuPermission?.userPermissionsLoaded === true
     );
 
-
-    // ============================================================
-    // ROLE
-    // ============================================================
+    /* =====================================================
+       ROLE
+    ===================================================== */
 
     const roleName =
         user?.roleName ||
@@ -111,285 +113,174 @@ export default function CurrencyDashboard() {
         user?.authority ||
         "";
 
-    const normalizedRole =
-        String(roleName)
-            .trim()
-            .toUpperCase();
-
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
-
-    const isAdmin =
-        normalizedRole === "ADMIN";
+    const normalizedRole = normalizeAction(roleName);
 
     const hasFullAccess =
-        isSuperAdmin || isAdmin;
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
-    // ============================================================
-    // PERMISSION CHECK
-    // ============================================================
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
 
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
+            if (hasFullAccess) {
+                return true;
+            }
 
-        // --------------------------------------------------------
-        // SUPER ADMIN / ADMIN
-        // --------------------------------------------------------
+            if (!Array.isArray(permissions)) {
+                return false;
+            }
 
-        if (hasFullAccess) {
-            return true;
-        }
+            const requestedModule = normalizeModule(moduleName);
+            const requestedAction = normalizeAction(actionName);
 
-        // --------------------------------------------------------
-        // PERMISSION ARRAY
-        // --------------------------------------------------------
+            return permissions.some((permission) => {
 
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
+                const permissionModule = normalizeModule(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                );
 
-        const requestedModule =
-            String(moduleName)
-                .trim()
-                .toLowerCase();
-
-        const requestedAction =
-            String(actionName)
-                .trim()
-                .toUpperCase();
-
-
-
-
-        return permissions.some(
-            (permission) => {
-
-                // ==================================================
-                // MODULE
-                // ==================================================
-
-                const permissionModule =
-                    String(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toLowerCase();
-
-                if (
-                    permissionModule !==
-                    requestedModule
-                ) {
+                if (permissionModule !== requestedModule) {
                     return false;
                 }
 
-
-                // ==================================================
-                // ACTIVE STATUS
-                // ==================================================
-
-                if (
-                    permission?.active === false
-                ) {
+                if (permission?.active === false) {
                     return false;
                 }
 
                 if (
-                    String(
-                        permission?.status || ""
-                    )
-                        .trim()
-                        .toUpperCase() ===
-                    "INACTIVE"
+                    normalizeAction(permission?.status) === "INACTIVE"
                 ) {
                     return false;
                 }
 
+                /* ACTION ARRAY */
 
-                // ==================================================
-                // GROUPED ACTIONS
-                // ==================================================
+                if (Array.isArray(permission?.actions)) {
 
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
+                    return permission.actions.some((action) => {
 
-                    return permission.actions.some(
-                        (action) => {
-
-                            const permissionAction =
-                                String(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.action?.name ||
-                                    ""
-                                )
-                                    .trim()
-                                    .toUpperCase();
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
-
+                        if (typeof action === "string") {
                             return (
-                                permissionAction ===
-                                requestedAction &&
-                                allowed
+                                normalizeAction(action) === requestedAction
                             );
                         }
-                    );
+
+                        const permissionAction = normalizeAction(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        );
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        if (action?.active === false) {
+                            return false;
+                        }
+
+                        if (
+                            normalizeAction(action?.status) === "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
                 }
 
+                /* DIRECT / FLAT ACTION */
 
-                // ==================================================
-                // FLAT ACTION
-                // ==================================================
-
-                const permissionAction =
-                    String(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toUpperCase();
+                const permissionAction = normalizeAction(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                );
 
                 const allowed =
                     permission?.allowed === true ||
                     permission?.allowed === "true";
 
                 return (
-                    permissionAction ===
-                    requestedAction &&
+                    permissionAction === requestedAction &&
                     allowed
                 );
-            }
-        );
-    };
+            });
 
-
-    // ============================================================
-    // CURRENCY PERMISSIONS
-    // ============================================================
-
-    const canViewCurrency =
-        hasPermission(
-            "Currency Detail",
-            "VIEW"
-        );
-
-    const canCreateCurrency =
-        hasPermission(
-            "Currency Detail",
-            "CREATE"
-        );
-
-
-    // ============================================================
-    // CURRENCY STATE
-    // ============================================================
-
-    const currencies = useSelector(
-        (state) =>
-            state.currency?.currencies || []
+        },
+        [
+            hasFullAccess,
+            permissions,
+        ]
     );
 
+    /* =====================================================
+       CURRENCY PERMISSIONS
+    ===================================================== */
+
+    const canViewCurrency = hasPermission(
+        "Currencies",
+        "VIEW"
+    );
+
+    const canCreateCurrency = hasPermission(
+        "Currencies",
+        "CREATE"
+    );
+
+    /* =====================================================
+       CURRENCY STATE
+    ===================================================== */
+
+    const currenciesFromRedux = useSelector(
+        (state) => state.currency?.currencies
+    );
+
+    const currencies = Array.isArray(currenciesFromRedux)
+        ? currenciesFromRedux
+        : EMPTY_ARRAY;
+
     const loading = useSelector(
-        (state) =>
-            state.currency?.loading || false
+        (state) => state.currency?.loading === true
     );
 
     const error = useSelector(
-        (state) =>
-            state.currency?.error
+        (state) => state.currency?.error
     );
 
-
-    // ============================================================
-    // CURRENCY FILTER STATE
-    // ============================================================
-
-    const currencyStatus = useSelector(
-        (state) =>
-            state.currencyView?.currencyStatus ||
-            "ALL"
-    );
-
-
-    // ============================================================
-    // LOAD CURRENT USER PERMISSIONS
-    //
-    // NOTE:
-    //
-    // Ideally this should happen in AuthSlice/bootstrap.
-    // This fallback ensures CompanyDashboard can still
-    // initialize permissions if AuthSlice has not done so.
-    // ============================================================
+    /* =====================================================
+       LOAD USER PERMISSIONS
+    ===================================================== */
 
     useEffect(() => {
 
-        // --------------------------------------------------------
-        // AUTH STILL CHECKING
-        // --------------------------------------------------------
-
-        if (authChecking) {
+        if (authChecking || !isAuthenticated) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // NOT AUTHENTICATED
-        // --------------------------------------------------------
-
-        if (!isAuthenticated) {
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // ADMIN / SUPER ADMIN
-        //
-        // No permission request required.
-        // --------------------------------------------------------
-
+        // Admin and Super Admin have full access.
         if (hasFullAccess) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // ALREADY LOADED
-        // --------------------------------------------------------
-
-        if (permissionsLoaded) {
+        if (permissionsLoaded || permissionLoading) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // CURRENTLY LOADING
-        // --------------------------------------------------------
-
-        if (permissionLoading) {
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // LOAD CURRENT USER EFFECTIVE PERMISSIONS
-        // --------------------------------------------------------
-
-        dispatch(
-            getUserPermission()
-        );
+        dispatch(getUserPermission());
 
     }, [
         authChecking,
@@ -400,256 +291,100 @@ export default function CurrencyDashboard() {
         dispatch,
     ]);
 
+    /* =====================================================
+       FILTER CURRENCIES
+    ===================================================== */
 
-    // ============================================================
-    // FETCH SALES PERSONS
-    // ============================================================
+    const filteredCurrencies = useMemo(() => {
 
-    useEffect(() => {
+        return currencies;
 
-        // --------------------------------------------------------
-        // AUTH CHECKING
-        // --------------------------------------------------------
+    }, [
+        currencies,
+    ]);
 
-        if (authChecking) {
-            return;
-        }
+    /* =====================================================
+       OPEN CREATE CURRENCY MODAL
+    ===================================================== */
 
-
-        // --------------------------------------------------------
-        // NOT AUTHENTICATED
-        // --------------------------------------------------------
+    const handleCreateCurrency = useCallback(() => {
 
         if (!isAuthenticated) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // STAFF / OTHER ROLE
-        //
-        // Wait until permissions are loaded.
-        // --------------------------------------------------------
-
-        if (!hasFullAccess) {
-
-            if (!permissionsLoaded) {
-                return;
-            }
-
-            if (permissionLoading) {
-                return;
-            }
-
-
-            // ----------------------------------------------------
-            // NO VIEW PERMISSION
-            // ----------------------------------------------------
-
-            if (!canViewCurrency) {
-                return;
-            }
-        }
-
-
-        // --------------------------------------------------------
-        // FETCH CURRENCIES
-        // --------------------------------------------------------
-
-        dispatch(
-            fetchAllCurrencies()
-        );
-
-    }, [
-        authChecking,
-        isAuthenticated,
-        hasFullAccess,
-        permissionsLoaded,
-        permissionLoading,
-        canViewCurrency,
-        dispatch,
-    ]);
-
-
-    // ============================================================
-    // SYNC URL STATUS → REDUX
-    // ============================================================
-
-    useEffect(() => {
-
-        const urlStatus =
-            searchParams.get(
-                "currencyStatus"
-            );
-
-        if (!urlStatus) {
-            return;
-        }
-
-
-        const normalizedStatus =
-            String(urlStatus)
-                .toUpperCase();
-
-
-        const validStatuses = [
-            "ALL",
-            "ACTIVE",
-            "INACTIVE",
-            "DRAFT",
-        ];
-
-
         if (
-            !validStatuses.includes(
-                normalizedStatus
+            !hasFullAccess &&
+            (
+                permissionLoading ||
+                !permissionsLoaded
             )
         ) {
             return;
         }
-
-
-        dispatch(
-            setCurrencyStatus(
-                normalizedStatus
-            )
-        );
-
-
-        const statusLabels = {
-
-            ALL:
-                "All Currencies",
-
-            ACTIVE:
-                "Active Currencies",
-
-            INACTIVE:
-                "Inactive Currencies",
-
-            DRAFT:
-                "Draft Currencies",
-
-        };
-
-
-        dispatch(
-            setSelectedCurrencyView(
-                statusLabels[
-                normalizedStatus
-                ]
-            )
-        );
-
-    }, [
-        searchParams,
-        dispatch,
-    ]);
-
-
-    // ============================================================
-    // FILTER CURRENCIES BY STATUS
-    // ============================================================
-
-    const filteredCurrencies = useMemo(() => {
-
-        const selectedStatus =
-            String(
-                currencyStatus || "ALL"
-            ).toUpperCase();
-
-
-        if (
-            selectedStatus === "ALL"
-        ) {
-
-            return currencies;
-
-        }
-
-
-        return currencies.filter(
-            (currency) => {
-
-                const backendStatus =
-                    String(
-                        currency?.status || ""
-                    ).toUpperCase();
-
-
-                return (
-                    backendStatus ===
-                    selectedStatus
-                );
-
-            }
-        );
-
-    }, [
-        currencies,
-        currencyStatus,
-    ]);
-
-
-    // ============================================================
-    // CREATE CURRENCY MODAL
-    // ============================================================
-
-    const handleCreateCurrency = () => {
-
-        // --------------------------------------------------------
-        // CREATE PERMISSION
-        // --------------------------------------------------------
 
         if (!canCreateCurrency) {
-
             toast.error(
                 "You do not have permission to create currencies."
             );
-
             return;
         }
-
-
-        // --------------------------------------------------------
-        // OPEN MODAL
-        // --------------------------------------------------------
 
         dispatch(
             openModal({
                 type: "addCurrency",
-                data: null,
             })
         );
 
-    };
+    }, [
+        isAuthenticated,
+        hasFullAccess,
+        permissionLoading,
+        permissionsLoaded,
+        canCreateCurrency,
+        dispatch,
+    ]);
 
+    /* =====================================================
+       CLEAR ERROR
+    ===================================================== */
 
-    // ============================================================
-    // AUTH CHECKING
-    // ============================================================
+    useEffect(() => {
+
+        if (!error) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            dispatch(clearError());
+        }, 2000);
+
+        return () => clearTimeout(timer);
+
+    }, [
+        error,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       AUTH CHECKING
+    ===================================================== */
 
     if (authChecking) {
-
-        return (
-            <InvoiceSkeleton />
-        );
-
+        return <InvoiceSkeleton />;
     }
 
-
-    // ============================================================
-    // NOT AUTHENTICATED
-    // ============================================================
+    /* =====================================================
+       NOT AUTHENTICATED
+    ===================================================== */
 
     if (!isAuthenticated) {
         return null;
     }
 
-
-    // ============================================================
-    // PERMISSION LOADING
-    // ============================================================
+    /* =====================================================
+       PERMISSION LOADING
+    ===================================================== */
 
     if (
         !hasFullAccess &&
@@ -658,166 +393,95 @@ export default function CurrencyDashboard() {
             !permissionsLoaded
         )
     ) {
-
-        return (
-            <InvoiceSkeleton />
-        );
-
+        return <InvoiceSkeleton />;
     }
 
-
-    // ============================================================
-    // VIEW PERMISSION DENIED
-    // ============================================================
+    /* =====================================================
+       VIEW PERMISSION DENIED
+    ===================================================== */
 
     if (!canViewCurrency) {
 
         return (
             <div
                 className="
-                    flex
-                    h-screen
-                    items-center
-                    justify-center
-                    bg-gray-50
-                    font-sans
+                    flex h-screen items-center justify-center
+                    bg-gray-50 font-sans
                 "
             >
-
-                <div
-                    className="
-                        text-center
-                        px-6
-                    "
-                >
+                <div className="px-6 text-center">
 
                     <div
                         className="
-                            mx-auto
-                            mb-4
-                            w-16
-                            h-16
-                            rounded-full
-                            bg-red-50
-                            flex
-                            items-center
-                            justify-center
-                            text-red-500
-                            text-2xl
-                            font-semibold
+                            mx-auto mb-4 flex h-16 w-16
+                            items-center justify-center
+                            rounded-full bg-red-50
+                            text-2xl font-semibold text-red-500
                         "
                     >
                         !
                     </div>
 
-
-                    <h2
-                        className="
-                            text-lg
-                            font-semibold
-                            text-gray-800
-                        "
-                    >
+                    <h2 className="text-lg font-semibold text-gray-800">
                         Access Denied
                     </h2>
 
-
-                    <p
-                        className="
-                            mt-1
-                            text-sm
-                            text-gray-500
-                            max-w-sm
-                        "
-                    >
-                        You do not have permission
-                        to view currencies.
+                    <p className="mt-1 max-w-sm text-sm text-gray-500">
+                        You do not have permission to view currencies.
                     </p>
 
                 </div>
-
             </div>
         );
-
     }
 
-
-    // ============================================================
-    // CURRENCY LOADING
-    // ============================================================
-
-    if (loading) {
-
-        return (
-            <InvoiceSkeleton />
-        );
-
-    }
-
-
-    // ============================================================
-    // PAGE
-    // ============================================================
+    /* =====================================================
+       PAGE
+    ===================================================== */
 
     return (
 
         <div
             className="
-                flex
-                h-screen
-                bg-gray-50
-                font-sans
-                text-[13px]
-                overflow-hidden
+                flex h-screen overflow-hidden
+                bg-gray-50 font-sans text-[13px]
             "
         >
 
-            {/* =====================================================
-                SINGLE PAGE SCROLLER
-            ===================================================== */}
-
             <div
                 className="
-                    flex-1
-                    min-h-0
-                    bg-white
-                    overflow-y-auto
+                    min-h-0 flex-1 overflow-y-auto bg-white
                 "
             >
 
                 <div
                     className="
-                        px-2
-                        py-5
-                        w-full
+                        w-full max-w-30xl px-2 py-5
                     "
                 >
 
-                    {/* =================================================
-                        CURRENCY NAVBAR
-                    ================================================= */}
+                    {/* CURRENCY NAVBAR */}
 
                     <NavbarCurrency />
 
+                    {/* CURRENCY OVERVIEW */}
 
-                    {/* =================================================
-                        ERROR
-                    ================================================= */}
+                    <CurrencyOverview
+                        canViewCurrency={canViewCurrency}
+                        isAuthenticated={isAuthenticated}
+                        authChecking={authChecking}
+                    />
+
+                    {/* ERROR */}
 
                     {error && (
 
                         <div
                             className="
-                                mx-2
-                                mt-4
-                                px-4
-                                py-3
-                                rounded-md
-                                border
-                                border-red-200
-                                bg-red-50
-                                text-sm
-                                text-red-600
+                                mx-2 mt-4 rounded-md
+                                border border-red-200
+                                bg-red-50 px-4 py-3
+                                text-sm text-red-600
                             "
                         >
                             {error}
@@ -825,137 +489,148 @@ export default function CurrencyDashboard() {
 
                     )}
 
+                    {/* CURRENCY TABLE / LOADING / EMPTY STATE */}
 
-                    {/* =================================================
-                        CURRENCY TABLE
-                    ================================================= */}
+                    {loading ? (
 
-                    {filteredCurrencies.length > 0 ? (
+                        <div
+                            className="
+                                flex min-h-[250px]
+                                items-center justify-center
+                            "
+                        >
+                            <p className="text-sm text-gray-500">
+                                Loading currencies...
+                            </p>
+                        </div>
+
+                    ) : filteredCurrencies.length > 0 ? (
 
                         <CurrencyTable
-                            currency={
-                                filteredCurrencies
-                            }
+                            currencies={filteredCurrencies}
                         />
 
                     ) : (
 
                         <div
                             className="
-                                flex
-                                flex-col
-                                items-center
-                                justify-center
-                                py-16
+                                flex min-h-full flex-col
+                                items-center justify-center
+                                gap-3 px-4
                             "
                         >
 
-                            <h2
-                                className="
-                                    text-lg
-                                    font-semibold
-                                    text-gray-800
-                                "
-                            >
-                                No currencies found
-                            </h2>
-
-
-                            <p
-                                className="
-                                    mt-2
-                                    text-sm
-                                    text-gray-500
-                                    text-center
-                                    max-w-md
-                                "
-                            >
-
-                                {currencyStatus === "ALL"
-                                    ? "There are no currencies to display."
-                                    : `There are no ${String(
-                                        currencyStatus
-                                    ).toLowerCase()
-                                    } currencies.`}
-
-                            </p>
-
-
-                            {/* =================================================
-                                ACTION BUTTONS
-                            ================================================= */}
+                            {/* EMPTY STATE ICON */}
 
                             <div
                                 className="
-                                    flex
-                                    items-center
-                                    gap-3
-                                    mt-6
+                                    relative mt-30 mb-1
+                                    flex h-24 w-24 shrink-0
+                                    items-center justify-center
+                                    rounded-full bg-gray-100
                                 "
                             >
 
-                                {/* =================================================
-                                    CREATE COMPANY
-                                ================================================= */}
+                                <div
+                                    className="
+                                        flex items-center justify-center
+                                        text-gray-400
+                                    "
+                                >
+                                    <Coins
+                                        size={42}
+                                        strokeWidth={1.7}
+                                    />
+                                </div>
+
+                                <div
+                                    className="
+                                        absolute bottom-1 right-1
+                                        flex h-7 w-7 items-center
+                                        justify-center rounded-full
+                                        bg-blue-500 text-white
+                                    "
+                                >
+                                    <Plus className="h-4 w-4" />
+                                </div>
+
+                            </div>
+
+                            {/* EMPTY STATE TITLE */}
+
+                            <p
+                                className="
+                                    text-center text-base
+                                    font-medium text-gray-800
+                                "
+                            >
+                                Manage your currencies
+                            </p>
+
+                            {/* EMPTY STATE DESCRIPTION */}
+
+                            <p
+                                className="
+                                    max-w-sm text-center
+                                    text-sm text-gray-500
+                                "
+                            >
+                                Create and manage currencies,
+                                configure currency codes and symbols,
+                                set decimal precision, and maintain
+                                currency availability for your invoices
+                                and transactions.
+                            </p>
+
+                            {/* ACTION BUTTONS */}
+
+                            <div
+                                className="
+                                    mt-1 flex flex-wrap
+                                    items-center justify-center gap-2.5
+                                "
+                            >
+
+                                {/* CREATE CURRENCY */}
 
                                 {canCreateCurrency && (
 
                                     <button
                                         type="button"
-                                        onClick={
-                                            handleCreateCurrency
-                                        }
+                                        onClick={handleCreateCurrency}
                                         className="
-                                            flex
-                                            items-center
-                                            gap-2
-                                            bg-[#0F4659]
-                                            text-white
-                                            px-4
-                                            py-2
-                                            rounded-md
-                                            hover:bg-[#0F4659]/90
-                                            transition
+                                            flex items-center gap-2
+                                            whitespace-nowrap rounded-md
+                                            bg-blue-500 px-4 py-2
+                                            text-sm font-medium text-white
+                                            transition-colors hover:bg-blue-600
                                         "
                                     >
-
-                                        <Plus
-                                            size={16}
-                                        />
-
-                                        Create New Currency
-
+                                        <Plus className="h-4 w-4" />
+                                        Create Currency
                                     </button>
 
                                 )}
 
-
-                                {/* =================================================
-                                    IMPORT
-                                ================================================= */}
+                                {/* IMPORT */}
 
                                 <button
                                     type="button"
+                                    onClick={() => {
+                                        toast(
+                                            "Currency import is not configured yet."
+                                        );
+                                    }}
                                     className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        border
-                                        border-gray-300
-                                        px-4
-                                        py-2
-                                        rounded-md
-                                        hover:bg-gray-50
-                                        transition
+                                        flex items-center gap-2
+                                        whitespace-nowrap rounded-md
+                                        border border-gray-300 bg-white
+                                        px-4 py-2 text-sm text-gray-700
+                                        transition-colors hover:bg-gray-50
                                     "
                                 >
-
-                                    <Download
-                                        size={16}
-                                    />
-
+                                    <Download className="h-4 w-4" />
                                     Import File
-
                                 </button>
 
                             </div>
@@ -969,7 +644,5 @@ export default function CurrencyDashboard() {
             </div>
 
         </div>
-
     );
-
 }

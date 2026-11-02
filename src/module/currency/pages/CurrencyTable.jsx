@@ -1,13 +1,12 @@
-import React, { useState } from "react";
+
+import React from "react";
 
 import {
     useDispatch,
     useSelector,
 } from "react-redux";
 
-import {
-    useNavigate,
-} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import {
     openModal,
@@ -23,26 +22,26 @@ import {
 } from "../slices/currencySlice";
 
 import {
-    ChevronDown,
     Edit,
     Trash2,
-    Building2,
+    Coins,
     Eye,
+    Hash,
+    CircleDollarSign,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
+
 import Pagination from "../../../common/pagination/table/Pagination";
 
 
-export default function CurrencyTable({ currency = [] }) {
+export default function CurrencyTable({
+    currencies = [],
+}) {
 
     const dispatch = useDispatch();
+    const navigate = useNavigate();
 
-    const navigate =
-        useNavigate();
-
-    const [showEdit, setShowEdit] = useState(false);
-    const [showView, setShowView] = useState(false);
     /* =====================================================
        REDUX STATE
     ===================================================== */
@@ -50,34 +49,21 @@ export default function CurrencyTable({ currency = [] }) {
     const {
         loading,
         error,
-        pagination,
-    } = useSelector(
-        (state) =>
-            state.currency
-    );
+        pageNumber = 0,
+        pageSize = 10,
+        totalPages = 0,
+        totalElements = 0,
+    } = useSelector((state) => state.currency || {});
 
-
-    const {
-        pageNumber,
-        pageSize,
-        totalPages,
-        totalElements,
-    } = pagination || {};
-
-
-    const currentCurrencies =
-        currency || [];
-
+    const currentCurrencies = currencies || [];
 
     /* =====================================================
        AUTH STATE
     ===================================================== */
 
     const user = useSelector(
-        (state) =>
-            state.auth?.user
+        (state) => state.auth?.user
     );
-
 
     /* =====================================================
        PERMISSION STATE
@@ -87,7 +73,6 @@ export default function CurrencyTable({ currency = [] }) {
         (state) =>
             state.menuPermission?.userPermissions || []
     );
-
 
     /* =====================================================
        ROLE
@@ -101,224 +86,166 @@ export default function CurrencyTable({ currency = [] }) {
         user?.authority ||
         "";
 
-
-    const normalizedRole =
-        String(roleName)
-            .trim()
-            .toUpperCase();
-
+    const normalizedRole = String(roleName)
+        .trim()
+        .toUpperCase();
 
     const isSuperAdmin =
         normalizedRole === "SUPER_ADMIN";
 
-
     const isAdmin =
         normalizedRole === "ADMIN";
 
-
     const hasFullAccess =
-        isSuperAdmin ||
-        isAdmin;
+        isSuperAdmin || isAdmin;
 
-
-
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
     const hasPermission = (
         moduleName,
         actionName
     ) => {
 
-        /* =================================================
-           SUPER ADMIN / ADMIN
-        ================================================= */
-
         if (hasFullAccess) {
             return true;
         }
-
-
-        /* =================================================
-           INVALID PERMISSION STATE
-        ================================================= */
 
         if (!Array.isArray(permissions)) {
             return false;
         }
 
+        const requestedModule = String(moduleName)
+            .trim()
+            .toLowerCase();
 
-        const requestedModule =
-            String(moduleName)
+        const requestedAction = String(actionName)
+            .trim()
+            .toUpperCase();
+
+        return permissions.some((permission) => {
+
+            const permissionModule = String(
+                permission?.moduleName ||
+                permission?.module?.moduleName ||
+                permission?.module?.name ||
+                ""
+            )
                 .trim()
                 .toLowerCase();
 
+            if (permissionModule !== requestedModule) {
+                return false;
+            }
 
-        const requestedAction =
-            String(actionName)
-                .trim()
-                .toUpperCase();
+            if (permission?.active === false) {
+                return false;
+            }
 
+            if (
+                String(permission?.status || "")
+                    .trim()
+                    .toUpperCase() === "INACTIVE"
+            ) {
+                return false;
+            }
 
-        /* =================================================
-           SEARCH PERMISSIONS
-        ================================================= */
+            /* GROUPED ACTIONS */
 
-        return permissions.some(
-            (permission) => {
+            if (Array.isArray(permission?.actions)) {
 
-                /* =========================================
-                   MODULE
-                ========================================= */
+                return permission.actions.some((action) => {
 
-                const permissionModule =
-                    String(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toLowerCase();
+                    if (typeof action === "string") {
+                        return (
+                            action.trim().toUpperCase() ===
+                            requestedAction
+                        );
+                    }
 
-
-                if (
-                    permissionModule !==
-                    requestedModule
-                ) {
-                    return false;
-                }
-
-
-                /* =========================================
-                   PERMISSION STATUS
-                ========================================= */
-
-                if (
-                    permission?.active === false
-                ) {
-                    return false;
-                }
-
-
-                if (
-                    String(
-                        permission?.status || ""
-                    )
-                        .trim()
-                        .toUpperCase() ===
-                    "INACTIVE"
-                ) {
-                    return false;
-                }
-
-
-                /* =========================================
-                   GROUPED ACTIONS
-                ========================================= */
-
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
-
-                    return permission.actions.some(
-                        (action) => {
-
-                            const permissionAction =
-                                String(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.action?.name ||
-                                    ""
-                                )
-                                    .trim()
-                                    .toUpperCase();
-
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
-
-
-                            return (
-                                permissionAction ===
-                                requestedAction &&
-                                allowed
-                            );
-
-                        }
-                    );
-
-                }
-
-
-                /* =========================================
-                   FLAT ACTION
-                ========================================= */
-
-                const permissionAction =
-                    String(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
+                    const permissionAction = String(
+                        action?.actionName ||
+                        action?.action?.actionName ||
+                        action?.action?.name ||
+                        action?.name ||
                         ""
                     )
                         .trim()
                         .toUpperCase();
 
+                    const allowed =
+                        action?.allowed === true ||
+                        action?.allowed === "true";
 
-                const allowed =
-                    permission?.allowed === true ||
-                    permission?.allowed === "true";
+                    if (action?.active === false) {
+                        return false;
+                    }
 
+                    if (
+                        String(action?.status || "")
+                            .trim()
+                            .toUpperCase() === "INACTIVE"
+                    ) {
+                        return false;
+                    }
 
-                return (
-                    permissionAction ===
-                    requestedAction &&
-                    allowed
-                );
+                    return (
+                        permissionAction === requestedAction &&
+                        allowed
+                    );
 
+                });
             }
-        );
+
+            /* FLAT ACTION */
+
+            const permissionAction = String(
+                permission?.actionName ||
+                permission?.action?.actionName ||
+                permission?.action?.name ||
+                ""
+            )
+                .trim()
+                .toUpperCase();
+
+            const allowed =
+                permission?.allowed === true ||
+                permission?.allowed === "true";
+
+            return (
+                permissionAction === requestedAction &&
+                allowed
+            );
+
+        });
 
     };
-
 
     /* =====================================================
        CURRENCY PERMISSIONS
     ===================================================== */
 
-    const canEditCurrency =
-        hasPermission(
-            "Currency Detail",
-            "EDIT"
-        );
+    const canViewCurrency = hasPermission(
+        "Currencies",
+        "VIEW"
+    );
 
+    const canEditCurrency = hasPermission(
+        "Currencies",
+        "EDIT"
+    );
 
-    const canDeleteCurrency =
-        hasPermission(
-            "Currency Detail",
-            "DELETE"
-        );
-
-    const canViewCurrency =
-        hasPermission(
-            "Currency Detail",
-            "VIEW"
-        );
-
+    const canDeleteCurrency = hasPermission(
+        "Currencies",
+        "DELETE"
+    );
 
     /* =====================================================
        DELETE CURRENCY
     ===================================================== */
 
-    const handleDelete = async (
-        id
-    ) => {
-
-        /* =================================================
-           PERMISSION SAFETY CHECK
-        ================================================= */
+    const handleDelete = async (id) => {
 
         if (!canDeleteCurrency) {
 
@@ -329,7 +256,6 @@ export default function CurrencyTable({ currency = [] }) {
             return;
         }
 
-
         if (
             !window.confirm(
                 "Delete this currency?"
@@ -338,21 +264,21 @@ export default function CurrencyTable({ currency = [] }) {
             return;
         }
 
-
         try {
 
             await dispatch(
                 deleteCurrency(id)
             ).unwrap();
 
-
             toast.success(
                 "Currency deleted successfully"
             );
 
-
             dispatch(
-                fetchAllCurrencies()
+                fetchAllCurrencies({
+                    page: Number(pageNumber) || 0,
+                    size: Number(pageSize) || 10,
+                })
             );
 
         } catch (error) {
@@ -368,36 +294,29 @@ export default function CurrencyTable({ currency = [] }) {
 
     };
 
-
     /* =====================================================
        VIEW CURRENCY
     ===================================================== */
 
-    const handleView = (
-        currency
-    ) => {
+    const handleView = (currency) => {
 
+        if (!canViewCurrency) {
+
+            toast.error(
+                "You do not have permission to view currencies."
+            );
+
+            return;
+        }
 
         try {
 
-            if (!canViewCurrency) {
-
-                toast.error(
-                    "You do not have permission to view currencies."
-                );
-
-                return;
-            }
-
             dispatch(
-                setExistingCurrency(
-                    currency
-                )
+                setExistingCurrency(currency)
             );
 
-
             navigate(
-                `/currencies/view/${currency.id}`
+                `/settings/currencies/view/${currency.id}`
             );
 
         } catch (error) {
@@ -410,18 +329,11 @@ export default function CurrencyTable({ currency = [] }) {
 
     };
 
-
     /* =====================================================
        EDIT CURRENCY
     ===================================================== */
 
-    const handleEdit = (
-        salesPerson
-    ) => {
-
-        /* =================================================
-           PERMISSION SAFETY CHECK
-        ================================================= */
+    const handleEdit = (currency) => {
 
         if (!canEditCurrency) {
 
@@ -432,37 +344,19 @@ export default function CurrencyTable({ currency = [] }) {
             return;
         }
 
-
-        console.log(
-            "EDIT CURRENCY:",
-            currency
-        );
-
-
         try {
 
             dispatch(
-                openModal({
-                    type: "editCurrency",
-                    data: currency,
-                })
+                setExistingCurrency(currency)
             );
 
-
-            console.log(
-                "CURRENCY MODAL OPEN DISPATCHED"
+            navigate(
+                `/settings/currencies/edit/${currency.id}`
             );
 
         } catch (error) {
 
-            console.error(
-                "CURRENCY EDIT ERROR:",
-                error
-            );
-
-
             toast.error(
-                error?.message ||
                 "Failed to open currency"
             );
 
@@ -470,33 +364,25 @@ export default function CurrencyTable({ currency = [] }) {
 
     };
 
-
     /* =====================================================
        CURRENCY INITIALS
     ===================================================== */
 
-    const initials = (
-        name
-    ) => {
+    const initials = (currencyName) => {
 
-        if (!name) {
-            return "CUR";
+        if (!currencyName) {
+            return "CU";
         }
 
-
-        return name
-            ?.split(" ")
+        return currencyName
+            .split(" ")
             .filter(Boolean)
-            .map(
-                (word) =>
-                    word[0]
-            )
+            .map((word) => word[0])
             .join("")
             .slice(0, 2)
-            .toUpperCase() || "SP";
+            .toUpperCase() || "CU";
 
     };
-
 
     /* =====================================================
        STATUS COLORS
@@ -515,9 +401,8 @@ export default function CurrencyTable({ currency = [] }) {
 
     };
 
-
     /* =====================================================
-       SALES PERSON AVATAR COLORS
+       AVATAR COLORS
     ===================================================== */
 
     const avatarColors = [
@@ -532,30 +417,19 @@ export default function CurrencyTable({ currency = [] }) {
 
     ];
 
+    const getAvatarColor = (name = "") => {
 
-    const getAvatarColor = (
-        name = ""
-    ) => {
-
-        const index =
-            name
-                .split("")
-                .reduce(
-                    (
-                        acc,
-                        char
-                    ) =>
-                        acc +
-                        char.charCodeAt(0),
-                    0
-                ) %
-            avatarColors.length;
-
+        const index = name
+            .split("")
+            .reduce(
+                (acc, char) =>
+                    acc + char.charCodeAt(0),
+                0
+            ) % avatarColors.length;
 
         return avatarColors[index];
 
     };
-
 
     /* =====================================================
        LOADING
@@ -565,14 +439,7 @@ export default function CurrencyTable({ currency = [] }) {
 
         return (
 
-            <div
-                className="
-                    flex
-                    items-center
-                    justify-center
-                    py-10
-                "
-            >
+            <div className="flex items-center justify-center py-10">
 
                 <p className="text-gray-500">
                     Loading currencies...
@@ -584,7 +451,6 @@ export default function CurrencyTable({ currency = [] }) {
 
     }
 
-
     /* =====================================================
        ERROR
     ===================================================== */
@@ -595,12 +461,8 @@ export default function CurrencyTable({ currency = [] }) {
 
             <div
                 className="
-                    bg-white
-                    rounded-xl
-                    border
-                    border-red-200
-                    p-8
-                    text-center
+                    rounded-xl border border-red-200
+                    bg-white p-8 text-center
                 "
             >
 
@@ -614,7 +476,6 @@ export default function CurrencyTable({ currency = [] }) {
 
     }
 
-
     /* =====================================================
        EMPTY STATE
     ===================================================== */
@@ -625,21 +486,14 @@ export default function CurrencyTable({ currency = [] }) {
 
             <div
                 className="
-                    bg-white
-                    rounded-2xl
-                    border
-                    border-gray-200
-                    p-8
-                    text-center
+                    rounded-2xl border border-gray-200
+                    bg-white p-8 text-center
                 "
             >
 
-                <Building2
+                <Coins
                     className="
-                        mx-auto
-                        mb-3
-                        h-10
-                        w-10
+                        mx-auto mb-3 h-10 w-10
                         text-gray-300
                     "
                 />
@@ -654,25 +508,35 @@ export default function CurrencyTable({ currency = [] }) {
 
     }
 
-
     /* =====================================================
        TABLE
     ===================================================== */
 
     return (
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
+        <div className="
+            overflow-x-auto overflow-y-visible
+            rounded-xl border border-gray-200 bg-white
+        ">
+
             <div className="overflow-x-auto overflow-y-visible">
+
                 <table className="w-full">
-                    <thead className="bg-[#FEFEFD] border-b border-gray-300">
+
+                    {/* TABLE HEADER */}
+
+                    <thead className="
+                        border-b border-gray-300
+                        bg-[#FAF9F7]/20
+                    ">
 
                         <tr>
 
                             {[
-                                "CurrencyName",
-                                "CurrencyCode",
-                                "symbol",
-                                "decimalPlaces",
+                                "Currency",
+                                "Currency Code",
+                                "Symbol",
+                                "Decimal Places",
                                 "Status",
                                 "Actions",
                             ].map((header) => (
@@ -680,17 +544,14 @@ export default function CurrencyTable({ currency = [] }) {
                                 <th
                                     key={header}
                                     className={`
-                                    px-5
-                                    py-3
-                                    font-medium
-                                    text-md
-                                    text-gray-400
-                                    uppercase
-                                    ${header === "Actions"
+                                        px-5 py-3
+                                        text-md font-medium
+                                        uppercase text-gray-400
+                                        ${header === "Actions"
                                             ? "text-right"
                                             : "text-left"
                                         }
-                                `}
+                                    `}
                                 >
                                     {header}
                                 </th>
@@ -701,316 +562,246 @@ export default function CurrencyTable({ currency = [] }) {
 
                     </thead>
 
-
-
-                    {/* =================================================
-                    TABLE BODY
-                ================================================= */}
+                    {/* TABLE BODY */}
 
                     <tbody>
 
-                        {[
-                            ...currentCurrencies,
-                        ]
+                        {[...currentCurrencies]
                             .sort(
-                                (
-                                    a,
-                                    b
-                                ) =>
-                                    (
-                                        a.id || 0
-                                    ) -
-                                    (
-                                        b.id || 0
-                                    )
+                                (a, b) =>
+                                    (a.id || 0) - (b.id || 0)
                             )
-                            .map(
-                                (
-                                    currency,
-                                    index
-                                ) => (
+                            .map((currency, index) => (
 
-                                    <tr
-                                        key={
-                                            currency.id ||
-                                            index
-                                        }
-                                        onClick={() =>
-                                            handleView(
-                                                currency
-                                            )
-                                        }
-                                        className="
-                                        border-b
-                                        border-gray-100
-                                        hover:bg-gray-50
-                                        text-xs
-                                        cursor-pointer
-                                        transition-colors
+                                <tr
+                                    key={currency.id || index}
+                                    className="
+                                        cursor-pointer border-b
+                                        border-gray-100 text-xs
+                                        transition-colors hover:bg-gray-50
                                     "
-                                    >
+                                >
 
-                                        {/* =================================
-                                        CURRENCY
-                                    ================================= */}
+                                    {/* CURRENCY */}
 
-                                        <td
-                                            className="
-                                            px-2
-                                            py-3
-                                        "
-                                        >
+                                    <td className="overflow-hidden px-2 py-3">
 
-                                            <div
-                                                className="
-                                                flex
-                                                items-center
-                                                gap-3
-                                            "
-                                            >
+                                        <div className="
+                                            flex min-w-0 items-center gap-2
+                                        ">
 
-                                                <div
-                                                    className={`
-                                                    w-10
-                                                    h-10
-                                                    rounded-full
-                                                    flex
-                                                    items-center
-                                                    justify-center
-                                                    text-md
-                                                    font-bold
-                                                    ${getAvatarColor(
-                                                        currency.currencyName
-                                                    )}
-                                                `}
-                                                >
+                                            <div className={`
+                                                flex h-9 min-w-[36px]
+                                                w-9 items-center justify-center
+                                                rounded-full text-sm font-bold
+                                                ${getAvatarColor(
+                                                currency.currencyName
+                                            )}
+                                            `}>
 
-                                                    {initials(
-                                                        currency.currencyName
-                                                    )}
-
-                                                </div>
-
-
-                                                <div>
-
-                                                    <p
-                                                        className="
-                                                        font-medium
-                                                        text-gray-800
-                                                    "
-                                                    >
-                                                        {
-                                                            currency.currencyName ||
-                                                            "—"
-                                                        }
-                                                    </p>
-
-
-                                                    <p
-                                                        className="
-                                                        text-sm
-                                                        text-gray-500
-                                                    "
-                                                    >
-                                                        ID: #
-                                                        {
-                                                            currency.id
-                                                        }
-                                                    </p>
-
-                                                </div>
+                                                {initials(currency.currencyName)}
 
                                             </div>
 
-                                        </td>
+                                            <div className="min-w-0">
 
+                                                <p
+                                                    className="
+                                                        truncate font-medium
+                                                        text-gray-800
+                                                    "
+                                                    title={currency.currencyName || ""}
+                                                >
+                                                    {currency.currencyName || "—"}
+                                                </p>
 
-                                        {/* =================================
-                                        CURRENCY code
-                                    ================================= */}
+                                                <p className="text-xs text-gray-500">
+                                                    ID: #{currency.id}
+                                                </p>
 
-                                        <td
-                                            className="
-                                            px-4
-                                            py-3
-                                        "
-                                        >
-                                            {
-                                                currency.currencyCode ||
-                                                "—"
-                                            }
-                                        </td>
+                                            </div>
 
+                                        </div>
 
-                                        {/* =================================
-                                        CURRENCY SYMBOL
-                                    ================================= */}
+                                    </td>
 
-                                        <td
-                                            className="
-                                            px-4
-                                            py-3
-                                        "
-                                        >
-                                            {
-                                                currency.symbol ||
-                                                "—"
-                                            }
-                                        </td>
+                                    {/* CURRENCY CODE */}
 
+                                    <td className="overflow-hidden px-2 py-3">
 
+                                        <div className="
+                                            flex items-center gap-1.5
+                                        ">
 
-                                        {/* =================================
-                                        DECIMAL PLACES
-                                    ================================= */}
+                                            <Hash
+                                                size={13}
+                                                className="text-gray-400"
+                                            />
 
-                                        <td
-                                            className="
-                                            px-4
-                                            py-3
-                                        "
-                                        >
-                                            {
-                                                currency.decimalPlaces ||
-                                                "—"
-                                            }
-                                        </td>
-
-
-
-
-                                        {/* =================================
-                                        STATUS
-                                    ================================= */}
-
-                                        <td
-                                            className="
-                                            px-5
-                                            py-3
-                                            font-semibold
-                                        "
-                                        >
-
-                                            <span
-                                                className={`
-                                                px-2
-                                                py-1
-                                                rounded-full
-                                                text-xs
-                                                font-medium
-                                                ${statusColor[
-                                                    currency.status
-                                                    ] ||
-                                                    "bg-gray-100 text-gray-700"
-                                                    }
-                                            `}
+                                            <p
+                                                className="
+                                                    font-medium text-gray-700
+                                                "
+                                                title={currency.currencyCode || ""}
                                             >
+                                                {currency.currencyCode || "—"}
+                                            </p>
 
-                                                {
-                                                    currency.status ||
-                                                    "—"
-                                                }
+                                        </div>
 
-                                            </span>
+                                    </td>
 
-                                        </td>
+                                    {/* SYMBOL */}
 
+                                    <td className="overflow-hidden px-2 py-3">
 
-                                        {/* =================================
-                                        ACTIONS
-                                    ================================= */}
+                                        <div className="
+                                            flex items-center gap-1.5
+                                        ">
 
-                                        {/* Actions */}
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center justify-end gap-2">
+                                            <CircleDollarSign
+                                                size={14}
+                                                className="text-gray-400"
+                                            />
 
-                                                {/* View */}
+                                            <p
+                                                className="
+                                                    font-medium text-gray-700
+                                                "
+                                                title={currency.symbol || ""}
+                                            >
+                                                {currency.symbol || "—"}
+                                            </p>
+
+                                        </div>
+
+                                    </td>
+
+                                    {/* DECIMAL PLACES */}
+
+                                    <td className="overflow-hidden px-2 py-3">
+
+                                        <p className="
+                                            font-medium text-gray-700
+                                        ">
+                                            {currency.decimalPlaces ?? "—"}
+                                        </p>
+
+                                    </td>
+
+                                    {/* STATUS */}
+
+                                    <td className="overflow-hidden px-2 py-3">
+
+                                        <span className={`
+                                            inline-block rounded-full
+                                            px-2 py-1 text-xs font-medium
+                                            ${statusColor[
+                                            String(
+                                                currency.status || ""
+                                            ).toUpperCase()
+                                            ] ||
+                                            "bg-gray-100 text-gray-700"
+                                            }
+                                        `}>
+                                            {currency.status || "—"}
+                                        </span>
+
+                                    </td>
+
+                                    {/* ACTIONS */}
+
+                                    <td className="px-4 py-3">
+
+                                        <div className="
+                                            flex items-center justify-end gap-2
+                                        ">
+
+                                            {/* VIEW */}
+
+                                            {canViewCurrency && (
+
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setShowView(true);
-                                                        dispatch(setExistingCurrency(currency));
-                                                        navigate(`/settings/currencies/view/${currency.id}`);
+                                                        handleView(currency);
                                                     }}
                                                     title="View"
                                                     className="
-                                                            flex h-8 w-8 items-center justify-center
-                                                            rounded-lg
-                                                            bg-blue-50
-                                                            text-blue-600
-                                                            transition
-                                                            hover:bg-blue-100
-                                                            hover:text-blue-700
-                                                        "
+                                                        flex h-8 w-8 items-center
+                                                        justify-center rounded-lg
+                                                        bg-blue-50 text-blue-600
+                                                        transition hover:bg-blue-100
+                                                        hover:text-blue-700
+                                                    "
                                                 >
                                                     <Eye size={16} />
                                                 </button>
 
-                                                {/* Edit */}
+                                            )}
+
+                                            {/* EDIT */}
+
+                                            {canEditCurrency && (
+
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setShowEdit(true);
-                                                        dispatch(setExistingCurrency(currency));
-                                                        navigate(`/settings/currencies/edit/${currency.id}`);
+                                                        handleEdit(currency);
                                                     }}
                                                     title="Edit"
                                                     className="
-                                                        flex h-8 w-8 items-center justify-center
-                                                        rounded-lg
-                                                        bg-amber-50
-                                                        text-amber-600
-                                                        transition
-                                                        hover:bg-amber-100
+                                                        flex h-8 w-8 items-center
+                                                        justify-center rounded-lg
+                                                        bg-amber-50 text-amber-600
+                                                        transition hover:bg-amber-100
                                                         hover:text-amber-700
                                                     "
                                                 >
                                                     <Edit size={16} />
                                                 </button>
 
-                                                {/* Delete */}
+                                            )}
+
+                                            {/* DELETE */}
+
+                                            {canDeleteCurrency && (
+
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-
-                                                        // Your delete confirmation logic
                                                         handleDelete(currency.id);
                                                     }}
                                                     title="Delete"
                                                     className="
-                                                        flex h-8 w-8 items-center justify-center
-                                                        rounded-lg
-                                                        bg-red-50
-                                                        text-red-600
-                                                        transition
-                                                        hover:bg-red-100
+                                                        flex h-8 w-8 items-center
+                                                        justify-center rounded-lg
+                                                        bg-red-50 text-red-600
+                                                        transition hover:bg-red-100
                                                         hover:text-red-700
                                                     "
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
 
-                                            </div>
-                                        </td>
+                                            )}
 
+                                        </div>
 
-                                    </tr>
+                                    </td>
 
-                                )
-                            )}
+                                </tr>
+
+                            ))}
 
                     </tbody>
 
                 </table>
 
-
-                {/* =====================================================
-                PAGINATION
-            ===================================================== */}
+                {/* PAGINATION */}
 
                 <Pagination
                     page={Number(pageNumber) || 0}
@@ -1037,10 +828,9 @@ export default function CurrencyTable({ currency = [] }) {
                     }}
                 />
 
-
             </div>
 
-        </div >
-    );
+        </div>
 
+    );
 }

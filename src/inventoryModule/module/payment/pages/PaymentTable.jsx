@@ -1,0 +1,787 @@
+import React, { useCallback, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+
+import {
+    Eye,
+    Receipt,
+    CalendarDays,
+    Wallet,
+    ArrowDownLeft,
+    ArrowUpRight,
+    RotateCcw,
+} from "lucide-react";
+
+import toast from "react-hot-toast";
+
+import {
+    fetchAllPayments,
+    reversePayment,
+} from "../thunks/paymentThunks";
+
+import {
+    setExistingPayment,
+} from "../slices/paymentSlice";
+
+import Pagination from "../../../../common/pagination/table/Pagination";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMPTY_ARRAY = [];
+
+const AVATAR_COLORS = [
+    "bg-pink-500 text-white",
+    "bg-green-500 text-white",
+    "bg-blue-500 text-white",
+    "bg-purple-500 text-white",
+    "bg-orange-500 text-white",
+    "bg-cyan-500 text-white",
+    "bg-indigo-500 text-white",
+];
+
+const PAYMENT_STATUS_COLORS = {
+    COMPLETED: "bg-green-100 text-green-700",
+    PENDING: "bg-orange-100 text-orange-700",
+    FAILED: "bg-red-100 text-red-700",
+    REVERSED: "bg-gray-100 text-gray-700",
+};
+
+const PAYMENT_TYPE_COLORS = {
+    SALES: "bg-blue-100 text-blue-700",
+    PURCHASE: "bg-purple-100 text-purple-700",
+    EXPENSE: "bg-orange-100 text-orange-700",
+};
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const getInitials = (value = "") => {
+    return (
+        String(value)
+            .split(/[\s-]+/)
+            .filter(Boolean)
+            .map((word) => word[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase() || "PY"
+    );
+};
+
+const getAvatarColor = (value = "") => {
+    const index = String(value)
+        .split("")
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0)
+        % AVATAR_COLORS.length;
+
+    return AVATAR_COLORS[index];
+};
+
+const formatDate = (date) => {
+    if (!date) return "—";
+
+    const parsedDate = new Date(`${date}T00:00:00`);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return date;
+    }
+
+    return parsedDate.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+};
+
+const formatAmount = (amount, currencyCode = "") => {
+    const value = Number(amount ?? 0);
+
+    return `${currencyCode ? `${currencyCode} ` : ""}${value.toLocaleString(
+        "en-IN",
+        {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }
+    )}`;
+};
+
+/* =========================================================
+   COMPONENT
+========================================================= */
+
+export default function PaymentTable({
+    payments,
+    fetchParams = {},
+}) {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+
+    /* =====================================================
+       REDUX STATE
+    ===================================================== */
+
+    const {
+        payments: reduxPayments = EMPTY_ARRAY,
+        loading = false,
+        actionLoading = false,
+        error = null,
+        pagination = {},
+    } = useSelector((state) => state.payment || {});
+
+    const {
+        pageNumber = 0,
+        pageSize = 20,
+        totalPages = 0,
+        totalElements = 0,
+    } = pagination;
+
+    const currentPayments = Array.isArray(payments)
+        ? payments
+        : reduxPayments;
+
+    /* =====================================================
+       AUTH STATE
+    ===================================================== */
+
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
+
+    const permissions = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissions || EMPTY_ARRAY
+    );
+
+    /* =====================================================
+       ROLE
+    ===================================================== */
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+    const normalizedRole = String(roleName)
+        .trim()
+        .toUpperCase();
+
+    const hasFullAccess =
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
+
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
+
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
+            if (hasFullAccess) return true;
+
+            if (!Array.isArray(permissions)) return false;
+
+            const requestedModule = String(moduleName)
+                .trim()
+                .toLowerCase();
+
+            const requestedAction = String(actionName)
+                .trim()
+                .toUpperCase();
+
+            return permissions.some((permission) => {
+                const permissionModule = String(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                )
+                    .trim()
+                    .toLowerCase();
+
+                if (permissionModule !== requestedModule) {
+                    return false;
+                }
+
+                if (permission?.active === false) {
+                    return false;
+                }
+
+                if (
+                    String(permission?.status || "").toUpperCase() ===
+                    "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                if (Array.isArray(permission?.actions)) {
+                    return permission.actions.some((action) => {
+                        const permissionAction = String(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            ""
+                        )
+                            .trim()
+                            .toUpperCase();
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
+                }
+
+                const permissionAction = String(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction === requestedAction &&
+                    allowed
+                );
+            });
+        },
+        [hasFullAccess, permissions]
+    );
+
+    const canViewPayment = hasPermission("Payments", "VIEW");
+    const canReversePayment = hasPermission("Payments", "EDIT");
+
+    /* =====================================================
+       FETCH PARAMS
+    ===================================================== */
+
+    const getFetchParams = useCallback(
+        (page, size) => ({
+            ...fetchParams,
+            page,
+            size,
+        }),
+        [fetchParams]
+    );
+
+    const refreshPayments = useCallback(
+        (page = pageNumber, size = pageSize) => {
+            dispatch(
+                fetchAllPayments(
+                    getFetchParams(page, size)
+                )
+            );
+        },
+        [
+            dispatch,
+            getFetchParams,
+            pageNumber,
+            pageSize,
+        ]
+    );
+
+    /* =====================================================
+       VIEW PAYMENT
+    ===================================================== */
+
+    const handleView = (payment) => {
+        if (!canViewPayment) {
+            toast.error(
+                "You do not have permission to view Payments."
+            );
+            return;
+        }
+
+        dispatch(setExistingPayment(payment));
+
+        navigate(`/payments/view/${payment.id}`);
+    };
+
+    /* =====================================================
+       REVERSE PAYMENT
+    ===================================================== */
+
+    const handleReverse = async (payment) => {
+        if (!canReversePayment) {
+            toast.error(
+                "You do not have permission to reverse Payments."
+            );
+            return;
+        }
+
+        if (payment.paymentStatus !== "COMPLETED") {
+            toast.error(
+                "Only completed payments can be reversed."
+            );
+            return;
+        }
+
+        const reversalReason = window.prompt(
+            "Enter the reason for reversing this payment:",
+            "Incorrect payment entry"
+        );
+
+        if (!reversalReason || !reversalReason.trim()) {
+            return;
+        }
+
+        try {
+            await dispatch(
+                reversePayment({
+                    id: payment.id,
+                    reversalReason: reversalReason.trim(),
+                })
+            ).unwrap();
+
+            toast.success("Payment reversed successfully.");
+
+            refreshPayments();
+        } catch (error) {
+            toast.error(
+                typeof error === "string"
+                    ? error
+                    : "Failed to reverse payment."
+            );
+        }
+    };
+
+    /* =====================================================
+       SORTING
+    ===================================================== */
+
+    const sortedPayments = useMemo(
+        () => [...currentPayments],
+        [currentPayments]
+    );
+
+    /* =====================================================
+       LOADING
+    ===================================================== */
+
+    if (loading && !currentPayments.length) {
+        return (
+            <div className="flex items-center justify-center py-10">
+                <p className="text-sm text-gray-500">
+                    Loading payments...
+                </p>
+            </div>
+        );
+    }
+
+    /* =====================================================
+       ERROR
+    ===================================================== */
+
+    if (error && !currentPayments.length) {
+        return (
+            <div className="
+                rounded-xl border border-red-200
+                bg-white p-8 text-center
+            ">
+                <p className="text-sm text-red-500">
+                    {typeof error === "string"
+                        ? error
+                        : "Failed to fetch payments"}
+                </p>
+
+                <button
+                    type="button"
+                    onClick={() => refreshPayments()}
+                    className="
+                        mt-3 rounded-lg bg-blue-600
+                        px-4 py-2 text-sm text-white
+                        transition hover:bg-blue-700
+                    "
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
+
+    /* =====================================================
+       EMPTY STATE
+    ===================================================== */
+
+    if (!currentPayments.length) {
+        return (
+            <div className="
+                rounded-2xl border border-gray-200
+                bg-white p-8 text-center
+            ">
+                <Receipt className="
+                    mx-auto mb-3 h-10 w-10 text-gray-300
+                " />
+
+                <p className="text-sm text-gray-500">
+                    No payments found.
+                </p>
+            </div>
+        );
+    }
+
+    /* =====================================================
+       TABLE
+    ===================================================== */
+
+    return (
+        <div className="
+            overflow-x-auto overflow-y-visible
+            rounded-xl border border-gray-200 bg-white
+        ">
+            <table className="w-full">
+
+                {/* TABLE HEADER */}
+
+                <thead className="
+                    border-b border-gray-300
+                    bg-[#FAF9F7]/20
+                ">
+                    <tr>
+                        {[
+                            "Payment",
+                            "Type",
+                            "Payment Date",
+                            "Source",
+                            "Payment Method",
+                            "Amount",
+                            "Direction",
+                            "Status",
+                            "Actions",
+                        ].map((header) => (
+                            <th
+                                key={header}
+                                className={`
+                                    whitespace-nowrap px-5 py-3
+                                    text-left text-xs font-medium
+                                    uppercase text-gray-400
+                                    ${header === "Actions"
+                                        ? "text-right"
+                                        : ""
+                                    }
+                                `}
+                            >
+                                {header}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+
+                {/* TABLE BODY */}
+
+                <tbody>
+                    {sortedPayments.map((payment) => {
+                        const paymentStatus = String(
+                            payment.paymentStatus || ""
+                        ).toUpperCase();
+
+                        const paymentType = String(
+                            payment.paymentType || ""
+                        ).toUpperCase();
+
+                        const direction = String(
+                            payment.paymentDirection || ""
+                        ).toUpperCase();
+
+                        const sourceName =
+                            payment.sourceNumber ||
+                            (payment.paymentType === "SALES"
+                                ? payment.customerName
+                                : payment.partyName) ||
+                            "—";
+
+                        const isReceived = direction === "RECEIVED";
+
+                        return (
+                            <tr
+                                key={payment.id}
+                                className="
+                                    border-b border-gray-100
+                                    text-xs transition-colors
+                                    hover:bg-gray-50
+                                "
+                            >
+
+                                {/* PAYMENT */}
+
+                                <td className="px-3 py-3">
+                                    <div className="
+                                        flex min-w-0 items-center gap-2
+                                    ">
+                                        <div
+                                            className={`
+                                                flex h-9 w-9 min-w-[36px]
+                                                items-center justify-center
+                                                rounded-full text-sm font-bold
+                                                ${getAvatarColor(
+                                                payment.paymentNumber
+                                            )}
+                                            `}
+                                        >
+                                            {getInitials(payment.paymentNumber)}
+                                        </div>
+
+                                        <div className="min-w-0">
+                                            <p
+                                                className="
+                                                    truncate font-medium
+                                                    text-gray-800
+                                                "
+                                                title={payment.paymentNumber || ""}
+                                            >
+                                                {payment.paymentNumber || "—"}
+                                            </p>
+
+                                            <p className="
+                                                mt-0.5 text-xs text-gray-500
+                                            ">
+                                                {payment.referenceNumber || "No reference"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                {/* PAYMENT TYPE */}
+
+                                <td className="px-3 py-3">
+                                    <span
+                                        className={`
+                                            inline-block whitespace-nowrap
+                                            rounded-full px-2.5 py-1
+                                            text-xs font-medium
+                                            ${PAYMENT_TYPE_COLORS[paymentType] ||
+                                            "bg-gray-100 text-gray-700"}
+                                        `}
+                                    >
+                                        {payment.paymentType || "—"}
+                                    </span>
+                                </td>
+
+                                {/* PAYMENT DATE */}
+
+                                <td className="px-3 py-3">
+                                    <div className="
+                                        flex items-center gap-2
+                                        whitespace-nowrap text-gray-700
+                                    ">
+                                        <CalendarDays
+                                            size={14}
+                                            className="text-gray-400"
+                                        />
+
+                                        {formatDate(payment.paymentDate)}
+                                    </div>
+                                </td>
+
+                                {/* SOURCE */}
+
+                                <td className="px-3 py-3">
+                                    <div className="min-w-0">
+                                        <p
+                                            className="
+                                                max-w-[180px] truncate
+                                                font-medium text-gray-700
+                                            "
+                                            title={sourceName}
+                                        >
+                                            {sourceName}
+                                        </p>
+
+                                        <p className="
+                                            mt-0.5 text-xs text-gray-400
+                                        ">
+                                            {payment.customerName ||
+                                                payment.partyName ||
+                                                (payment.paymentType === "EXPENSE"
+                                                    ? "Expense"
+                                                    : "—")}
+                                        </p>
+                                    </div>
+                                </td>
+
+                                {/* PAYMENT METHOD */}
+
+                                <td className="px-3 py-3">
+                                    <p className="
+                                        whitespace-nowrap font-medium
+                                        text-gray-700
+                                    ">
+                                        {String(payment.paymentMethod || "—")
+                                            .replaceAll("_", " ")}
+                                    </p>
+
+                                    <p className="
+                                        mt-0.5 text-xs text-gray-400
+                                    ">
+                                        {payment.bankAccountName ||
+                                            payment.cashAccountName ||
+                                            "—"}
+                                    </p>
+                                </td>
+
+                                {/* AMOUNT */}
+
+                                <td className="px-3 py-3">
+                                    <div className="
+                                        flex items-center gap-2
+                                        whitespace-nowrap
+                                    ">
+                                        <Wallet
+                                            size={14}
+                                            className="text-gray-400"
+                                        />
+
+                                        <div>
+                                            <p className="
+                                                font-semibold text-gray-800
+                                            ">
+                                                {formatAmount(
+                                                    payment.paymentAmount,
+                                                    payment.currencyCode
+                                                )}
+                                            </p>
+
+                                            {payment.baseAmount != null && (
+                                                <p className="
+                                                    mt-0.5 text-xs text-gray-400
+                                                ">
+                                                    Base: {formatAmount(
+                                                        payment.baseAmount,
+                                                        "INR"
+                                                    )}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </td>
+
+                                {/* DIRECTION */}
+
+                                <td className="px-3 py-3">
+                                    <span className={`
+                                        inline-flex items-center gap-1
+                                        whitespace-nowrap rounded-full
+                                        px-2.5 py-1 text-xs font-medium
+                                        ${isReceived
+                                            ? "bg-green-100 text-green-700"
+                                            : "bg-orange-100 text-orange-700"
+                                        }
+                                    `}>
+                                        {isReceived
+                                            ? <ArrowDownLeft size={13} />
+                                            : <ArrowUpRight size={13} />
+                                        }
+
+                                        {payment.paymentDirection || "—"}
+                                    </span>
+                                </td>
+
+                                {/* PAYMENT STATUS */}
+
+                                <td className="px-3 py-3">
+                                    <span
+                                        className={`
+                                            inline-block whitespace-nowrap
+                                            rounded-full px-2.5 py-1
+                                            text-xs font-medium
+                                            ${PAYMENT_STATUS_COLORS[paymentStatus] ||
+                                            "bg-gray-100 text-gray-700"}
+                                        `}
+                                    >
+                                        {payment.paymentStatus || "—"}
+                                    </span>
+                                </td>
+
+                                {/* ACTIONS */}
+
+                                <td className="px-4 py-3">
+                                    <div className="
+                                        flex items-center justify-end gap-2
+                                    ">
+                                        {canViewPayment && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleView(payment)
+                                                }
+                                                title="View"
+                                                className="
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg bg-blue-50
+                                                    text-blue-600 transition
+                                                    hover:bg-blue-100
+                                                    hover:text-blue-700
+                                                "
+                                            >
+                                                <Eye size={16} />
+                                            </button>
+                                        )}
+
+                                        {canReversePayment &&
+                                            paymentStatus === "COMPLETED" && (
+                                                <button
+                                                    type="button"
+                                                    disabled={actionLoading}
+                                                    onClick={() =>
+                                                        handleReverse(payment)
+                                                    }
+                                                    title="Reverse payment"
+                                                    className="
+                                                        flex h-8 w-8
+                                                        items-center justify-center
+                                                        rounded-lg bg-amber-50
+                                                        text-amber-600 transition
+                                                        hover:bg-amber-100
+                                                        hover:text-amber-700
+                                                        disabled:cursor-not-allowed
+                                                        disabled:opacity-50
+                                                    "
+                                                >
+                                                    <RotateCcw size={16} />
+                                                </button>
+                                            )}
+                                    </div>
+                                </td>
+
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+
+            {/* PAGINATION */}
+
+            <Pagination
+                page={Number(pageNumber) || 0}
+                size={Number(pageSize) || 20}
+                totalElements={Number(totalElements) || 0}
+                totalPages={Number(totalPages) || 0}
+                loading={loading}
+                label="payments"
+                onPageChange={(nextPage) => {
+                    refreshPayments(
+                        nextPage,
+                        Number(pageSize) || 20
+                    );
+                }}
+                onPageSizeChange={(nextSize) => {
+                    refreshPayments(0, nextSize);
+                }}
+            />
+        </div>
+    );
+}

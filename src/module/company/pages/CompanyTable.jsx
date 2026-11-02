@@ -1,13 +1,12 @@
-import React, { useState } from "react";
+
+import React from "react";
 
 import {
     useDispatch,
     useSelector,
 } from "react-redux";
 
-import {
-    useNavigate,
-} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import {
     openModal,
@@ -23,15 +22,18 @@ import {
 } from "../slices/companySlice";
 
 import {
-    ChevronDown,
     Edit,
     Trash2,
     Building2,
-    Eye,
     Star,
+    Eye,
+    MapPin,
+    Mail,
+    Phone,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
+
 import Pagination from "../../../common/pagination/table/Pagination";
 
 
@@ -40,12 +42,8 @@ export default function CompanyTable({
 }) {
 
     const dispatch = useDispatch();
+    const navigate = useNavigate();
 
-    const navigate =
-        useNavigate();
-
-    const [showEdit, setShowEdit] = useState(false);
-    const [showView, setShowView] = useState(false);
     /* =====================================================
        REDUX STATE
     ===================================================== */
@@ -53,34 +51,21 @@ export default function CompanyTable({
     const {
         loading,
         error,
-        pagination,
-    } = useSelector(
-        (state) =>
-            state.company
-    );
+        pageNumber = 0,
+        pageSize = 10,
+        totalPages = 0,
+        totalElements = 0,
+    } = useSelector((state) => state.company || {});
 
-
-    const {
-        pageNumber,
-        pageSize,
-        totalPages,
-        totalElements,
-    } = pagination || {};
-
-
-    const currentCompanies =
-        companies || [];
-
+    const currentCompanies = companies || [];
 
     /* =====================================================
        AUTH STATE
     ===================================================== */
 
     const user = useSelector(
-        (state) =>
-            state.auth?.user
+        (state) => state.auth?.user
     );
-
 
     /* =====================================================
        PERMISSION STATE
@@ -90,7 +75,6 @@ export default function CompanyTable({
         (state) =>
             state.menuPermission?.userPermissions || []
     );
-
 
     /* =====================================================
        ROLE
@@ -104,48 +88,21 @@ export default function CompanyTable({
         user?.authority ||
         "";
 
-
-    const normalizedRole =
-        String(roleName)
-            .trim()
-            .toUpperCase();
-
+    const normalizedRole = String(roleName)
+        .trim()
+        .toUpperCase();
 
     const isSuperAdmin =
         normalizedRole === "SUPER_ADMIN";
 
-
     const isAdmin =
         normalizedRole === "ADMIN";
 
-
     const hasFullAccess =
-        isSuperAdmin ||
-        isAdmin;
-
+        isSuperAdmin || isAdmin;
 
     /* =====================================================
        PERMISSION CHECK
-
-       Supports both:
-
-       FLAT:
-       {
-           moduleName: "Companies",
-           actionName: "EDIT",
-           allowed: true
-       }
-
-       GROUPED:
-       {
-           moduleName: "Companies",
-           actions: [
-               {
-                   actionName: "EDIT",
-                   allowed: true
-               }
-           ]
-       }
     ===================================================== */
 
     const hasPermission = (
@@ -153,197 +110,144 @@ export default function CompanyTable({
         actionName
     ) => {
 
-        /* =================================================
-           SUPER ADMIN / ADMIN
-        ================================================= */
-
         if (hasFullAccess) {
             return true;
         }
-
-
-        /* =================================================
-           INVALID PERMISSION STATE
-        ================================================= */
 
         if (!Array.isArray(permissions)) {
             return false;
         }
 
+        const requestedModule = String(moduleName)
+            .trim()
+            .toLowerCase();
 
-        const requestedModule =
-            String(moduleName)
+        const requestedAction = String(actionName)
+            .trim()
+            .toUpperCase();
+
+        return permissions.some((permission) => {
+
+            const permissionModule = String(
+                permission?.moduleName ||
+                permission?.module?.moduleName ||
+                permission?.module?.name ||
+                ""
+            )
                 .trim()
                 .toLowerCase();
 
+            if (permissionModule !== requestedModule) {
+                return false;
+            }
 
-        const requestedAction =
-            String(actionName)
-                .trim()
-                .toUpperCase();
+            if (permission?.active === false) {
+                return false;
+            }
 
+            if (
+                String(permission?.status || "")
+                    .trim()
+                    .toUpperCase() === "INACTIVE"
+            ) {
+                return false;
+            }
 
-        /* =================================================
-           SEARCH PERMISSIONS
-        ================================================= */
+            /* GROUPED ACTIONS */
 
-        return permissions.some(
-            (permission) => {
+            if (Array.isArray(permission?.actions)) {
 
-                /* =========================================
-                   MODULE
-                ========================================= */
+                return permission.actions.some((action) => {
 
-                const permissionModule =
-                    String(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toLowerCase();
+                    if (typeof action === "string") {
+                        return (
+                            action.trim().toUpperCase() ===
+                            requestedAction
+                        );
+                    }
 
-
-                if (
-                    permissionModule !==
-                    requestedModule
-                ) {
-                    return false;
-                }
-
-
-                /* =========================================
-                   PERMISSION STATUS
-                ========================================= */
-
-                if (
-                    permission?.active === false
-                ) {
-                    return false;
-                }
-
-
-                if (
-                    String(
-                        permission?.status || ""
-                    )
-                        .trim()
-                        .toUpperCase() ===
-                    "INACTIVE"
-                ) {
-                    return false;
-                }
-
-
-                /* =========================================
-                   GROUPED ACTIONS
-                ========================================= */
-
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
-
-                    return permission.actions.some(
-                        (action) => {
-
-                            const permissionAction =
-                                String(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.action?.name ||
-                                    ""
-                                )
-                                    .trim()
-                                    .toUpperCase();
-
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
-
-
-                            return (
-                                permissionAction ===
-                                requestedAction &&
-                                allowed
-                            );
-
-                        }
-                    );
-
-                }
-
-
-                /* =========================================
-                   FLAT ACTION
-                ========================================= */
-
-                const permissionAction =
-                    String(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
+                    const permissionAction = String(
+                        action?.actionName ||
+                        action?.action?.actionName ||
+                        action?.action?.name ||
+                        action?.name ||
                         ""
                     )
                         .trim()
                         .toUpperCase();
 
+                    const allowed =
+                        action?.allowed === true ||
+                        action?.allowed === "true";
 
-                const allowed =
-                    permission?.allowed === true ||
-                    permission?.allowed === "true";
+                    if (action?.active === false) {
+                        return false;
+                    }
 
+                    if (
+                        String(action?.status || "")
+                            .trim()
+                            .toUpperCase() === "INACTIVE"
+                    ) {
+                        return false;
+                    }
 
-                return (
-                    permissionAction ===
-                    requestedAction &&
-                    allowed
-                );
+                    return (
+                        permissionAction === requestedAction &&
+                        allowed
+                    );
 
+                });
             }
-        );
+
+            /* FLAT ACTION */
+
+            const permissionAction = String(
+                permission?.actionName ||
+                permission?.action?.actionName ||
+                permission?.action?.name ||
+                ""
+            )
+                .trim()
+                .toUpperCase();
+
+            const allowed =
+                permission?.allowed === true ||
+                permission?.allowed === "true";
+
+            return (
+                permissionAction === requestedAction &&
+                allowed
+            );
+
+        });
 
     };
-
 
     /* =====================================================
        COMPANY PERMISSIONS
     ===================================================== */
 
-    const canEditCompany =
-        hasPermission(
-            "Company Detail",
-            "EDIT"
-        );
+    const canViewCompany = hasPermission(
+        "Companies",
+        "VIEW"
+    );
 
+    const canEditCompany = hasPermission(
+        "Companies",
+        "EDIT"
+    );
 
-    const canDeleteCompany =
-        hasPermission(
-            "Company Detail",
-            "DELETE"
-        );
-
-    const canViewCompany =
-        hasPermission(
-            "Company Detail",
-            "VIEW"
-        );
-
+    const canDeleteCompany = hasPermission(
+        "Companies",
+        "DELETE"
+    );
 
     /* =====================================================
        DELETE COMPANY
     ===================================================== */
 
-    const handleDelete = async (
-        id
-    ) => {
-
-        /* =================================================
-           PERMISSION SAFETY CHECK
-        ================================================= */
+    const handleDelete = async (id) => {
 
         if (!canDeleteCompany) {
 
@@ -354,7 +258,6 @@ export default function CompanyTable({
             return;
         }
 
-
         if (
             !window.confirm(
                 "Delete this company?"
@@ -363,21 +266,21 @@ export default function CompanyTable({
             return;
         }
 
-
         try {
 
             await dispatch(
                 deleteCompany(id)
             ).unwrap();
 
-
             toast.success(
                 "Company deleted successfully"
             );
 
-
             dispatch(
-                fetchAllCompanies()
+                fetchAllCompanies({
+                    page: Number(pageNumber) || 0,
+                    size: Number(pageSize) || 10,
+                })
             );
 
         } catch (error) {
@@ -393,33 +296,26 @@ export default function CompanyTable({
 
     };
 
-
     /* =====================================================
        VIEW COMPANY
     ===================================================== */
 
-    const handleView = (
-        company
-    ) => {
+    const handleView = (company) => {
 
+        if (!canViewCompany) {
+
+            toast.error(
+                "You do not have permission to view companies."
+            );
+
+            return;
+        }
 
         try {
 
-            if (!canViewCompany) {
-
-                toast.error(
-                    "You do not have permission to View companies."
-                );
-
-                return;
-            }
-
             dispatch(
-                setExsistingCompany(
-                    company
-                )
+                setExsistingCompany(company)
             );
-
 
             navigate(
                 `/settings/companies/view/${company.id}`
@@ -435,18 +331,11 @@ export default function CompanyTable({
 
     };
 
-
     /* =====================================================
        EDIT COMPANY
     ===================================================== */
 
-    const handleEdit = (
-        company
-    ) => {
-
-        /* =================================================
-           PERMISSION SAFETY CHECK
-        ================================================= */
+    const handleEdit = (company) => {
 
         if (!canEditCompany) {
 
@@ -457,14 +346,11 @@ export default function CompanyTable({
             return;
         }
 
-
-        console.log(
-            "EDIT COMPANY:",
-            company
-        );
-
-
         try {
+
+            dispatch(
+                setExsistingCompany(company)
+            );
 
             dispatch(
                 openModal({
@@ -473,21 +359,9 @@ export default function CompanyTable({
                 })
             );
 
-
-            console.log(
-                "COMPANY MODAL OPEN DISPATCHED"
-            );
-
         } catch (error) {
 
-            console.error(
-                "COMPANY EDIT ERROR:",
-                error
-            );
-
-
             toast.error(
-                error?.message ||
                 "Failed to open company"
             );
 
@@ -495,33 +369,25 @@ export default function CompanyTable({
 
     };
 
-
     /* =====================================================
        COMPANY INITIALS
     ===================================================== */
 
-    const initials = (
-        companyName
-    ) => {
+    const initials = (companyName) => {
 
         if (!companyName) {
             return "CO";
         }
 
-
         return companyName
-            ?.split(" ")
+            .split(" ")
             .filter(Boolean)
-            .map(
-                (word) =>
-                    word[0]
-            )
+            .map((word) => word[0])
             .join("")
             .slice(0, 2)
             .toUpperCase() || "CO";
 
     };
-
 
     /* =====================================================
        STATUS COLORS
@@ -540,9 +406,8 @@ export default function CompanyTable({
 
     };
 
-
     /* =====================================================
-       COMPANY AVATAR COLORS
+       AVATAR COLORS
     ===================================================== */
 
     const avatarColors = [
@@ -557,30 +422,19 @@ export default function CompanyTable({
 
     ];
 
+    const getAvatarColor = (name = "") => {
 
-    const getAvatarColor = (
-        name = ""
-    ) => {
-
-        const index =
-            name
-                .split("")
-                .reduce(
-                    (
-                        acc,
-                        char
-                    ) =>
-                        acc +
-                        char.charCodeAt(0),
-                    0
-                ) %
-            avatarColors.length;
-
+        const index = name
+            .split("")
+            .reduce(
+                (acc, char) =>
+                    acc + char.charCodeAt(0),
+                0
+            ) % avatarColors.length;
 
         return avatarColors[index];
 
     };
-
 
     /* =====================================================
        LOADING
@@ -590,14 +444,7 @@ export default function CompanyTable({
 
         return (
 
-            <div
-                className="
-                    flex
-                    items-center
-                    justify-center
-                    py-10
-                "
-            >
+            <div className="flex items-center justify-center py-10">
 
                 <p className="text-gray-500">
                     Loading companies...
@@ -609,7 +456,6 @@ export default function CompanyTable({
 
     }
 
-
     /* =====================================================
        ERROR
     ===================================================== */
@@ -620,12 +466,8 @@ export default function CompanyTable({
 
             <div
                 className="
-                    bg-white
-                    rounded-xl
-                    border
-                    border-red-200
-                    p-8
-                    text-center
+                    rounded-xl border border-red-200
+                    bg-white p-8 text-center
                 "
             >
 
@@ -639,7 +481,6 @@ export default function CompanyTable({
 
     }
 
-
     /* =====================================================
        EMPTY STATE
     ===================================================== */
@@ -650,21 +491,14 @@ export default function CompanyTable({
 
             <div
                 className="
-                    bg-white
-                    rounded-2xl
-                    border
-                    border-gray-200
-                    p-8
-                    text-center
+                    rounded-2xl border border-gray-200
+                    bg-white p-8 text-center
                 "
             >
 
                 <Building2
                     className="
-                        mx-auto
-                        mb-3
-                        h-10
-                        w-10
+                        mx-auto mb-3 h-10 w-10
                         text-gray-300
                     "
                 />
@@ -679,28 +513,35 @@ export default function CompanyTable({
 
     }
 
-
     /* =====================================================
        TABLE
     ===================================================== */
 
     return (
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
+        <div className="
+            overflow-x-auto overflow-y-visible
+            rounded-xl border border-gray-200 bg-white
+        ">
+
             <div className="overflow-x-auto overflow-y-visible">
+
                 <table className="w-full">
-                    <thead className="bg-[#FEFEFD] border-b border-gray-300">
+
+                    {/* TABLE HEADER */}
+
+                    <thead className="
+                        border-b border-gray-300
+                        bg-[#FAF9F7]/20
+                    ">
 
                         <tr>
 
                             {[
                                 "Company",
-                                "Code",
-                                "GST",
-                                "PAN ",
-                                "Email",
-                                "Phone",
-                                "City",
+                                "Company Code",
+                                "Contact",
+                                "Location",
                                 "Status",
                                 "Actions",
                             ].map((header) => (
@@ -708,17 +549,14 @@ export default function CompanyTable({
                                 <th
                                     key={header}
                                     className={`
-                                    px-5
-                                    py-3
-                                    font-medium
-                                    text-md
-                                    text-gray-400
-                                    uppercase
-                                    ${header === "Actions"
+                                        px-5 py-3
+                                        text-md font-medium
+                                        uppercase text-gray-400
+                                        ${header === "Actions"
                                             ? "text-right"
                                             : "text-left"
                                         }
-                                `}
+                                    `}
                                 >
                                     {header}
                                 </th>
@@ -729,368 +567,319 @@ export default function CompanyTable({
 
                     </thead>
 
-
-
-                    {/* =================================================
-                    TABLE BODY
-                ================================================= */}
+                    {/* TABLE BODY */}
 
                     <tbody>
 
-                        {[
-                            ...currentCompanies,
-                        ]
+                        {[...currentCompanies]
                             .sort(
-                                (
-                                    a,
-                                    b
-                                ) =>
-                                    (
-                                        a.id || 0
-                                    ) -
-                                    (
-                                        b.id || 0
-                                    )
+                                (a, b) =>
+                                    (a.id || 0) - (b.id || 0)
                             )
-                            .map(
-                                (
-                                    company,
-                                    index
-                                ) => (
+                            .map((company, index) => (
 
-                                    <tr
-                                        key={
-                                            company.id ||
-                                            index
-                                        }
-                                        onClick={() =>
-                                            handleView(
-                                                company
-                                            )
-                                        }
-                                        className="
-                                        border-b
-                                        border-gray-100
-                                        hover:bg-gray-50
-                                        text-xs
-                                        cursor-pointer
-                                        transition-colors
+                                <tr
+                                    key={company.id || index}
+                                    className="
+                                        cursor-pointer border-b
+                                        border-gray-100 text-xs
+                                        transition-colors hover:bg-gray-50
                                     "
-                                    >
+                                >
 
-                                        {/* =================================
-                                        COMPANY
-                                    ================================= */}
+                                    {/* COMPANY */}
 
-                                        <td
-                                            className="
-                                            px-2
-                                            py-3
-                                        "
-                                        >
+                                    <td className="overflow-hidden px-2 py-3">
 
-                                            <div
-                                                className="
-                                                flex
-                                                items-center
-                                                gap-3
-                                            "
-                                            >
+                                        <div className="
+                                            flex min-w-0 items-center gap-2
+                                        ">
 
-                                                <div
-                                                    className={`
-                                                    w-10
-                                                    h-10
-                                                    rounded-full
-                                                    flex
-                                                    items-center
-                                                    justify-center
-                                                    text-md
-                                                    font-bold
-                                                    ${getAvatarColor(
-                                                        company.companyName
-                                                    )}
-                                                `}
-                                                >
+                                            <div className={`
+                                                flex h-9 min-w-[36px]
+                                                w-9 items-center justify-center
+                                                rounded-full text-sm font-bold
+                                                ${getAvatarColor(
+                                                company.companyName
+                                            )}
+                                            `}>
 
-                                                    {initials(
-                                                        company.companyName
-                                                    )}
-
-                                                </div>
-
-
-                                                <div>
-                                                    <p className="flex items-center gap-2 font-medium text-gray-800">
-                                                        {company.companyName || "—"}
-
-                                                        {company.isDefault === true && (
-                                                            <span
-                                                                className="
-                    inline-flex
-                    items-center
-                    gap-1
-                    px-1.5
-                    py-0.5
-                    rounded-full
-                    bg-yellow-100
-                    text-yellow-700
-                    text-[10px]
-                    font-medium
-                    shrink-0
-                "
-                                                            >
-                                                                <Star size={10} fill="currentColor" />
-                                                                Default
-                                                            </span>
-                                                        )}
-                                                    </p>
-
-                                                    <p className="text-sm text-gray-500">
-                                                        ID: #{company.id}
-                                                    </p>
-                                                </div>
+                                                {initials(company.companyName)}
 
                                             </div>
 
-                                        </td>
+                                            <div className="min-w-0">
 
+                                                <div className="
+                                                    flex items-center gap-1.5
+                                                ">
 
-                                        {/* =================================
-                                        COMPANY CODE
-                                    ================================= */}
+                                                    <p
+                                                        className="
+                                                            truncate font-medium
+                                                            text-gray-800
+                                                        "
+                                                        title={company.companyName || ""}
+                                                    >
+                                                        {company.displayName ||
+                                                            company.companyName ||
+                                                            "—"}
+                                                    </p>
 
-                                        <td
+                                                    {company.isDefault && (
+
+                                                        <span className="
+                                                            inline-flex shrink-0
+                                                            items-center gap-1
+                                                            rounded-full bg-yellow-100
+                                                            px-1.5 py-0.5
+                                                            text-[10px] font-medium
+                                                            text-yellow-700
+                                                        ">
+
+                                                            <Star
+                                                                size={10}
+                                                                fill="currentColor"
+                                                            />
+
+                                                            Default
+
+                                                        </span>
+
+                                                    )}
+
+                                                </div>
+
+                                                <p className="text-xs text-gray-500">
+                                                    ID: #{company.id}
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                    </td>
+
+                                    {/* COMPANY CODE */}
+
+                                    <td className="overflow-hidden px-2 py-3">
+
+                                        <p
                                             className="
-                                            px-4
-                                            py-3
-                                        "
+                                                font-medium text-gray-700
+                                            "
+                                            title={company.companyCode || ""}
                                         >
-                                            {
-                                                company.companyCode ||
-                                                "—"
+                                            {company.companyCode || "—"}
+                                        </p>
+
+                                        <p className="text-xs text-gray-500">
+                                            {company.gstNumber || "—"}
+                                        </p>
+
+                                    </td>
+
+                                    {/* CONTACT */}
+
+                                    <td className="overflow-hidden px-2 py-3">
+
+                                        <div className="min-w-0">
+
+                                            <div className="
+                                                flex items-center gap-1.5
+                                            ">
+
+                                                <Mail
+                                                    size={12}
+                                                    className="shrink-0 text-gray-400"
+                                                />
+
+                                                <p
+                                                    className="
+                                                        truncate text-gray-700
+                                                    "
+                                                    title={company.email || ""}
+                                                >
+                                                    {company.email || "—"}
+                                                </p>
+
+                                            </div>
+
+                                            <div className="
+                                                mt-1 flex items-center gap-1.5
+                                            ">
+
+                                                <Phone
+                                                    size={12}
+                                                    className="shrink-0 text-gray-400"
+                                                />
+
+                                                <p className="text-xs text-gray-500">
+                                                    {company.phone || "—"}
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                    </td>
+
+                                    {/* LOCATION */}
+
+                                    <td className="overflow-hidden px-2 py-3">
+
+                                        <div className="
+                                            flex min-w-0 items-start gap-1.5
+                                        ">
+
+                                            <MapPin
+                                                size={13}
+                                                className="
+                                                    mt-0.5 shrink-0 text-gray-400
+                                                "
+                                            />
+
+                                            <div className="min-w-0">
+
+                                                <p
+                                                    className="
+                                                        truncate font-medium
+                                                        text-gray-700
+                                                    "
+                                                    title={company.city || ""}
+                                                >
+                                                    {company.city || "—"}
+                                                </p>
+
+                                                <p
+                                                    className="
+                                                        truncate text-xs
+                                                        text-gray-500
+                                                    "
+                                                    title={company.state || ""}
+                                                >
+                                                    {company.state || ""}
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                    </td>
+
+                                    {/* STATUS */}
+
+                                    <td className="overflow-hidden px-2 py-3">
+
+                                        <span className={`
+                                            inline-block rounded-full
+                                            px-2 py-1 text-xs font-medium
+                                            ${statusColor[
+                                            String(
+                                                company.status || ""
+                                            ).toUpperCase()
+                                            ] ||
+                                            "bg-gray-100 text-gray-700"
                                             }
-                                        </td>
+                                        `}>
+                                            {company.status || "—"}
+                                        </span>
 
+                                    </td>
 
-                                        {/* =================================
-                                        GST NUMBER
-                                    ================================= */}
+                                    {/* ACTIONS */}
 
-                                        <td
-                                            className="
-                                            px-4
-                                            py-3
-                                        "
-                                        >
-                                            {
-                                                company.gstNumber ||
-                                                "—"
-                                            }
-                                        </td>
+                                    <td className="px-4 py-3">
 
+                                        <div className="
+                                            flex items-center justify-end gap-2
+                                        ">
 
-                                        {/* =================================
-                                        PAN NUMBER
-                                    ================================= */}
+                                            {/* VIEW */}
 
-                                        <td
-                                            className="
-                                            px-4
-                                            py-3
-                                        "
-                                        >
-                                            {
-                                                company.panNumber ||
-                                                "—"
-                                            }
-                                        </td>
+                                            {canViewCompany && (
 
-
-                                        {/* =================================
-                                        EMAIL
-                                    ================================= */}
-
-                                        <td
-                                            className="
-                                            px-4
-                                            py-3
-                                        "
-                                        >
-                                            {
-                                                company.email ||
-                                                "—"
-                                            }
-                                        </td>
-
-
-                                        {/* =================================
-                                        PHONE
-                                    ================================= */}
-
-                                        <td
-                                            className="
-                                            px-4
-                                            py-3
-                                        "
-                                        >
-                                            {
-                                                company.phone ||
-                                                "—"
-                                            }
-                                        </td>
-
-
-                                        {/* =================================
-                                        CITY
-                                    ================================= */}
-
-                                        <td
-                                            className="
-                                            px-4
-                                            py-3
-                                        "
-                                        >
-                                            {
-                                                company.city ||
-                                                "—"
-                                            }
-                                        </td>
-
-
-                                        {/* =================================
-                                        STATUS
-                                    ================================= */}
-
-                                        <td
-                                            className="
-                                            px-5
-                                            py-3
-                                            font-semibold
-                                        "
-                                        >
-
-                                            <span
-                                                className={`
-                                                px-2
-                                                py-1
-                                                rounded-full
-                                                text-xs
-                                                font-medium
-                                                ${statusColor[
-                                                    company.status
-                                                    ] ||
-                                                    "bg-gray-100 text-gray-700"
-                                                    }
-                                            `}
-                                            >
-
-                                                {
-                                                    company.status ||
-                                                    "—"
-                                                }
-
-                                            </span>
-
-                                        </td>
-
-
-                                        {/* =================================
-                                        ACTIONS
-                                    ================================= */}
-
-                                        {/* Actions */}
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center justify-end gap-2">
-
-                                                {/* View */}
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setShowView(true);
-                                                        dispatch(setExsistingCompany(company));
-                                                        navigate(`/settings/companies/view/${company.id}`);
+                                                        handleView(company);
                                                     }}
                                                     title="View"
                                                     className="
-                                                            flex h-8 w-8 items-center justify-center
-                                                            rounded-lg
-                                                            bg-blue-50
-                                                            text-blue-600
-                                                            transition
-                                                            hover:bg-blue-100
-                                                            hover:text-blue-700
-                                                        "
+                                                        flex h-8 w-8 items-center
+                                                        justify-center rounded-lg
+                                                        bg-blue-50 text-blue-600
+                                                        transition hover:bg-blue-100
+                                                        hover:text-blue-700
+                                                    "
                                                 >
                                                     <Eye size={16} />
                                                 </button>
 
-                                                {/* Edit */}
+                                            )}
+
+                                            {/* EDIT */}
+
+                                            {canEditCompany && (
+
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setShowEdit(true);
-                                                        dispatch(setExsistingCompany(company));
-                                                        navigate(`/settings/companies/editSimple/${company.id}`);
-
+                                                        handleEdit(company);
                                                     }}
                                                     title="Edit"
                                                     className="
-                                                        flex h-8 w-8 items-center justify-center
-                                                        rounded-lg
-                                                        bg-amber-50
-                                                        text-amber-600
-                                                        transition
-                                                        hover:bg-amber-100
+                                                        flex h-8 w-8 items-center
+                                                        justify-center rounded-lg
+                                                        bg-amber-50 text-amber-600
+                                                        transition hover:bg-amber-100
                                                         hover:text-amber-700
                                                     "
                                                 >
                                                     <Edit size={16} />
                                                 </button>
 
-                                                {/* Delete */}
+                                            )}
+
+                                            {/* DELETE */}
+
+                                            {canDeleteCompany && (
+
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-
-                                                        // Your delete confirmation logic
                                                         handleDelete(company.id);
                                                     }}
                                                     title="Delete"
                                                     className="
-                                                        flex h-8 w-8 items-center justify-center
-                                                        rounded-lg
-                                                        bg-red-50
-                                                        text-red-600
-                                                        transition
-                                                        hover:bg-red-100
+                                                        flex h-8 w-8 items-center
+                                                        justify-center rounded-lg
+                                                        bg-red-50 text-red-600
+                                                        transition hover:bg-red-100
                                                         hover:text-red-700
                                                     "
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
 
-                                            </div>
-                                        </td>
+                                            )}
 
+                                        </div>
 
-                                    </tr>
+                                    </td>
 
-                                )
-                            )}
+                                </tr>
+
+                            ))}
 
                     </tbody>
 
                 </table>
 
-
-                {/* =====================================================
-                PAGINATION
-            ===================================================== */}
-
+                {/* PAGINATION */}
 
                 <Pagination
                     page={Number(pageNumber) || 0}
@@ -1098,7 +887,7 @@ export default function CompanyTable({
                     totalElements={Number(totalElements) || 0}
                     totalPages={Number(totalPages) || 0}
                     loading={loading}
-                    label="compaines"
+                    label="companies"
                     onPageChange={(nextPage) => {
                         dispatch(
                             fetchAllCompanies({
@@ -1119,7 +908,7 @@ export default function CompanyTable({
 
             </div>
 
-        </div >
-    );
+        </div>
 
+    );
 }

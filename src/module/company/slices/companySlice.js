@@ -168,6 +168,10 @@ const companySlice = createSlice({
       state.exsistingCompany = null;
     },
 
+    clearError: (state) => {
+      state.error = null;
+    },
+
     /* =====================================================
        SET COMPANY FIELD
     ===================================================== */
@@ -562,6 +566,7 @@ const companySlice = createSlice({
    ========================================================= */
 
 export const {
+  clearError,
   setExsistingCompany,
 
   clearCompanyState,

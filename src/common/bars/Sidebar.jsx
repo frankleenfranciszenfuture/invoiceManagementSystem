@@ -69,7 +69,7 @@ const NAV = [
         moduleName: "Products",
         icon: Package,
         to: "/items",
-        addTo: "/items/newSimple",
+        addTo: "/items/create",
         basePath: "/items",
         dropdown: true,
     },
@@ -254,23 +254,26 @@ const INVENTORY_NAV = [
     },
 
     {
-        label: "Stock Adjustment",
-        moduleName: "Stock Adjustment",
-        icon: Package,
-        to: "/inventory/adjustments",
+        label: "Record Payments",
+        moduleName: "Payments",
+        icon: BadgeTurkishLira,
+        to: "/inventory/payments",
     },
+
     {
-        label: "Stock Transfer",
-        moduleName: "Stock Transfer",
-        icon: Package,
-        to: "/inventory/transfers",
+        label: "Cash Accounts",
+        moduleName: "Cash Accounts",
+        icon: BadgeTurkishLira,
+        to: "/inventory/cash-accounts   ",
     },
+
     {
-        label: "Stock History",
-        moduleName: "Stock History",
-        icon: FileText,
-        to: "/inventory/history",
+        label: "Items",
+        moduleName: "Items",
+        icon: BadgeTurkishLira,
+        to: "/inventory/items   ",
     },
+
 ];
 
 

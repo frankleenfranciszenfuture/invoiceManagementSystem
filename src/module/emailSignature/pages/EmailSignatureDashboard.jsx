@@ -1,316 +1,654 @@
-import React, { useEffect, useMemo } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useSearchParams } from "react-router-dom";
-import { Download, Plus } from "lucide-react";
+
+import React, {
+    useEffect,
+    useMemo,
+    useCallback,
+} from "react";
+
+import {
+    useSelector,
+    useDispatch,
+} from "react-redux";
+
+import {
+    Plus,
+    Download,
+    Mail,
+} from "lucide-react";
+
 import toast from "react-hot-toast";
 
-import EmailSignatureTable from "./EmailSignatureTable";
+import EmailSignatureTable from "../pages/EmailSignatureTable";
 import NavbarEmailSignature from "../components/bars/nav/NavbarEmailSignature";
-import { fetchAllEmailSignatures } from "../thunks/emailSignatureThunks";
-import { getUserPermission } from "../../menuPermission/thunks/menuPermissionThunks";
+
 import {
-    setEmailSignatureStatus,
-    setSelectedEmailSignatureView,
-} from "../slices/emailSignatureViewSlice";
-import { openModal } from "../../ui/uiSlice";
+    clearEmailSignatureError,
+} from "../slices/emailSignatureSlice";
+
+import {
+    openModal,
+} from "../../ui/uiSlice";
+
+import {
+    getUserPermission,
+} from "../../menuPermission/thunks/menuPermissionThunks";
+
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
 
-const normalizeAction = (value) =>
-    String(value ?? "").trim().toUpperCase().replace(/[\\s-]+/g, "_");
+import EmailSignatureOverview from "../../emailSignature/pages/EmailSignatureOverview";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMPTY_ARRAY = [];
+
+/* =========================================================
+   NORMALIZE HELPERS
+========================================================= */
 
 const normalizeModule = (value) =>
-    String(value ?? "").trim().toLowerCase().replace(/\\s+/g, " ");
+    String(value ?? "").trim().toLowerCase();
 
-const isAllowed = (value) => value === true || value === "true";
+const normalizeAction = (value) =>
+    String(value ?? "").trim().toUpperCase();
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function EmailSignatureDashboard() {
+
     const dispatch = useDispatch();
-    const [searchParams] = useSearchParams();
 
-    // Auth state
-    const authState = useSelector((state) => state.auth || {});
-    const user = authState.user;
-    const isAuthenticated = authState.isAuthenticated === true;
-    const authChecking = Boolean(authState.authChecking ?? authState.loading);
+    /* =====================================================
+       AUTH STATE
+    ===================================================== */
 
-    // Permission state
-    const permissionState = useSelector((state) => state.menuPermission || {});
-    const permissions = Array.isArray(permissionState.userPermissions)
-        ? permissionState.userPermissions
-        : [];
-    const permissionLoading = Boolean(
-        permissionState.userPermissionsLoading ?? permissionState.loading
+    const user = useSelector(
+        (state) => state.auth?.user
     );
-    const permissionsLoaded =
-        permissionState.userPermissionsLoaded === true ||
-        permissionState.permissionsLoaded === true ||
-        permissionState.loaded === true ||
-        permissionState.userPermissions != null;
 
-    // Role
-    const role = user?.roleName ||
+    const userId = user?.id;
+
+    const isAuthenticated = useSelector(
+        (state) => state.auth?.isAuthenticated === true
+    );
+
+    const authChecking = useSelector(
+        (state) => state.auth?.authChecking === true
+    );
+
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
+
+    const permissions = useSelector(
+        (state) => {
+            const value = state.menuPermission?.userPermissions;
+
+            return Array.isArray(value)
+                ? value
+                : EMPTY_ARRAY;
+        }
+    );
+
+    const permissionLoading = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissionsLoading === true
+    );
+
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissionsLoaded === true
+    );
+
+    /* =====================================================
+       ROLE
+    ===================================================== */
+
+    const roleName =
+        user?.roleName ||
         user?.role?.roleName ||
         user?.role?.name ||
         user?.role ||
         user?.authority ||
         "";
-    const normalizedRole = normalizeAction(
-        typeof role === "object" ? role?.name || role?.roleName : role
-    );
-    const hasFullAccess = ["ADMIN", "SUPER_ADMIN"].includes(normalizedRole);
 
-    // Permission checking supports both grouped and flat permission payloads.
-    const hasPermission = (moduleName, actionName) => {
-        if (hasFullAccess) return true;
+    const normalizedRole = normalizeAction(roleName);
 
-        const requestedModule = normalizeModule(moduleName);
-        const requestedAction = normalizeAction(actionName);
+    const hasFullAccess =
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
-        return permissions.some((permission) => {
-            const module = normalizeModule(
-                permission?.moduleName ||
-                permission?.module?.moduleName ||
-                permission?.module?.name
-            );
-            if (module !== requestedModule) return false;
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
-            if (
-                permission?.active === false ||
-                normalizeAction(permission?.status) === "INACTIVE"
-            ) return false;
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
 
-            const actions = Array.isArray(permission?.actions)
-                ? permission.actions
-                : null;
+            if (hasFullAccess) {
+                return true;
+            }
 
-            if (actions) {
-                return actions.some((action) => {
-                    const name = normalizeAction(
-                        typeof action === "string"
-                            ? action
-                            : action?.actionName ||
+            if (!Array.isArray(permissions)) {
+                return false;
+            }
+
+            const requestedModule = normalizeModule(moduleName);
+            const requestedAction = normalizeAction(actionName);
+
+            return permissions.some((permission) => {
+
+                const permissionModule = normalizeModule(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                );
+
+                if (permissionModule !== requestedModule) {
+                    return false;
+                }
+
+                if (permission?.active === false) {
+                    return false;
+                }
+
+                if (
+                    normalizeAction(permission?.status) === "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                /* ACTION ARRAY */
+
+                if (Array.isArray(permission?.actions)) {
+
+                    return permission.actions.some((action) => {
+
+                        if (typeof action === "string") {
+                            return (
+                                normalizeAction(action) === requestedAction
+                            );
+                        }
+
+                        const permissionAction = normalizeAction(
+                            action?.actionName ||
                             action?.action?.actionName ||
                             action?.action?.name ||
-                            action?.name
-                    );
-                    if (name !== requestedAction) return false;
+                            action?.name ||
+                            ""
+                        );
 
-                    if (typeof action === "string") return true;
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
 
-                    return (
-                        action?.active !== false &&
-                        normalizeAction(action?.status) !== "INACTIVE" &&
-                        (
-                            isAllowed(action?.allowed) ||
-                            isAllowed(action?.isAllowed)
-                        )
-                    );
-                });
-            }
+                        if (action?.active === false) {
+                            return false;
+                        }
 
-            const directAction = normalizeAction(
-                permission?.actionName ||
-                permission?.action?.actionName ||
-                permission?.action?.name
-            );
-            return (
-                directAction === requestedAction &&
-                (
-                    isAllowed(permission?.allowed) ||
-                    isAllowed(permission?.isAllowed)
-                )
-            );
-        });
-    };
+                        if (
+                            normalizeAction(action?.status) === "INACTIVE"
+                        ) {
+                            return false;
+                        }
 
-    const canViewEmailSignature = hasPermission("Email Signatures", "VIEW") ||
-        hasPermission("Email Signature", "VIEW");
-    const canCreateEmailSignature = hasPermission("Email Signatures", "CREATE") ||
-        hasPermission("Email Signature", "CREATE");
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
+                }
 
-    // Email signature state
-    const emailSignaturesState = useSelector(
-        (state) => state.emailSignatures || {}
+                /* DIRECT / FLAT ACTION */
+
+                const permissionAction = normalizeAction(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                );
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction === requestedAction &&
+                    allowed
+                );
+            });
+
+        },
+        [
+            hasFullAccess,
+            permissions,
+        ]
     );
-    const emailSignatures = Array.isArray(emailSignaturesState.emailSignatures)
-        ? emailSignaturesState.emailSignatures
-        : [];
-    const loading = Boolean(emailSignaturesState.loading);
-    const error = emailSignaturesState.error;
 
-    // Status filter
-    const emailSignatureStatus = useSelector(
-        (state) => state.emailSignatureView?.emailSignatureStatus || "ALL"
+    /* =====================================================
+       EMAIL SIGNATURE PERMISSIONS
+    ===================================================== */
+
+    const canViewEmailSignature = hasPermission(
+        "Email Signatures",
+        "VIEW"
     );
 
-    // Load permissions for non-admin users.
+    const canCreateEmailSignature = hasPermission(
+        "Email Signatures",
+        "CREATE"
+    );
+
+    /* =====================================================
+       EMAIL SIGNATURE STATE
+    ===================================================== */
+
+    const emailSignaturesFromRedux = useSelector(
+        (state) => state.emailSignatures?.emailSignatures
+    );
+
+    const emailSignatures = Array.isArray(emailSignaturesFromRedux)
+        ? emailSignaturesFromRedux
+        : EMPTY_ARRAY;
+
+    const loading = useSelector(
+        (state) => state.emailSignatures?.loading === true
+    );
+
+    const error = useSelector(
+        (state) => state.emailSignatures?.error
+    );
+
+    /* =====================================================
+       LOAD USER PERMISSIONS
+    ===================================================== */
+
     useEffect(() => {
-        if (
-            authChecking ||
-            !isAuthenticated ||
-            hasFullAccess ||
-            permissionsLoaded ||
-            permissionLoading
-        ) return;
 
-        dispatch(getUserPermission());
-    }, [
-        authChecking,
-        isAuthenticated,
-        hasFullAccess,
-        permissionsLoaded,
-        permissionLoading,
-        dispatch,
-    ]);
-
-    // Fetch signatures only when the user is allowed to view them.
-    useEffect(() => {
-        if (authChecking || !isAuthenticated) return;
-        if (!user?.id) return;
-
-        if (!hasFullAccess) {
-            if (permissionLoading || !permissionsLoaded || !canViewEmailSignature) {
-                return;
-            }
-        }
-
-        dispatch(fetchAllEmailSignatures(user.id));
-    }, [
-        authChecking,
-        isAuthenticated,
-        user?.id,
-        hasFullAccess,
-        permissionLoading,
-        permissionsLoaded,
-        canViewEmailSignature,
-        dispatch,
-    ]);
-
-    // Sync URL filter to Redux.
-    useEffect(() => {
-        const urlStatus = searchParams.get("emailSignatureStatus");
-        if (!urlStatus) return;
-
-        const normalizedStatus = urlStatus.trim().toUpperCase();
-        const validStatuses = ["ALL", "ACTIVE", "INACTIVE", "DRAFT"];
-        if (!validStatuses.includes(normalizedStatus)) return;
-
-        dispatch(setEmailSignatureStatus(normalizedStatus));
-
-        const statusLabels = {
-            ALL: "All Email Signatures",
-            ACTIVE: "Active Email Signatures",
-            INACTIVE: "Inactive Email Signatures",
-            DRAFT: "Draft Email Signatures",
-        };
-
-        dispatch(setSelectedEmailSignatureView(statusLabels[normalizedStatus]));
-    }, [searchParams, dispatch]);
-
-    const filteredEmailSignatures = useMemo(() => {
-        const selectedStatus = String(emailSignatureStatus || "ALL").toUpperCase();
-        if (selectedStatus === "ALL") return emailSignatures;
-
-        return emailSignatures.filter(
-            (signature) =>
-                String(signature?.status || "").toUpperCase() === selectedStatus
-        );
-    }, [emailSignatures, emailSignatureStatus]);
-
-    const handleCreateEmailSignature = () => {
-        if (!canCreateEmailSignature) {
-            toast.error("You do not have permission to create email signatures.");
+        if (authChecking || !isAuthenticated) {
             return;
         }
 
-        dispatch(openModal({ type: "addEmailSignature", data: null }));
-    };
+        // Admin and Super Admin have full access.
+        if (hasFullAccess) {
+            return;
+        }
 
-    if (authChecking) return <InvoiceSkeleton />;
+        if (permissionsLoaded || permissionLoading) {
+            return;
+        }
 
-    if (!isAuthenticated) return null;
+        dispatch(getUserPermission());
 
-    if (!hasFullAccess && (permissionLoading || !permissionsLoaded)) {
+    }, [
+        authChecking,
+        isAuthenticated,
+        hasFullAccess,
+        permissionsLoaded,
+        permissionLoading,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       FILTER EMAIL SIGNATURES
+    ===================================================== */
+
+    const filteredEmailSignatures = useMemo(() => {
+
+        return emailSignatures.filter(
+            (signature) =>
+                String(signature?.userId) === String(userId)
+        );
+
+    }, [
+        emailSignatures,
+        userId,
+    ]);
+
+    /* =====================================================
+       OPEN CREATE EMAIL SIGNATURE MODAL
+    ===================================================== */
+
+    const handleCreateEmailSignature = useCallback(() => {
+
+        if (!isAuthenticated || !userId) {
+            return;
+        }
+
+        if (
+            !hasFullAccess &&
+            (
+                permissionLoading ||
+                !permissionsLoaded
+            )
+        ) {
+            return;
+        }
+
+        if (!canCreateEmailSignature) {
+            toast.error(
+                "You do not have permission to create email signatures."
+            );
+            return;
+        }
+
+        dispatch(
+            openModal({
+                type: "addEmailSignature",
+            })
+        );
+
+    }, [
+        isAuthenticated,
+        userId,
+        hasFullAccess,
+        permissionLoading,
+        permissionsLoaded,
+        canCreateEmailSignature,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       CLEAR ERROR
+    ===================================================== */
+
+    useEffect(() => {
+
+        if (!error) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            dispatch(clearEmailSignatureError());
+        }, 2000);
+
+        return () => clearTimeout(timer);
+
+    }, [
+        error,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       AUTH CHECKING
+    ===================================================== */
+
+    if (authChecking) {
         return <InvoiceSkeleton />;
     }
 
+    /* =====================================================
+       NOT AUTHENTICATED
+    ===================================================== */
+
+    if (!isAuthenticated) {
+        return null;
+    }
+
+    /* =====================================================
+       PERMISSION LOADING
+    ===================================================== */
+
+    if (
+        !hasFullAccess &&
+        (
+            permissionLoading ||
+            !permissionsLoaded
+        )
+    ) {
+        return <InvoiceSkeleton />;
+    }
+
+    /* =====================================================
+       VIEW PERMISSION DENIED
+    ===================================================== */
+
     if (!canViewEmailSignature) {
+
         return (
-            <div className="flex h-screen items-center justify-center bg-gray-50 font-sans">
+            <div
+                className="
+                    flex h-screen items-center justify-center
+                    bg-gray-50 font-sans
+                "
+            >
                 <div className="px-6 text-center">
-                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-2xl font-semibold text-red-500">
+
+                    <div
+                        className="
+                            mx-auto mb-4 flex h-16 w-16
+                            items-center justify-center
+                            rounded-full bg-red-50
+                            text-2xl font-semibold text-red-500
+                        "
+                    >
                         !
                     </div>
-                    <h2 className="text-lg font-semibold text-gray-800">Access Denied</h2>
+
+                    <h2 className="text-lg font-semibold text-gray-800">
+                        Access Denied
+                    </h2>
+
                     <p className="mt-1 max-w-sm text-sm text-gray-500">
                         You do not have permission to view email signatures.
                     </p>
+
                 </div>
             </div>
         );
     }
 
-    if (loading) return <InvoiceSkeleton />;
+    /* =====================================================
+       PAGE
+    ===================================================== */
 
     return (
-        <div className="flex h-screen overflow-hidden bg-gray-50 font-sans text-[13px]">
-            <div className="min-h-0 flex-1 overflow-y-auto bg-white">
-                <div className="w-full px-2 py-5">
+
+        <div
+            className="
+                flex h-screen overflow-hidden
+                bg-gray-50 font-sans text-[13px]
+            "
+        >
+
+            <div
+                className="
+                    min-h-0 flex-1 overflow-y-auto bg-white
+                "
+            >
+
+                <div
+                    className="
+                        w-full max-w-30xl px-2 py-5
+                    "
+                >
+
+                    {/* EMAIL SIGNATURE NAVBAR */}
+
                     <NavbarEmailSignature />
 
+                    {/* EMAIL SIGNATURE OVERVIEW */}
+
+                    <EmailSignatureOverview
+                        canViewEmailSignature={canViewEmailSignature}
+                        isAuthenticated={isAuthenticated}
+                        authChecking={authChecking}
+                    />
+
+                    {/* ERROR */}
+
                     {error && (
-                        <div className="mx-2 mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                            <div className="flex items-center justify-between gap-3">
-                                <span>{typeof error === "string" ? error : error?.message || "Failed to load email signatures."}</span>
-                                <button
-                                    type="button"
-                                    onClick={() => dispatch(fetchAllEmailSignatures(user.id))}
-                                    className="shrink-0 font-medium underline"
-                                >
-                                    Retry
-                                </button>
-                            </div>
+
+                        <div
+                            className="
+                                mx-2 mt-4 rounded-md
+                                border border-red-200
+                                bg-red-50 px-4 py-3
+                                text-sm text-red-600
+                            "
+                        >
+                            {error}
                         </div>
+
                     )}
 
-                    {filteredEmailSignatures.length > 0 ? (
-                        <EmailSignatureTable emailSignatures={filteredEmailSignatures} />
+                    {/* EMAIL SIGNATURE TABLE / LOADING / EMPTY STATE */}
+
+                    {loading ? (
+
+                        <div
+                            className="
+                                flex min-h-[250px]
+                                items-center justify-center
+                            "
+                        >
+                            <p className="text-sm text-gray-500">
+                                Loading email signatures...
+                            </p>
+                        </div>
+
+                    ) : filteredEmailSignatures.length > 0 ? (
+
+                        <EmailSignatureTable
+                            emailSignatures={filteredEmailSignatures}
+                        />
+
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-16">
-                            <h2 className="text-lg font-semibold text-gray-800">
-                                No email signatures found
-                            </h2>
-                            <p className="mt-2 max-w-md text-center text-sm text-gray-500">
-                                {emailSignatureStatus === "ALL"
-                                    ? "There are no email signatures to display."
-                                    : `There are no ${String(emailSignatureStatus).toLowerCase()} email signatures.`}
+
+                        <div
+                            className="
+                                flex min-h-full flex-col
+                                items-center justify-center
+                                gap-3 px-4
+                            "
+                        >
+
+                            {/* EMPTY STATE ICON */}
+
+                            <div
+                                className="
+                                    relative mt-30 mb-1
+                                    flex h-24 w-24 shrink-0
+                                    items-center justify-center
+                                    rounded-full bg-gray-100
+                                "
+                            >
+
+                                <div
+                                    className="
+                                        flex items-center justify-center
+                                        text-gray-400
+                                    "
+                                >
+                                    <Mail
+                                        size={42}
+                                        strokeWidth={1.7}
+                                    />
+                                </div>
+
+                                <div
+                                    className="
+                                        absolute bottom-1 right-1
+                                        flex h-7 w-7 items-center
+                                        justify-center rounded-full
+                                        bg-blue-500 text-white
+                                    "
+                                >
+                                    <Plus className="h-4 w-4" />
+                                </div>
+
+                            </div>
+
+                            {/* EMPTY STATE TITLE */}
+
+                            <p
+                                className="
+                                    text-center text-base
+                                    font-medium text-gray-800
+                                "
+                            >
+                                Manage your email signatures
                             </p>
 
-                            <div className="mt-6 flex items-center gap-3">
+                            {/* EMPTY STATE DESCRIPTION */}
+
+                            <p
+                                className="
+                                    max-w-sm text-center
+                                    text-sm text-gray-500
+                                "
+                            >
+                                Create and manage your email signatures,
+                                customize signature content, configure
+                                defaults for new messages and replies,
+                                and maintain your professional email identity.
+                            </p>
+
+                            {/* ACTION BUTTONS */}
+
+                            <div
+                                className="
+                                    mt-1 flex flex-wrap
+                                    items-center justify-center gap-2.5
+                                "
+                            >
+
+                                {/* CREATE EMAIL SIGNATURE */}
+
                                 {canCreateEmailSignature && (
+
                                     <button
                                         type="button"
                                         onClick={handleCreateEmailSignature}
-                                        className="flex items-center gap-2 rounded-md bg-[#0F4659] px-4 py-2 text-white transition hover:bg-[#0F4659]/90"
+                                        className="
+                                            flex items-center gap-2
+                                            whitespace-nowrap rounded-md
+                                            bg-blue-500 px-4 py-2
+                                            text-sm font-medium text-white
+                                            transition-colors hover:bg-blue-600
+                                        "
                                     >
-                                        <Plus size={16} />
-                                        Create New Email Signature
+                                        <Plus className="h-4 w-4" />
+                                        Create Email Signature
                                     </button>
+
                                 )}
+
+                                {/* IMPORT */}
 
                                 <button
                                     type="button"
-                                    onClick={() => toast("Import is not implemented yet.")}
-                                    className="flex items-center gap-2 rounded-md border border-gray-300 px-4 py-2 transition hover:bg-gray-50"
+                                    onClick={() => {
+                                        toast(
+                                            "Email signature import is not configured yet."
+                                        );
+                                    }}
+                                    className="
+                                        flex items-center gap-2
+                                        whitespace-nowrap rounded-md
+                                        border border-gray-300 bg-white
+                                        px-4 py-2 text-sm text-gray-700
+                                        transition-colors hover:bg-gray-50
+                                    "
                                 >
-                                    <Download size={16} />
+                                    <Download className="h-4 w-4" />
                                     Import File
                                 </button>
+
                             </div>
+
                         </div>
+
                     )}
+
                 </div>
+
             </div>
+
         </div>
     );
 }

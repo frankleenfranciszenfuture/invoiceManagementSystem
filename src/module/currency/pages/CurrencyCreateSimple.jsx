@@ -5,37 +5,31 @@ import React, {
     useState,
 } from "react";
 
-import {
-    useDispatch,
-    useSelector,
-} from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
-    useNavigate,
-    useParams,
-} from "react-router-dom";
-
-import {
-    Building2,
-    UserRoundArrowLeft,
-    X,
-    Upload,
-    Landmark,
+    ArrowLeft,
+    Coins,
+    Save,
     ChevronDown,
+    Loader2,
+    RotateCcw,
+    FileText,
+    CheckCircle,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
 import {
-    resetCurrencyForm,
-    setCurrencyField,
-} from "../slices/currencySlice";
+    createCurrency,
+    fetchCurrencyById,
+    updateCurrency,
+} from "../thunks/currencyThunks";
 
 import {
-    createCurrency,
-    updateCurrency,
-    fetchCurrencyById,
-} from "../thunks/currencyThunks";
+    resetCurrencyForm,
+} from "../slices/currencySlice";
 
 import {
     getUserPermission,
@@ -44,210 +38,205 @@ import {
 import CustomSelect from "../../../common/custom/CustomSelect";
 
 /* =========================================================
-   CONSTANTS
+   INITIAL FORM DATA
 ========================================================= */
 
-const INITIAL_FORM = {
-    id: null,
+const initialFormData = {
     currencyCode: "",
     currencyName: "",
     symbol: "",
-    decimalPlaces: "",
+    decimalPlaces: 2,
     status: "ACTIVE",
-};
-
-const TABS = [
-    { id: "currency", label: "Currency Information" },
-
-];
-
-const STATUS_OPTIONS = [
-    { value: "ACTIVE", label: "Active" },
-    { value: "INACTIVE", label: "Inactive" },
-    { value: "DRAFT", label: "Draft" },
-];
-
-
-/* =========================================================
-   STYLES
-========================================================= */
-
-const labelClass =
-    "mb-1.5 block text-xs font-medium text-[#0F4659]";
-
-
-
-const getLabelClass = (required = false) => `
-        block
-        text-xs
-        font-medium
-        ${required ? "text-red-500" : "text-[#0F4659]"}
-        mb-1.5
-    `;
-
-const errorClass =
-    "mt-1 text-xs text-red-500";
-
-const inputBaseClass =
-    "h-10 w-full rounded-md border bg-white px-3 text-sm " +
-    "text-[#0F4659] transition focus:outline-none focus:ring-2";
-
-const textareaBaseClass =
-    "w-full rounded-md border bg-white px-3 py-2 text-sm " +
-    "text-[#0F4659] resize-none focus:outline-none focus:ring-2";
-
-const inputClass = (hasError = false) =>
-    `${inputBaseClass} ${hasError
-        ? "border-red-400 focus:border-red-400 focus:ring-red-100"
-        : "border-gray-300 focus:border-[#0F4659] focus:ring-[#0F4659]/20"
-    }`;
-
-const textareaClass = (hasError = false) =>
-    `${textareaBaseClass} ${hasError
-        ? "border-red-400 focus:border-red-400 focus:ring-red-100"
-        : "border-gray-300 focus:border-[#0F4659] focus:ring-[#0F4659]/20"
-    }`;
-
-const normalizeModule = (value) =>
-    String(value ?? "")
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, " ");
-
-const normalizeAction = (value) =>
-    String(value ?? "")
-        .trim()
-        .toUpperCase()
-        .replace(/[\s-]+/g, "_");
-
-const isTrue = (value) =>
-    value === true || value === "true";
-
-const getFileUrl = (value) => {
-    if (typeof value === "string") {
-        return value;
-    }
-
-    if (value && typeof value === "object") {
-        return (
-            value.url ||
-            value.fileUrl ||
-            value.path ||
-            ""
-        );
-    }
-
-    return "";
+    active: true,
 };
 
 /* =========================================================
-   COMPONENT
+   REUSABLE FORM COMPONENTS
 ========================================================= */
 
-export default function CurrencyCreateSimple() {
+const FormField = ({
+    label,
+    required = false,
+    children,
+    className = "",
+}) => (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+        <label className="text-sm font-medium text-gray-700">
+            {label}
+
+            {required && (
+                <span className="ml-1 text-red-500">*</span>
+            )}
+        </label>
+
+        {children}
+    </div>
+);
+
+const TextInput = ({
+    value,
+    onChange,
+    placeholder,
+    type = "text",
+    disabled = false,
+    maxLength,
+    min,
+    max,
+}) => (
+    <input
+        type={type}
+        value={value ?? ""}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        maxLength={maxLength}
+        min={min}
+        max={max}
+        className="
+            h-10 w-full rounded-lg border border-gray-200
+            bg-white px-3 text-sm text-gray-700
+            outline-none transition
+            placeholder:text-gray-400
+            focus:border-[#408DFB] focus:ring-2
+            focus:ring-[#408DFB]/10
+            disabled:cursor-not-allowed disabled:bg-gray-100
+        "
+    />
+);
+
+const SectionHeading = ({
+    icon: Icon,
+    title,
+    description,
+}) => (
+    <div className="mb-5 flex items-center gap-3">
+        <div className="
+            flex h-10 w-10 items-center justify-center
+            rounded-xl bg-blue-50 text-[#408DFB]
+        ">
+            <Icon size={19} />
+        </div>
+
+        <div>
+            <h3 className="text-sm font-semibold text-gray-800">
+                {title}
+            </h3>
+
+            {description && (
+                <p className="mt-0.5 text-xs text-gray-400">
+                    {description}
+                </p>
+            )}
+        </div>
+    </div>
+);
+
+/* =========================================================
+   MAIN COMPONENT
+========================================================= */
+
+const CurrencyCreateSimple = () => {
+
     const dispatch = useDispatch();
     const navigate = useNavigate();
+
     const { id } = useParams();
 
-    const isEdit = Boolean(id);
+    const isEditMode = Boolean(id);
 
     /* =====================================================
-       REDUX
+       REDUX STATE
     ===================================================== */
 
     const currencyState = useSelector(
-        (state) => state.currency || {}
+        (state) => state.currency ?? {}
     );
 
     const {
         currency,
-        loading,
+        loading = false,
     } = currencyState;
 
-    const authState = useSelector(
-        (state) => state.auth || {}
-    );
-
-    const { user } = authState;
-
-    const permissionState = useSelector(
-        (state) => state.menuPermission || {}
-    );
-
-    const form = currency || INITIAL_FORM;
-
     /* =====================================================
-       AUTH
+       AUTH STATE
     ===================================================== */
 
-    const isAuthenticated =
-        authState.isAuthenticated !== false;
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
 
-    const authChecking = Boolean(
-        authState.authChecking ?? authState.loading
+    const isAuthenticated = useSelector(
+        (state) => state.auth?.isAuthenticated === true
+    );
+
+    const authChecking = useSelector(
+        (state) => state.auth?.authChecking === true
+    );
+
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
+
+    const permissions = useSelector(
+        (state) => state.menuPermission?.userPermissions ?? []
+    );
+
+    const permissionLoading = useSelector(
+        (state) => state.menuPermission?.loading === true
+    );
+
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissionsLoaded === true
     );
 
     /* =====================================================
        LOCAL STATE
     ===================================================== */
 
-    const [activeTab, setActiveTab] = useState("currency");
+    const [formData, setFormData] = useState({
+        ...initialFormData,
+    });
 
-    const [showSaveMenu, setShowSaveMenu] = useState(false);
+    const [saveMode, setSaveMode] = useState("close");
 
-    const [editLoading, setEditLoading] = useState(isEdit);
-
-    const [editLoadError, setEditLoadError] = useState(false);
-
-    const [errors, setErrors] = useState({});
+    const [showSaveOptions, setShowSaveOptions] = useState(false);
 
     /* =====================================================
-       PERMISSIONS
+       NORMALIZATION
     ===================================================== */
 
-    const userPermissions = Array.isArray(
-        permissionState.userPermissions
-    )
-        ? permissionState.userPermissions
-        : [];
+    const normalizeModule = (value) =>
+        String(value ?? "").trim().toLowerCase();
 
-    const permissionLoading = Boolean(
-        permissionState.userPermissionsLoading ??
-        permissionState.loading
-    );
+    const normalizeAction = (value) =>
+        String(value ?? "").trim().toUpperCase();
 
-    const permissionsLoaded =
-        permissionState.userPermissionsLoaded === true ||
-        permissionState.permissionsLoaded === true ||
-        permissionState.loaded === true ||
-        (
-            permissionState.userPermissions !== undefined &&
-            permissionState.userPermissions !== null
-        );
+    /* =====================================================
+       ROLE
+    ===================================================== */
 
-    const role = useMemo(() => {
-        return (
-            user?.roleName ||
-            user?.role?.roleName ||
-            user?.role?.name ||
-            user?.role ||
-            user?.authority ||
-            ""
-        );
-    }, [user]);
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
 
-    const normalizedRole = normalizeAction(
-        typeof role === "object"
-            ? role?.name || role?.roleName
-            : role
-    );
+    const normalizedRole = normalizeAction(roleName);
 
-    const hasFullAccess = [
-        "ADMIN",
-        "SUPER_ADMIN",
-    ].includes(normalizedRole);
+    const isSuperAdmin = normalizedRole === "SUPER_ADMIN";
+    const isAdmin = normalizedRole === "ADMIN";
+
+    const hasFullAccess = isSuperAdmin || isAdmin;
+
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
     const hasPermission = (moduleName, actionName) => {
+
         if (hasFullAccess) {
             return true;
         }
@@ -255,12 +244,16 @@ export default function CurrencyCreateSimple() {
         const requestedModule = normalizeModule(moduleName);
         const requestedAction = normalizeAction(actionName);
 
-        return userPermissions.some((permission) => {
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+        return permissions.some((permission) => {
+
             const permissionModule = normalizeModule(
                 permission?.moduleName ||
                 permission?.module?.moduleName ||
-                permission?.module?.name ||
-                ""
+                permission?.module?.name
             );
 
             if (permissionModule !== requestedModule) {
@@ -274,96 +267,79 @@ export default function CurrencyCreateSimple() {
                 return false;
             }
 
-            const nestedActions = Array.isArray(
-                permission?.actions
-            )
-                ? permission.actions
-                : [];
+            if (Array.isArray(permission?.actions)) {
 
-            const matchingNestedAction = nestedActions.find(
-                (action) => {
-                    const actionNameValue =
-                        typeof action === "string"
-                            ? action
-                            : (
-                                action?.actionName ||
-                                action?.action?.actionName ||
-                                action?.action?.name ||
-                                action?.name ||
-                                ""
+                const groupedPermission = permission.actions.some(
+                    (action) => {
+
+                        if (typeof action === "string") {
+                            return (
+                                normalizeAction(action) === requestedAction
                             );
+                        }
 
-                    return (
-                        normalizeAction(actionNameValue) ===
-                        requestedAction
-                    );
-                }
-            );
+                        const actionName = normalizeAction(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.name
+                        );
 
-            if (matchingNestedAction !== undefined) {
-                if (typeof matchingNestedAction === "string") {
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        return (
+                            actionName === requestedAction &&
+                            allowed &&
+                            action?.active !== false &&
+                            normalizeAction(action?.status) !== "INACTIVE"
+                        );
+                    }
+                );
+
+                if (groupedPermission) {
                     return true;
                 }
-
-                return (
-                    matchingNestedAction?.active !== false &&
-                    normalizeAction(
-                        matchingNestedAction?.status
-                    ) !== "INACTIVE" &&
-                    (
-                        isTrue(matchingNestedAction?.allowed) ||
-                        isTrue(matchingNestedAction?.isAllowed)
-                    )
-                );
             }
 
-            const directAction = normalizeAction(
+            const permissionAction = normalizeAction(
                 permission?.actionName ||
                 permission?.action?.actionName ||
-                permission?.action?.name ||
-                ""
+                permission?.action?.name
             );
 
+            const allowed =
+                permission?.allowed === true ||
+                permission?.allowed === "true";
+
             return (
-                directAction === requestedAction &&
-                (
-                    isTrue(permission?.allowed) ||
-                    isTrue(permission?.isAllowed)
-                )
+                permissionAction === requestedAction &&
+                allowed
             );
         });
     };
 
-    const hasCreatePermission = hasPermission(
-        "Currencies",
-        "CREATE"
-    );
+    const requiredAction = isEditMode ? "EDIT" : "CREATE";
 
-    const hasEditPermission = hasPermission(
+    const hasRequiredPermission = hasPermission(
         "Currencies",
-        "EDIT"
+        requiredAction
     );
-
-    const hasSavePermission = isEdit
-        ? hasEditPermission
-        : hasCreatePermission;
 
     /* =====================================================
        LOAD PERMISSIONS
     ===================================================== */
 
     useEffect(() => {
-        if (
-            authChecking ||
-            !isAuthenticated ||
-            hasFullAccess
-        ) {
+
+        if (authChecking || !isAuthenticated || hasFullAccess) {
             return;
         }
 
         if (!permissionsLoaded && !permissionLoading) {
             dispatch(getUserPermission());
         }
+
     }, [
         authChecking,
         isAuthenticated,
@@ -374,233 +350,172 @@ export default function CurrencyCreateSimple() {
     ]);
 
     /* =====================================================
-       LOAD SALES PERSON FOR EDIT
+       FETCH CURRENCY FOR EDIT
     ===================================================== */
 
     useEffect(() => {
-        let cancelled = false;
 
-        const loadCurrency = async () => {
-            if (!isEdit) {
-                dispatch(resetCurrencyForm());
+        if (!id || !isAuthenticated) {
+            return;
+        }
 
-                setEditLoading(false);
-                setEditLoadError(false);
+        dispatch(fetchCurrencyById(id));
 
-                return;
-            }
-
-            setEditLoading(true);
-            setEditLoadError(false);
-
-            dispatch(resetCurrencyForm());
-
-            try {
-                const response = await dispatch(
-                    fetchCurrencyById(id)
-                ).unwrap();
-
-                if (cancelled) {
-                    return;
-                }
-
-                const result =
-                    response?.data?.data ??
-                    response?.data ??
-                    response?.company ??
-                    response;
-
-                if (
-                    !result ||
-                    typeof result !== "object" ||
-                    Array.isArray(result) ||
-                    result.id == null
-                ) {
-                    throw new Error(
-                        "Currency details were not found."
-                    );
-                }
-
-                const populatedForm = {
-                    ...INITIAL_FORM,
-                    ...result,
-
-                    id: result.id,
-
-                    currencyCode: result.currencyCode || "",
-
-                    currencyName: result.currencyName || "",
-
-                    symbol: result.symbol || "",
-
-                    decimalPlaces: result.decimalPlaces || "",
-
-                    status: result.status || "ACTIVE",
-                };
-
-                Object.entries(populatedForm).forEach(
-                    ([field, value]) => {
-                        dispatch(
-                            setCurrencyField({
-                                field,
-                                value,
-                            })
-                        );
-                    }
-                );
-            } catch (error) {
-                if (cancelled) {
-                    return;
-                }
-
-                console.error(
-                    "Failed to load currency:",
-                    error
-                );
-
-                setEditLoadError(true);
-
-                toast.error(
-                    typeof error === "string"
-                        ? error
-                        : error?.message ||
-                        "Failed to load currency details."
-                );
-            } finally {
-                if (!cancelled) {
-                    setEditLoading(false);
-                }
-            }
-        };
-
-        loadCurrency();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [dispatch, id, isEdit]);
+    }, [dispatch, id, isAuthenticated]);
 
     /* =====================================================
-       FIELD HANDLERS
+       CHECK CURRENT CURRENCY
+    ===================================================== */
+
+    const isCurrentCurrencyLoaded =
+        isEditMode &&
+        currency?.id != null &&
+        String(currency.id) === String(id);
+
+    /* =====================================================
+       POPULATE EDIT FORM
+    ===================================================== */
+
+    useEffect(() => {
+
+        if (!isCurrentCurrencyLoaded) {
+            return;
+        }
+
+        setFormData({
+            currencyCode: currency.currencyCode ?? "",
+            currencyName: currency.currencyName ?? "",
+            symbol: currency.symbol ?? "",
+            decimalPlaces: currency.decimalPlaces ?? 2,
+            status: currency.status ?? "ACTIVE",
+            active: currency.active ?? currency.status === "ACTIVE",
+        });
+
+    }, [
+        isCurrentCurrencyLoaded,
+        currency,
+    ]);
+
+    /* =====================================================
+       STATUS OPTIONS
+    ===================================================== */
+
+    const statusOptions = useMemo(() => [
+        { label: "Active", value: "ACTIVE" },
+        { label: "Inactive", value: "INACTIVE" },
+    ], []);
+
+    /* =====================================================
+       DECIMAL PLACE OPTIONS
+    ===================================================== */
+
+    const decimalPlaceOptions = useMemo(() => [
+        { label: "0 - No decimal places", value: 0 },
+        { label: "1 - One decimal place", value: 1 },
+        { label: "2 - Two decimal places", value: 2 },
+        { label: "3 - Three decimal places", value: 3 },
+        { label: "4 - Four decimal places", value: 4 },
+    ], []);
+
+    /* =====================================================
+       HANDLE FIELD CHANGE
     ===================================================== */
 
     const handleChange = (field, value) => {
-        dispatch(
-            setCurrencyField({
-                field,
-                value,
-            })
-        );
 
-        setErrors((previous) => {
-            if (!previous[field]) {
-                return previous;
+        setFormData((previous) => {
+
+            const updated = {
+                ...previous,
+                [field]: value,
+            };
+
+            if (field === "status") {
+                updated.active = value === "ACTIVE";
             }
 
-            const updated = { ...previous };
-            delete updated[field];
+            if (field === "active") {
+                updated.status = value ? "ACTIVE" : "INACTIVE";
+            }
 
             return updated;
         });
     };
 
-    const handleFileChange = (field, file) => {
-        if (!file) {
-            return;
-        }
-
-        if (!file.type.startsWith("image/")) {
-            toast.error("Please select a valid image file.");
-            return;
-        }
-
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error("Image size must not exceed 5 MB.");
-            return;
-        }
-
-        handleChange(field, file);
-    };
-
     /* =====================================================
-       CLOSE
+       RESET FORM
     ===================================================== */
 
-    const handleClose = () => {
-        if (loading || editLoading) {
-            return;
+    const getCurrencyFormData = () => ({
+        currencyCode: currency.currencyCode ?? "",
+        currencyName: currency.currencyName ?? "",
+        symbol: currency.symbol ?? "",
+        decimalPlaces: currency.decimalPlaces ?? 2,
+        status: currency.status ?? "ACTIVE",
+        active: currency.active ?? currency.status === "ACTIVE",
+    });
+
+    const handleReset = () => {
+
+        if (isEditMode) {
+
+            if (!isCurrentCurrencyLoaded) {
+                return;
+            }
+
+            setFormData(getCurrencyFormData());
+
+        } else {
+
+            setFormData({
+                ...initialFormData,
+            });
         }
 
-        setShowSaveMenu(false);
-        setErrors({});
+        setSaveMode("close");
+        setShowSaveOptions(false);
 
         dispatch(resetCurrencyForm());
-
-        setActiveTab("currency");
-
-        navigate("/settings/currencies");
     };
-
-    useEffect(() => {
-        const handleEscape = (event) => {
-            if (event.key === "Escape") {
-                handleClose();
-            }
-        };
-
-        document.addEventListener(
-            "keydown",
-            handleEscape
-        );
-
-        return () => {
-            document.removeEventListener(
-                "keydown",
-                handleEscape
-            );
-        };
-    }, [loading, editLoading]);
 
     /* =====================================================
        VALIDATION
     ===================================================== */
 
     const validateForm = () => {
-        const nextErrors = {};
 
-        if (!form.currencyName?.trim()) {
-            nextErrors.currencyName =
-                "Currency currencyName is required.";
+        if (!formData.currencyCode.trim()) {
+            toast.error("Currency code is required");
+            return false;
         }
 
-        if (!form.symbol?.trim()) {
-            nextErrors.symbol =
-                "Currency symbol is required.";
+        if (!/^[A-Za-z]{3}$/.test(formData.currencyCode.trim())) {
+            toast.error("Currency code must contain exactly 3 letters");
+            return false;
         }
 
-        setErrors(nextErrors);
+        if (!formData.currencyName.trim()) {
+            toast.error("Currency name is required");
+            return false;
+        }
 
-        if (Object.keys(nextErrors).length > 0) {
-            const tabFields = {
-                currency: [
-                    "currencyName",
-                    "symbol",
-                    "decimalPlaces",
-                ],
+        if (!formData.symbol.trim()) {
+            toast.error("Currency symbol is required");
+            return false;
+        }
 
-            };
+        if (
+            formData.decimalPlaces === "" ||
+            !Number.isInteger(Number(formData.decimalPlaces)) ||
+            Number(formData.decimalPlaces) < 0 ||
+            Number(formData.decimalPlaces) > 4
+        ) {
+            toast.error("Select valid decimal places");
+            return false;
+        }
 
-            const firstTab = Object.entries(tabFields).find(
-                ([, fields]) =>
-                    fields.some((field) => nextErrors[field])
-            );
-
-            setActiveTab(firstTab?.[0] || "salesPerson");
-
-            toast.error(
-                Object.values(nextErrors)[0]
-            );
-
+        if (!formData.status) {
+            toast.error("Currency status is required");
             return false;
         }
 
@@ -608,47 +523,35 @@ export default function CurrencyCreateSimple() {
     };
 
     /* =====================================================
-       SAVE
+       SAVE CURRENCY
     ===================================================== */
 
-    const handleSave = async ({
-        saveAndNew = false,
-        saveAndClose = true,
-    } = {}) => {
+    const handleSubmit = async (e) => {
+
+        e.preventDefault();
+
+        if (loading) {
+            return;
+        }
+
+        if (isEditMode && !isCurrentCurrencyLoaded) {
+            toast.error("Currency details are still loading");
+            return;
+        }
+
         if (!isAuthenticated) {
-            toast.error("You are not authenticated.");
+            toast.error("You are not authenticated");
             return;
         }
 
-        if (loading || editLoading) {
+        if (!hasFullAccess && !permissionsLoaded) {
+            toast.error("Permissions are still loading");
             return;
         }
 
-        if (isEdit && editLoadError) {
+        if (!hasRequiredPermission) {
             toast.error(
-                "Cannot update because company details failed to load."
-            );
-            return;
-        }
-
-        if (
-            !hasFullAccess &&
-            (
-                permissionLoading ||
-                !permissionsLoaded
-            )
-        ) {
-            toast.error(
-                "Permissions are still loading. Please try again."
-            );
-            return;
-        }
-
-        if (!hasSavePermission) {
-            toast.error(
-                isEdit
-                    ? "You do not have permission to edit companies."
-                    : "You do not have permission to create companies."
+                `You do not have permission to ${isEditMode ? "edit" : "create"} currencies`
             );
             return;
         }
@@ -658,61 +561,53 @@ export default function CurrencyCreateSimple() {
         }
 
         const payload = {
-            ...form,
-
-            currencyCode: form.currencyCode.trim().toUpperCase(),
-            currencyName: form.currencyName.trim(),
-            symbol: form.symbol?.trim() || "",
-            decimalPlaces: Number(form.decimalPlaces ?? 2),
-            status: form.status ?? "ACTIVE",
-            active: form.active ?? true,
+            currencyCode: formData.currencyCode.trim().toUpperCase(),
+            currencyName: formData.currencyName.trim(),
+            symbol: formData.symbol.trim(),
+            decimalPlaces: Number(formData.decimalPlaces),
+            status: formData.status,
+            active: formData.status === "ACTIVE",
         };
 
         try {
-            if (isEdit) {
-                await dispatch(
+
+            const response = isEditMode
+                ? await dispatch(
                     updateCurrency({
-                        id: Number(id),
+                        id,
                         data: payload,
                     })
-                ).unwrap();
-
-                toast.success(
-                    "Currency updated successfully."
-                );
-            } else {
-                await dispatch(
+                ).unwrap()
+                : await dispatch(
                     createCurrency(payload)
                 ).unwrap();
 
-                toast.success(
-                    "Currency created successfully."
-                );
-            }
+            toast.success(
+                response?.message ||
+                `Currency ${isEditMode ? "updated" : "created"} successfully`
+            );
 
-            setShowSaveMenu(false);
-            setErrors({});
+            if (!isEditMode && saveMode === "new") {
 
-            if (saveAndNew && !isEdit) {
+                setFormData({
+                    ...initialFormData,
+                });
+
                 dispatch(resetCurrencyForm());
 
-                setActiveTab("currency");
+                setSaveMode("close");
 
                 return;
             }
 
             dispatch(resetCurrencyForm());
 
-            setActiveTab("currency");
+            navigate("/settings/currencies");
 
-            if (saveAndClose) {
-                navigate("/currencies");
-            }
         } catch (error) {
+
             console.error(
-                isEdit
-                    ? "Currency update error:"
-                    : "Currency create error:",
+                `Currency ${isEditMode ? "update" : "creation"} error:`,
                 error
             );
 
@@ -720,216 +615,62 @@ export default function CurrencyCreateSimple() {
                 typeof error === "string"
                     ? error
                     : error?.message ||
-                    error?.response?.data?.message ||
-                    (
-                        isEdit
-                            ? "Failed to update currency."
-                            : "Failed to create currency."
-                    )
+                    `Failed to ${isEditMode ? "update" : "create"} currency`
             );
         }
     };
 
     /* =====================================================
-       REUSABLE FIELD
+       ESCAPE KEY
     ===================================================== */
 
-    const renderInput = ({
-        field,
-        label,
-        placeholder = "",
-        type = "text",
-        required = false,
-        maxLength,
-        onValueChange,
-    }) => (
-        <div>
-            <label className={required ? getLabelClass(true) : labelClass}>
-                {label}
-                {required && (
-                    <span className="ml-1 text-red-500">*</span>
-                )}
-            </label>
+    useEffect(() => {
 
-            <input
-                type={type}
-                value={form[field] ?? ""}
-                maxLength={maxLength}
-                placeholder={placeholder}
-                onChange={(event) => {
-                    const rawValue = event.target.value;
+        const handleEscape = (event) => {
 
-                    const value = onValueChange
-                        ? onValueChange(rawValue)
-                        : rawValue;
+            if (event.key === "Escape") {
+                setShowSaveOptions(false);
+            }
+        };
 
-                    handleChange(field, value);
-                }}
-                className={inputClass(Boolean(errors[field]))}
-            />
+        window.addEventListener("keydown", handleEscape);
 
-            {errors[field] && (
-                <p className={errorClass}>
-                    {errors[field]}
-                </p>
-            )}
-        </div>
-    );
+        return () => {
+            window.removeEventListener("keydown", handleEscape);
+        };
 
-    const renderSelect = ({
-        field,
-        label,
-        options,
-        required = false,
-    }) => (
-        <div>
-            <label className={required ? getLabelClass(true) : labelClass}>
-                {label}
-                {required && (
-                    <span className="ml-1 text-red-500">*</span>
-                )}
-            </label>
-
-            <CustomSelect
-                value={form[field] || ""}
-                onChange={(value) => handleChange(field, value)}
-                options={options}
-            />
-
-            {errors[field] && (
-                <p className={errorClass}>
-                    {errors[field]}
-                </p>
-            )}
-        </div>
-    );
+    }, []);
 
     /* =====================================================
-       COMPANY TAB
-    ===================================================== */
-
-    const renderCurrencyTab = () => (
-        <div className="w-full max-w-7xl">
-            <div className="rounded-lg border border-gray-200 bg-white p-6">
-                <div className="mb-6">
-                    <h2 className="text-base font-semibold text-gray-500">
-                        Currency Information
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-400">
-                        Enter the basic information of the currency.
-                    </p>
-                </div>
-
-                <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
-                    <div className="space-y-5">
-
-                        {renderInput({
-                            field: "currencyName",
-                            label: "Currency Name",
-                            placeholder: "Enter currency name (e.g., US Dollar, Euro, Indian Rupee)",
-                            required: true,
-                        })}
-                        {renderInput({
-                            field: "currencyCode",
-                            label: "Currency Code",
-                            placeholder: "Enter currency code (e.g., USD, EUR, INR)",
-                            required: true,
-                        })}
-
-
-                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-
-
-                            {renderInput({
-                                field: "symbol",
-                                label: "Currency Symbol",
-                                placeholder: "Enter currency symbol (e.g., ₹, $, €, £)",
-                                required: true,
-                            })}
-                            {renderInput({
-                                field: "decimalPlaces",
-                                label: "Decimal Places",
-                                placeholder: "Enter decimal places (e.g., 2 for USD, 3 for JPY)",
-                                required: true,
-                                type: "number",
-                                min: 0,
-                            })}
-                        </div>
-
-
-                    </div>
-
-                    <div className="rounded-lg border border-gray-200 p-4">
-                        <div className="mb-4 flex items-center gap-2">
-                            <Building2
-                                size={18}
-                                className="text-gray-500"
-                            />
-
-                            <h3 className="text-sm font-semibold text-gray-500">
-                                Currency Status
-                            </h3>
-                        </div>
-
-                        {renderSelect({
-                            field: "status",
-                            label: "Status",
-                            options: STATUS_OPTIONS,
-                            required: true,
-                        })}
-
-                        <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-3">
-                            <p className="text-xs text-gray-500">
-                                Currency status controls whether this
-                                currency is available for normal transactions.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-
-
-    /* =====================================================
-       AUTH CHECK
+       LOADING
     ===================================================== */
 
     if (authChecking) {
+
         return (
-            <div className="flex min-h-40 items-center justify-center">
-                <p className="text-sm text-gray-500">
+            <div className="flex h-full items-center justify-center bg-gray-50">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 size={20} className="animate-spin" />
                     Checking authentication...
-                </p>
+                </div>
             </div>
         );
     }
 
     if (!isAuthenticated) {
+        return null;
+    }
+
+    if (
+        isEditMode &&
+        (loading || !isCurrentCurrencyLoaded)
+    ) {
+
         return (
-            <div className="flex min-h-64 items-center justify-center px-6">
-                <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-                    <UserRoundArrowLeft
-                        className="mx-auto mb-4 text-red-500"
-                        size={42}
-                    />
-
-                    <h2 className="text-lg font-semibold text-gray-800">
-                        Authentication Required
-                    </h2>
-
-                    <p className="mt-2 text-sm text-gray-500">
-                        Please sign in to manage companies.
-                    </p>
-
-                    <button
-                        type="button"
-                        onClick={() => navigate("/salesPersons")}
-                        className="mt-6 rounded-md bg-[#0F4659] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#0F4659]/90"
-                    >
-                        Back to Sales Persons
-                    </button>
+            <div className="flex h-full items-center justify-center bg-gray-50">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 size={20} className="animate-spin" />
+                    Loading currency...
                 </div>
             </div>
         );
@@ -937,290 +678,424 @@ export default function CurrencyCreateSimple() {
 
     if (
         !hasFullAccess &&
-        (
-            permissionLoading ||
-            !permissionsLoaded
-        )
+        (permissionLoading || !permissionsLoaded)
     ) {
+
         return (
-            <div className="flex min-h-40 items-center justify-center">
-                <div className="text-center">
-                    <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-[#0F4659]/20 border-t-[#0F4659]" />
-
-                    <p className="text-sm font-medium text-gray-600">
-                        Loading permissions...
-                    </p>
-                </div>
-            </div>
-        );
-    }
-
-    if (!hasSavePermission) {
-        return (
-            <div className="flex items-center justify-center py-8">
-                <div className="w-full max-w-md text-center">
-                    <UserRoundArrowLeft
-                        size={28}
-                        className="mx-auto mb-3 text-red-500"
-                    />
-
-                    <h2 className="text-lg font-semibold text-gray-800">
-                        Access Denied
-                    </h2>
-
-                    <p className="mt-2 text-sm text-gray-500">
-                        {isEdit
-                            ? "You do not have permission to edit currencies."
-                            : "You do not have permission to create currencies."}
-                    </p>
-
-                    <button
-                        type="button"
-                        onClick={() => navigate("/currencies")}
-                        className="mt-4 rounded-md border border-gray-300 px-4 py-2 text-sm text-[#0F4659] hover:bg-gray-50"
-                    >
-                        Back to Currencies
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    if (editLoading) {
-        return (
-            <div className="flex min-h-64 flex-col items-center justify-center bg-gray-50">
-                <div className="mb-3 h-10 w-10 animate-spin rounded-full border-2 border-[#0F4659]/20 border-t-[#0F4659]" />
-
-                <p className="text-sm font-medium text-[#0F4659]">
-                    Loading currency details...
-                </p>
-            </div>
-        );
-    }
-
-    if (isEdit && editLoadError) {
-        return (
-            <div className="flex min-h-64 items-center justify-center px-4">
-                <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 text-center">
-                    <Building2
-                        size={32}
-                        className="mx-auto mb-3 text-red-500"
-                    />
-
-                    <h2 className="text-lg font-semibold text-[#0F4659]">
-                        Unable to Load Currency Details
-                    </h2>
-
-                    <p className="mt-2 text-sm text-gray-500">
-                        Currency details could not be loaded.
-                        Return to the currency list and try again.
-                    </p>
-
-                    <button
-                        type="button"
-                        onClick={() => navigate("/currencies")}
-                        className="mt-5 h-10 rounded-md bg-[#0F4659] px-5 text-sm font-medium text-white hover:bg-[#0F4659]/90"
-                    >
-                        Back to Currencies
-                    </button>
+            <div className="flex h-full items-center justify-center bg-gray-50">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 size={20} className="animate-spin" />
+                    Loading permissions...
                 </div>
             </div>
         );
     }
 
     /* =====================================================
-       MAIN UI
+       ACCESS DENIED
+    ===================================================== */
+
+    if (!hasRequiredPermission) {
+
+        return (
+            <div className="
+                flex h-full items-center justify-center
+                rounded-xl bg-white p-8
+            ">
+                <div className="text-center">
+
+                    <div className="
+                        mx-auto mb-3 flex h-12 w-12
+                        items-center justify-center rounded-full
+                        bg-red-50 text-lg font-semibold text-red-500
+                    ">
+                        !
+                    </div>
+
+                    <h2 className="text-lg font-semibold text-gray-800">
+                        Access Denied
+                    </h2>
+
+                    <p className="mt-1 text-sm text-gray-500">
+                        You do not have permission to{" "}
+                        {isEditMode ? "edit" : "create"} currencies.
+                    </p>
+
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="
+                            mt-5 rounded-lg bg-blue-600
+                            px-5 py-2 text-sm font-medium
+                            text-white hover:bg-blue-700
+                        "
+                    >
+                        Go Back
+                    </button>
+
+                </div>
+            </div>
+        );
+    }
+
+    /* =====================================================
+       RENDER
     ===================================================== */
 
     return (
-        <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-5">
+        <div className="
+            flex h-full min-h-0 flex-col
+            bg-gray-50 px-3.5 py-3
+        ">
+
             {/* HEADER */}
 
-            <div className="shrink-0 px-6 py-4 bg-white border border-lime-400 rounded flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div
-                        className="w-10 h-10 rounded-lg bg-[#408DFB] border border-blue-100 flex items-center justify-center cursor-pointer"
-                        onClick={() => navigate("/currencies")}
-                    >
-                        <Landmark
-                            size={20}
-                            className="text-gray-100"
-                        />
-                    </div>
+            <div className="
+                mb-3 flex shrink-0 items-center
+                justify-between rounded-xl
+                border-b-[3px] border-[#B7E34A]
+                bg-white px-5 py-4 shadow-sm
+            ">
 
+                <div className="flex items-center gap-3">
+
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="
+                            flex h-9 w-9 items-center justify-center
+                            rounded-lg border border-gray-200
+                            text-gray-500 transition hover:bg-gray-100
+                        "
+                        title="Go Back"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
 
                     <div>
-                        <h1 className="text-lg font-semibold text-gray-500">
-                            {isEdit ? "Edit Currency" : "New Currency"}
-                        </h1>
+                        <h2 className="text-base font-semibold text-gray-800">
+                            {isEditMode
+                                ? "Edit Currency"
+                                : "Create Currency"
+                            }
+                        </h2>
 
                         <p className="mt-0.5 text-xs text-gray-400">
-                            {isEdit
-                                ? `Update currency details${form.name ? ` — ${form.name}` : ""}`
-                                : "Create new currency details"}
+                            {isEditMode
+                                ? "Update the existing currency information"
+                                : "Create and configure your currency"
+                            }
                         </p>
                     </div>
+
                 </div>
 
-                <button
-                    type="button"
-                    disabled={loading || editLoading}
-                    onClick={handleClose}
-                    className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
-                    aria-label="Close"
-                >
-                    <X size={20} />
-                </button>
-            </div>
+                <div className="
+                    hidden items-center gap-2 rounded-lg
+                    bg-blue-50 px-3 py-2 sm:flex
+                ">
+                    <Coins size={16} className="text-[#408DFB]" />
 
-            {/* TABS */}
-
-            <div className="flex shrink-0 items-center gap-7 overflow-x-auto border-b border-gray-200 bg-white px-6">
-                {TABS.map((tab) => (
-                    <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`whitespace-nowrap border-b-2 py-3 text-sm font-medium transition ${activeTab === tab.id
-                            ? "border-gray-400 text-gray-500"
-                            : "border-transparent text-gray-500 hover:text-gray-700"
-                            }`}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* BODY */}
-
-            <div className="min-h-0 flex-1 overflow-y-auto py-6">
-                {activeTab === "currency" && renderCurrencyTab()}
-
-            </div>
-
-            {/* FOOTER */}
-
-            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-6 py-3">
-                <div className="text-xs text-gray-500">
-                    <span className="text-red-500">*</span>
-                    {" "}Required fields
+                    <span className="text-xs font-medium text-[#408DFB]">
+                        Currency
+                    </span>
                 </div>
 
-                <div className="flex items-center justify-end gap-3">
+            </div>
+
+            {/* FORM */}
+
+            <form
+                onSubmit={handleSubmit}
+                className="
+                    flex min-h-0 flex-1 flex-col
+                    overflow-hidden rounded-xl
+                    bg-white shadow-sm
+                "
+            >
+
+                {/* SCROLL BODY */}
+
+                <div className="flex-1 overflow-y-auto p-5">
+
+                    <section className="mb-7">
+
+                        <SectionHeading
+                            icon={Coins}
+                            title="Currency Information"
+                            description="Enter the currency code, name, symbol and formatting details"
+                        />
+
+                        <div className="
+                            grid grid-cols-1 gap-5
+                            md:grid-cols-2 lg:grid-cols-3
+                        ">
+
+                            <FormField label="Currency Code" required>
+                                <TextInput
+                                    value={formData.currencyCode}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "currencyCode",
+                                            e.target.value.toUpperCase()
+                                        )
+                                    }
+                                    placeholder="Example: INR"
+                                    maxLength={3}
+                                />
+                            </FormField>
+
+                            <FormField label="Currency Name" required>
+                                <TextInput
+                                    value={formData.currencyName}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "currencyName",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Example: Indian Rupee"
+                                    maxLength={100}
+                                />
+                            </FormField>
+
+                            <FormField label="Currency Symbol" required>
+                                <TextInput
+                                    value={formData.symbol}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "symbol",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Example: ₹"
+                                    maxLength={10}
+                                />
+                            </FormField>
+
+                            <FormField label="Decimal Places" required>
+                                <CustomSelect
+                                    value={Number(formData.decimalPlaces)}
+                                    onChange={(value) =>
+                                        handleChange(
+                                            "decimalPlaces",
+                                            Number(value)
+                                        )
+                                    }
+                                    options={decimalPlaceOptions}
+                                    placeholder="Select decimal places"
+                                />
+                            </FormField>
+
+                            <FormField label="Currency Status" required>
+                                <CustomSelect
+                                    value={formData.status}
+                                    onChange={(value) =>
+                                        handleChange("status", value)
+                                    }
+                                    options={statusOptions}
+                                    placeholder="Select currency status"
+                                />
+                            </FormField>
+
+                        </div>
+
+                    </section>
+
+                    <div className="my-6 border-t border-gray-100" />
+
+                    {/* STATUS INFORMATION */}
+
+                    <section>
+
+                        <SectionHeading
+                            icon={CheckCircle}
+                            title="Currency Availability"
+                            description="Control whether this currency can be selected in the application"
+                        />
+
+                        <label className="
+                            flex cursor-pointer items-center gap-3
+                            rounded-lg border border-gray-100
+                            bg-gray-50 p-4
+                        ">
+
+                            <input
+                                type="checkbox"
+                                checked={formData.active}
+                                onChange={(e) =>
+                                    handleChange(
+                                        "active",
+                                        e.target.checked
+                                    )
+                                }
+                                className="
+                                    h-4 w-4 rounded border-gray-300
+                                    text-blue-600 focus:ring-blue-500
+                                "
+                            />
+
+                            <div>
+                                <p className="text-sm font-medium text-gray-700">
+                                    Enable this currency
+                                </p>
+
+                                <p className="mt-0.5 text-xs text-gray-400">
+                                    Active currencies can be selected when creating invoices and transactions.
+                                </p>
+                            </div>
+
+                        </label>
+
+                    </section>
+
+                </div>
+
+                {/* FOOTER */}
+
+                <div className="
+                    flex shrink-0 flex-wrap items-center
+                    justify-between gap-3 border-t
+                    border-gray-100 bg-white px-5 py-3
+                ">
+
                     <button
                         type="button"
-                        disabled={loading || editLoading}
-                        onClick={handleClose}
-                        className="h-10 rounded-md border border-gray-300 bg-white px-5 text-sm font-medium text-[#0F4659] hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => navigate(-1)}
+                        disabled={loading}
+                        className="
+                            rounded-lg border border-gray-200
+                            px-4 py-2 text-sm font-medium
+                            text-gray-600 transition hover:bg-gray-50
+                            disabled:opacity-50
+                        "
                     >
                         Cancel
                     </button>
 
-                    <div className="relative flex">
+                    <div className="flex items-center gap-2">
+
                         <button
                             type="button"
-                            disabled={loading || editLoading}
-                            onClick={() =>
-                                handleSave({
-                                    saveAndNew: false,
-                                    saveAndClose: true,
-                                })
-                            }
-                            className="h-10 rounded-l-md bg-[#408DFB] px-5 text-sm
-                             font-medium text-white hover:bg-[#408DFB]/90
-                              disabled:cursor-not-allowed disabled:opacity-50"
+                            onClick={handleReset}
+                            disabled={loading}
+                            className="
+                                flex items-center gap-2 rounded-lg
+                                border border-gray-200 px-4 py-2
+                                text-sm font-medium text-gray-600
+                                transition hover:bg-gray-50
+                                disabled:opacity-50
+                            "
                         >
+                            <RotateCcw size={15} />
+                            Reset
+                        </button>
+
+                        <button
+                            type="submit"
+                            disabled={
+                                loading ||
+                                (isEditMode && !isCurrentCurrencyLoaded)
+                            }
+                            onClick={() => setSaveMode("close")}
+                            className="
+                                flex items-center gap-2 rounded-lg
+                                bg-[#408DFB] px-5 py-2 text-sm
+                                font-medium text-white transition
+                                hover:bg-blue-600 disabled:cursor-not-allowed
+                                disabled:opacity-60
+                            "
+                        >
+
+                            {loading ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <Save size={16} />
+                            )}
+
                             {loading
-                                ? isEdit
-                                    ? "Updating..."
-                                    : "Saving..."
-                                : isEdit
-                                    ? "Update Currency"
-                                    : "Save Currency"}
-                        </button>
-
-                        <button
-                            type="button"
-                            disabled={loading || editLoading}
-                            onClick={() =>
-                                setShowSaveMenu((previous) => !previous)
+                                ? "Saving..."
+                                : isEditMode
+                                    ? "Update"
+                                    : "Save"
                             }
-                            className="flex h-10 w-10 items-center justify-center 
-                            rounded-r-md border-l border-white/30 bg-[#408DFB] 
-                            text-white hover:bg-[#408DFB]/90 disabled:opacity-50"
-                            aria-label="More save options"
-                        >
-                            <ChevronDown
-                                size={16}
-                                className={
-                                    showSaveMenu
-                                        ? "rotate-180 transition-transform"
-                                        : "transition-transform"
-                                }
-                            />
+
                         </button>
 
-                        {showSaveMenu && (
-                            <>
+                        {/* SAVE OPTIONS - CREATE ONLY */}
+
+                        {!isEditMode && (
+                            <div className="relative">
+
                                 <button
                                     type="button"
-                                    aria-label="Close save options"
-                                    className="fixed inset-0 z-[80] cursor-default"
-                                    onClick={() => setShowSaveMenu(false)}
-                                />
+                                    disabled={loading}
+                                    onClick={() =>
+                                        setShowSaveOptions((prev) => !prev)
+                                    }
+                                    className="
+                                        flex h-9 items-center justify-center
+                                        rounded-lg border border-gray-200
+                                        px-2 text-gray-600 transition
+                                        hover:bg-gray-50 disabled:opacity-50
+                                    "
+                                >
+                                    <ChevronDown size={17} />
+                                </button>
 
-                                <div className="absolute bottom-full right-0 z-[90] mb-2 w-56 overflow-hidden rounded-md border border-gray-200 bg-white shadow-xl">
-                                    {!isEdit && (
+                                {showSaveOptions && (
+
+                                    <div className="
+                                        absolute bottom-11 right-0 z-20
+                                        w-44 overflow-hidden rounded-lg
+                                        border border-gray-100 bg-white
+                                        py-1 shadow-lg
+                                    ">
+
                                         <button
-                                            type="button"
+                                            type="submit"
                                             onClick={() => {
-                                                setShowSaveMenu(false);
-
-                                                handleSave({
-                                                    saveAndNew: true,
-                                                    saveAndClose: false,
-                                                });
+                                                setSaveMode("new");
+                                                setShowSaveOptions(false);
                                             }}
-                                            className="w-full border-b border-gray-100 px-4 py-3 text-left hover:bg-gray-50"
+                                            className="
+                                                w-full px-4 py-2.5 text-left
+                                                text-sm text-gray-600
+                                                transition hover:bg-blue-50
+                                                hover:text-[#408DFB]
+                                            "
                                         >
-                                            <div className="text-sm font-medium text-gray-700">
-                                                Save & New
-                                            </div>
-
-                                            <div className="mt-0.5 text-xs text-gray-400">
-                                                Save and create another currency
-                                            </div>
+                                            Save & New
                                         </button>
-                                    )}
 
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setShowSaveMenu(false);
+                                        <button
+                                            type="submit"
+                                            onClick={() => {
+                                                setSaveMode("close");
+                                                setShowSaveOptions(false);
+                                            }}
+                                            className="
+                                                w-full px-4 py-2.5 text-left
+                                                text-sm text-gray-600
+                                                transition hover:bg-blue-50
+                                                hover:text-[#408DFB]
+                                            "
+                                        >
+                                            Save & Close
+                                        </button>
 
-                                            handleSave({
-                                                saveAndNew: false,
-                                                saveAndClose: true,
-                                            });
-                                        }}
-                                        className="w-full px-4 py-3 text-left hover:bg-gray-50"
-                                    >
-                                        <div className="text-sm font-medium text-gray-700">
-                                            {isEdit
-                                                ? "Update & Close"
-                                                : "Save & Close"}
-                                        </div>
+                                    </div>
+                                )}
 
-                                        <div className="mt-0.5 text-xs text-gray-400">
-                                            Save and return to currency list
-                                        </div>
-                                    </button>
-                                </div>
-                            </>
+                            </div>
                         )}
+
                     </div>
                 </div>
-            </div>
+
+            </form>
         </div>
     );
-}
+};
+
+export default CurrencyCreateSimple;

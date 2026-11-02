@@ -17,8 +17,8 @@ import {
 } from "lucide-react";
 
 import {
-    setSelectedProductView,
-    setProductStatus,
+    setSelectedProductsView,
+    setProductsStatus,
 } from "../slices/productViewSlice";
 import { setExsistingProduct } from "../slices/productSlice";
 
@@ -87,11 +87,11 @@ export default function ProductOverViewSiderTopbar() {
         }
 
         dispatch(
-            setSelectedProductView(view.label)
+            setSelectedProductsView(view.label)
         );
 
         dispatch(
-            setProductStatus(view.value)
+            setProductsStatus(view.value)
         );
 
         setDropdownOpen(false);

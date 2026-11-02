@@ -1,8 +1,18 @@
 
-import React, { useState } from "react";
+import React, { useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { openModal } from "../../ui/uiSlice";
+
+import {
+    Eye,
+    Package,
+    Tag,
+    CalendarDays,
+    Edit,
+    Trash2,
+} from "lucide-react";
+
+import toast from "react-hot-toast";
 
 import {
     fetchAllProducts,
@@ -13,91 +23,259 @@ import {
     setExsistingProduct,
 } from "../slices/productSlice";
 
-import {
-    ChevronDown,
-    Edit,
-    Trash2,
-    Package,
-    Eye,
-} from "lucide-react";
-
-import toast from "react-hot-toast";
 import Pagination from "../../../common/pagination/table/Pagination";
 
-export default function ProductTable({ products = [] }) {
+/* =========================================================
+   CONSTANTS
+========================================================= */
 
+const EMPTY_ARRAY = [];
+
+const STATUS_COLORS = {
+    ACTIVE: "bg-green-100 text-green-700",
+    INACTIVE: "bg-red-100 text-red-700",
+    DRAFT: "bg-gray-100 text-gray-700",
+};
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const formatAmount = (amount) => {
+    return Number(amount ?? 0).toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+};
+
+const formatDate = (date) => {
+    if (!date) return "—";
+
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return date;
+    }
+
+    return parsedDate.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+};
+
+/* =========================================================
+   COMPONENT
+========================================================= */
+
+export default function ProductTable({
+    products,
+    fetchParams = {},
+}) {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-
-
-    const [showEdit, setShowEdit] = useState(false);
-    const [showView, setShowView] = useState(false);
 
     /* =====================================================
        REDUX STATE
     ===================================================== */
 
     const {
-        loading,
-        error,
-        pagination,
-    } = useSelector((state) => state.product);
+        products: reduxProducts = EMPTY_ARRAY,
+        loading = false,
+        actionLoading = false,
+        error = null,
+        pagination = {},
+    } = useSelector((state) => state.product || {});
 
     const {
-        pageNumber,
-        pageSize,
-        totalPages,
-        totalElements,
-    } = pagination || {};
+        pageNumber = 0,
+        pageSize = 20,
+        totalPages = 0,
+        totalElements = 0,
+    } = pagination;
 
-    const currentProducts = products || [];
+    const currentProducts = Array.isArray(products)
+        ? products
+        : reduxProducts;
 
     /* =====================================================
-       DELETE PRODUCT
+       AUTH STATE
     ===================================================== */
 
-    const handleDelete = async (id) => {
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
 
-        if (!window.confirm("Delete this product?")) {
-            return;
-        }
+    const permissions = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissions || EMPTY_ARRAY
+    );
 
-        try {
+    /* =====================================================
+       ROLE
+    ===================================================== */
 
-            await dispatch(deleteProduct(id)).unwrap();
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
 
-            toast.success("Product deleted successfully");
+    const normalizedRole = String(roleName)
+        .trim()
+        .toUpperCase();
 
-            dispatch(fetchAllProducts());
+    const hasFullAccess =
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
-        } catch (error) {
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
-            toast.error(
-                typeof error === "string"
-                    ? error
-                    : error?.message || "Failed to delete product"
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
+            if (hasFullAccess) return true;
+
+            if (!Array.isArray(permissions)) return false;
+
+            const requestedModule = String(moduleName)
+                .trim()
+                .toLowerCase();
+
+            const requestedAction = String(actionName)
+                .trim()
+                .toUpperCase();
+
+            return permissions.some((permission) => {
+                const permissionModule = String(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                )
+                    .trim()
+                    .toLowerCase();
+
+                if (permissionModule !== requestedModule) {
+                    return false;
+                }
+
+                if (permission?.active === false) {
+                    return false;
+                }
+
+                if (
+                    String(permission?.status || "").toUpperCase() ===
+                    "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                if (Array.isArray(permission?.actions)) {
+                    return permission.actions.some((action) => {
+                        const permissionAction = String(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        )
+                            .trim()
+                            .toUpperCase();
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        if (action?.active === false) return false;
+
+                        if (
+                            String(action?.status || "").toUpperCase() ===
+                            "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
+                }
+
+                const permissionAction = String(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction === requestedAction &&
+                    allowed
+                );
+            });
+        },
+        [hasFullAccess, permissions]
+    );
+
+    const canViewProduct = hasPermission("Products", "VIEW");
+    const canEditProduct = hasPermission("Products", "EDIT");
+    const canDeleteProduct = hasPermission("Products", "DELETE");
+
+    /* =====================================================
+       FETCH PARAMS
+    ===================================================== */
+
+    const getFetchParams = useCallback(
+        (page, size) => ({
+            ...fetchParams,
+            page,
+            size,
+        }),
+        [fetchParams]
+    );
+
+    const refreshProducts = useCallback(
+        (page = pageNumber, size = pageSize) => {
+            dispatch(
+                fetchAllProducts(
+                    getFetchParams(page, size)
+                )
             );
-        }
-    };
+        },
+        [
+            dispatch,
+            getFetchParams,
+            pageNumber,
+            pageSize,
+        ]
+    );
 
     /* =====================================================
        VIEW PRODUCT
     ===================================================== */
 
     const handleView = (product) => {
-
-        try {
-
-            dispatch(
-                setExsistingProduct(product)
+        if (!canViewProduct) {
+            toast.error(
+                "You do not have permission to view products."
             );
-
-            navigate(`/items/view/${product.id}`);
-
-        } catch (error) {
-
-            toast.error("Failed to open product");
+            return;
         }
+
+        dispatch(setExsistingProduct(product));
+
+        navigate(`/items/view/${product.id}`);
     };
 
     /* =====================================================
@@ -105,126 +283,124 @@ export default function ProductTable({ products = [] }) {
     ===================================================== */
 
     const handleEdit = (product) => {
+        if (!canEditProduct) {
+            toast.error(
+                "You do not have permission to edit products."
+            );
+            return;
+        }
 
-        console.log("EDIT PRODUCT:", product);
+        dispatch(setExistingProduct(product));
+
+        navigate(`/products/edit/${product.id}`);
+    };
+
+    /* =====================================================
+       DELETE PRODUCT
+    ===================================================== */
+
+    const handleDelete = async (product) => {
+        if (!canDeleteProduct) {
+            toast.error(
+                "You do not have permission to delete products."
+            );
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Are you sure you want to delete "${product.productName}"?`
+        );
+
+        if (!confirmed) return;
 
         try {
+            await dispatch(
+                deleteProduct(product.id)
+            ).unwrap();
 
-            dispatch(
-                setExsistingProduct(product)
-            );
+            toast.success("Product deleted successfully.");
 
-            navigate(`/items/editSimple/${product.id}`);
-
-
+            refreshProducts();
         } catch (error) {
-
-            console.error(
-                "PRODUCT EDIT ERROR:",
-                error
-            );
-
             toast.error(
-                error?.message ||
-                "Failed to open product"
+                typeof error === "string"
+                    ? error
+                    : "Failed to delete product."
             );
         }
     };
 
     /* =====================================================
-       PRODUCT INITIALS
+       SORTING
     ===================================================== */
 
-    const initials = (productName) =>
-        productName
-            ?.split(" ")
-            .map((word) => word[0])
-            .join("")
-            .slice(0, 2)
-            .toUpperCase() || "PR";
-
-    /* =====================================================
-       STATUS COLORS
-    ===================================================== */
-
-    const statusColor = {
-
-        ACTIVE:
-            "bg-green-100 text-green-700",
-
-        INACTIVE:
-            "bg-gray-100 text-gray-700",
-
-        DRAFT:
-            "bg-yellow-100 text-yellow-700",
-
-    };
-
-    /* =====================================================
-       PRODUCT AVATAR COLORS
-    ===================================================== */
-
-    const avatarColors = [
-
-        "bg-pink-500 text-white",
-        "bg-green-500 text-white",
-        "bg-blue-500 text-white",
-        "bg-purple-500 text-white",
-        "bg-orange-500 text-white",
-        "bg-cyan-500 text-white",
-        "bg-indigo-500 text-white",
-
-    ];
-
-    const getAvatarColor = (name = "") => {
-
-        const index =
-            name
-                .split("")
-                .reduce(
-                    (acc, char) =>
-                        acc + char.charCodeAt(0),
-                    0
-                ) %
-            avatarColors.length;
-
-        return avatarColors[index];
-    };
+    const sortedProducts = useMemo(
+        () => [...currentProducts],
+        [currentProducts]
+    );
 
     /* =====================================================
        LOADING
     ===================================================== */
 
-    if (loading) {
-
+    if (loading && !currentProducts.length) {
         return (
             <div className="flex items-center justify-center py-10">
-
-                <p className="text-gray-500">
+                <p className="text-sm text-gray-500">
                     Loading products...
                 </p>
-
             </div>
         );
     }
 
+    /* =====================================================
+       ERROR
+    ===================================================== */
 
+    if (error && !currentProducts.length) {
+        return (
+            <div className="
+                rounded-xl border border-red-200
+                bg-white p-8 text-center
+            ">
+                <p className="text-sm text-red-500">
+                    {typeof error === "string"
+                        ? error
+                        : "Failed to fetch products"}
+                </p>
+
+                <button
+                    type="button"
+                    onClick={() => refreshProducts()}
+                    className="
+                        mt-3 rounded-lg bg-blue-600
+                        px-4 py-2 text-sm text-white
+                        transition hover:bg-blue-700
+                    "
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
 
     /* =====================================================
        EMPTY STATE
     ===================================================== */
 
     if (!currentProducts.length) {
-
         return (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+            <div className="
+                rounded-2xl border border-gray-200
+                bg-white p-8 text-center
+            ">
+                <Package className="
+                    mx-auto mb-3 h-10 w-10 text-gray-300
+                " />
 
-                <Package className="mx-auto mb-3 h-10 w-10 text-gray-300" />
-
-                <p className="text-gray-500">
+                <p className="text-sm text-gray-500">
                     No products found.
                 </p>
-
             </div>
         );
     }
@@ -234,361 +410,273 @@ export default function ProductTable({ products = [] }) {
     ===================================================== */
 
     return (
+        <div className="
+            overflow-x-auto overflow-y-visible
+            rounded-xl border border-gray-200 bg-white
+        ">
+            <table className="w-full">
 
+                {/* TABLE HEADER */}
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
-            <div className="overflow-x-auto overflow-y-visible">
-                <table className="w-full">
-                    <thead className="bg-[#FAF9F7]/20 border-b border-gray-300">
-                        <tr>
-
-                            {[
-                                "Product",
-                                "SKU",
-                                "Category",
-                                "HSN",
-                                "Selling Price",
-                                "Purchase Price",
-                                "Tax",
-                                "Status",
-                                "Actions",
-                            ].map((header) => (
-
-                                <th
-                                    key={header}
-                                    className={`
-                                    px-4
-                                    py-3
-                                    font-medium
-                                    text-md
-                                    text-gray-400
-                                    uppercase
+                <thead className="
+                    border-b border-gray-300
+                    bg-[#FAF9F7]/20
+                ">
+                    <tr>
+                        {[
+                            "Product",
+                            "Category",
+                            "Subcategory",
+                            "HSN Code",
+                            "Selling Price",
+                            "Purchase Price",
+                            "Stock",
+                            "Status",
+                            "Actions",
+                        ].map((header) => (
+                            <th
+                                key={header}
+                                className={`
+                                    whitespace-nowrap px-5 py-3
+                                    text-left text-xs font-medium
+                                    uppercase text-gray-400
                                     ${header === "Actions"
-                                            ? "text-center"
-                                            : "text-left"
-                                        }
+                                        ? "text-right"
+                                        : ""
+                                    }
                                 `}
-                                >
-                                    {header}
-                                </th>
+                            >
+                                {header}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
 
-                            ))}
+                {/* TABLE BODY */}
 
-                        </tr>
+                <tbody>
+                    {sortedProducts.map((product) => {
+                        const status = String(
+                            product.status || ""
+                        ).toUpperCase();
 
-                    </thead>
+                        return (
+                            <tr
+                                key={product.id}
+                                className="
+                                    border-b border-gray-100
+                                    text-xs transition-colors
+                                    hover:bg-gray-50
+                                "
+                            >
 
-                    {/* =================================================
-                    TABLE BODY
-                ================================================= */}
+                                {/* PRODUCT */}
 
-                    <tbody>
-
-                        {[...currentProducts]
-                            .sort(
-                                (a, b) =>
-                                    a.id - b.id
-                            )
-                            .map(
-                                (
-                                    product,
-                                    index
-                                ) => (
-
-                                    <tr
-                                        key={
-                                            product.id ||
-                                            index
-                                        }
-                                        onClick={() =>
-                                            handleView(
-                                                product
-                                            )
-                                        }
-                                        className="
-                                        border-b
-                                        border-gray-100
-                                        hover:bg-gray-50
-                                        text-xs
-                                        text-left
-                                        cursor-pointer
-                                        transition-colors
-                                    "
-                                    >
-
-                                        {/* =================================
-                                        PRODUCT
-                                    ================================= */}
-
-                                        <td className="px-2 py-3">
-
-                                            <div className="flex items-center gap-3">
-
-                                                <div
-                                                    className={`
-                                                    w-10
-                                                    h-10
-                                                    rounded-full
-                                                    flex
-                                                    items-center
-                                                    justify-center
-                                                    text-md
-                                                    font-bold
-                                                    ${getAvatarColor(
-                                                        product.productName
-                                                    )}
-                                                `}
-                                                >
-                                                    {initials(
-                                                        product.productName
-                                                    )}
-                                                </div>
-
-                                                <div>
-
-                                                    <p className="font-medium text-gray-800">
-                                                        {product.productName ||
-                                                            "—"}
-                                                    </p>
-
-                                                    <p className="text-sm text-gray-500">
-                                                        ID: #
-                                                        {product.id}
-                                                    </p>
-
-                                                </div>
-
-                                            </div>
-
-                                        </td>
-
-                                        {/* =================================
-                                        SKU
-                                    ================================= */}
-
-                                        <td className="px-4 py-3">
-                                            {product.sku ||
-                                                "—"}
-                                        </td>
-
-                                        {/* =================================
-                                        CATEGORY
-                                    ================================= */}
-
-                                        <td className="px-4 py-3">
-                                            {product.categoryName ||
-                                                product.category
-                                                    ?.categoryName ||
-                                                "—"}
-                                        </td>
-
-                                        {/* =================================
-                                        HSN
-                                    ================================= */}
-
-                                        <td className="px-4 py-3">
-                                            {product.hsnCode ||
-                                                "—"}
-                                        </td>
-
-                                        {/* =================================
-                                        SELLING PRICE
-                                    ================================= */}
-
-                                        <td className="px-4 py-3">
-                                            ₹{" "}
-                                            {product.sellingPrice ??
-                                                "0.00"}
-                                        </td>
-
-                                        {/* =================================
-                                        PURCHASE PRICE
-                                    ================================= */}
-
-                                        <td className="px-4 py-3">
-                                            ₹{" "}
-                                            {product.purchasingPrice ??
-                                                "0.00"}
-                                        </td>
-
-                                        {/* =================================
-                                        TAX
-                                    ================================= */}
-
-                                        <td className="px-4 py-3">
-
-                                            {product.taxName ? (
-
-                                                <div>
-
-                                                    <p className="text-gray-800">
-                                                        {
-                                                            product.taxName
-                                                        }
-                                                    </p>
-
-                                                    <p className="text-xs text-gray-500">
-                                                        {
-                                                            product.taxRate ??
-                                                            0
-                                                        }
-                                                        %
-                                                    </p>
-
-                                                </div>
-
-                                            ) : (
-
-                                                "—"
-
-                                            )}
-
-                                        </td>
-
-                                        {/* =================================
-                                        STATUS
-                                    ================================= */}
-
-                                        <td className="px-5 py-3 font-semibold">
-
-                                            <span
-                                                className={`
-                                                px-2
-                                                py-1
-                                                rounded-full
-                                                text-xs
-                                                font-medium
-                                                ${statusColor[
-                                                    product.status
-                                                    ] ||
-                                                    "bg-gray-100 text-gray-700"
-                                                    }
-                                            `}
-                                            >
-                                                {product.status ||
-                                                    "—"}
-                                            </span>
-
-                                        </td>
-
-                                        {/* =================================
-                                        ACTIONS
-                                    ================================= */}
-
-                                        {/* Actions */}
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center justify-center gap-2">
-
-                                                {/* View */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setShowView(true);
-                                                        dispatch(setExsistingProduct(product));
-                                                        navigate(`/items/view/${product.id}`);
-                                                    }}
-                                                    title="View"
-                                                    className="
-                                            flex h-8 w-8 items-center justify-center
-                                            rounded-lg
-                                            bg-blue-50
+                                <td className="px-3 py-3">
+                                    <div className="
+                                        flex min-w-0 items-center gap-2
+                                    ">
+                                        <div className="
+                                            flex h-9 w-9 min-w-[36px]
+                                            items-center justify-center
+                                            rounded-lg bg-blue-50
                                             text-blue-600
-                                            transition
-                                            hover:bg-blue-100
-                                            hover:text-blue-700
-                                        "
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
+                                        ">
+                                            <Package size={17} />
+                                        </div>
 
-                                                {/* Edit */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setShowEdit(true);
-                                                        dispatch(setExsistingProduct(product));
-                                                        navigate(`/items/editSimple/${product.id}`);
-                                                    }}
-                                                    title="Edit"
-                                                    className="
-                                                   flex h-8 w-8 items-center justify-center
-                                                   rounded-lg
-                                                   bg-amber-50
-                                                   text-amber-600
-                                                   transition
-                                                   hover:bg-amber-100
-                                                   hover:text-amber-700
-                                               "
-                                                >
-                                                    <Edit size={16} />
-                                                </button>
-
-                                                {/* Delete */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-
-                                                        // Your delete confirmation logic
-                                                        handleDelete(product.id);
-                                                    }}
-                                                    title="Delete"
-                                                    className="
-                                                    flex h-8 w-8 items-center justify-center
-                                                    rounded-lg
-                                                    bg-red-50
-                                                    text-red-600
-                                                    transition
-                                                    hover:bg-red-100
-                                                    hover:text-red-700
+                                        <div className="min-w-0">
+                                            <p
+                                                className="
+                                                    truncate font-medium
+                                                    text-gray-800
                                                 "
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                title={product.productName || ""}
+                                            >
+                                                {product.productName || "—"}
+                                            </p>
 
-                                            </div>
-                                        </td>
-                                    </tr>
+                                            <p className="
+                                                mt-0.5 text-xs text-gray-500
+                                            ">
+                                                {product.brand || "No brand"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </td>
 
-                                )
-                            )}
+                                {/* CATEGORY */}
 
-                    </tbody>
+                                <td className="px-3 py-3">
+                                    <p className="whitespace-nowrap text-gray-700">
+                                        {product.category?.categoryName ||
+                                            product.categoryName ||
+                                            "—"}
+                                    </p>
+                                </td>
 
-                </table>
+                                {/* SUBCATEGORY */}
 
-                {/* =====================================================
-                PAGINATION
-            ===================================================== */}
+                                <td className="px-3 py-3">
+                                    <p className="whitespace-nowrap text-gray-700">
+                                        {product.subCategory?.subCategoryName ||
+                                            product.subCategoryName ||
+                                            "—"}
+                                    </p>
+                                </td>
 
-                <Pagination
-                    page={Number(pageNumber) || 0}
-                    size={Number(pageSize) || 10}
-                    totalElements={Number(totalElements) || 0}
-                    totalPages={Number(totalPages) || 0}
-                    loading={loading}
-                    label="products"
-                    onPageChange={(nextPage) => {
-                        dispatch(
-                            fetchAllProducts({
-                                page: nextPage,
-                                size: Number(pageSize) || 10,
-                            })
+                                {/* HSN CODE */}
+
+                                <td className="px-3 py-3">
+                                    <span className="whitespace-nowrap text-gray-600">
+                                        {product.hsnCode || "—"}
+                                    </span>
+                                </td>
+
+                                {/* SELLING PRICE */}
+
+                                <td className="px-3 py-3">
+                                    <p className="
+                                        whitespace-nowrap font-semibold
+                                        text-gray-800
+                                    ">
+                                        ₹ {formatAmount(product.sellingPrice)}
+                                    </p>
+                                </td>
+
+                                {/* PURCHASE PRICE */}
+
+                                <td className="px-3 py-3">
+                                    <p className="
+                                        whitespace-nowrap text-gray-700
+                                    ">
+                                        ₹ {formatAmount(product.purchasingPrice)}
+                                    </p>
+                                </td>
+
+                                {/* STOCK */}
+
+                                <td className="px-3 py-3">
+                                    <div className="whitespace-nowrap">
+                                        <p className="font-medium text-gray-700">
+                                            {product.currentStock ??
+                                                product.stockQuantity ??
+                                                0}
+                                        </p>
+
+                                        <p className="mt-0.5 text-xs text-gray-400">
+                                            Min: {product.minimumStock ?? 0}
+                                        </p>
+                                    </div>
+                                </td>
+
+                                {/* STATUS */}
+
+                                <td className="px-3 py-3">
+                                    <span className={`
+                                        inline-block whitespace-nowrap
+                                        rounded-full px-2.5 py-1
+                                        text-xs font-medium
+                                        ${STATUS_COLORS[status] ||
+                                        "bg-gray-100 text-gray-700"}
+                                    `}>
+                                        {product.status || "—"}
+                                    </span>
+                                </td>
+
+                                {/* ACTIONS */}
+
+                                <td className="px-4 py-3">
+                                    <div className="
+                                        flex items-center justify-end gap-2
+                                    ">
+                                        {canViewProduct && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleView(product)
+                                                }
+                                                title="View product"
+                                                className="
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg bg-blue-50
+                                                    text-blue-600 transition
+                                                    hover:bg-blue-100
+                                                "
+                                            >
+                                                <Eye size={16} />
+                                            </button>
+                                        )}
+
+                                        {canEditProduct && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleEdit(product)
+                                                }
+                                                title="Edit product"
+                                                className="
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg bg-green-50
+                                                    text-green-600 transition
+                                                    hover:bg-green-100
+                                                "
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                        )}
+
+                                        {canDeleteProduct && (
+                                            <button
+                                                type="button"
+                                                disabled={actionLoading}
+                                                onClick={() =>
+                                                    handleDelete(product)
+                                                }
+                                                title="Delete product"
+                                                className="
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg bg-red-50
+                                                    text-red-600 transition
+                                                    hover:bg-red-100
+                                                    disabled:cursor-not-allowed
+                                                    disabled:opacity-50
+                                                "
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </td>
+
+                            </tr>
                         );
-                    }}
-                    onPageSizeChange={(nextSize) => {
-                        dispatch(
-                            fetchAllProducts({
-                                page: 0,
-                                size: nextSize,
-                            })
-                        );
-                    }}
-                />
+                    })}
+                </tbody>
+            </table>
 
-            </div>
+            {/* PAGINATION */}
+
+            <Pagination
+                page={Number(pageNumber) || 0}
+                size={Number(pageSize) || 20}
+                totalElements={Number(totalElements) || 0}
+                totalPages={Number(totalPages) || 0}
+                loading={loading}
+                label="products"
+                onPageChange={(nextPage) => {
+                    refreshProducts(
+                        nextPage,
+                        Number(pageSize) || 20
+                    );
+                }}
+                onPageSizeChange={(nextSize) => {
+                    refreshProducts(0, nextSize);
+                }}
+            />
         </div>
     );
 }

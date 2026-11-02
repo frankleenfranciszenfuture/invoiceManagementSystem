@@ -1,7 +1,7 @@
-
 import React, {
     useEffect,
     useMemo,
+    useCallback,
 } from "react";
 
 import {
@@ -10,295 +10,476 @@ import {
 } from "react-redux";
 
 import {
-    useSearchParams,
-} from "react-router-dom";
-
-import {
-    Download,
     Plus,
+    Download,
+    Package,
 } from "lucide-react";
 
-import ProductTable from "./ProductTable";
+import toast from "react-hot-toast";
 
-import NavbarProduct
-    from "../components/bars/nav/NavbarProduct";
-
-import {
-    fetchAllProducts,
-} from "../thunks/productThunks";
+import ProductTable from "../pages/ProductTable";
+import NavbarProduct from "../components/bars/nav/NavbarProduct";
 
 import {
-    setProductStatus,
-    setSelectedProductView,
-} from "../slices/productViewSlice";
-
-import {
-    clearError
-} from "../slices/productSlice"
+    clearProductError,
+} from "../slices/productSlice";
 
 import {
     openModal,
-} from "../../ui/uiSlice";
+} from "../../../module/ui/uiSlice";
 
-import InvoiceSkeleton
-    from "../../../common/loader/InvoiceSkeleton";
+import {
+    getUserPermission,
+} from "../../../module/menuPermission/thunks/menuPermissionThunks";
+
+import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
+
+import ProductOverview from "../pages/ProductOverview";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMPTY_ARRAY = [];
+
+/* =========================================================
+   NORMALIZE HELPERS
+========================================================= */
+
+const normalizeModule = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+const normalizeAction = (value) =>
+    String(value ?? "").trim().toUpperCase();
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function ProductDashboard() {
 
     const dispatch = useDispatch();
 
-    const [searchParams] =
-        useSearchParams();
+    /* =====================================================
+       AUTH STATE
+    ===================================================== */
 
-    // ============================================================
-    // PRODUCT STATE
-    // ============================================================
-
-    const products = useSelector(
-        (state) =>
-            state.product?.products || []
+    const user = useSelector(
+        (state) => state.auth?.user
     );
 
-    const loading = useSelector(
+    const isAuthenticated = useSelector(
+        (state) => state.auth?.isAuthenticated === true
+    );
+
+    const authChecking = useSelector(
+        (state) => state.auth?.authChecking === true
+    );
+
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
+
+    const permissions = useSelector(
+        (state) => {
+            const value = state.menuPermission?.userPermissions;
+
+            return Array.isArray(value)
+                ? value
+                : EMPTY_ARRAY;
+        }
+    );
+
+    const permissionLoading = useSelector(
         (state) =>
-            state.product?.loading || false
+            state.menuPermission?.userPermissionsLoading === true
+    );
+
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissionsLoaded === true
+    );
+
+    /* =====================================================
+       ROLE
+    ===================================================== */
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+    const normalizedRole = normalizeAction(roleName);
+
+    const hasFullAccess =
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
+
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
+
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
+
+            if (hasFullAccess) {
+                return true;
+            }
+
+            if (!Array.isArray(permissions)) {
+                return false;
+            }
+
+            const requestedModule = normalizeModule(moduleName);
+            const requestedAction = normalizeAction(actionName);
+
+            return permissions.some((permission) => {
+
+                const permissionModule = normalizeModule(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                );
+
+                if (permissionModule !== requestedModule) {
+                    return false;
+                }
+
+                if (permission?.active === false) {
+                    return false;
+                }
+
+                if (
+                    normalizeAction(permission?.status) === "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                /* ACTION ARRAY */
+
+                if (Array.isArray(permission?.actions)) {
+
+                    return permission.actions.some((action) => {
+
+                        if (typeof action === "string") {
+                            return (
+                                normalizeAction(action) === requestedAction
+                            );
+                        }
+
+                        const permissionAction = normalizeAction(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        );
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        if (action?.active === false) {
+                            return false;
+                        }
+
+                        if (
+                            normalizeAction(action?.status) === "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
+                }
+
+                /* DIRECT / FLAT ACTION */
+
+                const permissionAction = normalizeAction(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                );
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction === requestedAction &&
+                    allowed
+                );
+            });
+
+        },
+        [
+            hasFullAccess,
+            permissions,
+        ]
+    );
+
+    /* =====================================================
+       PRODUCT PERMISSIONS
+    ===================================================== */
+
+    const canViewProduct = hasPermission(
+        "Products",
+        "VIEW"
+    );
+
+    const canCreateProduct = hasPermission(
+        "Products",
+        "CREATE"
+    );
+
+    /* =====================================================
+       PRODUCT STATE
+    ===================================================== */
+
+    const productsFromRedux = useSelector(
+        (state) => state.product?.products
+    );
+
+    const products = Array.isArray(productsFromRedux)
+        ? productsFromRedux
+        : EMPTY_ARRAY;
+
+    const loading = useSelector(
+        (state) => state.product?.loading === true
     );
 
     const error = useSelector(
-        (state) =>
-            state.product?.error
+        (state) => state.product?.error
     );
 
-
-
-
-    // ============================================================
-    // PRODUCT FILTER STATE
-    // ============================================================
-
-    const productStatus = useSelector(
-        (state) =>
-            state.productView?.productStatus ||
-            "ALL"
-    );
-
-    // ============================================================
-    // FETCH PRODUCTS
-    // ============================================================
+    /* =====================================================
+       LOAD USER PERMISSIONS
+    ===================================================== */
 
     useEffect(() => {
 
-        dispatch(
-            fetchAllProducts()
-        );
-
-    }, [dispatch]);
-
-    // ============================================================
-    // SYNC URL STATUS → REDUX
-    // ============================================================
-
-    useEffect(() => {
-
-        const urlStatus =
-            searchParams.get(
-                "productStatus"
-            );
-
-        if (!urlStatus) {
+        if (authChecking || !isAuthenticated) {
             return;
         }
 
-        const normalizedStatus =
-            String(urlStatus)
-                .toUpperCase();
-
-        const validStatuses = [
-            "ALL",
-            "ACTIVE",
-            "INACTIVE",
-            "DRAFT",
-        ];
-
-        if (
-            !validStatuses.includes(
-                normalizedStatus
-            )
-        ) {
+        if (hasFullAccess) {
             return;
         }
 
-        dispatch(
-            setProductStatus(
-                normalizedStatus
-            )
-        );
+        if (permissionsLoaded || permissionLoading) {
+            return;
+        }
 
-        const statusLabels = {
-
-            ALL:
-                "All Products",
-
-            ACTIVE:
-                "Active Products",
-
-            INACTIVE:
-                "Inactive Products",
-
-            DRAFT:
-                "Draft Products",
-
-        };
-
-        dispatch(
-            setSelectedProductView(
-                statusLabels[
-                normalizedStatus
-                ]
-            )
-        );
+        dispatch(getUserPermission());
 
     }, [
-        searchParams,
+        authChecking,
+        isAuthenticated,
+        hasFullAccess,
+        permissionsLoaded,
+        permissionLoading,
         dispatch,
     ]);
 
-    // ============================================================
-    // FILTER PRODUCTS BY STATUS
-    // ============================================================
+    /* =====================================================
+       FILTER PRODUCTS
+    ===================================================== */
 
     const filteredProducts = useMemo(() => {
 
-        const selectedStatus =
-            String(
-                productStatus || "ALL"
-            ).toUpperCase();
-
-        if (
-            selectedStatus === "ALL"
-        ) {
-            return products;
-        }
-
-        return products.filter(
-            (product) => {
-
-                const backendStatus =
-                    String(
-                        product?.status || ""
-                    ).toUpperCase();
-
-                return (
-                    backendStatus ===
-                    selectedStatus
-                );
-
-            }
-        );
+        return products;
 
     }, [
         products,
-        productStatus,
     ]);
 
-    useEffect(() => {
-        if (!error) return;
+    /* =====================================================
+       OPEN CREATE PRODUCT MODAL
+    ===================================================== */
 
-        const timer = setTimeout(() => {
-            dispatch(clearError());
-        }, 2000);
+    const handleCreateProduct = useCallback(() => {
 
-        return () => clearTimeout(timer);
-    }, [error, dispatch]);
-    // ============================================================
-    // CREATE PRODUCT MODAL
-    // ============================================================
+        if (!isAuthenticated) {
+            return;
+        }
 
-    const handleCreateProduct = () => {
+        if (
+            !hasFullAccess &&
+            (
+                permissionLoading ||
+                !permissionsLoaded
+            )
+        ) {
+            return;
+        }
+
+        if (!canCreateProduct) {
+            toast.error(
+                "You do not have permission to create products."
+            );
+            return;
+        }
 
         dispatch(
             openModal({
                 type: "addProduct",
-                data: null,
             })
         );
 
-    };
+    }, [
+        isAuthenticated,
+        hasFullAccess,
+        permissionLoading,
+        permissionsLoaded,
+        canCreateProduct,
+        dispatch,
+    ]);
 
-    // ============================================================
-    // LOADING
-    // ============================================================
+    /* =====================================================
+       CLEAR ERROR
+    ===================================================== */
 
-    if (loading) {
+    useEffect(() => {
 
-        return (
-            <InvoiceSkeleton />
-        );
+        if (!error) {
+            return;
+        }
 
+        const timer = setTimeout(() => {
+            dispatch(clearProductError());
+        }, 2000);
+
+        return () => clearTimeout(timer);
+
+    }, [
+        error,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       AUTH CHECKING
+    ===================================================== */
+
+    if (authChecking) {
+        return <InvoiceSkeleton />;
     }
 
-    // ============================================================
-    // PAGE
-    // ============================================================
+    /* =====================================================
+       NOT AUTHENTICATED
+    ===================================================== */
+
+    if (!isAuthenticated) {
+        return null;
+    }
+
+    /* =====================================================
+       PERMISSION LOADING
+    ===================================================== */
+
+    if (
+        !hasFullAccess &&
+        (
+            permissionLoading ||
+            !permissionsLoaded
+        )
+    ) {
+        return <InvoiceSkeleton />;
+    }
+
+    /* =====================================================
+       VIEW PERMISSION DENIED
+    ===================================================== */
+
+    if (!canViewProduct) {
+
+        return (
+            <div
+                className="
+                    flex h-screen items-center justify-center
+                    bg-gray-50 font-sans
+                "
+            >
+                <div className="px-6 text-center">
+
+                    <div
+                        className="
+                            mx-auto mb-4 flex h-16 w-16
+                            items-center justify-center
+                            rounded-full bg-red-50
+                            text-2xl font-semibold text-red-500
+                        "
+                    >
+                        !
+                    </div>
+
+                    <h2 className="text-lg font-semibold text-gray-800">
+                        Access Denied
+                    </h2>
+
+                    <p className="mt-1 max-w-sm text-sm text-gray-500">
+                        You do not have permission to view products.
+                    </p>
+
+                </div>
+            </div>
+        );
+    }
+
+    /* =====================================================
+       PAGE
+    ===================================================== */
 
     return (
 
         <div
             className="
-                flex
-                h-screen
-                bg-gray-50
-                font-sans
-                text-[13px]
-                overflow-hidden
+                flex h-screen overflow-hidden
+                bg-gray-50 font-sans text-[13px]
             "
         >
 
-            {/* =====================================================
-                SINGLE PAGE SCROLLER
-            ===================================================== */}
-
             <div
                 className="
-                    flex-1
-                    min-h-0
-                    bg-white
-                    overflow-y-auto
+                    min-h-0 flex-1 overflow-y-auto bg-white
                 "
             >
 
                 <div
                     className="
-                        px-2
-                        py-5
-                        w-full
+                        w-full max-w-30xl px-2 py-5
                     "
                 >
 
-                    {/* =================================================
-                        PRODUCT NAVBAR
-                    ================================================= */}
+                    {/* PRODUCT NAVBAR */}
 
                     <NavbarProduct />
 
-                    {/* =================================================
-                        ERROR
-                    ================================================= */}
+                    {/* PRODUCT OVERVIEW */}
+
+                    <ProductOverview
+                        canViewProduct={canViewProduct}
+                        isAuthenticated={isAuthenticated}
+                        authChecking={authChecking}
+                    />
+
+                    {/* ERROR */}
 
                     {error && (
 
                         <div
                             className="
-                                mx-2
-                                mt-4
-                                px-4
-                                py-3
-                                rounded-md
-                                border
-                                border-red-200
-                                bg-red-50
-                                text-sm
-                                text-red-600
+                                mx-2 mt-4 rounded-md
+                                border border-red-200
+                                bg-red-50 px-4 py-3
+                                text-sm text-red-600
                             "
                         >
                             {error}
@@ -306,124 +487,146 @@ export default function ProductDashboard() {
 
                     )}
 
-                    {/* =================================================
-                        PRODUCT TABLE
-                    ================================================= */}
+                    {/* PRODUCT TABLE / LOADING / EMPTY STATE */}
 
-                    {filteredProducts.length > 0 ? (
+                    {loading ? (
+
+                        <div
+                            className="
+                                flex min-h-[250px]
+                                items-center justify-center
+                            "
+                        >
+                            <p className="text-sm text-gray-500">
+                                Loading products...
+                            </p>
+                        </div>
+
+                    ) : filteredProducts.length > 0 ? (
 
                         <ProductTable
-                            products={
-                                filteredProducts
-                            }
+                            products={filteredProducts}
                         />
 
                     ) : (
 
                         <div
                             className="
-                                flex
-                                flex-col
-                                items-center
-                                justify-center
-                                py-16
+                                flex min-h-full flex-col
+                                items-center justify-center
+                                gap-3 px-4
                             "
                         >
 
-                            <h2
-                                className="
-                                    text-lg
-                                    font-semibold
-                                    text-gray-800
-                                "
-                            >
-                                No products found
-                            </h2>
-
-                            <p
-                                className="
-                                    mt-2
-                                    text-sm
-                                    text-gray-500
-                                    text-center
-                                    max-w-md
-                                "
-                            >
-
-                                {productStatus === "ALL"
-                                    ? "There are no products to display."
-                                    : `There are no ${String(
-                                        productStatus
-                                    ).toLowerCase()} products.`}
-
-                            </p>
-
-                            {/* =================================================
-                                ACTION BUTTONS
-                            ================================================= */}
+                            {/* EMPTY STATE ICON */}
 
                             <div
                                 className="
-                                    flex
-                                    items-center
-                                    gap-3
-                                    mt-6
+                                    relative mt-30 mb-1
+                                    flex h-24 w-24 shrink-0
+                                    items-center justify-center
+                                    rounded-full bg-gray-100
+                                "
+                            >
+
+                                <div
+                                    className="
+                                        flex items-center justify-center
+                                        text-gray-400
+                                    "
+                                >
+                                    <Package
+                                        size={42}
+                                        strokeWidth={1.7}
+                                    />
+                                </div>
+
+                                <div
+                                    className="
+                                        absolute bottom-1 right-1
+                                        flex h-7 w-7 items-center
+                                        justify-center rounded-full
+                                        bg-blue-500 text-white
+                                    "
+                                >
+                                    <Plus className="h-4 w-4" />
+                                </div>
+
+                            </div>
+
+                            {/* EMPTY STATE TITLE */}
+
+                            <p
+                                className="
+                                    text-center text-base
+                                    font-medium text-gray-800
+                                "
+                            >
+                                Manage your business products
+                            </p>
+
+                            {/* EMPTY STATE DESCRIPTION */}
+
+                            <p
+                                className="
+                                    max-w-sm text-center
+                                    text-sm text-gray-500
+                                "
+                            >
+                                Create and manage products, organize
+                                categories, sizes and units, and track
+                                your product pricing and stock levels.
+                            </p>
+
+                            {/* ACTION BUTTONS */}
+
+                            <div
+                                className="
+                                    mt-1 flex flex-wrap
+                                    items-center justify-center gap-2.5
                                 "
                             >
 
                                 {/* CREATE PRODUCT */}
 
-                                <button
-                                    type="button"
-                                    onClick={
-                                        handleCreateProduct
-                                    }
-                                    className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        bg-blue-500
-                                        text-white
-                                        px-4
-                                        py-2
-                                        rounded-md
-                                        hover:bg-blue-600
-                                        transition
-                                    "
-                                >
+                                {canCreateProduct && (
 
-                                    <Plus
-                                        size={16}
-                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleCreateProduct}
+                                        className="
+                                            flex items-center gap-2
+                                            whitespace-nowrap rounded-md
+                                            bg-blue-500 px-4 py-2
+                                            text-sm font-medium text-white
+                                            transition-colors hover:bg-blue-600
+                                        "
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Create Product
+                                    </button>
 
-                                    Create New Product
-
-                                </button>
+                                )}
 
                                 {/* IMPORT */}
 
                                 <button
                                     type="button"
+                                    onClick={() => {
+                                        toast(
+                                            "Product import is not configured yet."
+                                        );
+                                    }}
                                     className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        border
-                                        border-gray-300
-                                        px-4
-                                        py-2
-                                        rounded-md
-                                        hover:bg-gray-50
-                                        transition
+                                        flex items-center gap-2
+                                        whitespace-nowrap rounded-md
+                                        border border-gray-300 bg-white
+                                        px-4 py-2 text-sm text-gray-700
+                                        transition-colors hover:bg-gray-50
                                     "
                                 >
-
-                                    <Download
-                                        size={16}
-                                    />
-
+                                    <Download className="h-4 w-4" />
                                     Import File
-
                                 </button>
 
                             </div>
@@ -437,6 +640,5 @@ export default function ProductDashboard() {
             </div>
 
         </div>
-
     );
 }

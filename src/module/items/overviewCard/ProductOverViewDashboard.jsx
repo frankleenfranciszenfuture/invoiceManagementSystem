@@ -13,10 +13,8 @@ import {
 
 import ProductOverViewSiderTopbar from "../overviewCard/ProductOverViewSiderTopbar";
 import ProductOverViewSiderDetails from "../overviewCard/ProductOverViewSiderDetails";
-import ProductOverviewTabTopbar from "../overviewCard/ProductOverviewTabTopbar";
-import ProductOverViewTabsTopbardown from "../overviewCard/ProductOverViewTabsTopbardown";
-import CustomerProfileOverview from "../../customer/pages/Customerprofileoverview";
 import ProductViewDetails from "../pages/Productviewdetails";
+import Productview from "../pages/Productview";
 
 export default function ProductOverViewDashboard() {
     const { id } = useParams();
@@ -92,7 +90,7 @@ export default function ProductOverViewDashboard() {
                         flex-1
                         
                     ">
-                        <ProductViewDetails />
+                        <Productview />
                     </div>
                 </main>
 

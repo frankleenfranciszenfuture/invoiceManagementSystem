@@ -1,7 +1,7 @@
-
 import React, {
     useEffect,
     useMemo,
+    useCallback,
 } from "react";
 
 import {
@@ -10,82 +10,84 @@ import {
 } from "react-redux";
 
 import {
-    useSearchParams,
-} from "react-router-dom";
-
-import {
-    Download,
     Plus,
+    Download,
+    Building2,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
-import CompanyTable
-    from "./CompanyTable";
-
-import NavbarCompany
-    from "../components/bars/nav/NavbarCompany";
+import CompanyTable from "../pages/CompanyTable";
+import NavbarCompany from "../components/bars/nav/NavbarCompany";
 
 import {
-    fetchAllCompanies,
-} from "../thunks/companyThunks";
-
-import {
-    getUserPermission,
-} from "../../menuPermission/thunks/menuPermissionThunks";
-
-import {
-    setCompanyStatus,
-    setSelectedCompanyView,
-} from "../slices/companyViewSlice";
+    clearError,
+} from "../slices/companySlice";
 
 import {
     openModal,
 } from "../../ui/uiSlice";
 
-import InvoiceSkeleton
-    from "../../../common/loader/InvoiceSkeleton";
+import {
+    getUserPermission,
+} from "../../menuPermission/thunks/menuPermissionThunks";
 
+import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
 
-// ============================================================
-// COMPANY DASHBOARD
-// ============================================================
+import CompanyOverview from "../../company/pages/CompanyOverview";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMPTY_ARRAY = [];
+
+/* =========================================================
+   NORMALIZE HELPERS
+========================================================= */
+
+const normalizeModule = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+const normalizeAction = (value) =>
+    String(value ?? "").trim().toUpperCase();
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function CompanyDashboard() {
 
     const dispatch = useDispatch();
 
-    const [searchParams] =
-        useSearchParams();
-
-
-    // ============================================================
-    // AUTH STATE
-    // ============================================================
+    /* =====================================================
+       AUTH STATE
+    ===================================================== */
 
     const user = useSelector(
-        (state) =>
-            state.auth?.user
+        (state) => state.auth?.user
     );
 
     const isAuthenticated = useSelector(
-        (state) =>
-            state.auth?.isAuthenticated === true
+        (state) => state.auth?.isAuthenticated === true
     );
 
     const authChecking = useSelector(
-        (state) =>
-            state.auth?.authChecking === true
+        (state) => state.auth?.authChecking === true
     );
 
-
-    // ============================================================
-    // PERMISSION STATE
-    // ============================================================
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
 
     const permissions = useSelector(
-        (state) =>
-            state.menuPermission?.userPermissions || []
+        (state) => {
+            const value = state.menuPermission?.userPermissions;
+
+            return Array.isArray(value)
+                ? value
+                : EMPTY_ARRAY;
+        }
     );
 
     const permissionLoading = useSelector(
@@ -98,10 +100,9 @@ export default function CompanyDashboard() {
             state.menuPermission?.userPermissionsLoaded === true
     );
 
-
-    // ============================================================
-    // ROLE
-    // ============================================================
+    /* =====================================================
+       ROLE
+    ===================================================== */
 
     const roleName =
         user?.roleName ||
@@ -111,307 +112,174 @@ export default function CompanyDashboard() {
         user?.authority ||
         "";
 
-    const normalizedRole =
-        String(roleName)
-            .trim()
-            .toUpperCase();
-
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
-
-    const isAdmin =
-        normalizedRole === "ADMIN";
+    const normalizedRole = normalizeAction(roleName);
 
     const hasFullAccess =
-        isSuperAdmin || isAdmin;
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
-    // ============================================================
-    // PERMISSION CHECK
-    // ============================================================
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
 
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
+            if (hasFullAccess) {
+                return true;
+            }
 
-        // --------------------------------------------------------
-        // SUPER ADMIN / ADMIN
-        // --------------------------------------------------------
+            if (!Array.isArray(permissions)) {
+                return false;
+            }
 
-        if (hasFullAccess) {
-            return true;
-        }
+            const requestedModule = normalizeModule(moduleName);
+            const requestedAction = normalizeAction(actionName);
 
-        // --------------------------------------------------------
-        // PERMISSION ARRAY
-        // --------------------------------------------------------
+            return permissions.some((permission) => {
 
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
+                const permissionModule = normalizeModule(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                );
 
-        const requestedModule =
-            String(moduleName)
-                .trim()
-                .toLowerCase();
-
-        const requestedAction =
-            String(actionName)
-                .trim()
-                .toUpperCase();
-
-
-        // --------------------------------------------------------
-        // SUPPORT BOTH:
-        //
-        // 1. Flat permission:
-        //
-        // {
-        //     moduleName: "Companies",
-        //     actionName: "CREATE",
-        //     allowed: true
-        // }
-        //
-        // 2. Grouped permission:
-        //
-        // {
-        //     moduleName: "Companies",
-        //     actions: [
-        //         {
-        //             actionName: "CREATE",
-        //             allowed: true
-        //         }
-        //     ]
-        // }
-        // --------------------------------------------------------
-
-        return permissions.some(
-            (permission) => {
-
-                // ==================================================
-                // MODULE
-                // ==================================================
-
-                const permissionModule =
-                    String(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toLowerCase();
-
-                if (
-                    permissionModule !==
-                    requestedModule
-                ) {
+                if (permissionModule !== requestedModule) {
                     return false;
                 }
 
-
-                // ==================================================
-                // ACTIVE STATUS
-                // ==================================================
-
-                if (
-                    permission?.active === false
-                ) {
+                if (permission?.active === false) {
                     return false;
                 }
 
                 if (
-                    String(
-                        permission?.status || ""
-                    )
-                        .trim()
-                        .toUpperCase() ===
-                    "INACTIVE"
+                    normalizeAction(permission?.status) === "INACTIVE"
                 ) {
                     return false;
                 }
 
+                /* ACTION ARRAY */
 
-                // ==================================================
-                // GROUPED ACTIONS
-                // ==================================================
+                if (Array.isArray(permission?.actions)) {
 
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
+                    return permission.actions.some((action) => {
 
-                    return permission.actions.some(
-                        (action) => {
-
-                            const permissionAction =
-                                String(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.action?.name ||
-                                    ""
-                                )
-                                    .trim()
-                                    .toUpperCase();
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
-
+                        if (typeof action === "string") {
                             return (
-                                permissionAction ===
-                                requestedAction &&
-                                allowed
+                                normalizeAction(action) === requestedAction
                             );
                         }
-                    );
+
+                        const permissionAction = normalizeAction(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        );
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        if (action?.active === false) {
+                            return false;
+                        }
+
+                        if (
+                            normalizeAction(action?.status) === "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
                 }
 
+                /* DIRECT / FLAT ACTION */
 
-                // ==================================================
-                // FLAT ACTION
-                // ==================================================
-
-                const permissionAction =
-                    String(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toUpperCase();
+                const permissionAction = normalizeAction(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                );
 
                 const allowed =
                     permission?.allowed === true ||
                     permission?.allowed === "true";
 
                 return (
-                    permissionAction ===
-                    requestedAction &&
+                    permissionAction === requestedAction &&
                     allowed
                 );
-            }
-        );
-    };
+            });
 
-
-    // ============================================================
-    // COMPANY PERMISSIONS
-    // ============================================================
-
-    const canViewCompany =
-        hasPermission(
-            "Company Detail",
-            "VIEW"
-        );
-
-    const canCreateCompany =
-        hasPermission(
-            "Company Detail",
-            "CREATE"
-        );
-
-
-    // ============================================================
-    // COMPANY STATE
-    // ============================================================
-
-    const companies = useSelector(
-        (state) =>
-            state.company?.companies || []
+        },
+        [
+            hasFullAccess,
+            permissions,
+        ]
     );
 
+    /* =====================================================
+       COMPANY PERMISSIONS
+    ===================================================== */
+
+    const canViewCompany = hasPermission(
+        "Companies",
+        "VIEW"
+    );
+
+    const canCreateCompany = hasPermission(
+        "Companies",
+        "CREATE"
+    );
+
+    /* =====================================================
+       COMPANY STATE
+    ===================================================== */
+
+    const companiesFromRedux = useSelector(
+        (state) => state.company?.companies
+    );
+
+    const companies = Array.isArray(companiesFromRedux)
+        ? companiesFromRedux
+        : EMPTY_ARRAY;
+
     const loading = useSelector(
-        (state) =>
-            state.company?.loading || false
+        (state) => state.company?.loading === true
     );
 
     const error = useSelector(
-        (state) =>
-            state.company?.error
+        (state) => state.company?.error
     );
 
-
-    // ============================================================
-    // COMPANY FILTER STATE
-    // ============================================================
-
-    const companyStatus = useSelector(
-        (state) =>
-            state.companyView?.companyStatus ||
-            "ALL"
-    );
-
-
-    // ============================================================
-    // LOAD CURRENT USER PERMISSIONS
-    //
-    // NOTE:
-    //
-    // Ideally this should happen in AuthSlice/bootstrap.
-    // This fallback ensures CompanyDashboard can still
-    // initialize permissions if AuthSlice has not done so.
-    // ============================================================
+    /* =====================================================
+       LOAD USER PERMISSIONS
+    ===================================================== */
 
     useEffect(() => {
 
-        // --------------------------------------------------------
-        // AUTH STILL CHECKING
-        // --------------------------------------------------------
-
-        if (authChecking) {
+        if (authChecking || !isAuthenticated) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // NOT AUTHENTICATED
-        // --------------------------------------------------------
-
-        if (!isAuthenticated) {
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // ADMIN / SUPER ADMIN
-        //
-        // No permission request required.
-        // --------------------------------------------------------
-
+        // Admin and Super Admin have full access.
         if (hasFullAccess) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // ALREADY LOADED
-        // --------------------------------------------------------
-
-        if (permissionsLoaded) {
+        if (permissionsLoaded || permissionLoading) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // CURRENTLY LOADING
-        // --------------------------------------------------------
-
-        if (permissionLoading) {
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // LOAD CURRENT USER EFFECTIVE PERMISSIONS
-        // --------------------------------------------------------
-
-        dispatch(
-            getUserPermission()
-        );
+        dispatch(getUserPermission());
 
     }, [
         authChecking,
@@ -422,256 +290,100 @@ export default function CompanyDashboard() {
         dispatch,
     ]);
 
+    /* =====================================================
+       FILTER COMPANIES
+    ===================================================== */
 
-    // ============================================================
-    // FETCH COMPANIES
-    // ============================================================
+    const filteredCompanies = useMemo(() => {
 
-    useEffect(() => {
+        return companies;
 
-        // --------------------------------------------------------
-        // AUTH CHECKING
-        // --------------------------------------------------------
+    }, [
+        companies,
+    ]);
 
-        if (authChecking) {
-            return;
-        }
+    /* =====================================================
+       OPEN CREATE COMPANY MODAL
+    ===================================================== */
 
-
-        // --------------------------------------------------------
-        // NOT AUTHENTICATED
-        // --------------------------------------------------------
+    const handleCreateCompany = useCallback(() => {
 
         if (!isAuthenticated) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // STAFF / OTHER ROLE
-        //
-        // Wait until permissions are loaded.
-        // --------------------------------------------------------
-
-        if (!hasFullAccess) {
-
-            if (!permissionsLoaded) {
-                return;
-            }
-
-            if (permissionLoading) {
-                return;
-            }
-
-
-            // ----------------------------------------------------
-            // NO VIEW PERMISSION
-            // ----------------------------------------------------
-
-            if (!canViewCompany) {
-                return;
-            }
-        }
-
-
-        // --------------------------------------------------------
-        // FETCH COMPANIES
-        // --------------------------------------------------------
-
-        dispatch(
-            fetchAllCompanies()
-        );
-
-    }, [
-        authChecking,
-        isAuthenticated,
-        hasFullAccess,
-        permissionsLoaded,
-        permissionLoading,
-        canViewCompany,
-        dispatch,
-    ]);
-
-
-    // ============================================================
-    // SYNC URL STATUS → REDUX
-    // ============================================================
-
-    useEffect(() => {
-
-        const urlStatus =
-            searchParams.get(
-                "companyStatus"
-            );
-
-        if (!urlStatus) {
-            return;
-        }
-
-
-        const normalizedStatus =
-            String(urlStatus)
-                .toUpperCase();
-
-
-        const validStatuses = [
-            "ALL",
-            "ACTIVE",
-            "INACTIVE",
-            "DRAFT",
-        ];
-
-
         if (
-            !validStatuses.includes(
-                normalizedStatus
+            !hasFullAccess &&
+            (
+                permissionLoading ||
+                !permissionsLoaded
             )
         ) {
             return;
         }
-
-
-        dispatch(
-            setCompanyStatus(
-                normalizedStatus
-            )
-        );
-
-
-        const statusLabels = {
-
-            ALL:
-                "All Companies",
-
-            ACTIVE:
-                "Active Companies",
-
-            INACTIVE:
-                "Inactive Companies",
-
-            DRAFT:
-                "Draft Companies",
-
-        };
-
-
-        dispatch(
-            setSelectedCompanyView(
-                statusLabels[
-                normalizedStatus
-                ]
-            )
-        );
-
-    }, [
-        searchParams,
-        dispatch,
-    ]);
-
-
-    // ============================================================
-    // FILTER COMPANIES BY STATUS
-    // ============================================================
-
-    const filteredCompanies = useMemo(() => {
-
-        const selectedStatus =
-            String(
-                companyStatus || "ALL"
-            ).toUpperCase();
-
-
-        if (
-            selectedStatus === "ALL"
-        ) {
-
-            return companies;
-
-        }
-
-
-        return companies.filter(
-            (company) => {
-
-                const backendStatus =
-                    String(
-                        company?.status || ""
-                    ).toUpperCase();
-
-
-                return (
-                    backendStatus ===
-                    selectedStatus
-                );
-
-            }
-        );
-
-    }, [
-        companies,
-        companyStatus,
-    ]);
-
-
-    // ============================================================
-    // CREATE COMPANY MODAL
-    // ============================================================
-
-    const handleCreateCompany = () => {
-
-        // --------------------------------------------------------
-        // CREATE PERMISSION
-        // --------------------------------------------------------
 
         if (!canCreateCompany) {
-
             toast.error(
                 "You do not have permission to create companies."
             );
-
             return;
         }
-
-
-        // --------------------------------------------------------
-        // OPEN MODAL
-        // --------------------------------------------------------
 
         dispatch(
             openModal({
                 type: "addCompany",
-                data: null,
             })
         );
 
-    };
+    }, [
+        isAuthenticated,
+        hasFullAccess,
+        permissionLoading,
+        permissionsLoaded,
+        canCreateCompany,
+        dispatch,
+    ]);
 
+    /* =====================================================
+       CLEAR ERROR
+    ===================================================== */
 
-    // ============================================================
-    // AUTH CHECKING
-    // ============================================================
+    useEffect(() => {
+
+        if (!error) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            dispatch(clearError());
+        }, 2000);
+
+        return () => clearTimeout(timer);
+
+    }, [
+        error,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       AUTH CHECKING
+    ===================================================== */
 
     if (authChecking) {
-
-        return (
-            <InvoiceSkeleton />
-        );
-
+        return <InvoiceSkeleton />;
     }
 
-
-    // ============================================================
-    // NOT AUTHENTICATED
-    // ============================================================
+    /* =====================================================
+       NOT AUTHENTICATED
+    ===================================================== */
 
     if (!isAuthenticated) {
         return null;
     }
 
-
-    // ============================================================
-    // PERMISSION LOADING
-    // ============================================================
+    /* =====================================================
+       PERMISSION LOADING
+    ===================================================== */
 
     if (
         !hasFullAccess &&
@@ -680,304 +392,242 @@ export default function CompanyDashboard() {
             !permissionsLoaded
         )
     ) {
-
-        return (
-            <InvoiceSkeleton />
-        );
-
+        return <InvoiceSkeleton />;
     }
 
-
-    // ============================================================
-    // VIEW PERMISSION DENIED
-    // ============================================================
+    /* =====================================================
+       VIEW PERMISSION DENIED
+    ===================================================== */
 
     if (!canViewCompany) {
 
         return (
             <div
                 className="
-                    flex
-                    h-screen
-                    items-center
-                    justify-center
-                    bg-gray-50
-                    font-sans
+                    flex h-screen items-center justify-center
+                    bg-gray-50 font-sans
                 "
             >
-
-                <div
-                    className="
-                        text-center
-                        px-6
-                    "
-                >
+                <div className="px-6 text-center">
 
                     <div
                         className="
-                            mx-auto
-                            mb-4
-                            w-16
-                            h-16
-                            rounded-full
-                            bg-red-50
-                            flex
-                            items-center
-                            justify-center
-                            text-red-500
-                            text-2xl
-                            font-semibold
+                            mx-auto mb-4 flex h-16 w-16
+                            items-center justify-center
+                            rounded-full bg-red-50
+                            text-2xl font-semibold text-red-500
                         "
                     >
                         !
                     </div>
 
-
-                    <h2
-                        className="
-                            text-lg
-                            font-semibold
-                            text-gray-800
-                        "
-                    >
+                    <h2 className="text-lg font-semibold text-gray-800">
                         Access Denied
                     </h2>
 
-
-                    <p
-                        className="
-                            mt-1
-                            text-sm
-                            text-gray-500
-                            max-w-sm
-                        "
-                    >
-                        You do not have permission
-                        to view companies.
+                    <p className="mt-1 max-w-sm text-sm text-gray-500">
+                        You do not have permission to view companies.
                     </p>
 
                 </div>
-
             </div>
         );
-
     }
 
-
-    // ============================================================
-    // COMPANY LOADING
-    // ============================================================
-
-    if (loading) {
-
-        return (
-            <InvoiceSkeleton />
-        );
-
-    }
-
-
-    // ============================================================
-    // PAGE
-    // ============================================================
+    /* =====================================================
+       PAGE
+    ===================================================== */
 
     return (
 
         <div
             className="
-                flex
-                h-screen
-                bg-gray-50
-                font-sans
-                text-[13px]
-                overflow-hidden
+                flex h-screen overflow-hidden
+                bg-gray-50 font-sans text-[13px]
             "
         >
 
-            {/* =====================================================
-                SINGLE PAGE SCROLLER
-            ===================================================== */}
-
             <div
                 className="
-                    flex-1
-                    min-h-0
-                    bg-white
-                    overflow-y-auto
+                    min-h-0 flex-1 overflow-y-auto bg-white
                 "
             >
 
                 <div
                     className="
-                        px-2
-                        py-5
-                        w-full
+                        w-full max-w-30xl px-2 py-5
                     "
                 >
 
-                    {/* =================================================
-                        COMPANY NAVBAR
-                    ================================================= */}
+                    {/* COMPANY NAVBAR */}
 
                     <NavbarCompany />
 
+                    {/* COMPANY OVERVIEW */}
 
-                    {/* =================================================
-                        ERROR
-                    ================================================= */}
+                    <CompanyOverview
+                        canViewCompany={canViewCompany}
+                        isAuthenticated={isAuthenticated}
+                        authChecking={authChecking}
+                    />
+
+                    {/* ERROR */}
 
                     {error && (
 
                         <div
                             className="
-                                mx-2
-                                mt-4
-                                px-4
-                                py-3
-                                rounded-md
-                                border
-                                border-red-200
-                                bg-red-50
-                                text-sm
-                                text-red-600
+                                mx-2 mt-4 rounded-md
+                                border border-red-200
+                                bg-red-50 px-4 py-3
+                                text-sm text-red-600
                             "
                         >
                             {error}
                         </div>
-
                     )}
 
+                    {/* COMPANY TABLE / LOADING / EMPTY STATE */}
 
-                    {/* =================================================
-                        COMPANY TABLE
-                    ================================================= */}
+                    {loading ? (
 
-                    {filteredCompanies.length > 0 ? (
+                        <div
+                            className="
+                                flex min-h-[250px]
+                                items-center justify-center
+                            "
+                        >
+                            <p className="text-sm text-gray-500">
+                                Loading companies...
+                            </p>
+                        </div>
+
+                    ) : filteredCompanies.length > 0 ? (
 
                         <CompanyTable
-                            companies={
-                                filteredCompanies
-                            }
+                            companies={filteredCompanies}
                         />
 
                     ) : (
 
                         <div
                             className="
-                                flex
-                                flex-col
-                                items-center
-                                justify-center
-                                py-16
+                                flex min-h-full flex-col
+                                items-center justify-center
+                                gap-3 px-4
                             "
                         >
 
-                            <h2
-                                className="
-                                    text-lg
-                                    font-semibold
-                                    text-gray-800
-                                "
-                            >
-                                No companies found
-                            </h2>
-
-
-                            <p
-                                className="
-                                    mt-2
-                                    text-sm
-                                    text-gray-500
-                                    text-center
-                                    max-w-md
-                                "
-                            >
-
-                                {companyStatus === "ALL"
-                                    ? "There are no companies to display."
-                                    : `There are no ${String(
-                                        companyStatus
-                                    ).toLowerCase()
-                                    } companies.`}
-
-                            </p>
-
-
-                            {/* =================================================
-                                ACTION BUTTONS
-                            ================================================= */}
+                            {/* EMPTY STATE ICON */}
 
                             <div
                                 className="
-                                    flex
-                                    items-center
-                                    gap-3
-                                    mt-6
+                                    relative mt-30 mb-1
+                                    flex h-24 w-24 shrink-0
+                                    items-center justify-center
+                                    rounded-full bg-gray-100
                                 "
                             >
 
-                                {/* =================================================
-                                    CREATE COMPANY
-                                ================================================= */}
+                                <div
+                                    className="
+                                        flex items-center justify-center
+                                        text-gray-400
+                                    "
+                                >
+                                    <Building2
+                                        size={42}
+                                        strokeWidth={1.7}
+                                    />
+                                </div>
+
+                                <div
+                                    className="
+                                        absolute bottom-1 right-1
+                                        flex h-7 w-7 items-center
+                                        justify-center rounded-full
+                                        bg-blue-500 text-white
+                                    "
+                                >
+                                    <Plus className="h-4 w-4" />
+                                </div>
+
+                            </div>
+
+                            {/* EMPTY STATE TITLE */}
+
+                            <p
+                                className="
+                                    text-center text-base
+                                    font-medium text-gray-800
+                                "
+                            >
+                                Manage your companies
+                            </p>
+
+                            {/* EMPTY STATE DESCRIPTION */}
+
+                            <p
+                                className="
+                                    max-w-sm text-center
+                                    text-sm text-gray-500
+                                "
+                            >
+                                Create and manage your companies,
+                                organize company information, maintain
+                                contact details, and manage business
+                                profile information.
+                            </p>
+
+                            {/* ACTION BUTTONS */}
+
+                            <div
+                                className="
+                                    mt-1 flex flex-wrap
+                                    items-center justify-center gap-2.5
+                                "
+                            >
+
+                                {/* CREATE COMPANY */}
 
                                 {canCreateCompany && (
 
                                     <button
                                         type="button"
-                                        onClick={
-                                            handleCreateCompany
-                                        }
+                                        onClick={handleCreateCompany}
                                         className="
-                                            flex
-                                            items-center
-                                            gap-2
-                                            bg-blue-500
-                                            text-white
-                                            px-4
-                                            py-2
-                                            rounded-md
-                                            hover:bg-blue-600
-                                            transition
+                                            flex items-center gap-2
+                                            whitespace-nowrap rounded-md
+                                            bg-blue-500 px-4 py-2
+                                            text-sm font-medium text-white
+                                            transition-colors hover:bg-blue-600
                                         "
                                     >
-
-                                        <Plus
-                                            size={16}
-                                        />
-
-                                        Create New Company
-
+                                        <Plus className="h-4 w-4" />
+                                        Create Company
                                     </button>
 
                                 )}
 
-
-                                {/* =================================================
-                                    IMPORT
-                                ================================================= */}
+                                {/* IMPORT */}
 
                                 <button
                                     type="button"
+                                    onClick={() => {
+                                        toast(
+                                            "Company import is not configured yet."
+                                        );
+                                    }}
                                     className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        border
-                                        border-gray-300
-                                        px-4
-                                        py-2
-                                        rounded-md
-                                        hover:bg-gray-50
-                                        transition
+                                        flex items-center gap-2
+                                        whitespace-nowrap rounded-md
+                                        border border-gray-300 bg-white
+                                        px-4 py-2 text-sm text-gray-700
+                                        transition-colors hover:bg-gray-50
                                     "
                                 >
-
-                                    <Download
-                                        size={16}
-                                    />
-
+                                    <Download className="h-4 w-4" />
                                     Import File
-
                                 </button>
 
                             </div>
@@ -991,7 +641,5 @@ export default function CompanyDashboard() {
             </div>
 
         </div>
-
     );
-
 }

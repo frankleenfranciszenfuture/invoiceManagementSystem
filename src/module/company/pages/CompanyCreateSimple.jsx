@@ -5,37 +5,34 @@ import React, {
     useState,
 } from "react";
 
-import {
-    useDispatch,
-    useSelector,
-} from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
-    useNavigate,
-    useParams,
-} from "react-router-dom";
-
-import {
+    ArrowLeft,
     Building2,
-    UserRoundArrowLeft,
-    X,
-    Upload,
-    Landmark,
+    Save,
     ChevronDown,
+    Loader2,
+    RotateCcw,
+    FileText,
+    Phone,
+    MapPin,
+    Receipt,
+    Coins,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
 import {
-    resetCompanyForm,
-    setCompanyField,
-} from "../slices/companySlice";
+    createCompany,
+    fetchCompanyById,
+    updateCompany,
+} from "../thunks/companyThunks";
 
 import {
-    createCompany,
-    updateCompany,
-    fetchCompanyById,
-} from "../thunks/companyThunks";
+    resetCompanyForm,
+} from "../slices/companySlice";
 
 import {
     getUserPermission,
@@ -44,243 +41,223 @@ import {
 import CustomSelect from "../../../common/custom/CustomSelect";
 
 /* =========================================================
-   CONSTANTS
+   INITIAL FORM DATA
 ========================================================= */
 
-const INITIAL_FORM = {
-    id: null,
+const initialFormData = {
     companyName: "",
     displayName: "",
     legalName: "",
     companyCode: "",
+
     gstNumber: "",
     panNumber: "",
     tanNumber: "",
+
     email: "",
     phone: "",
     alternatePhone: "",
     website: "",
+
     addressLine1: "",
     addressLine2: "",
     city: "",
     state: "",
     country: "India",
     pincode: "",
-    invoicePrefix: "NT",
-    invoiceStartNumber: "1",
+
+    invoicePrefix: "",
+    invoiceStartNumber: 1,
     currency: "INR",
     financialYearStart: "",
-    status: "ACTIVE",
-    logo: null,
-    signature: null,
 
+    status: "ACTIVE",
     isDefault: false,
 };
 
-const TABS = [
-    { id: "company", label: "Company Information" },
-    { id: "contact", label: "Contact & Address" },
-    { id: "tax", label: "Tax & Registration" },
-    { id: "settings", label: "Invoice & Settings" },
-    { id: "branding", label: "Branding" },
-];
-
-const STATUS_OPTIONS = [
-    { value: "ACTIVE", label: "Active" },
-    { value: "INACTIVE", label: "Inactive" },
-    { value: "DRAFT", label: "Draft" },
-];
-
-const CURRENCY_OPTIONS = [
-    { value: "INR", label: "INR - Indian Rupee" },
-    { value: "USD", label: "USD - US Dollar" },
-    { value: "EUR", label: "EUR - Euro" },
-];
-
 /* =========================================================
-   STYLES
+   REUSABLE FORM COMPONENTS
 ========================================================= */
 
-const labelClass =
-    "mb-1.5 block text-xs font-medium text-gray-400";
+const FormField = ({
+    label,
+    required = false,
+    children,
+    className = "",
+}) => (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+        <label className="text-sm font-medium text-gray-700">
+            {label}
 
+            {required && (
+                <span className="ml-1 text-red-500">*</span>
+            )}
+        </label>
 
+        {children}
+    </div>
+);
 
-const getLabelClass = (required = false) => `
-        block
-        text-xs
-        font-medium
-        ${required ? "text-red-500" : "text-[#0F4659]"}
-        mb-1.5
-    `;
+const TextInput = ({
+    value,
+    onChange,
+    placeholder,
+    type = "text",
+    disabled = false,
+    maxLength,
+}) => (
+    <input
+        type={type}
+        value={value ?? ""}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        maxLength={maxLength}
+        className="
+            h-10 w-full rounded-lg border border-gray-200
+            bg-white px-3 text-sm text-gray-700
+            outline-none transition
+            placeholder:text-gray-400
+            focus:border-[#408DFB] focus:ring-2
+            focus:ring-[#408DFB]/10
+            disabled:cursor-not-allowed disabled:bg-gray-100
+        "
+    />
+);
 
-const errorClass =
-    "mt-1 text-xs text-red-500";
+const SectionHeading = ({
+    icon: Icon,
+    title,
+    description,
+}) => (
+    <div className="mb-5 flex items-center gap-3">
+        <div className="
+            flex h-10 w-10 items-center justify-center
+            rounded-xl bg-blue-50 text-[#408DFB]
+        ">
+            <Icon size={19} />
+        </div>
 
-const inputBaseClass =
-    "h-10 w-full rounded-md border bg-white px-3 text-sm " +
-    "text-[#0F4659] transition focus:outline-none focus:ring-2";
+        <div>
+            <h3 className="text-sm font-semibold text-gray-800">
+                {title}
+            </h3>
 
-const textareaBaseClass =
-    "w-full rounded-md border bg-white px-3 py-2 text-sm " +
-    "text-[#0F4659] resize-none focus:outline-none focus:ring-2";
-
-const inputClass = (hasError = false) =>
-    `${inputBaseClass} ${hasError
-        ? "border-red-400 focus:border-red-400 focus:ring-red-100"
-        : "border-gray-300 focus:border-[#0F4659] focus:ring-[#0F4659]/20"
-    }`;
-
-const textareaClass = (hasError = false) =>
-    `${textareaBaseClass} ${hasError
-        ? "border-red-400 focus:border-red-400 focus:ring-red-100"
-        : "border-gray-300 focus:border-[#0F4659] focus:ring-[#0F4659]/20"
-    }`;
-
-const normalizeModule = (value) =>
-    String(value ?? "")
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, " ");
-
-const normalizeAction = (value) =>
-    String(value ?? "")
-        .trim()
-        .toUpperCase()
-        .replace(/[\s-]+/g, "_");
-
-const isTrue = (value) =>
-    value === true || value === "true";
-
-const getFileUrl = (value) => {
-    if (typeof value === "string") {
-        return value;
-    }
-
-    if (value && typeof value === "object") {
-        return (
-            value.url ||
-            value.fileUrl ||
-            value.path ||
-            ""
-        );
-    }
-
-    return "";
-};
+            {description && (
+                <p className="mt-0.5 text-xs text-gray-400">
+                    {description}
+                </p>
+            )}
+        </div>
+    </div>
+);
 
 /* =========================================================
-   COMPONENT
+   MAIN COMPONENT
 ========================================================= */
 
-export default function CompanyCreateSimpleNew() {
+const CompanyCreateSimple = () => {
+
     const dispatch = useDispatch();
     const navigate = useNavigate();
+
     const { id } = useParams();
 
-    const isEdit = Boolean(id);
+    const isEditMode = Boolean(id);
 
     /* =====================================================
-       REDUX
+       REDUX STATE
     ===================================================== */
 
     const companyState = useSelector(
-        (state) => state.company || {}
+        (state) => state.company ?? {}
     );
 
     const {
         company,
-        loading,
+        loading = false,
     } = companyState;
 
-    const authState = useSelector(
-        (state) => state.auth || {}
-    );
-
-    const { user } = authState;
-
-    const permissionState = useSelector(
-        (state) => state.menuPermission || {}
-    );
-
-    const form = company || INITIAL_FORM;
-
     /* =====================================================
-       AUTH
+       AUTH STATE
     ===================================================== */
 
-    const isAuthenticated =
-        authState.isAuthenticated !== false;
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
 
-    const authChecking = Boolean(
-        authState.authChecking ?? authState.loading
+    const isAuthenticated = useSelector(
+        (state) => state.auth?.isAuthenticated === true
+    );
+
+    const authChecking = useSelector(
+        (state) => state.auth?.authChecking === true
+    );
+
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
+
+    const permissions = useSelector(
+        (state) => state.menuPermission?.userPermissions ?? []
+    );
+
+    const permissionLoading = useSelector(
+        (state) => state.menuPermission?.loading === true
+    );
+
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissionsLoaded === true
     );
 
     /* =====================================================
        LOCAL STATE
     ===================================================== */
 
-    const [activeTab, setActiveTab] = useState("company");
+    const [formData, setFormData] = useState({
+        ...initialFormData,
+    });
 
-    const [showSaveMenu, setShowSaveMenu] = useState(false);
+    const [saveMode, setSaveMode] = useState("close");
 
-    const [editLoading, setEditLoading] = useState(isEdit);
-
-    const [editLoadError, setEditLoadError] = useState(false);
-
-    const [errors, setErrors] = useState({});
-
-    const [logoPreview, setLogoPreview] = useState("");
-
-    const [signaturePreview, setSignaturePreview] = useState("");
+    const [showSaveOptions, setShowSaveOptions] = useState(false);
 
     /* =====================================================
-       PERMISSIONS
+       NORMALIZATION
     ===================================================== */
 
-    const userPermissions = Array.isArray(
-        permissionState.userPermissions
-    )
-        ? permissionState.userPermissions
-        : [];
+    const normalizeModule = (value) =>
+        String(value ?? "").trim().toLowerCase();
 
-    const permissionLoading = Boolean(
-        permissionState.userPermissionsLoading ??
-        permissionState.loading
-    );
+    const normalizeAction = (value) =>
+        String(value ?? "").trim().toUpperCase();
 
-    const permissionsLoaded =
-        permissionState.userPermissionsLoaded === true ||
-        permissionState.permissionsLoaded === true ||
-        permissionState.loaded === true ||
-        (
-            permissionState.userPermissions !== undefined &&
-            permissionState.userPermissions !== null
-        );
+    /* =====================================================
+       ROLE
+    ===================================================== */
 
-    const role = useMemo(() => {
-        return (
-            user?.roleName ||
-            user?.role?.roleName ||
-            user?.role?.name ||
-            user?.role ||
-            user?.authority ||
-            ""
-        );
-    }, [user]);
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
 
-    const normalizedRole = normalizeAction(
-        typeof role === "object"
-            ? role?.name || role?.roleName
-            : role
-    );
+    const normalizedRole = normalizeAction(roleName);
 
-    const hasFullAccess = [
-        "ADMIN",
-        "SUPER_ADMIN",
-    ].includes(normalizedRole);
+    const isSuperAdmin = normalizedRole === "SUPER_ADMIN";
+    const isAdmin = normalizedRole === "ADMIN";
+
+    const hasFullAccess = isSuperAdmin || isAdmin;
+
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
     const hasPermission = (moduleName, actionName) => {
+
         if (hasFullAccess) {
             return true;
         }
@@ -288,12 +265,16 @@ export default function CompanyCreateSimpleNew() {
         const requestedModule = normalizeModule(moduleName);
         const requestedAction = normalizeAction(actionName);
 
-        return userPermissions.some((permission) => {
+        if (!Array.isArray(permissions)) {
+            return false;
+        }
+
+        return permissions.some((permission) => {
+
             const permissionModule = normalizeModule(
                 permission?.moduleName ||
                 permission?.module?.moduleName ||
-                permission?.module?.name ||
-                ""
+                permission?.module?.name
             );
 
             if (permissionModule !== requestedModule) {
@@ -307,96 +288,79 @@ export default function CompanyCreateSimpleNew() {
                 return false;
             }
 
-            const nestedActions = Array.isArray(
-                permission?.actions
-            )
-                ? permission.actions
-                : [];
+            if (Array.isArray(permission?.actions)) {
 
-            const matchingNestedAction = nestedActions.find(
-                (action) => {
-                    const actionNameValue =
-                        typeof action === "string"
-                            ? action
-                            : (
-                                action?.actionName ||
-                                action?.action?.actionName ||
-                                action?.action?.name ||
-                                action?.name ||
-                                ""
+                const groupedPermission = permission.actions.some(
+                    (action) => {
+
+                        if (typeof action === "string") {
+                            return (
+                                normalizeAction(action) === requestedAction
                             );
+                        }
 
-                    return (
-                        normalizeAction(actionNameValue) ===
-                        requestedAction
-                    );
-                }
-            );
+                        const actionName = normalizeAction(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.name
+                        );
 
-            if (matchingNestedAction !== undefined) {
-                if (typeof matchingNestedAction === "string") {
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        return (
+                            actionName === requestedAction &&
+                            allowed &&
+                            action?.active !== false &&
+                            normalizeAction(action?.status) !== "INACTIVE"
+                        );
+                    }
+                );
+
+                if (groupedPermission) {
                     return true;
                 }
-
-                return (
-                    matchingNestedAction?.active !== false &&
-                    normalizeAction(
-                        matchingNestedAction?.status
-                    ) !== "INACTIVE" &&
-                    (
-                        isTrue(matchingNestedAction?.allowed) ||
-                        isTrue(matchingNestedAction?.isAllowed)
-                    )
-                );
             }
 
-            const directAction = normalizeAction(
+            const permissionAction = normalizeAction(
                 permission?.actionName ||
                 permission?.action?.actionName ||
-                permission?.action?.name ||
-                ""
+                permission?.action?.name
             );
 
+            const allowed =
+                permission?.allowed === true ||
+                permission?.allowed === "true";
+
             return (
-                directAction === requestedAction &&
-                (
-                    isTrue(permission?.allowed) ||
-                    isTrue(permission?.isAllowed)
-                )
+                permissionAction === requestedAction &&
+                allowed
             );
         });
     };
 
-    const hasCreatePermission = hasPermission(
-        "Companies",
-        "CREATE"
-    );
+    const requiredAction = isEditMode ? "EDIT" : "CREATE";
 
-    const hasEditPermission = hasPermission(
+    const hasRequiredPermission = hasPermission(
         "Companies",
-        "EDIT"
+        requiredAction
     );
-
-    const hasSavePermission = isEdit
-        ? hasEditPermission
-        : hasCreatePermission;
 
     /* =====================================================
        LOAD PERMISSIONS
     ===================================================== */
 
     useEffect(() => {
-        if (
-            authChecking ||
-            !isAuthenticated ||
-            hasFullAccess
-        ) {
+
+        if (authChecking || !isAuthenticated || hasFullAccess) {
             return;
         }
 
         if (!permissionsLoaded && !permissionLoading) {
             dispatch(getUserPermission());
         }
+
     }, [
         authChecking,
         isAuthenticated,
@@ -407,409 +371,222 @@ export default function CompanyCreateSimpleNew() {
     ]);
 
     /* =====================================================
-       LOAD COMPANY FOR EDIT
+       FETCH COMPANY FOR EDIT
     ===================================================== */
 
     useEffect(() => {
-        let cancelled = false;
 
-        const loadCompany = async () => {
-            if (!isEdit) {
-                dispatch(resetCompanyForm());
+        if (!id || !isAuthenticated) {
+            return;
+        }
 
-                setEditLoading(false);
-                setEditLoadError(false);
+        dispatch(fetchCompanyById(id));
 
-                return;
-            }
-
-            setEditLoading(true);
-            setEditLoadError(false);
-
-            dispatch(resetCompanyForm());
-
-            try {
-                const response = await dispatch(
-                    fetchCompanyById(id)
-                ).unwrap();
-
-                if (cancelled) {
-                    return;
-                }
-
-                const result =
-                    response?.data?.data ??
-                    response?.data ??
-                    response?.company ??
-                    response;
-
-                if (
-                    !result ||
-                    typeof result !== "object" ||
-                    Array.isArray(result) ||
-                    result.id == null
-                ) {
-                    throw new Error(
-                        "Company details were not found."
-                    );
-                }
-
-                const populatedForm = {
-                    ...INITIAL_FORM,
-                    ...result,
-
-                    id: result.id,
-
-                    logo: result.logo ?? null,
-
-                    signature: result.signature ?? null,
-
-                    invoiceStartNumber:
-                        result.invoiceStartNumber == null
-                            ? "1"
-                            : String(result.invoiceStartNumber),
-
-                    financialYearStart:
-                        result.financialYearStart
-                            ? String(result.financialYearStart).slice(0, 10)
-                            : "",
-
-                    status: result.status || "ACTIVE",
-                };
-
-                Object.entries(populatedForm).forEach(
-                    ([field, value]) => {
-                        dispatch(
-                            setCompanyField({
-                                field,
-                                value,
-                            })
-                        );
-                    }
-                );
-            } catch (error) {
-                if (cancelled) {
-                    return;
-                }
-
-                console.error(
-                    "Failed to load company:",
-                    error
-                );
-
-                setEditLoadError(true);
-
-                toast.error(
-                    typeof error === "string"
-                        ? error
-                        : error?.message ||
-                        "Failed to load company details."
-                );
-            } finally {
-                if (!cancelled) {
-                    setEditLoading(false);
-                }
-            }
-        };
-
-        loadCompany();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [dispatch, id, isEdit]);
+    }, [dispatch, id, isAuthenticated]);
 
     /* =====================================================
-       IMAGE PREVIEWS
+       CHECK CURRENT COMPANY
+    ===================================================== */
+
+    const isCurrentCompanyLoaded =
+        isEditMode &&
+        company?.id != null &&
+        String(company.id) === String(id);
+
+    /* =====================================================
+       POPULATE EDIT FORM
     ===================================================== */
 
     useEffect(() => {
-        if (form.logo instanceof File) {
-            const objectUrl = URL.createObjectURL(form.logo);
 
-            setLogoPreview(objectUrl);
-
-            return () => URL.revokeObjectURL(objectUrl);
+        if (!isCurrentCompanyLoaded) {
+            return;
         }
 
-        setLogoPreview(getFileUrl(form.logo));
+        setFormData({
+            companyName: company.companyName ?? "",
+            displayName: company.displayName ?? "",
+            legalName: company.legalName ?? "",
+            companyCode: company.companyCode ?? "",
 
-        return undefined;
-    }, [form.logo]);
+            gstNumber: company.gstNumber ?? "",
+            panNumber: company.panNumber ?? "",
+            tanNumber: company.tanNumber ?? "",
 
-    useEffect(() => {
-        if (form.signature instanceof File) {
-            const objectUrl = URL.createObjectURL(
-                form.signature
-            );
+            email: company.email ?? "",
+            phone: company.phone ?? "",
+            alternatePhone: company.alternatePhone ?? "",
+            website: company.website ?? "",
 
-            setSignaturePreview(objectUrl);
+            addressLine1: company.addressLine1 ?? "",
+            addressLine2: company.addressLine2 ?? "",
+            city: company.city ?? "",
+            state: company.state ?? "",
+            country: company.country ?? "India",
+            pincode: company.pincode ?? "",
 
-            return () => URL.revokeObjectURL(objectUrl);
-        }
+            invoicePrefix: company.invoicePrefix ?? "",
+            invoiceStartNumber: company.invoiceStartNumber ?? 1,
+            currency: company.currency ?? "INR",
+            financialYearStart: company.financialYearStart ?? "",
 
-        setSignaturePreview(getFileUrl(form.signature));
+            status: company.status ?? "ACTIVE",
+            isDefault: company.isDefault ?? false,
+        });
 
-        return undefined;
-    }, [form.signature]);
+    }, [
+        isCurrentCompanyLoaded,
+        company,
+    ]);
 
     /* =====================================================
-       FIELD HANDLERS
+       CURRENCY OPTIONS
+    ===================================================== */
+
+    const currencyOptions = useMemo(() => [
+        { label: "Indian Rupee (INR)", value: "INR" },
+        { label: "US Dollar (USD)", value: "USD" },
+        { label: "Euro (EUR)", value: "EUR" },
+        { label: "British Pound (GBP)", value: "GBP" },
+        { label: "UAE Dirham (AED)", value: "AED" },
+        { label: "Saudi Riyal (SAR)", value: "SAR" },
+    ], []);
+
+    /* =====================================================
+       STATUS OPTIONS
+    ===================================================== */
+
+    const statusOptions = useMemo(() => [
+        { label: "Active", value: "ACTIVE" },
+        { label: "Inactive", value: "INACTIVE" },
+    ], []);
+
+    /* =====================================================
+       HANDLE FIELD CHANGE
     ===================================================== */
 
     const handleChange = (field, value) => {
-        dispatch(
-            setCompanyField({
-                field,
-                value,
-            })
-        );
 
-        setErrors((previous) => {
-            if (!previous[field]) {
-                return previous;
-            }
-
-            const updated = { ...previous };
-            delete updated[field];
-
-            return updated;
-        });
-    };
-
-    const handleFileChange = (field, file) => {
-        if (!file) {
-            return;
-        }
-
-        if (!file.type.startsWith("image/")) {
-            toast.error("Please select a valid image file.");
-            return;
-        }
-
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error("Image size must not exceed 5 MB.");
-            return;
-        }
-
-        handleChange(field, file);
+        setFormData((previous) => ({
+            ...previous,
+            [field]: value,
+        }));
     };
 
     /* =====================================================
-       CLOSE
+       RESET FORM
     ===================================================== */
 
-    const handleClose = () => {
-        if (loading || editLoading) {
-            return;
+    const getCompanyFormData = () => ({
+        companyName: company.companyName ?? "",
+        displayName: company.displayName ?? "",
+        legalName: company.legalName ?? "",
+        companyCode: company.companyCode ?? "",
+
+        gstNumber: company.gstNumber ?? "",
+        panNumber: company.panNumber ?? "",
+        tanNumber: company.tanNumber ?? "",
+
+        email: company.email ?? "",
+        phone: company.phone ?? "",
+        alternatePhone: company.alternatePhone ?? "",
+        website: company.website ?? "",
+
+        addressLine1: company.addressLine1 ?? "",
+        addressLine2: company.addressLine2 ?? "",
+        city: company.city ?? "",
+        state: company.state ?? "",
+        country: company.country ?? "India",
+        pincode: company.pincode ?? "",
+
+        invoicePrefix: company.invoicePrefix ?? "",
+        invoiceStartNumber: company.invoiceStartNumber ?? 1,
+        currency: company.currency ?? "INR",
+        financialYearStart: company.financialYearStart ?? "",
+
+        status: company.status ?? "ACTIVE",
+        isDefault: company.isDefault ?? false,
+    });
+
+    const handleReset = () => {
+
+        if (isEditMode) {
+
+            if (!isCurrentCompanyLoaded) {
+                return;
+            }
+
+            setFormData(getCompanyFormData());
+
+        } else {
+
+            setFormData({
+                ...initialFormData,
+            });
         }
 
-        setShowSaveMenu(false);
-        setErrors({});
+        setSaveMode("close");
+        setShowSaveOptions(false);
 
         dispatch(resetCompanyForm());
-
-        setActiveTab("company");
-
-        navigate("/settings/companies");
     };
-
-    useEffect(() => {
-        const handleEscape = (event) => {
-            if (event.key === "Escape") {
-                handleClose();
-            }
-        };
-
-        document.addEventListener(
-            "keydown",
-            handleEscape
-        );
-
-        return () => {
-            document.removeEventListener(
-                "keydown",
-                handleEscape
-            );
-        };
-    }, [loading, editLoading]);
 
     /* =====================================================
        VALIDATION
     ===================================================== */
 
     const validateForm = () => {
-        const nextErrors = {};
 
-        if (!form.companyName?.trim()) {
-            nextErrors.companyName =
-                "Company name is required.";
+        if (!formData.companyName.trim()) {
+            toast.error("Company name is required");
+            return false;
         }
 
-        if (!form.companyCode?.trim()) {
-            nextErrors.companyCode =
-                "Company code is required.";
+        if (!formData.displayName.trim()) {
+            toast.error("Display name is required");
+            return false;
         }
 
-        if (!form.phone?.trim()) {
-            nextErrors.phone =
-                "Phone number is required.";
-        } else if (!/^\d{10}$/.test(form.phone.trim())) {
-            nextErrors.phone =
-                "Phone number must contain 10 digits.";
+        if (!formData.legalName.trim()) {
+            toast.error("Legal name is required");
+            return false;
         }
 
-        if (
-            form.alternatePhone?.trim() &&
-            !/^\d{10}$/.test(form.alternatePhone.trim())
-        ) {
-            nextErrors.alternatePhone =
-                "Alternate phone must contain 10 digits.";
+        if (!formData.companyCode.trim()) {
+            toast.error("Company code is required");
+            return false;
         }
 
-        if (
-            form.email?.trim() &&
-            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-                form.email.trim()
-            )
-        ) {
-            nextErrors.email =
-                "Enter a valid email address.";
+        if (!formData.email.trim()) {
+            toast.error("Email is required");
+            return false;
         }
 
-        if (
-            form.website?.trim() &&
-            !/^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/.*)?$/i.test(
-                form.website.trim()
-            )
-        ) {
-            nextErrors.website =
-                "Enter a valid website URL.";
+        if (!formData.phone.trim()) {
+            toast.error("Phone number is required");
+            return false;
+        }
+
+        if (!formData.currency) {
+            toast.error("Currency is required");
+            return false;
+        }
+
+        if (!formData.invoicePrefix.trim()) {
+            toast.error("Invoice prefix is required");
+            return false;
         }
 
         if (
-            form.addressLine1?.trim() === ""
+            formData.invoiceStartNumber === "" ||
+            Number(formData.invoiceStartNumber) < 1
         ) {
-            nextErrors.addressLine1 =
-                "Address is required.";
+            toast.error("Enter a valid invoice start number");
+            return false;
         }
 
-        if (!form.city?.trim()) {
-            nextErrors.city = "City is required.";
-        }
-
-        if (!form.state?.trim()) {
-            nextErrors.state = "State is required.";
-        }
-
-        if (!form.country?.trim()) {
-            nextErrors.country = "Country is required.";
-        }
-
-        if (!form.pincode?.trim()) {
-            nextErrors.pincode = "Pincode is required.";
-        } else if (!/^\d{6}$/.test(form.pincode.trim())) {
-            nextErrors.pincode =
-                "Pincode must contain 6 digits.";
-        }
-
-        if (
-            form.gstNumber?.trim() &&
-            !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(
-                form.gstNumber.trim().toUpperCase()
-            )
-        ) {
-            nextErrors.gstNumber =
-                "Enter a valid GST number.";
-        }
-
-        if (
-            form.panNumber?.trim() &&
-            !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(
-                form.panNumber.trim().toUpperCase()
-            )
-        ) {
-            nextErrors.panNumber =
-                "Enter a valid PAN number.";
-        }
-
-        if (
-            form.tanNumber?.trim() &&
-            !/^[A-Z]{4}[0-9]{5}[A-Z]$/.test(
-                form.tanNumber.trim().toUpperCase()
-            )
-        ) {
-            nextErrors.tanNumber =
-                "Enter a valid TAN number.";
-        }
-
-        if (!form.invoicePrefix?.trim()) {
-            nextErrors.invoicePrefix =
-                "Invoice prefix is required.";
-        }
-
-        if (
-            !Number.isInteger(
-                Number(form.invoiceStartNumber)
-            ) ||
-            Number(form.invoiceStartNumber) < 1
-        ) {
-            nextErrors.invoiceStartNumber =
-                "Invoice start number must be at least 1.";
-        }
-
-        if (!form.currency) {
-            nextErrors.currency = "Currency is required.";
-        }
-
-        if (!form.financialYearStart) {
-            nextErrors.financialYearStart =
-                "Financial year start is required.";
-        }
-
-        setErrors(nextErrors);
-
-        if (Object.keys(nextErrors).length > 0) {
-            const tabFields = {
-                company: [
-                    "companyName",
-                    "companyCode",
-                ],
-                contact: [
-                    "phone",
-                    "alternatePhone",
-                    "email",
-                    "website",
-                    "addressLine1",
-                    "city",
-                    "state",
-                    "country",
-                    "pincode",
-                ],
-                tax: [
-                    "gstNumber",
-                    "panNumber",
-                    "tanNumber",
-                ],
-                settings: [
-                    "invoicePrefix",
-                    "invoiceStartNumber",
-                    "currency",
-                    "financialYearStart",
-                ],
-            };
-
-            const firstTab = Object.entries(tabFields).find(
-                ([, fields]) =>
-                    fields.some((field) => nextErrors[field])
-            );
-
-            setActiveTab(firstTab?.[0] || "company");
-
-            toast.error(
-                Object.values(nextErrors)[0]
-            );
-
+        if (!formData.status) {
+            toast.error("Company status is required");
             return false;
         }
 
@@ -817,47 +594,35 @@ export default function CompanyCreateSimpleNew() {
     };
 
     /* =====================================================
-       SAVE
+       SAVE COMPANY
     ===================================================== */
 
-    const handleSave = async ({
-        saveAndNew = false,
-        saveAndClose = true,
-    } = {}) => {
+    const handleSubmit = async (e) => {
+
+        e.preventDefault();
+
+        if (loading) {
+            return;
+        }
+
+        if (isEditMode && !isCurrentCompanyLoaded) {
+            toast.error("Company details are still loading");
+            return;
+        }
+
         if (!isAuthenticated) {
-            toast.error("You are not authenticated.");
+            toast.error("You are not authenticated");
             return;
         }
 
-        if (loading || editLoading) {
+        if (!hasFullAccess && !permissionsLoaded) {
+            toast.error("Permissions are still loading");
             return;
         }
 
-        if (isEdit && editLoadError) {
+        if (!hasRequiredPermission) {
             toast.error(
-                "Cannot update because company details failed to load."
-            );
-            return;
-        }
-
-        if (
-            !hasFullAccess &&
-            (
-                permissionLoading ||
-                !permissionsLoaded
-            )
-        ) {
-            toast.error(
-                "Permissions are still loading. Please try again."
-            );
-            return;
-        }
-
-        if (!hasSavePermission) {
-            toast.error(
-                isEdit
-                    ? "You do not have permission to edit companies."
-                    : "You do not have permission to create companies."
+                `You do not have permission to ${isEditMode ? "edit" : "create"} companies`
             );
             return;
         }
@@ -867,108 +632,75 @@ export default function CompanyCreateSimpleNew() {
         }
 
         const payload = {
-            ...form,
+            companyName: formData.companyName.trim(),
+            displayName: formData.displayName.trim(),
+            legalName: formData.legalName.trim(),
+            companyCode: formData.companyCode.trim().toUpperCase(),
 
-            companyName: form.companyName.trim(),
+            gstNumber: formData.gstNumber.trim().toUpperCase() || null,
+            panNumber: formData.panNumber.trim().toUpperCase() || null,
+            tanNumber: formData.tanNumber.trim().toUpperCase() || null,
 
-            displayName: form.displayName?.trim() || "",
+            email: formData.email.trim(),
+            phone: formData.phone.trim(),
+            alternatePhone: formData.alternatePhone.trim() || null,
+            website: formData.website.trim() || null,
 
-            legalName: form.legalName?.trim() || "",
+            addressLine1: formData.addressLine1.trim() || null,
+            addressLine2: formData.addressLine2.trim() || null,
+            city: formData.city.trim() || null,
+            state: formData.state.trim() || null,
+            country: formData.country.trim() || null,
+            pincode: formData.pincode.trim() || null,
 
-            companyCode: form.companyCode.trim().toUpperCase(),
+            invoicePrefix: formData.invoicePrefix.trim().toUpperCase(),
+            invoiceStartNumber: Number(formData.invoiceStartNumber),
+            currency: formData.currency,
+            financialYearStart: formData.financialYearStart || null,
 
-            gstNumber:
-                form.gstNumber?.trim().toUpperCase() || "",
-
-            panNumber:
-                form.panNumber?.trim().toUpperCase() || "",
-
-            tanNumber:
-                form.tanNumber?.trim().toUpperCase() || "",
-
-            email: form.email?.trim() || "",
-
-            phone: form.phone?.trim() || "",
-
-            alternatePhone:
-                form.alternatePhone?.trim() || "",
-
-            website: form.website?.trim() || "",
-
-            addressLine1:
-                form.addressLine1?.trim() || "",
-
-            addressLine2:
-                form.addressLine2?.trim() || "",
-
-            city: form.city?.trim() || "",
-
-            state: form.state?.trim() || "",
-
-            country: form.country?.trim() || "India",
-
-            pincode: form.pincode?.trim() || "",
-
-            invoicePrefix:
-                form.invoicePrefix?.trim().toUpperCase() || "NT",
-
-            invoiceStartNumber: Number(
-                form.invoiceStartNumber || 1
-            ),
-
-            currency: form.currency || "INR",
-
-            financialYearStart:
-                form.financialYearStart || null,
-
-            status: form.status || "ACTIVE",
+            status: formData.status,
+            isDefault: formData.isDefault,
         };
 
         try {
-            if (isEdit) {
-                await dispatch(
+
+            const response = isEditMode
+                ? await dispatch(
                     updateCompany({
-                        id: Number(id),
+                        id,
                         data: payload,
                     })
-                ).unwrap();
-
-                toast.success(
-                    "Company updated successfully."
-                );
-            } else {
-                await dispatch(
+                ).unwrap()
+                : await dispatch(
                     createCompany(payload)
                 ).unwrap();
 
-                toast.success(
-                    "Company created successfully."
-                );
-            }
+            toast.success(
+                response?.message ||
+                `Company ${isEditMode ? "updated" : "created"} successfully`
+            );
 
-            setShowSaveMenu(false);
-            setErrors({});
+            if (!isEditMode && saveMode === "new") {
 
-            if (saveAndNew && !isEdit) {
+                setFormData({
+                    ...initialFormData,
+                });
+
                 dispatch(resetCompanyForm());
 
-                setActiveTab("company");
+                setSaveMode("close");
 
                 return;
             }
 
             dispatch(resetCompanyForm());
 
-            setActiveTab("company");
+            navigate("/settings/companies");
 
-            if (saveAndClose) {
-                navigate("/settings/companies");
-            }
         } catch (error) {
+
             console.error(
-                isEdit
-                    ? "Company update error:"
-                    : "Company create error:",
+                `Company ${isEditMode ? "update" : "creation"} error:`,
                 error
             );
 
@@ -976,638 +708,62 @@ export default function CompanyCreateSimpleNew() {
                 typeof error === "string"
                     ? error
                     : error?.message ||
-                    error?.response?.data?.message ||
-                    (
-                        isEdit
-                            ? "Failed to update company."
-                            : "Failed to create company."
-                    )
+                    `Failed to ${isEditMode ? "update" : "create"} company`
             );
         }
     };
 
     /* =====================================================
-       REUSABLE FIELD
+       ESCAPE KEY
     ===================================================== */
 
-    const renderInput = ({
-        field,
-        label,
-        placeholder = "",
-        type = "text",
-        required = false,
-        maxLength,
-        onValueChange,
-    }) => (
-        <div>
-            <label className={required ? getLabelClass(true) : labelClass}>
-                {label}
-                {required && (
-                    <span className="ml-1 text-red-500">*</span>
-                )}
-            </label>
+    useEffect(() => {
 
-            <input
-                type={type}
-                value={form[field] ?? ""}
-                maxLength={maxLength}
-                placeholder={placeholder}
-                onChange={(event) => {
-                    const rawValue = event.target.value;
+        const handleEscape = (event) => {
 
-                    const value = onValueChange
-                        ? onValueChange(rawValue)
-                        : rawValue;
+            if (event.key === "Escape") {
+                setShowSaveOptions(false);
+            }
+        };
 
-                    handleChange(field, value);
-                }}
-                className={inputClass(Boolean(errors[field]))}
-            />
+        window.addEventListener("keydown", handleEscape);
 
-            {errors[field] && (
-                <p className={errorClass}>
-                    {errors[field]}
-                </p>
-            )}
-        </div>
-    );
+        return () => {
+            window.removeEventListener("keydown", handleEscape);
+        };
 
-    const renderSelect = ({
-        field,
-        label,
-        options,
-        required = true,
-    }) => (
-        <div>
-            <label className={required ? getLabelClass(true) : labelClass}>
-                {label}
-                {required && (
-                    <span className="ml-1 text-red-500">*</span>
-                )}
-            </label>
-
-            <CustomSelect
-                value={form[field] || ""}
-                onChange={(value) => handleChange(field, value)}
-                options={options}
-            />
-
-            {errors[field] && (
-                <p className={errorClass}>
-                    {errors[field]}
-                </p>
-            )}
-        </div>
-    );
+    }, []);
 
     /* =====================================================
-       COMPANY TAB
-    ===================================================== */
-
-    const renderCompanyTab = () => (
-        <div className="w-full max-w-7xl">
-            <div className="rounded-lg border border-gray-200 bg-white p-6">
-                <div className="mb-6">
-                    <h2 className="text-base font-semibold text-gray-500">
-                        Company Information
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-400">
-                        Enter the basic information of the company.
-                    </p>
-                </div>
-
-                <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
-                    <div className="space-y-5">
-                        {renderInput({
-                            field: "companyName",
-                            label: "Company Name",
-                            placeholder: "Enter company name",
-                            required: true,
-                        })}
-
-                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                            {renderInput({
-                                field: "companyCode",
-                                label: "Company Code",
-                                placeholder: "Company code",
-                                required: true,
-                                onValueChange: (value) =>
-                                    value.toUpperCase(),
-                            })}
-
-                            {renderInput({
-                                field: "displayName",
-                                label: "Display Name",
-                                placeholder: "Display name",
-                            })}
-                        </div>
-
-                        {renderInput({
-                            field: "legalName",
-                            label: "Legal Name",
-                            placeholder: "Legal company name",
-                        })}
-                    </div>
-
-                    <div className="rounded-lg border border-gray-200 p-4">
-                        <div className="mb-4 flex items-center gap-2">
-                            <Building2
-                                size={18}
-                                className="text-gray-500"
-                            />
-
-                            <h3 className="text-sm font-semibold text-gray-500">
-                                Default Company
-                            </h3>
-                        </div>
-
-
-                        <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-3">
-                            {/* <p className="text-xs text-gray-500">
-                                Company status controls whether this
-                                company is available for normal transactions.
-                            </p> */}
-                            {/* DEFAULT COMPANY CHECKBOX */}
-
-                            <label className="flex cursor-pointer items-start gap-3">
-                                <input
-                                    type="checkbox"
-                                    checked={Boolean(form.isDefault)}
-                                    onChange={(event) =>
-                                        handleChange("isDefault", event.target.checked)
-                                    }
-                                    className="mt-0.5 h-4 w-4 cursor-pointer rounded border-gray-300 text-[#0F4659] focus:ring-[#0F4659]"
-                                />
-
-                                <div>
-                                    <span className="block text-sm font-medium text-[#0F4659]">
-                                        Set as Default Company
-                                    </span>
-
-                                    <span className="mt-1 block text-xs leading-5 text-gray-500">
-                                        Use this company by default when creating invoices,
-                                        unless another company is selected.
-                                    </span>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    );
-
-    /* =====================================================
-       CONTACT & ADDRESS TAB
-    ===================================================== */
-
-    const renderContactTab = () => (
-        <div className="w-full max-w-7xl">
-            <div className="rounded-lg border border-gray-200 bg-white p-6">
-                <div className="mb-6">
-                    <h2 className="text-base font-semibold text-gray-500">
-                        Contact & Address
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-400">
-                        Add company contact information and registered address.
-                    </p>
-                </div>
-
-                <div>
-                    <h3 className="mb-4 text-sm font-semibold text-gray-500">
-                        Contact Information
-                    </h3>
-
-                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                        {renderInput({
-                            field: "phone",
-                            label: "Phone",
-                            placeholder: "10 digit phone number",
-                            required: true,
-                            maxLength: 10,
-                            onValueChange: (value) =>
-                                value.replace(/\D/g, ""),
-                        })}
-
-                        {renderInput({
-                            field: "alternatePhone",
-                            label: "Alternate Phone",
-                            placeholder: "Alternate phone",
-                            maxLength: 10,
-                            onValueChange: (value) =>
-                                value.replace(/\D/g, ""),
-                        })}
-
-                        {renderInput({
-                            field: "email",
-                            label: "Email",
-                            placeholder: "Email address",
-                            type: "email",
-                        })}
-
-                        {renderInput({
-                            field: "website",
-                            label: "Website",
-                            placeholder: "https://example.com",
-                        })}
-                    </div>
-                </div>
-
-                <div className="mt-7 border-t border-gray-200 pt-6">
-                    <h3 className="mb-4 text-sm font-semibold text-gray-500">
-                        Company Address
-                    </h3>
-
-                    <div className="space-y-5">
-                        <div>
-                            <label className={labelClass}>
-                                Address Line 1
-                                <span className="ml-1 text-red-500">*</span>
-                            </label>
-
-                            <textarea
-                                rows={3}
-                                value={form.addressLine1 || ""}
-                                onChange={(event) =>
-                                    handleChange(
-                                        "addressLine1",
-                                        event.target.value
-                                    )
-                                }
-                                placeholder="Address"
-                                className={textareaClass(
-                                    Boolean(errors.addressLine1)
-                                )}
-                            />
-
-                            {errors.addressLine1 && (
-                                <p className={errorClass}>
-                                    {errors.addressLine1}
-                                </p>
-                            )}
-                        </div>
-
-                        <div>
-                            <label className={labelClass}>
-                                Address Line 2
-                            </label>
-
-                            <textarea
-                                rows={2}
-                                value={form.addressLine2 || ""}
-                                onChange={(event) =>
-                                    handleChange(
-                                        "addressLine2",
-                                        event.target.value
-                                    )
-                                }
-                                placeholder="Additional address"
-                                className={textareaClass()}
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                            {renderInput({
-                                field: "city",
-                                label: "City",
-                                placeholder: "City",
-                                required: true,
-                            })}
-
-                            {renderInput({
-                                field: "state",
-                                label: "State",
-                                placeholder: "State",
-                                required: true,
-                            })}
-
-                            {renderInput({
-                                field: "country",
-                                label: "Country",
-                                placeholder: "Country",
-                                required: true,
-                            })}
-
-                            {renderInput({
-                                field: "pincode",
-                                label: "Pincode",
-                                placeholder: "6 digit pincode",
-                                required: true,
-                                maxLength: 6,
-                                onValueChange: (value) =>
-                                    value.replace(/\D/g, ""),
-                            })}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-
-    /* =====================================================
-       TAX TAB
-    ===================================================== */
-
-    const renderTaxTab = () => (
-        <div className="w-full max-w-7xl">
-            <div className="rounded-lg border border-gray-200 bg-white p-6">
-                <div className="mb-6">
-                    <h2 className="text-base font-semibold text-gray-500">
-                        Tax & Registration
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-400">
-                        Enter the company's tax and registration details.
-                    </p>
-                </div>
-
-                <div className="grid max-w-4xl grid-cols-1 gap-5 md:grid-cols-2">
-                    {renderInput({
-                        field: "gstNumber",
-                        label: "GST Number",
-                        placeholder: "GST number",
-                        maxLength: 15,
-                        onValueChange: (value) =>
-                            value.toUpperCase(),
-                    })}
-
-                    {renderInput({
-                        field: "panNumber",
-                        label: "PAN Number",
-                        placeholder: "PAN number",
-                        maxLength: 10,
-                        onValueChange: (value) =>
-                            value.toUpperCase(),
-                    })}
-
-                    {renderInput({
-                        field: "tanNumber",
-                        label: "TAN Number",
-                        placeholder: "TAN number",
-                        maxLength: 10,
-                        onValueChange: (value) =>
-                            value.toUpperCase(),
-                    })}
-                </div>
-
-                <div className="mt-8 max-w-4xl rounded-lg border border-gray-200 bg-gray-50 p-4">
-                    <p className="text-xs text-gray-500">
-                        GST, PAN and TAN are optional. If provided,
-                        they will be validated before saving.
-                    </p>
-                </div>
-            </div>
-        </div>
-    );
-
-    /* =====================================================
-       SETTINGS TAB
-    ===================================================== */
-
-    const renderSettingsTab = () => (
-        <div className="w-full max-w-7xl">
-            <div className="rounded-lg border border-gray-200 bg-white p-6">
-                <div className="mb-6">
-                    <h2 className="text-base font-semibold text-gray-500">
-                        Invoice & Company Settings
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-400">
-                        Configure invoice numbering, currency and financial year.
-                    </p>
-                </div>
-
-                <div className="grid max-w-4xl grid-cols-1 gap-5 md:grid-cols-2">
-                    {renderInput({
-                        field: "invoicePrefix",
-                        label: "Invoice Prefix",
-                        placeholder: "NT",
-                        required: true,
-                        onValueChange: (value) =>
-                            value.toUpperCase(),
-                    })}
-
-                    {renderInput({
-                        field: "invoiceStartNumber",
-                        label: "Invoice Start Number",
-                        type: "number",
-                        required: true,
-                        onValueChange: (value) =>
-                            value === "" ? "" : Number(value),
-                    })}
-
-                    {renderSelect({
-                        field: "currency",
-                        label: "Currency",
-                        options: CURRENCY_OPTIONS,
-                        required: true,
-                    })}
-
-                    {renderInput({
-                        field: "financialYearStart",
-                        label: "Financial Year Start",
-                        type: "date",
-                        required: true,
-                    })}
-                </div>
-
-                <div className="mt-8 max-w-sm border-t border-gray-200 pt-6">
-                    <h3 className="mb-4 text-sm font-semibold text-gray-500">
-                        Company Status
-                    </h3>
-
-                    {renderSelect({
-                        field: "status",
-                        label: "Status",
-                        options: STATUS_OPTIONS,
-                        required: true,
-                    })}
-                </div>
-            </div>
-        </div>
-    );
-
-    /* =====================================================
-       BRANDING TAB
-    ===================================================== */
-
-    const renderBrandingTab = () => (
-        <div className="w-full max-w-7xl">
-            <div className="rounded-lg border border-gray-200 bg-white p-6">
-                <div className="mb-6">
-                    <h2 className="text-base font-semibold text-gray-500">
-                        Company Branding
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-400">
-                        Upload the company logo and signature used in documents and invoices.
-                    </p>
-                </div>
-
-                <div className="grid max-w-5xl grid-cols-1 gap-6 lg:grid-cols-2">
-                    {/* LOGO */}
-
-                    <div className="rounded-lg border border-gray-200 p-4">
-                        <h3 className="text-sm font-semibold text-gray-500">
-                            Company Logo
-                        </h3>
-
-                        <p className="mt-1 text-xs text-gray-400">
-                            PNG, JPG or WEBP. Maximum 5 MB.
-                        </p>
-
-                        <label className="mt-4 flex h-52 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 transition hover:bg-gray-50">
-                            {logoPreview ? (
-                                <img
-                                    src={logoPreview}
-                                    alt="Company logo"
-                                    className="h-40 max-w-full object-contain"
-                                />
-                            ) : (
-                                <>
-                                    <Upload
-                                        size={28}
-                                        className="text-gray-400"
-                                    />
-
-                                    <span className="mt-2 text-sm text-gray-400">
-                                        Upload Logo
-                                    </span>
-                                </>
-                            )}
-
-                            <input
-                                type="file"
-                                accept="image/png,image/jpeg,image/webp"
-                                className="hidden"
-                                onChange={(event) => {
-                                    handleFileChange(
-                                        "logo",
-                                        event.target.files?.[0]
-                                    );
-
-                                    event.target.value = "";
-                                }}
-                            />
-                        </label>
-
-                        {form.logo && (
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    handleChange("logo", null)
-                                }
-                                className="mt-3 text-xs font-medium text-red-500 hover:text-red-700"
-                            >
-                                Remove logo
-                            </button>
-                        )}
-                    </div>
-
-                    {/* SIGNATURE */}
-
-                    <div className="rounded-lg border border-gray-200 p-4">
-                        <h3 className="text-sm font-semibold text-gray-500">
-                            Signature
-                        </h3>
-
-                        <p className="mt-1 text-xs text-gray-400">
-                            PNG, JPG or WEBP. Maximum 5 MB.
-                        </p>
-
-                        <label className="mt-4 flex h-52 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 transition hover:bg-gray-50">
-                            {signaturePreview ? (
-                                <img
-                                    src={signaturePreview}
-                                    alt="Company signature"
-                                    className="h-40 max-w-full object-contain"
-                                />
-                            ) : (
-                                <>
-                                    <Upload
-                                        size={28}
-                                        className="text-gray-400"
-                                    />
-
-                                    <span className="mt-2 text-sm text-gray-400">
-                                        Upload Signature
-                                    </span>
-                                </>
-                            )}
-
-                            <input
-                                type="file"
-                                accept="image/png,image/jpeg,image/webp"
-                                className="hidden"
-                                onChange={(event) => {
-                                    handleFileChange(
-                                        "signature",
-                                        event.target.files?.[0]
-                                    );
-
-                                    event.target.value = "";
-                                }}
-                            />
-                        </label>
-
-                        {form.signature && (
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    handleChange("signature", null)
-                                }
-                                className="mt-3 text-xs font-medium text-red-500 hover:text-red-700"
-                            >
-                                Remove signature
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-
-    /* =====================================================
-       AUTH CHECK
+       LOADING
     ===================================================== */
 
     if (authChecking) {
+
         return (
-            <div className="flex min-h-40 items-center justify-center">
-                <p className="text-sm text-gray-500">
+            <div className="flex h-full items-center justify-center bg-gray-50">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 size={20} className="animate-spin" />
                     Checking authentication...
-                </p>
+                </div>
             </div>
         );
     }
 
     if (!isAuthenticated) {
+        return null;
+    }
+
+    if (
+        isEditMode &&
+        (loading || !isCurrentCompanyLoaded)
+    ) {
+
         return (
-            <div className="flex min-h-64 items-center justify-center px-6">
-                <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-                    <UserRoundArrowLeft
-                        className="mx-auto mb-4 text-red-500"
-                        size={42}
-                    />
-
-                    <h2 className="text-lg font-semibold text-gray-800">
-                        Authentication Required
-                    </h2>
-
-                    <p className="mt-2 text-sm text-gray-500">
-                        Please sign in to manage companies.
-                    </p>
-
-                    <button
-                        type="button"
-                        onClick={() => navigate("/companies")}
-                        className="mt-6 rounded-md bg-[#0F4659] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#0F4659]/90"
-                    >
-                        Back to Companies
-                    </button>
+            <div className="flex h-full items-center justify-center bg-gray-50">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 size={20} className="animate-spin" />
+                    Loading company...
                 </div>
             </div>
         );
@@ -1615,295 +771,682 @@ export default function CompanyCreateSimpleNew() {
 
     if (
         !hasFullAccess &&
-        (
-            permissionLoading ||
-            !permissionsLoaded
-        )
+        (permissionLoading || !permissionsLoaded)
     ) {
+
         return (
-            <div className="flex min-h-40 items-center justify-center">
-                <div className="text-center">
-                    <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-[#0F4659]/20 border-t-[#0F4659]" />
-
-                    <p className="text-sm font-medium text-gray-600">
-                        Loading permissions...
-                    </p>
-                </div>
-            </div>
-        );
-    }
-
-    if (!hasSavePermission) {
-        return (
-            <div className="flex items-center justify-center py-8">
-                <div className="w-full max-w-md text-center">
-                    <UserRoundArrowLeft
-                        size={28}
-                        className="mx-auto mb-3 text-red-500"
-                    />
-
-                    <h2 className="text-lg font-semibold text-gray-800">
-                        Access Denied
-                    </h2>
-
-                    <p className="mt-2 text-sm text-gray-500">
-                        {isEdit
-                            ? "You do not have permission to edit companies."
-                            : "You do not have permission to create companies."}
-                    </p>
-
-                    <button
-                        type="button"
-                        onClick={() => navigate("/companies")}
-                        className="mt-4 rounded-md border border-gray-300 px-4 py-2 text-sm text-[#0F4659] hover:bg-gray-50"
-                    >
-                        Back to Companies
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    if (editLoading) {
-        return (
-            <div className="flex min-h-64 flex-col items-center justify-center bg-gray-50">
-                <div className="mb-3 h-10 w-10 animate-spin rounded-full border-2 border-[#0F4659]/20 border-t-[#0F4659]" />
-
-                <p className="text-sm font-medium text-[#0F4659]">
-                    Loading company details...
-                </p>
-            </div>
-        );
-    }
-
-    if (isEdit && editLoadError) {
-        return (
-            <div className="flex min-h-64 items-center justify-center px-4">
-                <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 text-center">
-                    <Building2
-                        size={32}
-                        className="mx-auto mb-3 text-red-500"
-                    />
-
-                    <h2 className="text-lg font-semibold text-[#0F4659]">
-                        Unable to Load Company
-                    </h2>
-
-                    <p className="mt-2 text-sm text-gray-500">
-                        Company details could not be loaded.
-                        Return to the company list and try again.
-                    </p>
-
-                    <button
-                        type="button"
-                        onClick={() => navigate("/companies")}
-                        className="mt-5 h-10 rounded-md bg-[#0F4659] px-5 text-sm font-medium text-white hover:bg-[#0F4659]/90"
-                    >
-                        Back to Companies
-                    </button>
+            <div className="flex h-full items-center justify-center bg-gray-50">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 size={20} className="animate-spin" />
+                    Loading permissions...
                 </div>
             </div>
         );
     }
 
     /* =====================================================
-       MAIN UI
+       ACCESS DENIED
+    ===================================================== */
+
+    if (!hasRequiredPermission) {
+
+        return (
+            <div className="
+                flex h-full items-center justify-center
+                rounded-xl bg-white p-8
+            ">
+                <div className="text-center">
+
+                    <div className="
+                        mx-auto mb-3 flex h-12 w-12
+                        items-center justify-center rounded-full
+                        bg-red-50 text-lg font-semibold text-red-500
+                    ">
+                        !
+                    </div>
+
+                    <h2 className="text-lg font-semibold text-gray-800">
+                        Access Denied
+                    </h2>
+
+                    <p className="mt-1 text-sm text-gray-500">
+                        You do not have permission to{" "}
+                        {isEditMode ? "edit" : "create"} companies.
+                    </p>
+
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="
+                            mt-5 rounded-lg bg-blue-600
+                            px-5 py-2 text-sm font-medium
+                            text-white hover:bg-blue-700
+                        "
+                    >
+                        Go Back
+                    </button>
+
+                </div>
+            </div>
+        );
+    }
+
+    /* =====================================================
+       RENDER
     ===================================================== */
 
     return (
-        <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-5">
+        <div className="
+            flex h-full min-h-0 flex-col
+            bg-gray-50 px-3.5 py-3
+        ">
+
             {/* HEADER */}
 
-            <div className="shrink-0 px-6 py-4 bg-white border border-lime-400 rounded flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div
-                        className="w-10 h-10 rounded-lg bg-blue-400 border border-blue-100 flex items-center justify-center cursor-pointer"
-                        onClick={() => navigate("/companies")}
-                    >
-                        <Landmark
-                            size={20}
-                            className="text-gray-100"
-                        />
-                    </div>
+            <div className="
+                mb-3 flex shrink-0 items-center
+                justify-between rounded-xl
+                border-b-[3px] border-[#B7E34A]
+                bg-white px-5 py-4 shadow-sm
+            ">
 
+                <div className="flex items-center gap-3">
+
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="
+                            flex h-9 w-9 items-center justify-center
+                            rounded-lg border border-gray-200
+                            text-gray-500 transition hover:bg-gray-100
+                        "
+                        title="Go Back"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
 
                     <div>
-                        <h1 className="text-lg font-semibold text-gray-500">
-                            {isEdit ? "Edit Company" : "New Company"}
-                        </h1>
+                        <h2 className="text-base font-semibold text-gray-800">
+                            {isEditMode
+                                ? "Edit Company"
+                                : "Create Company"
+                            }
+                        </h2>
 
                         <p className="mt-0.5 text-xs text-gray-400">
-                            {isEdit
-                                ? `Update company details${form.companyName ? ` — ${form.companyName}` : ""}`
-                                : "Create new company details"}
+                            {isEditMode
+                                ? "Update the existing company information"
+                                : "Create and configure your company profile"
+                            }
                         </p>
                     </div>
+
                 </div>
 
-                <button
-                    type="button"
-                    disabled={loading || editLoading}
-                    onClick={handleClose}
-                    className="px-1 py-1 text-gray-100 hover:text-gray-100 bg-red-500 hover:bg-red-600 rounded disabled:opacity-50"
-                    aria-label="Close"
-                >
-                    <X size={20} />
-                </button>
-            </div>
+                <div className="
+                    hidden items-center gap-2 rounded-lg
+                    bg-blue-50 px-3 py-2 sm:flex
+                ">
+                    <Building2 size={16} className="text-[#408DFB]" />
 
-            {/* TABS */}
-
-            <div className="mt-3 flex shrink-0 items-center gap-7 overflow-x-auto border-b border-gray-200 bg-white px-5">
-                {TABS.map((tab) => (
-                    <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`whitespace-nowrap border-b-2 py-3 text-sm font-medium transition ${activeTab === tab.id
-                            ? "border-lime-500 text-gray-500"
-                            : "border-transparent text-gray-400 hover:text-gray-500"
-                            }`}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* BODY */}
-
-            <div className="min-h-0 flex-1 overflow-y-auto py-6">
-                {activeTab === "company" && renderCompanyTab()}
-
-                {activeTab === "contact" && renderContactTab()}
-
-                {activeTab === "tax" && renderTaxTab()}
-
-                {activeTab === "settings" && renderSettingsTab()}
-
-                {activeTab === "branding" && renderBrandingTab()}
-            </div>
-
-            {/* FOOTER */}
-
-            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-6 py-3">
-                <div className="text-xs text-gray-500">
-                    <span className="text-red-500">*</span>
-                    {" "}Required fields
+                    <span className="text-xs font-medium text-[#408DFB]">
+                        Company
+                    </span>
                 </div>
 
-                <div className="flex items-center justify-end gap-3">
+            </div>
+
+            {/* FORM */}
+
+            <form
+                onSubmit={handleSubmit}
+                className="
+                    flex min-h-0 flex-1 flex-col
+                    overflow-hidden rounded-xl
+                    bg-white shadow-sm
+                "
+            >
+
+                {/* SCROLL BODY */}
+
+                <div className="flex-1 overflow-y-auto p-5">
+
+                    {/* COMPANY DETAILS */}
+
+                    <section className="mb-7">
+
+                        <SectionHeading
+                            icon={Building2}
+                            title="Company Details"
+                            description="Enter the basic information about your company"
+                        />
+
+                        <div className="
+                            grid grid-cols-1 gap-5
+                            md:grid-cols-2 lg:grid-cols-3
+                        ">
+
+                            <FormField label="Company Name" required>
+                                <TextInput
+                                    value={formData.companyName}
+                                    onChange={(e) =>
+                                        handleChange("companyName", e.target.value)
+                                    }
+                                    placeholder="Enter company name"
+                                    maxLength={150}
+                                />
+                            </FormField>
+
+                            <FormField label="Display Name" required>
+                                <TextInput
+                                    value={formData.displayName}
+                                    onChange={(e) =>
+                                        handleChange("displayName", e.target.value)
+                                    }
+                                    placeholder="Enter display name"
+                                    maxLength={100}
+                                />
+                            </FormField>
+
+                            <FormField label="Legal Name" required>
+                                <TextInput
+                                    value={formData.legalName}
+                                    onChange={(e) =>
+                                        handleChange("legalName", e.target.value)
+                                    }
+                                    placeholder="Enter legal company name"
+                                    maxLength={200}
+                                />
+                            </FormField>
+
+                            <FormField label="Company Code" required>
+                                <TextInput
+                                    value={formData.companyCode}
+                                    onChange={(e) =>
+                                        handleChange("companyCode", e.target.value)
+                                    }
+                                    placeholder="Example: FFTECH"
+                                    maxLength={50}
+                                />
+                            </FormField>
+
+                            <FormField label="Company Status" required>
+                                <CustomSelect
+                                    value={formData.status}
+                                    onChange={(value) =>
+                                        handleChange("status", value)
+                                    }
+                                    options={statusOptions}
+                                    placeholder="Select company status"
+                                />
+                            </FormField>
+
+                            <FormField label="Currency" required>
+                                <CustomSelect
+                                    value={formData.currency}
+                                    onChange={(value) =>
+                                        handleChange("currency", value)
+                                    }
+                                    options={currencyOptions}
+                                    placeholder="Select currency"
+                                />
+                            </FormField>
+
+                        </div>
+
+                    </section>
+
+                    <div className="my-6 border-t border-gray-100" />
+
+                    {/* TAX INFORMATION */}
+
+                    <section className="mb-7">
+
+                        <SectionHeading
+                            icon={FileText}
+                            title="Tax Information"
+                            description="Enter your company tax registration details"
+                        />
+
+                        <div className="
+                            grid grid-cols-1 gap-5
+                            md:grid-cols-2 lg:grid-cols-3
+                        ">
+
+                            <FormField label="GST Number">
+                                <TextInput
+                                    value={formData.gstNumber}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "gstNumber",
+                                            e.target.value.toUpperCase()
+                                        )
+                                    }
+                                    placeholder="Enter GST number"
+                                    maxLength={15}
+                                />
+                            </FormField>
+
+                            <FormField label="PAN Number">
+                                <TextInput
+                                    value={formData.panNumber}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "panNumber",
+                                            e.target.value.toUpperCase()
+                                        )
+                                    }
+                                    placeholder="Enter PAN number"
+                                    maxLength={10}
+                                />
+                            </FormField>
+
+                            <FormField label="TAN Number">
+                                <TextInput
+                                    value={formData.tanNumber}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "tanNumber",
+                                            e.target.value.toUpperCase()
+                                        )
+                                    }
+                                    placeholder="Enter TAN number"
+                                    maxLength={10}
+                                />
+                            </FormField>
+
+                        </div>
+
+                    </section>
+
+                    <div className="my-6 border-t border-gray-100" />
+
+                    {/* CONTACT INFORMATION */}
+
+                    <section className="mb-7">
+
+                        <SectionHeading
+                            icon={Phone}
+                            title="Contact Information"
+                            description="Enter company contact and communication details"
+                        />
+
+                        <div className="
+                            grid grid-cols-1 gap-5
+                            md:grid-cols-2 lg:grid-cols-3
+                        ">
+
+                            <FormField label="Email" required>
+                                <TextInput
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) =>
+                                        handleChange("email", e.target.value)
+                                    }
+                                    placeholder="Enter company email"
+                                    maxLength={150}
+                                />
+                            </FormField>
+
+                            <FormField label="Phone" required>
+                                <TextInput
+                                    type="tel"
+                                    value={formData.phone}
+                                    onChange={(e) =>
+                                        handleChange("phone", e.target.value)
+                                    }
+                                    placeholder="Enter phone number"
+                                    maxLength={20}
+                                />
+                            </FormField>
+
+                            <FormField label="Alternate Phone">
+                                <TextInput
+                                    type="tel"
+                                    value={formData.alternatePhone}
+                                    onChange={(e) =>
+                                        handleChange("alternatePhone", e.target.value)
+                                    }
+                                    placeholder="Enter alternate phone"
+                                    maxLength={20}
+                                />
+                            </FormField>
+
+                            <FormField label="Website">
+                                <TextInput
+                                    value={formData.website}
+                                    onChange={(e) =>
+                                        handleChange("website", e.target.value)
+                                    }
+                                    placeholder="https://example.com"
+                                    maxLength={200}
+                                />
+                            </FormField>
+
+                        </div>
+
+                    </section>
+
+                    <div className="my-6 border-t border-gray-100" />
+
+                    {/* ADDRESS INFORMATION */}
+
+                    <section className="mb-7">
+
+                        <SectionHeading
+                            icon={MapPin}
+                            title="Address Information"
+                            description="Enter your registered company address"
+                        />
+
+                        <div className="
+                            grid grid-cols-1 gap-5
+                            md:grid-cols-2 lg:grid-cols-3
+                        ">
+
+                            <FormField label="Address Line 1">
+                                <TextInput
+                                    value={formData.addressLine1}
+                                    onChange={(e) =>
+                                        handleChange("addressLine1", e.target.value)
+                                    }
+                                    placeholder="Enter address line 1"
+                                    maxLength={200}
+                                />
+                            </FormField>
+
+                            <FormField label="Address Line 2">
+                                <TextInput
+                                    value={formData.addressLine2}
+                                    onChange={(e) =>
+                                        handleChange("addressLine2", e.target.value)
+                                    }
+                                    placeholder="Enter address line 2"
+                                    maxLength={200}
+                                />
+                            </FormField>
+
+                            <FormField label="City">
+                                <TextInput
+                                    value={formData.city}
+                                    onChange={(e) =>
+                                        handleChange("city", e.target.value)
+                                    }
+                                    placeholder="Enter city"
+                                    maxLength={100}
+                                />
+                            </FormField>
+
+                            <FormField label="State">
+                                <TextInput
+                                    value={formData.state}
+                                    onChange={(e) =>
+                                        handleChange("state", e.target.value)
+                                    }
+                                    placeholder="Enter state"
+                                    maxLength={100}
+                                />
+                            </FormField>
+
+                            <FormField label="Country">
+                                <TextInput
+                                    value={formData.country}
+                                    onChange={(e) =>
+                                        handleChange("country", e.target.value)
+                                    }
+                                    placeholder="Enter country"
+                                    maxLength={100}
+                                />
+                            </FormField>
+
+                            <FormField label="Pincode">
+                                <TextInput
+                                    value={formData.pincode}
+                                    onChange={(e) =>
+                                        handleChange("pincode", e.target.value)
+                                    }
+                                    placeholder="Enter pincode"
+                                    maxLength={10}
+                                />
+                            </FormField>
+
+                        </div>
+
+                    </section>
+
+                    <div className="my-6 border-t border-gray-100" />
+
+                    {/* INVOICE SETTINGS */}
+
+                    <section>
+
+                        <SectionHeading
+                            icon={Receipt}
+                            title="Invoice & Financial Settings"
+                            description="Configure invoice numbering and financial year details"
+                        />
+
+                        <div className="
+                            grid grid-cols-1 gap-5
+                            md:grid-cols-2 lg:grid-cols-3
+                        ">
+
+                            <FormField label="Invoice Prefix" required>
+                                <TextInput
+                                    value={formData.invoicePrefix}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "invoicePrefix",
+                                            e.target.value.toUpperCase()
+                                        )
+                                    }
+                                    placeholder="Example: INV"
+                                    maxLength={20}
+                                />
+                            </FormField>
+
+                            <FormField label="Invoice Start Number" required>
+                                <TextInput
+                                    type="number"
+                                    value={formData.invoiceStartNumber}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "invoiceStartNumber",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Enter starting number"
+                                />
+                            </FormField>
+
+                            <FormField label="Financial Year Start">
+                                <TextInput
+                                    type="date"
+                                    value={formData.financialYearStart}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "financialYearStart",
+                                            e.target.value
+                                        )
+                                    }
+                                />
+                            </FormField>
+
+                        </div>
+
+                        <div className="mt-5">
+                            <label className="
+                                flex cursor-pointer items-center gap-2
+                                text-sm font-medium text-gray-700
+                            ">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.isDefault}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "isDefault",
+                                            e.target.checked
+                                        )
+                                    }
+                                    className="
+                                        h-4 w-4 rounded border-gray-300
+                                        text-blue-600 focus:ring-blue-500
+                                    "
+                                />
+
+                                Set as default company
+                            </label>
+                        </div>
+
+                    </section>
+
+                </div>
+
+                {/* FOOTER */}
+
+                <div className="
+                    flex shrink-0 flex-wrap items-center
+                    justify-between gap-3 border-t
+                    border-gray-100 bg-white px-5 py-3
+                ">
+
                     <button
                         type="button"
-                        disabled={loading || editLoading}
-                        onClick={handleClose}
-                        className="h-10 rounded-md border border-gray-300 bg-white px-5 text-sm font-medium text-[#0F4659] hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => navigate(-1)}
+                        disabled={loading}
+                        className="
+                            rounded-lg border border-gray-200
+                            px-4 py-2 text-sm font-medium
+                            text-gray-600 transition hover:bg-gray-50
+                            disabled:opacity-50
+                        "
                     >
                         Cancel
                     </button>
 
-                    <div className="relative flex">
+                    <div className="flex items-center gap-2">
+
                         <button
                             type="button"
-                            disabled={loading || editLoading}
-                            onClick={() =>
-                                handleSave({
-                                    saveAndNew: false,
-                                    saveAndClose: true,
-                                })
-                            }
-                            className="h-10 rounded-l-md bg-[#408DFB] px-5 text-sm font-medium 
-                            text-white hover:bg-[#408DFB]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                            onClick={handleReset}
+                            disabled={loading}
+                            className="
+                                flex items-center gap-2 rounded-lg
+                                border border-gray-200 px-4 py-2
+                                text-sm font-medium text-gray-600
+                                transition hover:bg-gray-50
+                                disabled:opacity-50
+                            "
                         >
+                            <RotateCcw size={15} />
+                            Reset
+                        </button>
+
+                        <button
+                            type="submit"
+                            disabled={
+                                loading ||
+                                (isEditMode && !isCurrentCompanyLoaded)
+                            }
+                            onClick={() => setSaveMode("close")}
+                            className="
+                                flex items-center gap-2 rounded-lg
+                                bg-[#408DFB] px-5 py-2 text-sm
+                                font-medium text-white transition
+                                hover:bg-blue-600 disabled:cursor-not-allowed
+                                disabled:opacity-60
+                            "
+                        >
+
+                            {loading ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <Save size={16} />
+                            )}
+
                             {loading
-                                ? isEdit
-                                    ? "Updating..."
-                                    : "Saving..."
-                                : isEdit
-                                    ? "Update Company"
-                                    : "Save Company"}
-                        </button>
-
-                        <button
-                            type="button"
-                            disabled={loading || editLoading}
-                            onClick={() =>
-                                setShowSaveMenu((previous) => !previous)
+                                ? "Saving..."
+                                : isEditMode
+                                    ? "Update"
+                                    : "Save"
                             }
-                            className="flex h-10 w-10 items-center justify-center rounded-r-md 
-                            border-l border-white/30 bg-[#408DFB] text-white hover:bg-[#408DFB]/90 disabled:opacity-50"
-                            aria-label="More save options"
-                        >
-                            <ChevronDown
-                                size={16}
-                                className={
-                                    showSaveMenu
-                                        ? "rotate-180 transition-transform"
-                                        : "transition-transform"
-                                }
-                            />
+
                         </button>
 
-                        {showSaveMenu && (
-                            <>
+                        {/* SAVE OPTIONS - CREATE ONLY */}
+
+                        {!isEditMode && (
+                            <div className="relative">
+
                                 <button
                                     type="button"
-                                    aria-label="Close save options"
-                                    className="fixed inset-0 z-[80] cursor-default"
-                                    onClick={() => setShowSaveMenu(false)}
-                                />
+                                    disabled={loading}
+                                    onClick={() =>
+                                        setShowSaveOptions((prev) => !prev)
+                                    }
+                                    className="
+                                        flex h-9 items-center justify-center
+                                        rounded-lg border border-gray-200
+                                        px-2 text-gray-600 transition
+                                        hover:bg-gray-50 disabled:opacity-50
+                                    "
+                                >
+                                    <ChevronDown size={17} />
+                                </button>
 
-                                <div className="absolute bottom-full right-0 z-[90] mb-2 w-56 overflow-hidden rounded-md border border-gray-200 bg-white shadow-xl">
-                                    {!isEdit && (
+                                {showSaveOptions && (
+
+                                    <div className="
+                                        absolute bottom-11 right-0 z-20
+                                        w-44 overflow-hidden rounded-lg
+                                        border border-gray-100 bg-white
+                                        py-1 shadow-lg
+                                    ">
+
                                         <button
-                                            type="button"
+                                            type="submit"
                                             onClick={() => {
-                                                setShowSaveMenu(false);
-
-                                                handleSave({
-                                                    saveAndNew: true,
-                                                    saveAndClose: false,
-                                                });
+                                                setSaveMode("new");
+                                                setShowSaveOptions(false);
                                             }}
-                                            className="w-full border-b border-gray-100 px-4 py-3 text-left hover:bg-gray-50"
+                                            className="
+                                                w-full px-4 py-2.5 text-left
+                                                text-sm text-gray-600
+                                                transition hover:bg-blue-50
+                                                hover:text-[#408DFB]
+                                            "
                                         >
-                                            <div className="text-sm font-medium text-gray-700">
-                                                Save & New
-                                            </div>
-
-                                            <div className="mt-0.5 text-xs text-gray-400">
-                                                Save and create another company
-                                            </div>
+                                            Save & New
                                         </button>
-                                    )}
 
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setShowSaveMenu(false);
+                                        <button
+                                            type="submit"
+                                            onClick={() => {
+                                                setSaveMode("close");
+                                                setShowSaveOptions(false);
+                                            }}
+                                            className="
+                                                w-full px-4 py-2.5 text-left
+                                                text-sm text-gray-600
+                                                transition hover:bg-blue-50
+                                                hover:text-[#408DFB]
+                                            "
+                                        >
+                                            Save & Close
+                                        </button>
 
-                                            handleSave({
-                                                saveAndNew: false,
-                                                saveAndClose: true,
-                                            });
-                                        }}
-                                        className="w-full px-4 py-3 text-left hover:bg-gray-50"
-                                    >
-                                        <div className="text-sm font-medium text-gray-700">
-                                            {isEdit
-                                                ? "Update & Close"
-                                                : "Save & Close"}
-                                        </div>
+                                    </div>
+                                )}
 
-                                        <div className="mt-0.5 text-xs text-gray-400">
-                                            Save and return to companies
-                                        </div>
-                                    </button>
-                                </div>
-                            </>
+                            </div>
                         )}
+
                     </div>
                 </div>
-            </div>
+
+            </form>
         </div>
     );
-}
+};
+
+export default CompanyCreateSimple;

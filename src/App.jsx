@@ -150,6 +150,18 @@ import ExpenseCreate from "./inventoryModule/module/expenses/pages/ExpenseCreate
 import ExpenseDashboard from "./inventoryModule/module/expenses/pages/ExpenseDashboard";
 import ExpenseViewDetails from "./inventoryModule/module/expenses/pages/ExpenseViewDetails";
 import ExpenseCategoryViewDetails from "./inventoryModule/module/expenses/pages/ExpenseCategoryViewDetails";
+import PaymentDashboard from "./inventoryModule/module/payment/pages/PaymentDashboard";
+
+import PaymentViewDetails from "./inventoryModule/module/payment/pages/PaymentViewDetails";
+import PaymentCreate from "./inventoryModule/module/payment/pages/PaymentCreate";
+import CashAccountDashboard from "./inventoryModule/module/cashAccount/pages/CashAccountDashboard";
+import CashAccountCreate from "./inventoryModule/module/cashAccount/pages/CashAccountCreate";
+import CashAccountViewDetails from "./inventoryModule/module/cashAccount/pages/CashAccountViewDetails";
+import BankAccountViewDetails from "./module/bankAccount/pages/BankAccountViewDetails";
+import CompanyViewDetails from "./module/company/pages/CompanyViewDetails";
+import CurrencyViewDetails from "./module/currency/pages/CurrencyViewDetails";
+import EmailSignatureViewDetails from "./module/emailSignature/pages/EmailSignatureViewDetails";
+import ProductCreateNew from "./module/items/pages/ProductCreateNew";
 
 
 
@@ -374,9 +386,16 @@ function AppContent() {
           element={<ProductDashboard />}
         />
 
+
+
         <Route
           path="/items/new"
           element={<ProductCreate />}
+        />
+
+        <Route
+          path="/items/create"
+          element={<ProductCreateNew />}
         />
 
         <Route
@@ -507,18 +526,18 @@ function AppContent() {
         />
 
         <Route
-          path="/settings/bankAccount/newSimple"
+          path="/settings/bankAccount/create"
           element={<BankAccountCreateSimple />}
         />
 
         <Route
-          path="/settings/bankAccount/editSimple/:id"
+          path="/settings/bankAccount/edit/:id"
           element={<BankAccountCreateSimple />}
         />
 
         <Route
           path="/settings/bankAccount/view/:id"
-          element={<BankAccountProfileOverview />}
+          element={<BankAccountViewDetails />}
         />
 
 
@@ -532,25 +551,52 @@ function AppContent() {
         />
 
         <Route
+          path="/settings/companies/create"
+          element={<CompanyCreateSimple />}
+
+        />
+
+
+        <Route
+          path="/settings/companies/edit/:id"
+          element={<CompanyCreateSimple />}
+        />
+
+        <Route
           path="/settings/companies/view/:id"
-          element={<CompanyProfileOverview />}
-        />
-
-        <Route
-          path="/settings/companies/view/"
-          element={<CompanyProfileOverview />}
-        />
-
-        <Route
-          path="/settings/companies/newSimple"
-          element={<CompanyCreateSimple />}
-
+          element={<CompanyViewDetails />}
         />
 
 
+        {/* =================================================
+                   CURRENCY
+            ================================================= */}
+
         <Route
-          path="/settings/companies/editSimple/:id"
-          element={<CompanyCreateSimple />}
+          path="/settings/currencies"
+          element={<CurrencyDashboard />}
+        />
+
+        <Route
+          path="/settings/currencies/create"
+          element={<CurrencyCreateSimple />}
+        />
+
+
+        <Route
+          path="/currencies/model"
+          element={<CurrencyModel />}
+        />
+
+
+        <Route
+          path="/settings/currencies/edit/:id"
+          element={<CurrencyCreateSimple />}
+        />
+
+        <Route
+          path="/settings/currencies/view/:id"
+          element={<CurrencyViewDetails />}
         />
 
 
@@ -623,7 +669,7 @@ function AppContent() {
         />
 
         <Route
-          path="/settings/emailSignatures/newSimple"
+          path="/settings/emailSignatures/create"
           element={<EmailSignatureCreateSimple />}
         />
         <Route
@@ -632,8 +678,8 @@ function AppContent() {
         />
 
         <Route
-          path="/settings/emailSignatures/table"
-          element={<EmailSignatureTable />}
+          path="/settings/emailSignatures/view/:id"
+          element={<EmailSignatureViewDetails />}
         />
 
 
@@ -661,36 +707,6 @@ function AppContent() {
         />
 
 
-        {/* =================================================
-                   CURRENCY
-            ================================================= */}
-
-        <Route
-          path="/settings/currencies"
-          element={<CurrencyDashboard />}
-        />
-
-        <Route
-          path="/settings/currencies/newSimple"
-          element={<CurrencyCreateSimple />}
-        />
-
-
-        <Route
-          path="/currencies/model"
-          element={<CurrencyModel />}
-        />
-
-
-        <Route
-          path="/settings/currencies/edit/:id"
-          element={<CurrencyCreateSimple />}
-        />
-
-        <Route
-          path="/settings/currencies/view/:id"
-        // element={<CurrencyOverView />}
-        />
 
 
         {/* =================================================
@@ -896,6 +912,48 @@ function AppContent() {
         <Route
           path="/inventory/purchaseOrder/view/:id"
           element={<PurchaseOrderViewDetails />}
+        />
+
+
+        {/* Payments */}
+        <Route
+          path="/inventory/payments"
+          element={<PaymentDashboard />}
+        />
+
+        <Route
+          path="/inventory/payments/create"
+          element={<PaymentCreate />}
+        />
+        <Route
+          path="/inventory/payments/edit/:id"
+          element={<PaymentCreate />}
+        />
+        <Route
+          path="/inventory/payments/view/:id"
+          element={<PaymentViewDetails />}
+        />
+
+        {/* CashAccount  */}
+
+
+        <Route
+          path="/inventory/cash-accounts"
+          element={<CashAccountDashboard />}
+        />
+
+        <Route
+          path="/inventory/cash-accounts/create"
+          element={<CashAccountCreate />}
+        />
+
+        <Route
+          path="/inventory/cash-accounts/edit/:id"
+          element={<CashAccountCreate />}
+        />
+        <Route
+          path="/inventory/cash-accounts/view/:id"
+          element={<CashAccountViewDetails />}
         />
 
       </Route>

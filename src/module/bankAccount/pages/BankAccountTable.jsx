@@ -1115,7 +1115,7 @@ export default function BankAccountTable({
                                                         e.stopPropagation();
                                                         setShowEdit(true);
                                                         dispatch(setExsistingBankAccount(bankAccount));
-                                                        navigate(`/settings/bankAccount/editSimple/${bankAccount.id}`);
+                                                        navigate(`/settings/bankAccount/edit/${bankAccount.id}`);
 
                                                     }}
                                                     title="Edit"
