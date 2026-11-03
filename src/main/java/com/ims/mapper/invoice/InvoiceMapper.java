@@ -80,6 +80,10 @@ public interface InvoiceMapper {
     @Mapping(
             target = "bankName",
             source = "bankAccount.bankName")
+
+    @Mapping(
+            target = "branchName",
+            source = "bankAccount.branchName")
     @Mapping(
             target = "accountNumber",
             source = "bankAccount.accountNumber")
@@ -87,6 +91,11 @@ public interface InvoiceMapper {
     @Mapping(
             target = "ifsc",
             source = "bankAccount.ifsc"
+    )
+
+    @Mapping(
+            target = "swiftCode",
+            source = "bankAccount.swiftCode"
     )
 
     @Mapping(

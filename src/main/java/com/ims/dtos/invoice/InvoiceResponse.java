@@ -91,7 +91,9 @@ public class InvoiceResponse extends BaseResponse {
     private Long bankAccountId;
     private String accountNumber;
     private String bankName;
+    private String branchName;
     private String ifsc;
+    private String swiftCode;
 
     private Long emailSignatureId;
     private Long userId;

@@ -37,6 +37,9 @@ public interface BankAccountMapper {
             target = "audit",
             source = "."
     )
+    @Mapping(source = "branchName", target = "branchName")
+    @Mapping(source = "swiftCode", target = "swiftCode")
+
     BankAccountResponse toResponse(
             BankAccount entity
     );

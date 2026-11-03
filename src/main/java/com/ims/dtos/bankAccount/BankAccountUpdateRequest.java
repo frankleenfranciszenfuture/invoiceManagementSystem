@@ -32,8 +32,17 @@ public class BankAccountUpdateRequest {
     @Size(max = 150, message = "Bank name must not exceed 150 characters")
     private String bankName;
 
+    @Size(max = 150, message = "Branch name must not exceed 150 characters")
+    private String branchName;
+
     @Size(max = 20, message = "IFSC must not exceed 20 characters")
     private String ifsc;
+
+    @Pattern(
+            regexp = "^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$",
+            message = "Invalid SWIFT/BIC code"
+    )
+    private String swiftCode;
 
     private List<@NotNull @Positive Long> userIds;
 

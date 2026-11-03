@@ -91,10 +91,19 @@ public class BankAccount extends BaseEntity {
     private String bankName;
 
     @Column(
+            name = "branch_name",
+            length = 150
+    )
+    private String branchName;
+
+    @Column(
             name = "ifsc",
             length = 20
     )
     private String ifsc;
+
+    @Column(name = "swift_code", length = 11)
+    private String swiftCode;
 
     @ElementCollection
     @CollectionTable(

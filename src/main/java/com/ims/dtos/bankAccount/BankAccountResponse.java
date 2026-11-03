@@ -30,7 +30,11 @@ public class BankAccountResponse extends BaseResponse {
 
     private String bankName;
 
+    private String branchName;
+
     private String ifsc;
+
+    private String swiftCode;
 
     private List<Long> userIds;
 

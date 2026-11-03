@@ -101,9 +101,18 @@ public class BankAccountServiceImpl
                 request.getBankName()
         );
 
+        bankAccount.setBranchName(
+                request.getBranchName()
+        );
+
         bankAccount.setIfsc(
                 request.getIfsc()
         );
+
+        bankAccount.setSwiftCode(
+                request.getSwiftCode()
+        );
+
 
         // =================================================
         // 5. USERS
@@ -350,10 +359,24 @@ public class BankAccountServiceImpl
             );
         }
 
+        if (request.getBranchName() != null) {
+
+            bankAccount.setBranchName(
+                    request.getBranchName()
+            );
+        }
+
         if (request.getIfsc() != null) {
 
             bankAccount.setIfsc(
                     request.getIfsc()
+            );
+        }
+
+        if (request.getSwiftCode() != null) {
+
+            bankAccount.setSwiftCode(
+                    request.getSwiftCode()
             );
         }
 

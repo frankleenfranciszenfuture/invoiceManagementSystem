@@ -27,7 +27,11 @@ public class BankAccountSearchRequest {
 
     private String bankName;
 
+    private String branchName;
+
     private String ifsc;
+
+    private String swiftCode;
 
     private BankAccountStatus status;
 
