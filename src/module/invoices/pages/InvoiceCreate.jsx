@@ -62,6 +62,7 @@ import {
   removeInvoiceItem,
   resetInvoiceForm,
   setInvoiceItems,
+  setInvoiceForEdit
 } from "../slices/invoiceSlice";
 
 import {
@@ -126,6 +127,7 @@ import {
   formatDateForInput,
   calculateDueDate,
 } from "../utils/dateUtils";
+import CustomISelect from "../../../common/custom/CustomISelect";
 /* =========================================================
    EMPTY ITEM
 ========================================================= */
@@ -1277,41 +1279,50 @@ export default function InvoiceCreate() {
    ========================================================= */
 
   useEffect(() => {
-    if (!invoice.invoiceDate) {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, "0");
-      const day = String(today.getDate()).padStart(2, "0");
-
-      dispatch(
-        setInvoiceField({
-          field: "invoiceDate",
-          value: `${year}-${month}-${day}`,
-        })
-      );
+    // Set today's date only when creating a new invoice.
+    if (!isAdd || invoice.invoiceDate) {
+      return;
     }
-  }, [invoice.invoiceDate, dispatch]);
+
+    const today = new Date();
+
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+
+    dispatch(
+      setInvoiceField({
+        field: "invoiceDate",
+        value: `${year}-${month}-${day}`,
+      })
+    );
+  }, [
+    isAdd,
+    invoice.invoiceDate,
+    dispatch,
+  ]);
 
 
   useEffect(() => {
-    // ADD MODAL MUST NEVER LOAD AN INVOICE
     if (isAddModal) {
       return;
     }
 
-    // EDIT MODAL WITHOUT ID
-    if (isEditModal && !modal?.data?.id) {
-      console.error(
-        "Edit invoice opened without invoice ID:",
-        modal
-      );
+    const invoiceId = editInvoiceId;
 
-      toast.error("Invoice ID is missing");
+    if (!isEdit || !invoiceId) {
       return;
     }
 
-    // Nothing to load
-    if (!isEdit || !editInvoiceId) {
+    // InvoiceTable already fetched and populated this invoice
+    // before navigating to the edit route.
+    const currentInvoiceId =
+      invoice?.id ?? invoice?.invoiceId;
+
+    const alreadyLoaded =
+      String(currentInvoiceId) === String(invoiceId);
+
+    if (alreadyLoaded && location.state?.isEdit) {
       return;
     }
 
@@ -1319,44 +1330,47 @@ export default function InvoiceCreate() {
 
     const loadInvoice = async () => {
       try {
-        console.log(
-          "Loading invoice ID:",
-          editInvoiceId
-        );
-
-        dispatch(resetInvoiceForm());
-
         const result = await dispatch(
-          fetchInvoiceById(editInvoiceId)
+          fetchInvoiceById(invoiceId)
         ).unwrap();
 
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
 
         const existingInvoice =
-          result?.data?.data ||
-          result?.data?.invoice ||
-          result?.data ||
-          result?.invoice ||
+          result?.data?.data ??
+          result?.data?.invoice ??
+          result?.data ??
+          result?.invoice ??
           result;
 
         if (!existingInvoice) {
-          toast.error("Invoice not found");
+          toast.error("Invoice not found.");
           return;
         }
 
-        // KEEP YOUR EXISTING FIELD MAPPING HERE
+        const returnedId =
+          existingInvoice.id ?? existingInvoice.invoiceId;
+
+        if (
+          returnedId != null &&
+          String(returnedId) !== String(invoiceId)
+        ) {
+          toast.error("The loaded invoice does not match the requested ID.");
+          return;
+        }
+
+        // Populate the Redux form state.
+        dispatch(setInvoiceForEdit(existingInvoice));
 
       } catch (error) {
         if (!cancelled) {
-          console.error(
-            "Failed to load invoice:",
-            error
-          );
+          console.error("Failed to load invoice:", error);
 
           toast.error(
-            "Failed to load invoice"
+            error?.message ||
+            (typeof error === "string"
+              ? error
+              : "Failed to load invoice.")
           );
         }
       }
@@ -1367,15 +1381,30 @@ export default function InvoiceCreate() {
     return () => {
       cancelled = true;
     };
-
   }, [
+    dispatch,
     isAddModal,
-    isEditModal,
     isEdit,
     editInvoiceId,
-    modal?.data?.id,
-    dispatch,
+    invoice?.id,
+    invoice?.invoiceId,
+    location.state?.isEdit,
   ]);
+
+
+  useEffect(() => {
+    if (isEdit) return;
+
+    const invoiceType =
+      location.state?.invoiceType || "PRODUCT_INVOICE";
+
+    dispatch(
+      setInvoiceField({
+        field: "invoiceType",
+        value: invoiceType,
+      })
+    );
+  }, [isEdit, location.state?.invoiceType, dispatch]);
 
   /* =========================================================
      CLICK OUTSIDE
@@ -1583,26 +1612,15 @@ export default function InvoiceCreate() {
   ========================================================= */
 
   const handleClose = () => {
-
-
-    dispatch(
-      resetInvoiceForm()
-    );
-
+    dispatch(resetInvoiceForm());
     resetLocalState();
 
-
     if (isModal) {
-
-      dispatch(
-        closeModal()
-      );
-
+      dispatch(closeModal());
       return;
     }
 
     handleRequestLeave();
-
   };
 
   /* =========================================================
@@ -3208,12 +3226,20 @@ BANKACCOUNT NAME
 
               <div className="flex items-center gap-4">
 
-                <div
-                  type="button"
-                  className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700"
-                >
+                <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                  <span>
+                    {isEdit ? "Invoice Type:" : "Selected Type:"}
+                  </span>
 
-                  {invoice.invoiceType || ""}
+                  <span className="font-semibold text-blue-600">
+                    {{
+                      PRODUCT_INVOICE: "Product Invoice",
+                      SERVICE_INVOICE: "Service Invoice",
+                      SALE_INVOICE: "Sales Invoice",
+                      PURCHASE_INVOICE: "Purchase Invoice",
+                      TAX_INVOICE: "Tax Invoice",
+                    }[invoice.invoiceType] || ""}
+                  </span>
 
                 </div>
 
@@ -3244,11 +3270,42 @@ BANKACCOUNT NAME
 
           <div className="flex-1 overflow-y-auto px-2 py-6">
 
+
+            {/* InvoiceType */}
+
+            <div className="mb-6 flex items-start">
+              <label className="w-44 pt-2 text-sm font-medium text-red-500 shrink-0">
+                Invoice Type*
+              </label>
+              <div className="relative w-[350px]">
+                <CustomISelect
+                  name="invoiceType"
+                  value={invoice.invoiceType || ""}
+                  onChange={(selectedOption) =>
+                    dispatch(
+                      setInvoiceField({
+                        field: "invoiceType",
+                        value: selectedOption?.value ?? selectedOption,
+                      })
+                    )
+                  }
+                  options={[
+                    { value: "PRODUCT_INVOICE", label: "Product Invoice" },
+                    { value: "SERVICE_INVOICE", label: "Service Invoice" },
+                    { value: "SALE_INVOICE", label: "Sales Invoice" },
+                    { value: "PURCHASE_INVOICE", label: "Purchase Invoice" },
+                    { value: "TAX_INVOICE", label: "Tax Invoice" },
+                  ]}
+                  placeholder="Select Invoice Type"
+                />
+              </div>
+            </div>
             {/* =================================================
               CUSTOMER
           ================================================= */}
 
             <div className="mb-6 flex items-start">
+
 
               <label className="w-44 pt-2 text-sm font-medium text-red-500 shrink-0">
                 Customer Name*
@@ -3502,14 +3559,20 @@ BANKACCOUNT NAME
 
                   <div className="h-10 px-3 flex items-center gap-2 bg-white border border-gray-200 rounded-md text-sm text-gray-800">
 
-                    <span className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center">
-
+                    <span className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
                       <span className="w-2 h-2 rounded-full border-2 border-white" />
-
                     </span>
 
-                    {invoice?.currencyName || "INR"}
+                    <div className="flex flex-col justify-center leading-tight">
+                      <span className="text-sm font-medium">
+                        {invoice?.currencyName || "Indian Rupee"}
 
+                      </span>
+
+                      <span className="text-xs text-gray-500">
+                        1 {currencyCode} = {fmt(invoice.exchangeRate)} INR
+                      </span>
+                    </div>
                   </div>
 
                 </div>
@@ -3588,7 +3651,7 @@ BANKACCOUNT NAME
               </label>
 
 
-              <div className="relative w-[330px]">
+              <div className="relative w-[350px]">
 
                 <input
                   value={
@@ -6015,7 +6078,7 @@ BANKACCOUNT NAME
       {/* INVOICE TYPE SELECTION */}
 
       {
-        showInvoiceTypeOptions && !isEditMode && (
+        showInvoiceTypeOptions && isAdd && !isEdit && (
           <div
             onClick={handleInvoiceTypeBackdropClick}
             className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 p-4">

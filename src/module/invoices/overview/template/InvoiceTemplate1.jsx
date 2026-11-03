@@ -49,8 +49,8 @@ export default function InvoiceTemplate1({
     } = getInvoiceTemplateData(invoice, taxMasters);
 
     const companyAddress = [
-        company.addressLine1,
-        company.addressLine2,
+        [company.addressLine1,
+        company.addressLine2].filter(Boolean).join(", "),
         [
             company.city,
             company.state,
@@ -62,6 +62,15 @@ export default function InvoiceTemplate1({
     const pageClass = preview
         ? "relative mx-auto"
         : "fixed left-[-10000px] top-0";
+
+
+    const countryCodes = [
+        { code: "+91", country: "India" },
+        { code: "+1", country: "USA" },
+        { code: "+44", country: "UK" },
+        { code: "+971", country: "UAE" },
+        { code: "+61", country: "Australia" },
+    ];
 
     return (
         <div
@@ -84,7 +93,7 @@ export default function InvoiceTemplate1({
             `}
         >
             {/* HEADER */}
-            <div className="flex items-start justify-between border-b-[1.5px] border-[#111] pb-3">
+            <div className="flex items-start justify-between  pb-3">
                 <div className="w-[230px]">
                     {logo ? (
                         <img
@@ -97,23 +106,17 @@ export default function InvoiceTemplate1({
                     )}
 
                     {(company.tagline || currency !== "INR") && (
-                        <div className="mt-1.5 text-[11px] font-bold tracking-[3px]">
+                        <div className="mt-1.5 text-[16px] font-bold tracking-[3px]">
                             {company.tagline || "MULTI CURRENCY"}
                         </div>
                     )}
                 </div>
 
-                <div className="max-w-[470px] text-right text-[11px] leading-[1.5] text-[#333]">
-                    <div className="mb-[3px] text-[18px] font-black text-[#111]">
-                        {company.name || "-"}
+                <div className="max-w-[470px] text-right text-[14px] leading-[1.5] text-[#333] ">
+                    <div className="mb-[3px] text-[24px] font-black text-[#111] uppercase">
+                        {company.legalName || company.name || "-"}
                     </div>
 
-                    {company.legalName &&
-                        company.legalName !== company.name && (
-                            <div className="font-semibold">
-                                {company.legalName}
-                            </div>
-                        )}
 
                     {company.gstin && (
                         <div className="font-bold text-[#111]">
@@ -121,17 +124,6 @@ export default function InvoiceTemplate1({
                         </div>
                     )}
 
-                    {company.panNumber && (
-                        <div>
-                            <strong>PAN:</strong> {company.panNumber}
-                        </div>
-                    )}
-
-                    {company.tanNumber && (
-                        <div>
-                            <strong>TAN:</strong> {company.tanNumber}
-                        </div>
-                    )}
 
                     {companyAddress.length > 0 && (
                         <div className="font-medium text-[#111]">
@@ -143,19 +135,12 @@ export default function InvoiceTemplate1({
 
                     {company.contact && (
                         <div>
-                            <strong className="text-[#111]">Phone:</strong>{" "}
-                            {company.contact}
+                            <strong className="text-[#111]">Mobile:</strong>{" "}
+                            {company.countryCode || "+91"} {company.contact || "-"}
                         </div>
                     )}
 
-                    {company.alternatePhone && (
-                        <div>
-                            <strong className="text-[#111]">
-                                Alternate Phone:
-                            </strong>{" "}
-                            {company.alternatePhone}
-                        </div>
-                    )}
+
 
                     {company.email && (
                         <div>
@@ -172,6 +157,7 @@ export default function InvoiceTemplate1({
                     )}
                 </div>
             </div>
+            <div className="border"></div>
 
             {/* BILL TO + INVOICE META */}
             <div className="flex justify-between px-[6px] py-[14px]">
@@ -387,7 +373,7 @@ export default function InvoiceTemplate1({
                     </div>
                 </div>
             )}
-
+            <div className="border"></div>
             {/* TOTAL */}
             <div className="flex justify-end">
                 <div className="flex w-[250px] items-baseline justify-between border-t-[3px] border-double border-[#bbb] box-border px-2 py-[6px]">
@@ -399,7 +385,7 @@ export default function InvoiceTemplate1({
             </div>
 
             {/* ITEMS COUNT + AMOUNT IN WORDS */}
-            <div className="flex items-center justify-between border-b-[1.5px] border-[#111] px-[6px] py-[2px] pb-1 text-[10px] text-[#444]">
+            <div className="flex items-center justify-between  px-[6px] py-[2px] pb-1 text-[10px] text-[#444]">
                 <span>
                     Total Items / Qty : {items.length} / {totalQuantity}
                 </span>
@@ -409,6 +395,7 @@ export default function InvoiceTemplate1({
                 </span>
             </div>
 
+            <div className="border"></div>
             {/* AMOUNT PAYABLE */}
             <div className="flex justify-end gap-9 pr-2 pt-[3px] text-xs font-bold text-[#333]">
                 <span>
@@ -420,6 +407,7 @@ export default function InvoiceTemplate1({
 
                 <span>{symbol} {fmt(grandTotal)}</span>
             </div>
+
 
             {/* UPI / BANK / SIGNATORY */}
             <div className="mt-[22px] flex gap-9">
@@ -468,7 +456,7 @@ export default function InvoiceTemplate1({
 
                 {/* SIGNATORY */}
                 <div className="flex w-[200px] flex-col items-end text-right text-[10px] text-[#444]">
-                    <div>For {company.name || ""}</div>
+                    <div>For {company.legalName || company.name || ""}</div>
 
                     <div className="my-[10px] mb-3 flex min-h-[70px] w-[90px] items-center justify-center">
                         {(stamp || signature) && (

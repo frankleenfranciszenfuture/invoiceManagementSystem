@@ -2,6 +2,7 @@
 import React, {
     useEffect,
     useMemo,
+    useCallback,
 } from "react";
 
 import {
@@ -10,82 +11,84 @@ import {
 } from "react-redux";
 
 import {
-    useSearchParams,
-} from "react-router-dom";
-
-import {
-    Download,
     Plus,
+    Download,
+    Users,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
-import SalesPersonTable
-    from "./SalesPersonTable";
-
-import NavbarSalesPerson
-    from "../components/bars/nav/NavbarSalesPerson";
+import SalesPersonTable from "../pages/SalesPersonTable";
+import NavbarSalesPerson from "../components/bars/nav/NavbarSalesPerson";
 
 import {
-    fetchAllSalesPersons,
-} from "../thunks/salesPersonThunks";
-
-import {
-    getUserPermission,
-} from "../../menuPermission/thunks/menuPermissionThunks";
-
-import {
-    setSalesPersonStatus,
-    setSelectedSalesPersonView,
-} from "../slices/salesPersonViewSlice";
+    clearError,
+} from "../slices/salesPersonSlice";
 
 import {
     openModal,
 } from "../../ui/uiSlice";
 
-import InvoiceSkeleton
-    from "../../../common/loader/InvoiceSkeleton";
+import {
+    getUserPermission,
+} from "../../menuPermission/thunks/menuPermissionThunks";
 
+import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
 
-// ============================================================
-// SALES PERSON DASHBOARD
-// ============================================================
+import SalesPersonOverview from "../pages/SalesPersonOverview";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMPTY_ARRAY = [];
+
+/* =========================================================
+   NORMALIZE HELPERS
+========================================================= */
+
+const normalizeModule = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+const normalizeAction = (value) =>
+    String(value ?? "").trim().toUpperCase();
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function SalesPersonDashboard() {
 
     const dispatch = useDispatch();
 
-    const [searchParams] =
-        useSearchParams();
-
-
-    // ============================================================
-    // AUTH STATE
-    // ============================================================
+    /* =====================================================
+       AUTH STATE
+    ===================================================== */
 
     const user = useSelector(
-        (state) =>
-            state.auth?.user
+        (state) => state.auth?.user
     );
 
     const isAuthenticated = useSelector(
-        (state) =>
-            state.auth?.isAuthenticated === true
+        (state) => state.auth?.isAuthenticated === true
     );
 
     const authChecking = useSelector(
-        (state) =>
-            state.auth?.authChecking === true
+        (state) => state.auth?.authChecking === true
     );
 
-
-    // ============================================================
-    // PERMISSION STATE
-    // ============================================================
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
 
     const permissions = useSelector(
-        (state) =>
-            state.menuPermission?.userPermissions || []
+        (state) => {
+            const value = state.menuPermission?.userPermissions;
+
+            return Array.isArray(value)
+                ? value
+                : EMPTY_ARRAY;
+        }
     );
 
     const permissionLoading = useSelector(
@@ -98,10 +101,9 @@ export default function SalesPersonDashboard() {
             state.menuPermission?.userPermissionsLoaded === true
     );
 
-
-    // ============================================================
-    // ROLE
-    // ============================================================
+    /* =====================================================
+       ROLE
+    ===================================================== */
 
     const roleName =
         user?.roleName ||
@@ -111,307 +113,188 @@ export default function SalesPersonDashboard() {
         user?.authority ||
         "";
 
-    const normalizedRole =
-        String(roleName)
-            .trim()
-            .toUpperCase();
-
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
-
-    const isAdmin =
-        normalizedRole === "ADMIN";
+    const normalizedRole = normalizeAction(roleName);
 
     const hasFullAccess =
-        isSuperAdmin || isAdmin;
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
-    // ============================================================
-    // PERMISSION CHECK
-    // ============================================================
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
 
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
+            if (hasFullAccess) {
+                return true;
+            }
 
-        // --------------------------------------------------------
-        // SUPER ADMIN / ADMIN
-        // --------------------------------------------------------
+            if (!Array.isArray(permissions)) {
+                return false;
+            }
 
-        if (hasFullAccess) {
-            return true;
-        }
+            const requestedModule = normalizeModule(moduleName);
+            const requestedAction = normalizeAction(actionName);
 
-        // --------------------------------------------------------
-        // PERMISSION ARRAY
-        // --------------------------------------------------------
+            return permissions.some((permission) => {
 
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
+                const permissionModule = normalizeModule(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                );
 
-        const requestedModule =
-            String(moduleName)
-                .trim()
-                .toLowerCase();
-
-        const requestedAction =
-            String(actionName)
-                .trim()
-                .toUpperCase();
-
-
-        // --------------------------------------------------------
-        // SUPPORT BOTH:
-        //
-        // 1. Flat permission:
-        //
-        // {
-        //     moduleName: "Companies",
-        //     actionName: "CREATE",
-        //     allowed: true
-        // }
-        //
-        // 2. Grouped permission:
-        //
-        // {
-        //     moduleName: "Companies",
-        //     actions: [
-        //         {
-        //             actionName: "CREATE",
-        //             allowed: true
-        //         }
-        //     ]
-        // }
-        // --------------------------------------------------------
-
-        return permissions.some(
-            (permission) => {
-
-                // ==================================================
-                // MODULE
-                // ==================================================
-
-                const permissionModule =
-                    String(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toLowerCase();
-
-                if (
-                    permissionModule !==
-                    requestedModule
-                ) {
+                if (permissionModule !== requestedModule) {
                     return false;
                 }
 
-
-                // ==================================================
-                // ACTIVE STATUS
-                // ==================================================
-
-                if (
-                    permission?.active === false
-                ) {
+                if (permission?.active === false) {
                     return false;
                 }
 
                 if (
-                    String(
-                        permission?.status || ""
-                    )
-                        .trim()
-                        .toUpperCase() ===
-                    "INACTIVE"
+                    normalizeAction(permission?.status) === "INACTIVE"
                 ) {
                     return false;
                 }
 
+                /* ACTION ARRAY */
 
-                // ==================================================
-                // GROUPED ACTIONS
-                // ==================================================
+                if (Array.isArray(permission?.actions)) {
 
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
+                    return permission.actions.some((action) => {
 
-                    return permission.actions.some(
-                        (action) => {
-
-                            const permissionAction =
-                                String(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.action?.name ||
-                                    ""
-                                )
-                                    .trim()
-                                    .toUpperCase();
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
-
+                        if (typeof action === "string") {
                             return (
-                                permissionAction ===
-                                requestedAction &&
-                                allowed
+                                normalizeAction(action) === requestedAction
                             );
                         }
-                    );
+
+                        const permissionAction = normalizeAction(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        );
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        if (action?.active === false) {
+                            return false;
+                        }
+
+                        if (
+                            normalizeAction(action?.status) === "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
                 }
 
+                /* DIRECT / FLAT ACTION */
 
-                // ==================================================
-                // FLAT ACTION
-                // ==================================================
-
-                const permissionAction =
-                    String(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toUpperCase();
+                const permissionAction = normalizeAction(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                );
 
                 const allowed =
                     permission?.allowed === true ||
                     permission?.allowed === "true";
 
                 return (
-                    permissionAction ===
-                    requestedAction &&
+                    permissionAction === requestedAction &&
                     allowed
                 );
-            }
-        );
-    };
+            });
 
-
-    // ============================================================
-    // SALES PERSON PERMISSIONS
-    // ============================================================
-
-    const canViewSalesPerson =
-        hasPermission(
-            "Sales Person Detail",
-            "VIEW"
-        );
-
-    const canCreateSalesPerson =
-        hasPermission(
-            "Sales Person Detail",
-            "CREATE"
-        );
-
-
-    // ============================================================
-    // SALES PERSON STATE
-    // ============================================================
-
-    const salesPersons = useSelector(
-        (state) =>
-            state.salesPerson?.salesPersons || []
+        },
+        [
+            hasFullAccess,
+            permissions,
+        ]
     );
 
+    /* =====================================================
+       SALES PERSON PERMISSIONS
+    ===================================================== */
+
+    const canViewSalesPerson = hasPermission(
+        "Sales Persons",
+        "VIEW"
+    );
+
+    const canCreateSalesPerson = hasPermission(
+        "Sales Persons",
+        "CREATE"
+    );
+
+    /* =====================================================
+       SALES PERSON STATE
+    ===================================================== */
+
+    const salesPersonsFromRedux = useSelector(
+        (state) => state.salesPerson?.salesPersons
+    );
+
+    const salesPersons = Array.isArray(salesPersonsFromRedux)
+        ? salesPersonsFromRedux
+        : EMPTY_ARRAY;
+
     const loading = useSelector(
-        (state) =>
-            state.salesPerson?.loading || false
+        (state) => state.salesPerson?.loading === true
     );
 
     const error = useSelector(
-        (state) =>
-            state.salesPerson?.error
+        (state) => state.salesPerson?.error
     );
 
-
-    // ============================================================
-    // SALES PERSON FILTER STATE
-    // ============================================================
+    /* =====================================================
+       SALES PERSON VIEW STATE
+    ===================================================== */
 
     const salesPersonStatus = useSelector(
         (state) =>
-            state.salesPersonView?.salesPersonStatus ||
-            "ALL"
+            state.salesPersonView?.salesPersonStatus || "ALL"
     );
 
+    const search = useSelector(
+        (state) =>
+            state.salesPersonView?.search || ""
+    );
 
-    // ============================================================
-    // LOAD CURRENT USER PERMISSIONS
-    //
-    // NOTE:
-    //
-    // Ideally this should happen in AuthSlice/bootstrap.
-    // This fallback ensures CompanyDashboard can still
-    // initialize permissions if AuthSlice has not done so.
-    // ============================================================
+    /* =====================================================
+       LOAD USER PERMISSIONS
+    ===================================================== */
 
     useEffect(() => {
 
-        // --------------------------------------------------------
-        // AUTH STILL CHECKING
-        // --------------------------------------------------------
-
-        if (authChecking) {
+        if (authChecking || !isAuthenticated) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // NOT AUTHENTICATED
-        // --------------------------------------------------------
-
-        if (!isAuthenticated) {
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // ADMIN / SUPER ADMIN
-        //
-        // No permission request required.
-        // --------------------------------------------------------
-
+        // Admin and Super Admin have full access.
         if (hasFullAccess) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // ALREADY LOADED
-        // --------------------------------------------------------
-
-        if (permissionsLoaded) {
+        if (permissionsLoaded || permissionLoading) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // CURRENTLY LOADING
-        // --------------------------------------------------------
-
-        if (permissionLoading) {
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // LOAD CURRENT USER EFFECTIVE PERMISSIONS
-        // --------------------------------------------------------
-
-        dispatch(
-            getUserPermission()
-        );
+        dispatch(getUserPermission());
 
     }, [
         authChecking,
@@ -422,256 +305,150 @@ export default function SalesPersonDashboard() {
         dispatch,
     ]);
 
+    /* =====================================================
+       FILTER SALES PERSONS BY STATUS AND SEARCH
+    ===================================================== */
 
-    // ============================================================
-    // FETCH SALES PERSONS
-    // ============================================================
+    const filteredSalesPersons = useMemo(() => {
 
-    useEffect(() => {
+        const selectedStatus = String(
+            salesPersonStatus || "ALL"
+        )
+            .trim()
+            .toUpperCase();
 
-        // --------------------------------------------------------
-        // AUTH CHECKING
-        // --------------------------------------------------------
+        const searchValue = String(search ?? "")
+            .trim()
+            .toLowerCase();
 
-        if (authChecking) {
-            return;
-        }
+        return salesPersons.filter((salesPerson) => {
 
+            // STATUS FILTER
 
-        // --------------------------------------------------------
-        // NOT AUTHENTICATED
-        // --------------------------------------------------------
+            if (
+                selectedStatus !== "ALL" &&
+                String(salesPerson?.status ?? "")
+                    .trim()
+                    .toUpperCase() !== selectedStatus
+            ) {
+                return false;
+            }
+
+            // SEARCH FILTER
+
+            if (searchValue) {
+
+                const searchableValues = [
+                    salesPerson?.salesPersonCode,
+                    salesPerson?.salesPersonType,
+                    salesPerson?.salesPersonName,
+                    salesPerson?.email,
+                    salesPerson?.mobile,
+                    salesPerson?.status,
+                ];
+
+                const matchesSearch = searchableValues.some((value) =>
+                    String(value ?? "")
+                        .toLowerCase()
+                        .includes(searchValue)
+                );
+
+                if (!matchesSearch) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+
+    }, [
+        salesPersons,
+        salesPersonStatus,
+        search,
+    ]);
+
+    /* =====================================================
+       OPEN CREATE SALES PERSON MODAL
+    ===================================================== */
+
+    const handleCreateSalesPerson = useCallback(() => {
 
         if (!isAuthenticated) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // STAFF / OTHER ROLE
-        //
-        // Wait until permissions are loaded.
-        // --------------------------------------------------------
-
-        if (!hasFullAccess) {
-
-            if (!permissionsLoaded) {
-                return;
-            }
-
-            if (permissionLoading) {
-                return;
-            }
-
-
-            // ----------------------------------------------------
-            // NO VIEW PERMISSION
-            // ----------------------------------------------------
-
-            if (!canViewSalesPerson) {
-                return;
-            }
-        }
-
-
-        // --------------------------------------------------------
-        // FETCH SALES PERSONS
-        // --------------------------------------------------------
-
-        dispatch(
-            fetchAllSalesPersons()
-        );
-
-    }, [
-        authChecking,
-        isAuthenticated,
-        hasFullAccess,
-        permissionsLoaded,
-        permissionLoading,
-        canViewSalesPerson,
-        dispatch,
-    ]);
-
-
-    // ============================================================
-    // SYNC URL STATUS → REDUX
-    // ============================================================
-
-    useEffect(() => {
-
-        const urlStatus =
-            searchParams.get(
-                "companyStatus"
-            );
-
-        if (!urlStatus) {
-            return;
-        }
-
-
-        const normalizedStatus =
-            String(urlStatus)
-                .toUpperCase();
-
-
-        const validStatuses = [
-            "ALL",
-            "ACTIVE",
-            "INACTIVE",
-            "DRAFT",
-        ];
-
-
         if (
-            !validStatuses.includes(
-                normalizedStatus
+            !hasFullAccess &&
+            (
+                permissionLoading ||
+                !permissionsLoaded
             )
         ) {
             return;
         }
-
-
-        dispatch(
-            setSalesPersonStatus(
-                normalizedStatus
-            )
-        );
-
-
-        const statusLabels = {
-
-            ALL:
-                "All Sales Persons",
-
-            ACTIVE:
-                "Active Sales Persons",
-
-            INACTIVE:
-                "Inactive Sales Persons",
-
-            DRAFT:
-                "Draft Sales Persons",
-
-        };
-
-
-        dispatch(
-            setSelectedSalesPersonView(
-                statusLabels[
-                normalizedStatus
-                ]
-            )
-        );
-
-    }, [
-        searchParams,
-        dispatch,
-    ]);
-
-
-    // ============================================================
-    // FILTER SALES PERSONS BY STATUS
-    // ============================================================
-
-    const filteredSalesPersons = useMemo(() => {
-
-        const selectedStatus =
-            String(
-                salesPersonStatus || "ALL"
-            ).toUpperCase();
-
-
-        if (
-            selectedStatus === "ALL"
-        ) {
-
-            return salesPersons;
-
-        }
-
-
-        return salesPersons.filter(
-            (salesPerson) => {
-
-                const backendStatus =
-                    String(
-                        salesPerson?.status || ""
-                    ).toUpperCase();
-
-
-                return (
-                    backendStatus ===
-                    selectedStatus
-                );
-
-            }
-        );
-
-    }, [
-        salesPersons,
-        salesPersonStatus,
-    ]);
-
-
-    // ============================================================
-    // CREATE SALES PERSON MODAL
-    // ============================================================
-
-    const handleCreateSalesPerson = () => {
-
-        // --------------------------------------------------------
-        // CREATE PERMISSION
-        // --------------------------------------------------------
 
         if (!canCreateSalesPerson) {
-
             toast.error(
                 "You do not have permission to create sales persons."
             );
-
             return;
         }
-
-
-        // --------------------------------------------------------
-        // OPEN MODAL
-        // --------------------------------------------------------
 
         dispatch(
             openModal({
                 type: "addSalesPerson",
-                data: null,
             })
         );
 
-    };
+    }, [
+        isAuthenticated,
+        hasFullAccess,
+        permissionLoading,
+        permissionsLoaded,
+        canCreateSalesPerson,
+        dispatch,
+    ]);
 
+    /* =====================================================
+       CLEAR ERROR
+    ===================================================== */
 
-    // ============================================================
-    // AUTH CHECKING
-    // ============================================================
+    useEffect(() => {
+
+        if (!error) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            dispatch(clearError());
+        }, 2000);
+
+        return () => clearTimeout(timer);
+
+    }, [
+        error,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       AUTH CHECKING
+    ===================================================== */
 
     if (authChecking) {
-
-        return (
-            <InvoiceSkeleton />
-        );
-
+        return <InvoiceSkeleton />;
     }
 
-
-    // ============================================================
-    // NOT AUTHENTICATED
-    // ============================================================
+    /* =====================================================
+       NOT AUTHENTICATED
+    ===================================================== */
 
     if (!isAuthenticated) {
         return null;
     }
 
-
-    // ============================================================
-    // PERMISSION LOADING
-    // ============================================================
+    /* =====================================================
+       PERMISSION LOADING
+    ===================================================== */
 
     if (
         !hasFullAccess &&
@@ -680,304 +457,240 @@ export default function SalesPersonDashboard() {
             !permissionsLoaded
         )
     ) {
-
-        return (
-            <InvoiceSkeleton />
-        );
-
+        return <InvoiceSkeleton />;
     }
 
-
-    // ============================================================
-    // VIEW PERMISSION DENIED
-    // ============================================================
+    /* =====================================================
+       VIEW PERMISSION DENIED
+    ===================================================== */
 
     if (!canViewSalesPerson) {
 
         return (
             <div
                 className="
-                    flex
-                    h-screen
-                    items-center
-                    justify-center
-                    bg-gray-50
-                    font-sans
+                    flex h-screen items-center justify-center
+                    bg-gray-50 font-sans
                 "
             >
-
-                <div
-                    className="
-                        text-center
-                        px-6
-                    "
-                >
+                <div className="px-6 text-center">
 
                     <div
                         className="
-                            mx-auto
-                            mb-4
-                            w-16
-                            h-16
-                            rounded-full
-                            bg-red-50
-                            flex
-                            items-center
-                            justify-center
-                            text-red-500
-                            text-2xl
-                            font-semibold
+                            mx-auto mb-4 flex h-16 w-16
+                            items-center justify-center
+                            rounded-full bg-red-50
+                            text-2xl font-semibold text-red-500
                         "
                     >
                         !
                     </div>
 
-
-                    <h2
-                        className="
-                            text-lg
-                            font-semibold
-                            text-gray-800
-                        "
-                    >
+                    <h2 className="text-lg font-semibold text-gray-800">
                         Access Denied
                     </h2>
 
-
-                    <p
-                        className="
-                            mt-1
-                            text-sm
-                            text-gray-500
-                            max-w-sm
-                        "
-                    >
-                        You do not have permission
-                        to view sales persons.
+                    <p className="mt-1 max-w-sm text-sm text-gray-500">
+                        You do not have permission to view sales persons.
                     </p>
 
                 </div>
-
             </div>
         );
-
     }
 
-
-    // ============================================================
-    // SALES PERSON LOADING
-    // ============================================================
-
-    if (loading) {
-
-        return (
-            <InvoiceSkeleton />
-        );
-
-    }
-
-
-    // ============================================================
-    // PAGE
-    // ============================================================
+    /* =====================================================
+       PAGE
+    ===================================================== */
 
     return (
 
         <div
             className="
-                flex
-                h-screen
-                bg-gray-50
-                font-sans
-                text-[13px]
-                overflow-hidden
+                flex h-screen overflow-hidden
+                bg-gray-50 font-sans text-[13px]
             "
         >
 
-            {/* =====================================================
-                SINGLE PAGE SCROLLER
-            ===================================================== */}
-
             <div
                 className="
-                    flex-1
-                    min-h-0
-                    bg-white
-                    overflow-y-auto
+                    min-h-0 flex-1 overflow-y-auto bg-white
                 "
             >
 
                 <div
                     className="
-                        px-2
-                        py-5
-                        w-full
+                        w-full max-w-30xl px-2 py-5
                     "
                 >
 
-                    {/* =================================================
-                        COMPANY NAVBAR
-                    ================================================= */}
+                    {/* SALES PERSON NAVBAR */}
 
                     <NavbarSalesPerson />
 
+                    {/* SALES PERSON OVERVIEW */}
 
-                    {/* =================================================
-                        ERROR
-                    ================================================= */}
+                    <SalesPersonOverview
+                        canViewSalesPerson={canViewSalesPerson}
+                        isAuthenticated={isAuthenticated}
+                        authChecking={authChecking}
+                    />
+
+                    {/* ERROR */}
 
                     {error && (
 
                         <div
                             className="
-                                mx-2
-                                mt-4
-                                px-4
-                                py-3
-                                rounded-md
-                                border
-                                border-red-200
-                                bg-red-50
-                                text-sm
-                                text-red-600
+                                mx-2 mt-4 rounded-md
+                                border border-red-200
+                                bg-red-50 px-4 py-3
+                                text-sm text-red-600
                             "
                         >
                             {error}
                         </div>
-
                     )}
 
+                    {/* SALES PERSON TABLE / LOADING / EMPTY STATE */}
 
-                    {/* =================================================
-                        SALES PERSON TABLE
-                    ================================================= */}
+                    {loading ? (
 
-                    {filteredSalesPersons.length > 0 ? (
+                        <div
+                            className="
+                                flex min-h-[250px]
+                                items-center justify-center
+                            "
+                        >
+                            <p className="text-sm text-gray-500">
+                                Loading sales persons...
+                            </p>
+                        </div>
+
+                    ) : filteredSalesPersons.length > 0 ? (
 
                         <SalesPersonTable
-                            salesPersons={
-                                filteredSalesPersons
-                            }
+                            salesPersons={filteredSalesPersons}
                         />
 
                     ) : (
 
                         <div
                             className="
-                                flex
-                                flex-col
-                                items-center
-                                justify-center
-                                py-16
+                                flex min-h-full flex-col
+                                items-center justify-center
+                                gap-3 px-4
                             "
                         >
 
-                            <h2
-                                className="
-                                    text-lg
-                                    font-semibold
-                                    text-gray-800
-                                "
-                            >
-                                No sales persons found
-                            </h2>
-
-
-                            <p
-                                className="
-                                    mt-2
-                                    text-sm
-                                    text-gray-500
-                                    text-center
-                                    max-w-md
-                                "
-                            >
-
-                                {salesPersonStatus === "ALL"
-                                    ? "There are no sales persons to display."
-                                    : `There are no ${String(
-                                        salesPersonStatus
-                                    ).toLowerCase()
-                                    } sales persons.`}
-
-                            </p>
-
-
-                            {/* =================================================
-                                ACTION BUTTONS
-                            ================================================= */}
+                            {/* EMPTY STATE ICON */}
 
                             <div
                                 className="
-                                    flex
-                                    items-center
-                                    gap-3
-                                    mt-6
+                                    relative mt-30 mb-1
+                                    flex h-24 w-24 shrink-0
+                                    items-center justify-center
+                                    rounded-full bg-gray-100
                                 "
                             >
 
-                                {/* =================================================
-                                    CREATE COMPANY
-                                ================================================= */}
+                                <div
+                                    className="
+                                        flex items-center justify-center
+                                        text-gray-400
+                                    "
+                                >
+                                    <Users
+                                        size={42}
+                                        strokeWidth={1.7}
+                                    />
+                                </div>
+
+                                <div
+                                    className="
+                                        absolute bottom-1 right-1
+                                        flex h-7 w-7 items-center
+                                        justify-center rounded-full
+                                        bg-blue-500 text-white
+                                    "
+                                >
+                                    <Plus className="h-4 w-4" />
+                                </div>
+
+                            </div>
+
+                            {/* EMPTY STATE TITLE */}
+
+                            <p
+                                className="
+                                    text-center text-base
+                                    font-medium text-gray-800
+                                "
+                            >
+                                Manage your sales persons
+                            </p>
+
+                            {/* EMPTY STATE DESCRIPTION */}
+
+                            <p
+                                className="
+                                    max-w-sm text-center
+                                    text-sm text-gray-500
+                                "
+                            >
+                                Add and manage your sales persons
+                                in one place to organize your sales team.
+                            </p>
+
+                            {/* ACTION BUTTONS */}
+
+                            <div
+                                className="
+                                    mt-1 flex flex-wrap
+                                    items-center justify-center gap-2.5
+                                "
+                            >
+
+                                {/* CREATE SALES PERSON */}
 
                                 {canCreateSalesPerson && (
 
                                     <button
                                         type="button"
-                                        onClick={
-                                            handleCreateSalesPerson
-                                        }
+                                        onClick={handleCreateSalesPerson}
                                         className="
-                                            flex
-                                            items-center
-                                            gap-2
-                                            bg-[#0F4659]
-                                            text-white
-                                            px-4
-                                            py-2
-                                            rounded-md
-                                            hover:bg-[#0F4659]/90
-                                            transition
+                                            flex items-center gap-2
+                                            whitespace-nowrap rounded-md
+                                            bg-blue-500 px-4 py-2
+                                            text-sm font-medium text-white
+                                            transition-colors hover:bg-blue-600
                                         "
                                     >
-
-                                        <Plus
-                                            size={16}
-                                        />
-
+                                        <Plus className="h-4 w-4" />
                                         Create New Sales Person
-
                                     </button>
 
                                 )}
 
-
-                                {/* =================================================
-                                    IMPORT
-                                ================================================= */}
+                                {/* IMPORT */}
 
                                 <button
                                     type="button"
+                                    onClick={() => {
+                                        toast(
+                                            "Sales person import is not configured yet."
+                                        );
+                                    }}
                                     className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        border
-                                        border-gray-300
-                                        px-4
-                                        py-2
-                                        rounded-md
-                                        hover:bg-gray-50
-                                        transition
+                                        flex items-center gap-2
+                                        whitespace-nowrap rounded-md
+                                        border border-gray-300 bg-white
+                                        px-4 py-2 text-sm text-gray-700
+                                        transition-colors hover:bg-gray-50
                                     "
                                 >
-
-                                    <Download
-                                        size={16}
-                                    />
-
+                                    <Download className="h-4 w-4" />
                                     Import File
-
                                 </button>
 
                             </div>
@@ -991,7 +704,5 @@ export default function SalesPersonDashboard() {
             </div>
 
         </div>
-
     );
-
 }

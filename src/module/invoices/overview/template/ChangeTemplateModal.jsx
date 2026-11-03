@@ -1,3 +1,4 @@
+
 import { Check } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -9,45 +10,66 @@ import invoiceTemplates from "../template/templateRegistry";
 export default function ChangeTemplateModal() {
     const dispatch = useDispatch();
 
-    /*
-     * ============================================================
-     * CURRENT SELECTED TEMPLATE
-     * ============================================================
-     */
+    /* ============================================================
+       REDUX STATE
+    ============================================================ */
 
-    const currentTemplate = useSelector(
-        (state) => state.invoice?.invoiceTemplate
-    );
+    const {
+        invoiceTemplate: currentTemplate,
+        selectedTemplateInvoiceId,
+        previewInvoice,
+        exsistingInvoice,
+        invoice,
+        selectedInvoice,
+    } = useSelector((state) => state.invoice || {});
 
-    /*
-     * ============================================================
-     * PREVIEW INVOICE
-     * ============================================================
-     */
+    /* ============================================================
+       CURRENT INVOICE
+    ============================================================ */
 
-    const previewInvoice = useSelector(
-        (state) =>
-            state.invoice?.existingInvoice ||
-            state.invoice?.invoice ||
-            state.invoice?.selectedInvoice ||
-            null
-    );
+    const currentInvoice =
+        previewInvoice ||
+        exsistingInvoice ||
+        invoice ||
+        selectedInvoice ||
+        null;
 
-    /*
-     * ============================================================
-     * SELECT TEMPLATE
-     * ============================================================
-     */
+    const invoiceId =
+        currentInvoice?.id ??
+        currentInvoice?.invoiceId ??
+        null;
 
-    const handleSelect = (id) => {
-        dispatch(setInvoiceTemplate(id));
+    /* ============================================================
+       CURRENT SELECTED TEMPLATE
+    ============================================================ */
+
+    const activeTemplate =
+        selectedTemplateInvoiceId != null &&
+            String(selectedTemplateInvoiceId) === String(invoiceId)
+            ? currentTemplate
+            : currentInvoice?.invoiceTemplate || "InvoiceTemplate1";
+
+    /* ============================================================
+       SELECT TEMPLATE
+    ============================================================ */
+
+    const handleSelect = (templateId) => {
+        if (invoiceId == null) {
+            console.error("Invoice ID not found. Cannot select template.");
+            return;
+        }
+
+        dispatch(
+            setInvoiceTemplate({
+                templateId,
+                invoiceId,
+            })
+        );
     };
 
-    /*
-     * ============================================================
-     * CLOSE
-     * ============================================================
-     */
+    /* ============================================================
+       CLOSE
+    ============================================================ */
 
     const handleClose = () => {
         dispatch(closeModal());
@@ -56,12 +78,9 @@ export default function ChangeTemplateModal() {
     return (
         <div className="flex max-h-[90vh] flex-col">
 
-            {/* ==================================================
-                HEADER
-            ================================================== */}
+            {/* HEADER */}
 
             <div className="border-b px-5 py-4">
-
                 <h2 className="text-lg font-semibold text-gray-800">
                     Choose Invoice Template
                 </h2>
@@ -69,21 +88,16 @@ export default function ChangeTemplateModal() {
                 <p className="mt-1 text-sm text-gray-500">
                     Select the invoice template you want to use.
                 </p>
-
             </div>
 
-            {/* ==================================================
-                TEMPLATE GRID
-            ================================================== */}
+            {/* TEMPLATE GRID */}
 
             <div className="min-h-0 flex-1 overflow-y-auto">
-
                 <div className="grid grid-cols-2 gap-6 p-6">
 
                     {invoiceTemplates.map((template) => {
-
                         const isActive =
-                            currentTemplate === template.id;
+                            activeTemplate === template.id;
 
                         const TemplateComponent =
                             template.component;
@@ -101,7 +115,6 @@ export default function ChangeTemplateModal() {
                                     bg-white
                                     transition-all
                                     duration-200
-
                                     ${isActive
                                         ? "border-blue-500 shadow-lg shadow-blue-100"
                                         : "border-gray-200 hover:border-blue-400 hover:shadow-lg"
@@ -112,9 +125,7 @@ export default function ChangeTemplateModal() {
                                 }
                             >
 
-                                {/* ==========================================
-                                    SELECTED BADGE
-                                ========================================== */}
+                                {/* SELECTED BADGE */}
 
                                 {isActive && (
                                     <div
@@ -137,14 +148,11 @@ export default function ChangeTemplateModal() {
                                         "
                                     >
                                         <Check size={12} />
-
                                         Selected
                                     </div>
                                 )}
 
-                                {/* ==========================================
-                                    HOVER OVERLAY
-                                ========================================== */}
+                                {/* HOVER OVERLAY */}
 
                                 <div
                                     className="
@@ -162,7 +170,6 @@ export default function ChangeTemplateModal() {
                                         group-hover:opacity-100
                                     "
                                 >
-
                                     <button
                                         type="button"
                                         className="
@@ -180,22 +187,16 @@ export default function ChangeTemplateModal() {
                                         "
                                         onClick={(event) => {
                                             event.stopPropagation();
-
-                                            handleSelect(
-                                                template.id
-                                            );
+                                            handleSelect(template.id);
                                         }}
                                     >
                                         {isActive
                                             ? "✓ Already Selected"
                                             : "Choose Template"}
                                     </button>
-
                                 </div>
 
-                                {/* ==========================================
-                                    TEMPLATE PREVIEW
-                                ========================================== */}
+                                {/* TEMPLATE PREVIEW */}
 
                                 <div
                                     className="
@@ -204,50 +205,28 @@ export default function ChangeTemplateModal() {
                                         bg-gray-100
                                     "
                                 >
-
-                                    <div
-                                        className="
-                                            flex
-                                            justify-center
-                                            pt-4
-                                        "
-                                    >
-
+                                    <div className="flex justify-center pt-4">
                                         <div
                                             style={{
-                                                transform:
-                                                    "scale(0.45)",
-
-                                                transformOrigin:
-                                                    "top center",
-
-                                                width:
-                                                    "794px",
-
-                                                height:
-                                                    "1123px",
-
-                                                pointerEvents:
-                                                    "none",
+                                                transform: "scale(0.45)",
+                                                transformOrigin: "top center",
+                                                width: "794px",
+                                                height: "1123px",
+                                                pointerEvents: "none",
                                             }}
                                         >
-
-                                            <TemplateComponent
-                                                invoice={
-                                                    previewInvoice
-                                                }
-                                                preview={true}
-                                            />
-
+                                            {TemplateComponent && (
+                                                <TemplateComponent
+                                                    key={`${template.id}-${invoiceId || "preview"}`}
+                                                    invoice={currentInvoice}
+                                                    preview={true}
+                                                />
+                                            )}
                                         </div>
-
                                     </div>
-
                                 </div>
 
-                                {/* ==========================================
-                                    TEMPLATE TITLE
-                                ========================================== */}
+                                {/* TEMPLATE TITLE */}
 
                                 <div
                                     className={`
@@ -255,7 +234,6 @@ export default function ChangeTemplateModal() {
                                         p-4
                                         text-center
                                         font-medium
-
                                         ${isActive
                                             ? "bg-blue-50 text-blue-600"
                                             : "text-gray-700"
@@ -270,15 +248,11 @@ export default function ChangeTemplateModal() {
                     })}
 
                 </div>
-
             </div>
 
-            {/* ==================================================
-                FOOTER
-            ================================================== */}
+            {/* FOOTER */}
 
             <div className="flex justify-end border-t p-4">
-
                 <button
                     type="button"
                     onClick={handleClose}
@@ -295,7 +269,6 @@ export default function ChangeTemplateModal() {
                 >
                     Confirm
                 </button>
-
             </div>
 
         </div>

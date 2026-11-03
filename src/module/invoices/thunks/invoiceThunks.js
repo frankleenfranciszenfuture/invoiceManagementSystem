@@ -9,20 +9,20 @@ export const fetchInvoices = createAsyncThunk(
   "invoice/fetchInvoices",
 
   async (
-    { id, page = 0, size = 20, searchParams = {} },
+    { page = 0, size = 20, searchParams = {} } = {},
     { rejectWithValue },
   ) => {
     try {
       const res = await api.get("/invoices", {
         params: {
-          branchId: id,
           page,
           size,
           ...searchParams,
         },
       });
 
-      console.log("Invoices:", res.data);
+      console.log("INVOICE API RESPONSE:", res.data);
+      console.log("INVOICE CONTENT:", res.data?.data?.content);
 
       return res.data;
     } catch (error) {

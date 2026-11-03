@@ -10,9 +10,8 @@ import {
 
 import InvoiceOverViewSiderTopbar from "./InvoiceOverViewSiderTopbar";
 import InvoiceOverViewSiderDetails from "./InvoiceOverViewSiderDetails";
-import InvoicePreviewCard from "./InvoicePreviewCard";
-import InvoiceOverviewTabTopbar from "./InvoiceOverviewTabTopbar"
-import InvoiceprofileOverview from "./InvoiceprofileOverview";
+import InvoiceOverviewTabTopbar from "./InvoiceOverviewTabTopbar";
+import InvoiceViewDetails from "../../pages/InvoiceViewDetails";
 
 export default function InvoiceOverViewDashboard1() {
     const { id } = useParams();
@@ -22,11 +21,23 @@ export default function InvoiceOverViewDashboard1() {
         (state) => state.invoice?.invoices ?? []
     );
 
-    const loading = useSelector(
-        (state) => state.invoice?.loading ?? false
+    const previewInvoice = useSelector(
+        (state) => state.invoice?.previewInvoice
+    );
+
+    const previewInvoiceId = useSelector(
+        (state) => state.invoice?.previewInvoiceId
+    );
+
+    const previewLoading = useSelector(
+        (state) => state.invoice?.previewLoading
     );
 
     const requestedIdRef = useRef(null);
+
+    /* =========================================
+       FETCH INVOICE LIST
+    ========================================= */
 
     useEffect(() => {
         if (invoices.length === 0) {
@@ -34,50 +45,100 @@ export default function InvoiceOverViewDashboard1() {
         }
     }, [dispatch, invoices.length]);
 
+    /* =========================================
+       FETCH URL SELECTED INVOICE
+    ========================================= */
+
     useEffect(() => {
         if (!id) {
             requestedIdRef.current = null;
             return;
         }
 
-        if (requestedIdRef.current === id) return;
+        const normalizedId = String(id);
 
-        requestedIdRef.current = id;
+        // Already loaded completely.
+        if (
+            String(previewInvoiceId) === normalizedId &&
+            String(
+                previewInvoice?.id ??
+                previewInvoice?.invoiceId
+            ) === normalizedId
+        ) {
+            requestedIdRef.current = normalizedId;
+            return;
+        }
+
+        // Request already running for this URL.
+        if (
+            previewLoading &&
+            requestedIdRef.current === normalizedId
+        ) {
+            return;
+        }
+
+        if (requestedIdRef.current === normalizedId) {
+            return;
+        }
+
+        requestedIdRef.current = normalizedId;
 
         dispatch(fetchInvoiceById(id))
             .unwrap()
-            .catch(() => {
-                if (requestedIdRef.current === id) {
+            .catch((error) => {
+                console.error("Invoice loading failed:", error);
+
+                if (requestedIdRef.current === normalizedId) {
                     requestedIdRef.current = null;
                 }
             });
-    }, [id, dispatch]);
+
+    }, [
+        id,
+        dispatch,
+        previewInvoice,
+        previewInvoiceId,
+        previewLoading,
+    ]);
 
     return (
         <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-gray-100 p-2">
+
             <div className="mt-2 mr-2 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
 
-                {/* Fixed header area */}
+                {/* FIXED HEADER */}
+
                 <header className="z-20 shrink-0 border-b border-gray-200 bg-white">
-                    {/* <InvoiceOverviewTabTopbar /> */}
                 </header>
 
-                {/* Single shared scroll area */}
+                {/* MAIN CONTENT */}
+
                 <div className="flex min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain">
 
                     {/* LEFT SIDEBAR */}
-                    <aside className="w-[130px] min-w-[220px] shrink-0 border-r border-gray-200 bg-white">
+
+                    <aside className="w-[220px] min-w-[220px] shrink-0 border-r border-gray-200 bg-white">
+
                         <InvoiceOverViewSiderTopbar />
+
                         <InvoiceOverViewSiderDetails />
+
                     </aside>
 
                     {/* RIGHT CONTENT */}
+
                     <main className="min-w-0 flex-1 bg-gray-50">
+
                         <InvoiceOverviewTabTopbar />
-                        <InvoiceprofileOverview />
+
+                        <InvoiceViewDetails />
+
                     </main>
+
                 </div>
+
             </div>
+
         </div>
     );
 }

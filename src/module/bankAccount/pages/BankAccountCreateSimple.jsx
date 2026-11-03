@@ -49,7 +49,9 @@ const initialFormData = {
 
     accountNumber: "",
     bankName: "",
+    branchName: "",
     ifsc: "",
+    swiftCode: "",
 
     userIds: [],
 
@@ -414,7 +416,9 @@ const BankAccountCreateSimple = () => {
 
             accountNumber: bankAccount.accountNumber ?? "",
             bankName: bankAccount.bankName ?? "",
+            branchName: bankAccount.branchName ?? "",
             ifsc: bankAccount.ifsc ?? "",
+            swiftCode: bankAccount.swiftCode ?? "",
 
             userIds: bankAccount.userIds ?? [],
 
@@ -505,7 +509,9 @@ const BankAccountCreateSimple = () => {
 
                 accountNumber: bankAccount.accountNumber ?? "",
                 bankName: bankAccount.bankName ?? "",
+                branchName: bankAccount.branchName ?? "",
                 ifsc: bankAccount.ifsc ?? "",
+                swiftCode: bankAccount.swiftCode ?? "",
 
                 userIds: bankAccount.userIds ?? [],
 
@@ -570,6 +576,7 @@ const BankAccountCreateSimple = () => {
             return false;
         }
 
+
         if (!formData.status) {
             toast.error("Account status is required");
             return false;
@@ -624,7 +631,9 @@ const BankAccountCreateSimple = () => {
 
             accountNumber: formData.accountNumber.trim(),
             bankName: formData.bankName.trim(),
+            branchName: formData.branchName.trim(),
             ifsc: formData.ifsc.trim().toUpperCase(),
+            swiftCode: formData.swiftCode.trim().toUpperCase(),
 
             userIds: formData.userIds,
 
@@ -668,7 +677,7 @@ const BankAccountCreateSimple = () => {
 
             dispatch(resetBankAccountForm());
 
-            navigate("/inventory/bank-accounts");
+            navigate("/settings/bankAccount");
 
         } catch (error) {
 
@@ -896,7 +905,7 @@ const BankAccountCreateSimple = () => {
 
                         <div className="
                             grid grid-cols-1 gap-5
-                            md:grid-cols-2 lg:grid-cols-3
+                            md:grid-cols-2 lg:grid-cols-2
                         ">
 
                             <FormField label="Account Type" required>
@@ -961,7 +970,7 @@ const BankAccountCreateSimple = () => {
 
                         <div className="
                             grid grid-cols-1 gap-5
-                            md:grid-cols-2 lg:grid-cols-3
+                            md:grid-cols-2 lg:grid-cols-2
                         ">
 
                             <FormField label="Account Number" required>
@@ -986,6 +995,17 @@ const BankAccountCreateSimple = () => {
                                 />
                             </FormField>
 
+                            <FormField label="Branch Name" required>
+                                <TextInput
+                                    value={formData.branchName}
+                                    onChange={(e) =>
+                                        handleChange("branchName", e.target.value)
+                                    }
+                                    placeholder="Enter branch name"
+                                    maxLength={150}
+                                />
+                            </FormField>
+
                             <FormField label="IFSC Code" required>
                                 <TextInput
                                     value={formData.ifsc}
@@ -997,6 +1017,16 @@ const BankAccountCreateSimple = () => {
                                 />
                             </FormField>
 
+                            <FormField label="SWIFT Code" >
+                                <TextInput
+                                    value={formData.swiftCode}
+                                    onChange={(e) =>
+                                        handleChange("swiftCode", e.target.value.toUpperCase())
+                                    }
+                                    placeholder="Example: HDFCINBBCTS"
+                                    maxLength={11}
+                                />
+                            </FormField>
                         </div>
 
                     </section>

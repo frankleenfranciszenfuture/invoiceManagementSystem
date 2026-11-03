@@ -181,3 +181,37 @@
 .invoice-profile-compact .text-xl {
   font-size: 18px;
 }
+
+/* =========================================================
+   GLOBAL INVOICE FONT
+========================================================= */
+
+.invoice-template,
+.invoice-template * {
+  font-family: "Roboto", sans-serif !important;
+}
+
+@media print {
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .page-break {
+    break-after: page;
+  }
+
+  .no-break {
+    break-inside: avoid;
+  }
+}
+@page {
+  size: A4;
+  margin: 10mm;
+}
+
+.pdf-container {
+  width: 190mm;
+  box-sizing: border-box;
+}

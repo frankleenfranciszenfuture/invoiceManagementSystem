@@ -1,7 +1,8 @@
+
 import React, {
     useState,
     useEffect,
-    useRef,
+    useCallback,
 } from "react";
 
 import {
@@ -11,14 +12,18 @@ import {
 
 import {
     useNavigate,
+    useSearchParams,
 } from "react-router-dom";
 
 import {
     Plus,
     ChevronDown,
-    MoreHorizontal,
     Home,
     Settings,
+    Filter,
+    Search,
+    RotateCcw,
+    X,
 } from "lucide-react";
 
 import {
@@ -27,441 +32,707 @@ import {
 } from "../../../slices/salesPersonViewSlice";
 
 import {
-    openModal,
-} from "../../../../ui/uiSlice";
+    fetchAllSalesPersons,
+} from "../../../thunks/salesPersonThunks";
 
+import CustomSelect from "../../../../../common/custom/CustomSelect";
 
-// ============================================================
-// STABLE EMPTY ARRAY
-// ============================================================
+/* =========================================================
+   CONSTANTS
+========================================================= */
 
-const EMPTY_VIEWS = [];
+const INITIAL_FILTERS = {
+    salesPersonName: "",
+    salesPersonCode: "",
+    salesPersonType: "",
+    email: "",
+    mobile: "",
+    status: "",
+};
 
+const VALID_STATUSES = [
+    "ALL",
+    "ACTIVE",
+    "INACTIVE",
+    "DRAFT",
+];
+
+const STATUS_LABELS = {
+    ALL: "All Sales Persons",
+    ACTIVE: "Active Sales Persons",
+    INACTIVE: "Inactive Sales Persons",
+    DRAFT: "Draft Sales Persons",
+};
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function NavbarSalesPerson() {
 
     const dispatch = useDispatch();
+    const navigate = useNavigate();
 
-    const navigate =
-        useNavigate();
+    const [searchParams] = useSearchParams();
 
+    /* =====================================================
+       LOCAL STATE
+    ===================================================== */
 
-    const [moreOpen, setMoreOpen] =
-        useState(false);
+    const [filterOpen, setFilterOpen] = useState(false);
 
-    const [dropdownOpen, setDropdownOpen] =
-        useState(false);
+    const [filters, setFilters] = useState(INITIAL_FILTERS);
 
+    const [appliedFilters, setAppliedFilters] = useState(
+        INITIAL_FILTERS
+    );
 
-    const moreDropdownRef =
-        useRef(null);
+    /* =====================================================
+       REDUX STATE
+    ===================================================== */
 
-    const dropdownOpenRef =
-        useRef(null);
+    const selectedSalesPersonView = useSelector(
+        (state) =>
+            state.salesPersonView?.selectedSalesPersonView
+    );
 
+    const salesPersonStatus = useSelector(
+        (state) =>
+            state.salesPersonView?.salesPersonStatus || "ALL"
+    );
 
-    // ============================================================
-    // COMPANY VIEW STATE
-    // ============================================================
+    const loading = useSelector(
+        (state) =>
+            state.salesPerson?.loading === true
+    );
 
-    const selectedSalesPersonView =
-        useSelector(
-            (state) =>
-                state.salesPersonView
-                    ?.selectedSalesPersonView
-        );
+    /* =====================================================
+       URL STATUS
+    ===================================================== */
 
+    const urlStatus = searchParams.get("salesPersonStatus");
 
-    const views =
-        useSelector(
-            (state) =>
-                state.salesPersonView
-                    ?.views ??
-                EMPTY_VIEWS
-        );
+    const normalizedUrlStatus = String(
+        urlStatus || ""
+    )
+        .trim()
+        .toUpperCase();
 
+    const effectiveSalesPersonStatus =
+        VALID_STATUSES.includes(normalizedUrlStatus)
+            ? normalizedUrlStatus
+            : salesPersonStatus;
 
-    const salesPersonStatus =
-        useSelector(
-            (state) =>
-                state.salesPersonView
-                    ?.salesPersonStatus
-        );
-
-
-    // ============================================================
-    // CLICK OUTSIDE
-    // ============================================================
+    /* =====================================================
+       URL STATUS SYNCHRONIZATION
+    ===================================================== */
 
     useEffect(() => {
 
-        const handleClickOutside = (
-            e
-        ) => {
+        const selectedStatus = VALID_STATUSES.includes(
+            normalizedUrlStatus
+        )
+            ? normalizedUrlStatus
+            : salesPersonStatus;
 
-            if (
-                dropdownOpenRef.current &&
-                !dropdownOpenRef.current.contains(
-                    e.target
-                )
-            ) {
+        const selectedLabel =
+            STATUS_LABELS[selectedStatus] ||
+            "All Sales Persons";
 
-                setDropdownOpen(
-                    false
-                );
+        if (salesPersonStatus !== selectedStatus) {
+            dispatch(
+                setSalesPersonStatus(selectedStatus)
+            );
+        }
 
-            }
+        if (selectedSalesPersonView !== selectedLabel) {
+            dispatch(
+                setSelectedSalesPersonView(selectedLabel)
+            );
+        }
 
+    }, [
+        normalizedUrlStatus,
+        salesPersonStatus,
+        selectedSalesPersonView,
+        dispatch,
+    ]);
 
-            if (
-                moreDropdownRef.current &&
-                !moreDropdownRef.current.contains(
-                    e.target
-                )
-            ) {
+    /* =====================================================
+       FETCH SALES PERSONS
+    ===================================================== */
 
-                setMoreOpen(
-                    false
-                );
+    const loadSalesPersons = useCallback(
+        (filterValues, selectedViewStatus) => {
 
-            }
+            dispatch(
+                fetchAllSalesPersons({
+                    ...filterValues,
 
-        };
+                    status:
+                        filterValues.status ||
+                        (
+                            selectedViewStatus === "ALL"
+                                ? undefined
+                                : selectedViewStatus
+                        ),
 
-
-        document.addEventListener(
-            "mousedown",
-            handleClickOutside
-        );
-
-
-        return () => {
-
-            document.removeEventListener(
-                "mousedown",
-                handleClickOutside
+                    page: 0,
+                    size: 10,
+                })
             );
 
-        };
+        },
+        [dispatch]
+    );
 
-    }, []);
+    /* =====================================================
+       FETCH WHEN FILTERS OR STATUS CHANGE
+    ===================================================== */
 
+    useEffect(() => {
 
-    // ============================================================
-    // OPEN SALES PERSON CREATE MODAL
-    // ============================================================
+        loadSalesPersons(
+            appliedFilters,
+            effectiveSalesPersonStatus
+        );
 
-    const handleNewSalesPerson = () => {
+    }, [
+        loadSalesPersons,
+        appliedFilters,
+        effectiveSalesPersonStatus,
+    ]);
 
-        setMoreOpen(false);
+    /* =====================================================
+       FILTER INPUT CHANGE
+    ===================================================== */
 
+    const handleFilterChange = useCallback(
+        (eOrName, selectedValue) => {
 
-        dispatch(
-            openModal({
-                type: "addSalesPerson",
-                data: null,
-            })
+            const name =
+                typeof eOrName === "string"
+                    ? eOrName
+                    : eOrName.target.name;
+
+            const value =
+                typeof eOrName === "string"
+                    ? selectedValue
+                    : eOrName.target.value;
+
+            setFilters((previous) => ({
+                ...previous,
+                [name]: value,
+            }));
+
+        },
+        []
+    );
+
+    /* =====================================================
+       APPLY FILTERS
+    ===================================================== */
+
+    const handleApplyFilters = () => {
+
+        setAppliedFilters({
+            ...filters,
+        });
+
+        setFilterOpen(false);
+    };
+
+    /* =====================================================
+       RESET FILTERS
+    ===================================================== */
+
+    const handleResetFilters = () => {
+
+        setFilters({
+            ...INITIAL_FILTERS,
+        });
+
+        setAppliedFilters({
+            ...INITIAL_FILTERS,
+        });
+
+    };
+
+    /* =====================================================
+       REFRESH
+    ===================================================== */
+
+    const handleRefresh = () => {
+
+        loadSalesPersons(
+            appliedFilters,
+            effectiveSalesPersonStatus
         );
 
     };
 
+    /* =====================================================
+       STATUS VIEW CHANGE
+    ===================================================== */
 
-    // ============================================================
-    // STATUS VIEW CHANGE
-    // ============================================================
+    const handleViewChange = (view) => {
 
-    const handleViewChange = (
-        view
-    ) => {
-
-        dispatch(
-            setSelectedSalesPersonView(
-                view.label
-            )
-        );
-
+        if (!view) return;
 
         dispatch(
-            setSalesPersonStatus(
-                view.value
-            )
+            setSelectedSalesPersonView(view.label)
         );
 
+        dispatch(
+            setSalesPersonStatus(view.value)
+        );
 
         navigate(
             `/salesPersons?salesPersonStatus=${view.value}`
         );
 
+    };
 
-        setDropdownOpen(false);
+    /* =====================================================
+       CREATE SALES PERSON
+    ===================================================== */
+
+    const handleCreateSalesPerson = () => {
+
+        navigate("/salesPersons/create");
 
     };
 
+    /* =====================================================
+       INPUT STYLES
+    ===================================================== */
 
-    // ============================================================
-    // RENDER
-    // ============================================================
+    const inputClass = `
+        w-full
+        rounded-md
+        border
+        border-gray-200
+        bg-white
+        px-3
+        py-2
+        text-sm
+        text-gray-700
+        outline-none
+        transition
+        focus:border-[#0095FD]
+        focus:ring-2
+        focus:ring-[#0095FD]/10
+    `;
+
+    const labelClass = `
+        mb-1.5
+        block
+        text-xs
+        font-medium
+        text-gray-600
+    `;
+
+    /* =====================================================
+       FILTER OPTIONS
+    ===================================================== */
+
+    const salesPersonTypeOptions = [
+        { label: "All Types", value: "" },
+        { label: "Employee", value: "EMPLOYEE" },
+        { label: "Agent", value: "AGENT" },
+    ];
+
+    const salesPersonStatusOptions = [
+        { label: "All Statuses", value: "" },
+        { label: "Active", value: "ACTIVE" },
+        { label: "Inactive", value: "INACTIVE" },
+        { label: "Draft", value: "DRAFT" },
+    ];
+
+    /* =====================================================
+       RENDER
+    ===================================================== */
 
     return (
 
-        <div
-            className="
-                h-[60px]
-                border
-                border-gray-100
-                rounded-md
-                flex
-                items-center
-                justify-between
-                bg-white
-                px-2
-                py-2
-            "
-        >
+        <div className="relative">
 
-            {/* =====================================================
-                LEFT - USER STATUS FILTER
-            ====================================================== */}
+            {/* ==================================================
+                NAVBAR
+            ================================================== */}
 
+            <div
+                className="
+                    flex min-h-[60px] items-center
+                    justify-between gap-2 rounded-md
+                    border border-gray-100 bg-white
+                    px-2 py-2
+                "
+            >
 
-            <div className="flex items-center gap-2">
+                {/* LEFT */}
 
-                {/* HOME + ALL PRODUCTS */}
                 <div className="flex items-center gap-2">
+
+                    {/* HOME */}
 
                     <button
                         type="button"
                         onClick={() => navigate("/")}
                         className="
-                flex
-                items-center
-                justify-center
-                rounded-md
-                border
-                border-gray-200
-                 bg-[white]
-                p-2
-                text-[#408DFB]
-                hover:bg-[#408DFB]/20
-                transition
-            "
+                            flex items-center justify-center
+                            rounded-md border border-blue-300
+                            bg-white p-2 text-[#0095FD]
+                            transition hover:bg-[#0095FD]/20
+                        "
                         title="Home"
                     >
                         <Home size={18} />
                     </button>
 
+                    {/* TITLE */}
 
+                    <div>
+                        <h2 className="
+                            text-xl font-semibold text-gray-800
+                        ">
+                            Sales Person Overview
+                        </h2>
+
+                        <p className="
+                            mt-1 text-xs text-gray-500
+                        ">
+                            Monitor and manage your sales team.
+                        </p>
+                    </div>
 
                 </div>
 
-                {/* EXISTING ROLE STATUS FILTER */}
-                <div
-                    ref={dropdownOpenRef}
-                    className="relative"
-                >
+                {/* RIGHT */}
+
+                <div className="flex items-center gap-2">
+
+                    {/* REFRESH */}
+
+                    <button
+                        type="button"
+                        onClick={handleRefresh}
+                        disabled={loading}
+                        className="
+                            flex items-center gap-2 rounded-md
+                            border border-gray-200 bg-white
+                            px-3 py-2 text-sm text-gray-600
+                            transition hover:bg-gray-50
+                            disabled:opacity-50
+                        "
+                    >
+                        <RotateCcw
+                            size={15}
+                            className={loading ? "animate-spin" : ""}
+                        />
+
+                        Refresh
+                    </button>
+
+                    {/* FILTER BUTTON */}
 
                     <button
                         type="button"
                         onClick={() =>
-                            setDropdownOpen((prev) => !prev)
+                            setFilterOpen((previous) => !previous)
                         }
-                        className="
-                flex
-                items-center
-                gap-1
-                rounded-md
-                bg-[#408DFB]
-                px-3
-                py-2
-                cursor-pointer
-                hover:bg-[#408DFB]/90
-            "
+                        className={`
+                            flex items-center gap-2 rounded-md
+                            border px-3 py-2 text-sm font-medium
+                            transition
+                            ${filterOpen
+                                ? "border-[#0095FD] bg-[#0095FD] text-white"
+                                : "border-gray-200 bg-white text-gray-600 hover:bg-blue-50 hover:text-[#0095FD]"
+                            }
+                        `}
                     >
-                        <h2 className="font-semibold text-gray-100">
-                            {selectedSalesPersonView || "All Sales Persons"}
-                        </h2>
+                        <Filter size={16} />
+
+                        <span>Filters</span>
 
                         <ChevronDown
                             size={14}
                             className={`
-                    text-gray-100
-                    transition
-                    ${dropdownOpen ? "rotate-180" : ""}
-                `}
+                                transition
+                                ${filterOpen ? "rotate-180" : ""}
+                            `}
                         />
                     </button>
 
-                    {dropdownOpen && (
-                        <div
-                            className="
-                    absolute
-                    left-0
-                    mt-2
-                    w-72
-                    rounded-md
-                    border
-                    border-gray-200
-                    bg-white
-                    shadow-lg
-                    z-50
-                "
-                        >
-                            <div className="max-h-72 overflow-y-auto">
-                                {views.map((view) => (
-                                    <button
-                                        type="button"
-                                        key={view.value}
-                                        onClick={() => handleViewChange(view)}
-                                        className="
-                                w-full
-                                px-5
-                                py-4
-                                border-b
-                                border-gray-50
-                                text-left
-                                text-sm
-                                hover:bg-[#408DFB]/90
-                                hover:text-white
-                                rounded-md
-                            "
-                                    >
-                                        {view.label}
-                                    </button>
-                                ))}
-                            </div>
+                    {/* NEW SALES PERSON */}
 
-                            <button
-                                type="button"
-                                className="
-                        w-full
-                        border-t
-                        border-gray-200
-                        px-4
-                        py-3
-                        text-left
-                        text-[#408DFB]
-                        bg-[#408DFB]/20
-                        hover:text-white
-                        hover:bg-[#408DFB]/80
-                        rounded-md
-                    "
-                                onClick={() => {
-                                    setDropdownOpen(false);
+                    <button
+                        type="button"
+                        onClick={handleCreateSalesPerson}
+                        className="
+                            flex items-center gap-1 rounded-md
+                            bg-[#0095FD] px-3 py-2
+                            text-sm font-medium text-white
+                            hover:bg-[#0095FD]/90
+                        "
+                        title="Create New Sales Person"
+                    >
+                        <Plus size={14} />
 
-                                    dispatch(
-                                        openModal({
-                                            type: "addSalesPerson",
-                                        })
-                                    );
-                                }}
-                            >
-                                + New Sales Person
-                            </button>
-                        </div>
-                    )}
+                        <span>New</span>
+                    </button>
+
+                    {/* SETTINGS */}
+
+                    <button
+                        type="button"
+                        onClick={() => navigate("/settings")}
+                        className="
+                            rounded-md border border-gray-300
+                            p-2 text-[#0095FD]
+                            hover:bg-[#0095FD]/20
+                        "
+                        title="Settings"
+                    >
+                        <Settings size={18} />
+                    </button>
+
                 </div>
-
             </div>
 
+            {/* ==================================================
+                FILTER PANEL
+            ================================================== */}
 
-            {/* =====================================================
-                RIGHT
-            ====================================================== */}
-
-            <div
-                className="
-                    flex
-                    items-center
-                    gap-2
-                "
-            >
-
-                {/* =================================================
-                    NEW BANK ACCOUNT
-                ================================================== */}
+            {filterOpen && (
 
                 <div
                     className="
-                        flex
-                        overflow-hidden
-                        rounded-md
-                        border-blue-100
-                        shadow-sm
+                        absolute left-0 right-0 top-full
+                        z-40 mt-2 rounded-lg border
+                        border-gray-200 bg-white p-4 shadow-xl
                     "
                 >
 
-                    <button
-                        type="button"
-                        // onClick={
-                        //     handleNewBankAccount
-                        // }
+                    {/* FILTER HEADER */}
 
-                        onClick={() => navigate("/salesPersons/newSimple")}
-                        className="
-                            flex
-                            items-center
-                            gap-1
-                            bg-[#408DFB]
-                            px-3
-                            py-2
-                            text-sm
-                            font-medium
-                            text-white
-                            hover:bg-[#408DFB]/90
-                        "
-                    >
+                    <div className="
+                        mb-4 flex items-center justify-between
+                    ">
 
-                        <Plus size={14} />
+                        <div className="flex items-center gap-2">
 
-                    </button>
+                            <Filter
+                                size={17}
+                                className="text-[#0095FD]"
+                            />
+
+                            <h3 className="
+                                text-sm font-semibold text-gray-800
+                            ">
+                                Filter Sales Persons
+                            </h3>
+
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setFilterOpen(false)}
+                            className="
+                                rounded-md p-1 text-gray-400
+                                hover:bg-gray-100 hover:text-gray-700
+                            "
+                            title="Close filters"
+                        >
+                            <X size={17} />
+                        </button>
+
+                    </div>
+
+                    {/* FILTER INPUTS */}
+
+                    <div className="
+                        grid grid-cols-1 gap-4
+                        sm:grid-cols-2 lg:grid-cols-3
+                    ">
+
+                        {/* SALES PERSON NAME */}
+
+                        <div>
+                            <label className={labelClass}>
+                                Sales Person Name
+                            </label>
+
+                            <input
+                                type="text"
+                                name="salesPersonName"
+                                value={filters.salesPersonName}
+                                onChange={handleFilterChange}
+                                placeholder="Enter sales person name"
+                                className={inputClass}
+                            />
+                        </div>
+
+                        {/* SALES PERSON CODE */}
+
+                        <div>
+                            <label className={labelClass}>
+                                Sales Person Code
+                            </label>
+
+                            <input
+                                type="text"
+                                name="salesPersonCode"
+                                value={filters.salesPersonCode}
+                                onChange={handleFilterChange}
+                                placeholder="Enter sales person code"
+                                className={inputClass}
+                            />
+                        </div>
+
+                        {/* SALES PERSON TYPE */}
+
+                        <div>
+                            <label className={labelClass}>
+                                Sales Person Type
+                            </label>
+
+                            <CustomSelect
+                                name="salesPersonType"
+                                value={filters.salesPersonType}
+                                onChange={(value) => {
+                                    handleFilterChange(
+                                        "salesPersonType",
+                                        typeof value === "object"
+                                            ? value.value
+                                            : value
+                                    );
+                                }}
+                                options={salesPersonTypeOptions}
+                            />
+                        </div>
+
+                        {/* EMAIL */}
+
+                        <div>
+                            <label className={labelClass}>
+                                Email
+                            </label>
+
+                            <input
+                                type="text"
+                                name="email"
+                                value={filters.email}
+                                onChange={handleFilterChange}
+                                placeholder="Enter email"
+                                className={inputClass}
+                            />
+                        </div>
+
+                        {/* MOBILE */}
+
+                        <div>
+                            <label className={labelClass}>
+                                Mobile Number
+                            </label>
+
+                            <input
+                                type="text"
+                                name="mobile"
+                                value={filters.mobile}
+                                onChange={handleFilterChange}
+                                placeholder="Enter mobile number"
+                                className={inputClass}
+                            />
+                        </div>
+
+                        {/* SALES PERSON STATUS */}
+
+                        <div>
+                            <label className={labelClass}>
+                                Sales Person Status
+                            </label>
+
+                            <CustomSelect
+                                name="status"
+                                value={filters.status}
+                                onChange={(value) => {
+                                    handleFilterChange(
+                                        "status",
+                                        typeof value === "object"
+                                            ? value.value
+                                            : value
+                                    );
+                                }}
+                                options={salesPersonStatusOptions}
+                            />
+                        </div>
+
+                    </div>
+
+                    {/* ACTION BUTTONS */}
+
+                    <div className="
+                        mt-5 flex flex-wrap items-center
+                        justify-between gap-3 border-t
+                        border-gray-100 pt-4
+                    ">
+
+                        {/* RESET */}
+
+                        <button
+                            type="button"
+                            onClick={handleResetFilters}
+                            className="
+                                flex items-center gap-2 rounded-md
+                                border border-gray-200 px-3 py-2
+                                text-sm text-gray-600 transition
+                                hover:bg-gray-50
+                            "
+                        >
+                            <RotateCcw size={14} />
+                            Reset
+                        </button>
+
+                        <div className="flex items-center gap-2">
+
+                            {/* CANCEL */}
+
+                            <button
+                                type="button"
+                                onClick={() => setFilterOpen(false)}
+                                className="
+                                    rounded-md border border-gray-200
+                                    px-4 py-2 text-sm text-gray-600
+                                    hover:bg-gray-50
+                                "
+                            >
+                                Cancel
+                            </button>
+
+                            {/* APPLY */}
+
+                            <button
+                                type="button"
+                                onClick={handleApplyFilters}
+                                className="
+                                    flex items-center gap-2 rounded-md
+                                    bg-[#0095FD] px-4 py-2
+                                    text-sm font-medium text-white
+                                    hover:bg-[#0095FD]/90
+                                "
+                            >
+                                <Search size={14} />
+                                Apply Filters
+                            </button>
+
+                        </div>
+                    </div>
 
                 </div>
 
-                {/* =================================================
-                    MORE
-                ================================================== */}
-
-                <div
-                    ref={moreDropdownRef}
-                    className="relative"
-                >
-
-                    <button
-                        type="button"
-                        // onClick={() =>
-                        //     setMoreOpen(
-                        //         (prev) => !prev
-                        //     )
-                        // }
-
-                        onClick={() =>
-                            navigate("/settings")
-                        }
-                        className="
-                            rounded-md
-                            border
-                            border-gray-300
-                            p-2
-                            text-[#408DFB]
-                            hover:bg-gray-50
-                        "
-                        title="More"
-                    >
-
-                        <Settings
-                            size={18}
-                        />
-
-                    </button>
-
-
-
-                </div>
-
-            </div>
+            )}
 
         </div>
-
     );
-
 }

@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -21,8 +21,20 @@ export default function InvoiceOverViewSiderDetails() {
         (state) => state.invoice?.exsistingInvoice ?? null
     );
 
+    const previewInvoice = useSelector(
+        (state) => state.invoice?.previewInvoice ?? null
+    );
+
     const previewInvoiceId = useSelector(
         (state) => state.invoice?.previewInvoiceId ?? null
+    );
+
+    const previewLoading = useSelector(
+        (state) => state.invoice?.previewLoading ?? false
+    );
+
+    const previewError = useSelector(
+        (state) => state.invoice?.previewError ?? null
     );
 
     const invoiceStatus = useSelector(
@@ -31,8 +43,7 @@ export default function InvoiceOverViewSiderDetails() {
 
     const [currentPage, setCurrentPage] = useState(1);
 
-    // Prevent duplicate requests for an invoice already being fetched.
-    const requestedInvoiceIdRef = useRef(null);
+    const [loadingInvoiceId, setLoadingInvoiceId] = useState(null);
 
     const statusColor = {
         DRAFT: "bg-yellow-100 text-yellow-700",
@@ -53,6 +64,10 @@ export default function InvoiceOverViewSiderDetails() {
     const getStatusLabel = (invoice) =>
         invoice?.status || invoice?.invoiceStatus || "DRAFT";
 
+    /* =========================================
+       FILTER INVOICES
+    ========================================= */
+
     const filteredInvoices = useMemo(() => {
         if (!Array.isArray(invoices)) return [];
 
@@ -61,13 +76,17 @@ export default function InvoiceOverViewSiderDetails() {
         if (status === "ALL") return invoices;
 
         return invoices.filter((invoice) => {
-            const invoiceCurrentStatus = String(
-                invoice.status || invoice.invoiceStatus || "DRAFT"
+            const currentStatus = String(
+                getStatusLabel(invoice)
             ).toUpperCase();
 
-            return invoiceCurrentStatus === status;
+            return currentStatus === status;
         });
     }, [invoices, invoiceStatus]);
+
+    /* =========================================
+       SORT INVOICES
+    ========================================= */
 
     const sortedInvoices = useMemo(() => {
         return [...filteredInvoices].sort((a, b) => {
@@ -98,6 +117,10 @@ export default function InvoiceOverViewSiderDetails() {
         startIndex + PAGE_SIZE
     );
 
+    /* =========================================
+       SELECT INVOICE
+    ========================================= */
+
     const handleInvoiceClick = async (invoice) => {
         const invoiceId = getInvoiceId(invoice);
 
@@ -105,23 +128,19 @@ export default function InvoiceOverViewSiderDetails() {
 
         const normalizedId = String(invoiceId);
 
-        // Select immediately so the preview header responds at once.
-        dispatch(setExistingInvoice(invoice));
-
-        // Skip fetching if these exact full details are already loaded.
+        // Avoid fetching an invoice that is already fully loaded.
         if (
             String(previewInvoiceId) === normalizedId &&
-            String(getInvoiceId(existingInvoice)) === normalizedId
+            String(getInvoiceId(previewInvoice)) === normalizedId
         ) {
+            dispatch(setExistingInvoice(previewInvoice));
             return;
         }
 
-        // Avoid starting the same request multiple times.
-        if (requestedInvoiceIdRef.current === normalizedId) {
-            return;
-        }
+        // Select immediately.
+        dispatch(setExistingInvoice(invoice));
 
-        requestedInvoiceIdRef.current = normalizedId;
+        setLoadingInvoiceId(normalizedId);
 
         try {
             await dispatch(fetchInvoiceById(invoiceId)).unwrap();
@@ -131,28 +150,39 @@ export default function InvoiceOverViewSiderDetails() {
                 error
             );
         } finally {
-            if (requestedInvoiceIdRef.current === normalizedId) {
-                requestedInvoiceIdRef.current = null;
-            }
+            setLoadingInvoiceId((current) =>
+                current === normalizedId ? null : current
+            );
         }
     };
 
-    const selectedInvoiceId = getInvoiceId(existingInvoice) ?? id;
+    const selectedInvoiceId =
+        getInvoiceId(existingInvoice) ?? id;
 
     return (
         <div className="flex w-full min-w-0 flex-col bg-white">
+
             <div className="w-full">
+
                 {paginatedInvoices.length > 0 ? (
+
                     paginatedInvoices.map((invoice) => {
+
                         const invoiceId = getInvoiceId(invoice);
+
+                        const normalizedId = String(invoiceId);
 
                         const isSelected =
                             selectedInvoiceId != null &&
-                            String(selectedInvoiceId) === String(invoiceId);
+                            String(selectedInvoiceId) === normalizedId;
 
                         const status = String(
                             getStatusLabel(invoice)
                         ).toUpperCase();
+
+                        const isLoading =
+                            loadingInvoiceId === normalizedId &&
+                            previewLoading;
 
                         return (
                             <div
@@ -175,8 +205,11 @@ export default function InvoiceOverViewSiderDetails() {
                                     : "border-l-4 border-l-transparent hover:bg-gray-50"
                                     }`}
                             >
+
                                 <div className="flex items-start justify-between gap-2">
+
                                     <div className="flex min-w-0 gap-2">
+
                                         <input
                                             type="checkbox"
                                             checked={isSelected}
@@ -186,12 +219,12 @@ export default function InvoiceOverViewSiderDetails() {
                                                 event.stopPropagation()
                                             }
                                             className="mt-1 shrink-0 accent-blue-600"
-                                            aria-label={`Select invoice ${invoice.invoiceNumber ??
-                                                invoiceId
+                                            aria-label={`Select invoice ${invoice.invoiceNumber ?? invoiceId
                                                 }`}
                                         />
 
                                         <div className="min-w-0">
+
                                             <h3 className="break-words text-sm font-semibold text-gray-800">
                                                 {invoice.invoiceNumber ||
                                                     "Unnamed invoice"}
@@ -214,23 +247,33 @@ export default function InvoiceOverViewSiderDetails() {
                                             >
                                                 {getStatusLabel(invoice)}
                                             </span>
+
+                                            {isLoading && (
+                                                <p className="mt-2 text-xs text-blue-600">
+                                                    Loading details...
+                                                </p>
+                                            )}
+
+                                            {isSelected &&
+                                                !previewLoading &&
+                                                previewError && (
+                                                    <p className="mt-2 text-xs text-red-500">
+                                                        Failed to load invoice details.
+                                                    </p>
+                                                )}
+
                                         </div>
                                     </div>
 
-                                    {/* <div className="shrink-0 text-right">
-                                        <p className="text-sm font-semibold text-gray-800">
-                                            ₹
-                                            {Number(
-                                                invoice.grandTotal || 0
-                                            ).toFixed(2)}
-                                        </p>
-                                    </div> */}
                                 </div>
                             </div>
                         );
                     })
+
                 ) : (
+
                     <div className="flex min-h-[200px] flex-col items-center justify-center px-4 text-center">
+
                         <p className="text-sm font-medium text-gray-700">
                             No invoices found
                         </p>
@@ -238,13 +281,21 @@ export default function InvoiceOverViewSiderDetails() {
                         <p className="mt-1 text-xs text-gray-400">
                             No invoices match "{invoiceStatus}".
                         </p>
+
                     </div>
+
                 )}
+
             </div>
 
+            {/* PAGINATION */}
+
             {sortedInvoices.length > PAGE_SIZE && (
+
                 <div className="sticky bottom-0 z-10 mt-auto border-t border-gray-200 bg-white px-3 py-3">
+
                     <div className="flex items-center justify-between gap-2">
+
                         <button
                             type="button"
                             onClick={() =>
@@ -260,6 +311,7 @@ export default function InvoiceOverViewSiderDetails() {
                         </button>
 
                         <div className="min-w-0 text-center">
+
                             <p className="text-xs font-medium text-gray-700">
                                 Page {currentPage} of {totalPages}
                             </p>
@@ -272,6 +324,7 @@ export default function InvoiceOverViewSiderDetails() {
                                 )}{" "}
                                 of {sortedInvoices.length}
                             </p>
+
                         </div>
 
                         <button
@@ -287,9 +340,12 @@ export default function InvoiceOverViewSiderDetails() {
                         >
                             <ChevronRight size={16} />
                         </button>
+
                     </div>
+
                 </div>
             )}
+
         </div>
     );
 }

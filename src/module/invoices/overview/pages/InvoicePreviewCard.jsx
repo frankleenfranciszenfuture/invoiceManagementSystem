@@ -11,6 +11,7 @@ import html2canvas from "html2canvas-pro";
 
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
+import { setInvoiceTemplate } from "../../slices/invoiceSlice";
 
 import {
     ChevronDown,
@@ -18,13 +19,6 @@ import {
     FileText,
     RefreshCw,
     ArrowLeft,
-    Building2,
-    UserRound,
-    CalendarDays,
-    Landmark,
-    Coins,
-    ReceiptText,
-    Signature,
     ExternalLink,
     DownloadCloudIcon,
 } from "lucide-react";
@@ -38,13 +32,18 @@ export default function InvoicePreviewCard() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { id } = useParams();
+    const invoiceDownloadRef = useRef(null);
 
     const [customizeOpen, setCustomizeOpen] = useState(false);
     const [previewScale, setPreviewScale] = useState(1);
+    const [downloading, setDownloading] = useState(false);
 
     const customizeRef = useRef(null);
     const previewRef = useRef(null);
     const requestedInvoiceIdRef = useRef(null);
+
+    const TEMPLATE_WIDTH = 794;
+    const TEMPLATE_HEIGHT = 1123;
 
     /* ============================================================
        REDUX STATE
@@ -61,8 +60,12 @@ export default function InvoicePreviewCard() {
         previewError,
         error,
         invoiceTemplate: reduxInvoiceTemplate,
+        selectedTemplateInvoiceId,
     } = useSelector((state) => state.invoice || {});
 
+    /* ============================================================
+       COMMON HELPERS
+    ============================================================ */
 
     const getInvoiceId = (item) =>
         item?.id ?? item?.invoiceId ?? null;
@@ -101,10 +104,7 @@ export default function InvoicePreviewCard() {
 
         if (
             previewInvoice &&
-            sameId(
-                previewInvoice.id ?? previewInvoice.invoiceId,
-                targetInvoiceId
-            ) &&
+            sameId(getInvoiceId(previewInvoice), targetInvoiceId) &&
             (
                 previewInvoiceId == null ||
                 sameId(previewInvoiceId, targetInvoiceId)
@@ -122,10 +122,7 @@ export default function InvoicePreviewCard() {
 
         return (
             candidates.find((item) =>
-                sameId(
-                    item?.id ?? item?.invoiceId,
-                    targetInvoiceId
-                )
+                sameId(getInvoiceId(item), targetInvoiceId)
             ) || null
         );
     }, [
@@ -139,8 +136,8 @@ export default function InvoicePreviewCard() {
     ]);
 
     /* ============================================================
-   SHARED NORMALIZED INVOICE DATA
-============================================================ */
+       SHARED NORMALIZED INVOICE DATA
+    ============================================================ */
 
     const sharedInvoice = useMemo(
         () => (invoice ? normalizeInvoice(invoice) : null),
@@ -225,9 +222,7 @@ export default function InvoicePreviewCard() {
     useEffect(() => {
         const element = previewRef.current;
 
-        if (!element) {
-            return;
-        }
+        if (!element) return;
 
         const updatePreviewScale = () => {
             const availableWidth = Math.max(
@@ -236,7 +231,7 @@ export default function InvoicePreviewCard() {
             );
 
             setPreviewScale(
-                Math.min(1, availableWidth / 950)
+                Math.min(1, availableWidth / TEMPLATE_WIDTH)
             );
         };
 
@@ -268,13 +263,15 @@ export default function InvoicePreviewCard() {
     }, []);
 
     /* ============================================================
-    CURRENT TEMPLATE
- ============================================================ */
+       CURRENT TEMPLATE
+    ============================================================ */
 
-    const invoiceTemplate =
-        invoice?.invoiceTemplate ||
-        reduxInvoiceTemplate ||
-        "InvoiceTemplate1";
+    const invoiceTemplate = sameId(
+        selectedTemplateInvoiceId,
+        targetInvoiceId
+    )
+        ? reduxInvoiceTemplate
+        : invoice?.invoiceTemplate || "InvoiceTemplate1";
 
     const Template = invoiceTemplates.find(
         (template) => template.id === invoiceTemplate
@@ -285,9 +282,7 @@ export default function InvoicePreviewCard() {
     ============================================================ */
 
     const handleChangeTemplate = () => {
-        if (!invoice) {
-            return;
-        }
+        if (!invoice) return;
 
         setCustomizeOpen(false);
 
@@ -304,9 +299,7 @@ export default function InvoicePreviewCard() {
     ============================================================ */
 
     const handleEditTemplate = () => {
-        if (!invoice) {
-            return;
-        }
+        if (!invoice) return;
 
         setCustomizeOpen(false);
 
@@ -316,9 +309,7 @@ export default function InvoicePreviewCard() {
             invoice.invoiceType || ""
         ).toUpperCase();
 
-        if (invoiceId == null) {
-            return;
-        }
+        if (invoiceId == null) return;
 
         const editRoute =
             invoiceType === "SERVICE_INVOICE"
@@ -340,9 +331,7 @@ export default function InvoicePreviewCard() {
     const handleOpenPreviewInNewTab = () => {
         const invoiceId = getInvoiceId(invoice);
 
-        if (invoiceId == null) {
-            return;
-        }
+        if (invoiceId == null) return;
 
         const previewUrl =
             `${window.location.origin}/invoices/preview/${invoiceId}`;
@@ -359,9 +348,7 @@ export default function InvoicePreviewCard() {
     ============================================================ */
 
     const handleRetry = async () => {
-        if (!targetInvoiceId || previewLoading) {
-            return;
-        }
+        if (!targetInvoiceId || previewLoading) return;
 
         requestedInvoiceIdRef.current =
             String(targetInvoiceId);
@@ -385,29 +372,32 @@ export default function InvoicePreviewCard() {
         }
     };
 
+    /* ============================================================
+       PDF DOWNLOAD - SUPPORTS ALL TEMPLATES
+    ============================================================ */
 
 
     const handleDownload = async () => {
-        const element = document.getElementById("invoice-template-4");
+        const element = invoiceDownloadRef.current;
 
         if (!element) {
-            console.error("Invoice template not found");
+            console.error("Selected invoice template element not found.");
             return;
         }
 
         try {
-            // Capture actual invoice dimensions
             const canvas = await html2canvas(element, {
                 scale: 2,
                 useCORS: true,
+                allowTaint: false,
                 backgroundColor: "#ffffff",
                 logging: false,
+                scrollX: 0,
+                scrollY: 0,
                 width: element.scrollWidth,
                 height: element.scrollHeight,
                 windowWidth: element.scrollWidth,
                 windowHeight: element.scrollHeight,
-                scrollX: 0,
-                scrollY: 0,
             });
 
             const pdf = new jsPDF({
@@ -420,29 +410,24 @@ export default function InvoicePreviewCard() {
             const pageWidth = 210;
             const pageHeight = 297;
 
-            // Maintain the invoice aspect ratio
-            const imageHeight =
-                (canvas.height * pageWidth) / canvas.width;
+            // Exact pixel height corresponding to A4 width
+            const pagePixelHeight =
+                (canvas.width * pageHeight) / pageWidth;
 
-            // Calculate required pages
+            // Ignore insignificant trailing canvas overflow
             const totalPages = Math.ceil(
-                imageHeight / pageHeight - 0.001
-            );
-
-            // Crop each page from the original canvas
-            const pagePixelHeight = Math.floor(
-                (canvas.width * pageHeight) / pageWidth
+                (canvas.height - 2) / pagePixelHeight
             );
 
             for (let page = 0; page < totalPages; page++) {
-                const startY = page * pagePixelHeight;
+                const startY = Math.round(page * pagePixelHeight);
 
                 const currentHeight = Math.min(
-                    pagePixelHeight,
+                    Math.round(pagePixelHeight),
                     canvas.height - startY
                 );
 
-                if (currentHeight <= 0) break;
+                if (currentHeight <= 0) continue;
 
                 const pageCanvas = document.createElement("canvas");
                 pageCanvas.width = canvas.width;
@@ -451,7 +436,7 @@ export default function InvoicePreviewCard() {
                 const context = pageCanvas.getContext("2d");
 
                 context.fillStyle = "#ffffff";
-                context.fillRect(0, 0, canvas.width, currentHeight);
+                context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
 
                 context.drawImage(
                     canvas,
@@ -469,13 +454,13 @@ export default function InvoicePreviewCard() {
                     pdf.addPage();
                 }
 
-                const pageImage = pageCanvas.toDataURL("image/jpeg", 0.95);
+                const image = pageCanvas.toDataURL("image/jpeg", 0.95);
 
                 const renderedHeight =
                     (currentHeight * pageWidth) / canvas.width;
 
                 pdf.addImage(
-                    pageImage,
+                    image,
                     "JPEG",
                     0,
                     0,
@@ -671,7 +656,9 @@ export default function InvoicePreviewCard() {
        INVOICE ITEMS
     ============================================================ */
 
-    const invoiceItems = Array.isArray(invoice?.invoiceItems)
+    const invoiceItems = Array.isArray(
+        invoice?.invoiceItems
+    )
         ? invoice.invoiceItems
         : [];
 
@@ -859,15 +846,31 @@ export default function InvoicePreviewCard() {
                         <span>New Tab</span>
                     </button>
 
+                    {/* PDF DOWNLOAD */}
+
                     <button
                         type="button"
                         onClick={handleDownload}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-2 text-sm font-medium text-gray-100 transition bg-red-500 hover:bg-red-400 hover:text-gray-100"
-                        title="Open preview in a new tab"
+                        disabled={downloading}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-red-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+                        title="Download invoice PDF"
                     >
-                        <DownloadCloudIcon size={15} />
-                        <span>Pdf Download</span>
+                        {downloading ? (
+                            <RefreshCw
+                                size={15}
+                                className="animate-spin"
+                            />
+                        ) : (
+                            <DownloadCloudIcon size={15} />
+                        )}
+
+                        <span>
+                            {downloading
+                                ? "Generating PDF..."
+                                : "PDF Download"}
+                        </span>
                     </button>
+
                     {/* CUSTOMIZE DROPDOWN */}
 
                     <div
@@ -918,8 +921,6 @@ export default function InvoicePreviewCard() {
                 </div>
             </div>
 
-            {/* COMMON INVOICE DETAILS */}
-
             {/* RESPONSIVE TEMPLATE PREVIEW */}
 
             <div
@@ -929,26 +930,25 @@ export default function InvoicePreviewCard() {
                 <div className="flex w-full justify-center">
                     <div
                         style={{
-                            width: `${950 * previewScale}px`,
-                            height: `${1123 * previewScale}px`,
+                            width: `${TEMPLATE_WIDTH * previewScale}px`,
+                            height: `${TEMPLATE_HEIGHT * previewScale}px`,
                             flexShrink: 0,
                             position: "relative",
                         }}
                     >
                         <div
+                            ref={invoiceDownloadRef}
                             style={{
-                                width: "950px",
+                                width: `${TEMPLATE_WIDTH}px`,
                                 transform: `scale(${previewScale})`,
                                 transformOrigin: "top left",
                             }}
                         >
-                            <div className="rounded-md border border-gray-200 bg-white shadow-sm">
-                                <Template
-                                    key={`${invoiceId}-${invoiceTemplate}`}
-                                    invoice={sharedInvoice}
-                                    preview
-                                />
-                            </div>
+                            <Template
+                                key={`${invoiceId}-${invoiceTemplate}`}
+                                invoice={sharedInvoice}
+                                preview
+                            />
                         </div>
                     </div>
                 </div>

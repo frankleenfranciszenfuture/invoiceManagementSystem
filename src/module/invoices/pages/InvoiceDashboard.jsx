@@ -1,429 +1,790 @@
 
-import React, { useEffect, useMemo } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { Plus, Download, UserCircle } from "lucide-react";
-
-import InvoiceTable from "./InvoiceTable";
-import NavbarInvoice from "../components/bars/nav/NavbarInvoice";
-
-import { fetchInvoices } from "../thunks/invoiceThunks";
+import React, {
+    useEffect,
+    useMemo,
+    useCallback,
+} from "react";
 
 import {
-    setInvoiceStatus,
-    setSelectedInvoiceView,
-} from "../slices/invoiceViewSlice";
+    useSelector,
+    useDispatch,
+} from "react-redux";
 
-import { openModal } from "../../../module/ui/uiSlice";
+import {
+    Plus,
+    Download,
+    FileText,
+} from "lucide-react";
+
+import { useNavigate } from "react-router-dom";
+
+import toast from "react-hot-toast";
+
+import InvoiceTable from "../pages/InvoiceTable";
+import NavbarInvoice from "../components/bars/nav/NavbarInvoice";
+
+import {
+    clearInvoiceState,
+} from "../slices/invoiceSlice";
+
+import {
+    fetchInvoices,
+} from "../thunks/invoiceThunks";
+
+import {
+    getUserPermission,
+} from "../../menuPermission/thunks/menuPermissionThunks";
 
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
-import InvoiceCreate from "./InvoiceCreate";
+
+import InvoiceOverview from "../pages/InvoiceOverview";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMPTY_ARRAY = [];
+
+/* =========================================================
+   NORMALIZE HELPERS
+========================================================= */
+
+const normalizeModule = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+const normalizeAction = (value) =>
+    String(value ?? "").trim().toUpperCase();
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function InvoiceDashboard() {
 
     const dispatch = useDispatch();
+    const navigate = useNavigate();
 
-    // ============================================================
-    // INVOICE STATE
-    // ============================================================
+    /* =====================================================
+       AUTH STATE
+    ===================================================== */
+
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
+
+    const isAuthenticated = useSelector(
+        (state) => state.auth?.isAuthenticated === true
+    );
+
+    const authChecking = useSelector(
+        (state) => state.auth?.authChecking === true
+    );
+
+    /* =====================================================
+       BRANCH
+    ===================================================== */
+
+    const branchId =
+        user?.branchId ||
+        user?.branch?.id ||
+        user?.companyBranchId ||
+        null;
+
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
+
+    const permissions = useSelector(
+        (state) => {
+            const value = state.menuPermission?.userPermissions;
+
+            return Array.isArray(value)
+                ? value
+                : EMPTY_ARRAY;
+        }
+    );
+
+    const permissionLoading = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissionsLoading === true
+    );
+
+    const permissionsLoaded = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissionsLoaded === true
+    );
+
+    /* =====================================================
+       ROLE
+    ===================================================== */
+
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
+
+    const normalizedRole = normalizeAction(roleName);
+
+    const hasFullAccess =
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
+
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
+
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
+
+            if (hasFullAccess) {
+                return true;
+            }
+
+            if (!Array.isArray(permissions)) {
+                return false;
+            }
+
+            const requestedModule = normalizeModule(moduleName);
+            const requestedAction = normalizeAction(actionName);
+
+            return permissions.some((permission) => {
+
+                const permissionModule = normalizeModule(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                );
+
+                if (permissionModule !== requestedModule) {
+                    return false;
+                }
+
+                if (permission?.active === false) {
+                    return false;
+                }
+
+                if (
+                    normalizeAction(permission?.status) === "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                /* ACTION ARRAY */
+
+                if (Array.isArray(permission?.actions)) {
+
+                    return permission.actions.some((action) => {
+
+                        if (typeof action === "string") {
+                            return (
+                                normalizeAction(action) === requestedAction
+                            );
+                        }
+
+                        const permissionAction = normalizeAction(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        );
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        if (action?.active === false) {
+                            return false;
+                        }
+
+                        if (
+                            normalizeAction(action?.status) === "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
+                }
+
+                /* DIRECT / FLAT ACTION */
+
+                const permissionAction = normalizeAction(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                );
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction === requestedAction &&
+                    allowed
+                );
+            });
+
+        },
+        [
+            hasFullAccess,
+            permissions,
+        ]
+    );
+
+    /* =====================================================
+       INVOICE PERMISSIONS
+    ===================================================== */
+
+    const canViewInvoice = hasPermission(
+        "Invoices",
+        "VIEW"
+    );
+
+    const canCreateInvoice = hasPermission(
+        "Invoices",
+        "CREATE"
+    );
+
+    /* =====================================================
+       INVOICE STATE
+    ===================================================== */
 
     const invoicesFromRedux = useSelector(
         (state) => state.invoice?.invoices
     );
 
-    const invoices = invoicesFromRedux ?? [];
+    const invoices = Array.isArray(invoicesFromRedux)
+        ? invoicesFromRedux
+        : EMPTY_ARRAY;
 
     const loading = useSelector(
-        (state) => state.invoice?.loading || false
+        (state) => state.invoice?.loading === true
     );
 
     const error = useSelector(
         (state) => state.invoice?.error
     );
 
-    // ============================================================
-    // INVOICE FILTER STATE
-    // ============================================================
+    const pagination = useSelector(
+        (state) => state.invoice?.pagination
+    );
+
+    /* =====================================================
+       INVOICE VIEW STATE
+    ===================================================== */
 
     const invoiceStatus = useSelector(
         (state) =>
             state.invoiceView?.invoiceStatus || "ALL"
     );
 
-    // ============================================================
-    // FETCH INVOICES
-    // ============================================================
+    const search = useSelector(
+        (state) =>
+            state.invoiceView?.search || ""
+    );
+
+    /* =====================================================
+       LOAD USER PERMISSIONS
+    ===================================================== */
 
     useEffect(() => {
 
-        console.log("Fetching invoices...");
+        if (authChecking || !isAuthenticated) {
+            return;
+        }
+
+        // Admin and Super Admin have full access.
+        if (hasFullAccess) {
+            return;
+        }
+
+        if (permissionsLoaded || permissionLoading) {
+            return;
+        }
+
+        dispatch(getUserPermission());
+
+    }, [
+        authChecking,
+        isAuthenticated,
+        hasFullAccess,
+        permissionsLoaded,
+        permissionLoading,
+        dispatch,
+    ]);
+
+    /* =====================================================
+    FETCH INVOICES
+ ===================================================== */
+
+    useEffect(() => {
+
+        if (
+            authChecking ||
+            !isAuthenticated ||
+            !canViewInvoice
+        ) {
+            return;
+        }
+
+        if (
+            !hasFullAccess &&
+            (
+                permissionLoading ||
+                !permissionsLoaded
+            )
+        ) {
+            return;
+        }
 
         dispatch(
             fetchInvoices({
                 page: 0,
-                size: 20,
+                size: pagination?.pageSize || 20,
+                searchParams: {
+                    ...(invoiceStatus !== "ALL"
+                        ? { invoiceStatus }
+                        : {}),
+                    ...(search.trim()
+                        ? { search: search.trim() }
+                        : {}),
+                },
             })
         );
 
-    }, [dispatch]);
-
-    // ============================================================
-    // SYNC URL STATUS → REDUX
-    // ============================================================
-
-    useEffect(() => {
-
-        const params = new URLSearchParams(
-            window.location.search
-        );
-
-        const urlStatus =
-            params.get("invoiceStatus");
-
-        if (!urlStatus) {
-            return;
-        }
-
-        const normalizedStatus =
-            String(urlStatus).toUpperCase();
-
-        const validStatuses = [
-            "ALL",
-            "ACTIVE",
-            "INACTIVE",
-            "DRAFT",
-        ];
-
-        if (!validStatuses.includes(normalizedStatus)) {
-            return;
-        }
-
-        dispatch(
-            setInvoiceStatus(normalizedStatus)
-        );
-
-        const statusLabels = {
-            ALL: "All Invoices",
-            ACTIVE: "Active Invoices",
-            INACTIVE: "Inactive Invoices",
-            DRAFT: "Draft Invoices",
-        };
-
-        dispatch(
-            setSelectedInvoiceView(
-                statusLabels[normalizedStatus]
-            )
-        );
-
-    }, [dispatch]);
-
-    // ============================================================
-    // DEBUG
-    // ============================================================
-
-    useEffect(() => {
-
-        console.log("================================");
-        console.log(
-            "INVOICES FROM REDUX:",
-            invoices
-        );
-
-        console.log(
-            "INVOICE LOADING:",
-            loading
-        );
-
-        console.log(
-            "INVOICE ERROR:",
-            error
-        );
-
-        console.log(
-            "INVOICE STATUS:",
-            invoiceStatus
-        );
-
-        console.log("================================");
-
     }, [
-        invoices,
-        loading,
-        error,
+        authChecking,
+        isAuthenticated,
+        canViewInvoice,
+        hasFullAccess,
+        permissionLoading,
+        permissionsLoaded,
         invoiceStatus,
+        search,
+        pagination?.pageSize,
+        dispatch,
     ]);
 
-    // ============================================================
-    // FILTER INVOICES BY STATUS
-    // ============================================================
+    /* =====================================================
+    FILTER INVOICES BY STATUS AND SEARCH
+ ===================================================== */
 
     const filteredInvoices = useMemo(() => {
 
-        const selectedStatus =
-            String(invoiceStatus || "ALL")
-                .toUpperCase();
+        const selectedStatus = String(
+            invoiceStatus || "ALL"
+        )
+            .trim()
+            .toUpperCase();
 
-        // ========================================================
-        // ALL
-        // ========================================================
-
-        if (selectedStatus === "ALL") {
-            return invoices;
-        }
-
-        // ========================================================
-        // FILTER
-        // ========================================================
+        const searchValue = String(search ?? "")
+            .trim()
+            .toLowerCase();
 
         return invoices.filter((invoice) => {
 
-            const backendStatus =
-                String(invoice?.status || "")
-                    .toUpperCase();
+            const currentStatus = String(
+                invoice?.invoiceStatus ||
+                invoice?.status ||
+                "DRAFT"
+            )
+                .trim()
+                .toUpperCase();
 
-            console.log(
-                "Invoice:",
-                invoice?.invoiceNumber,
-                "| Backend Status:",
-                backendStatus,
-                "| Selected Status:",
-                selectedStatus
-            );
+            // STATUS FILTER
+            if (
+                selectedStatus !== "ALL" &&
+                currentStatus !== selectedStatus
+            ) {
+                return false;
+            }
 
-            return backendStatus === selectedStatus;
+            // SEARCH FILTER
+            if (searchValue) {
+
+                const searchableValues = [
+                    invoice?.invoiceNumber,
+                    invoice?.invoiceType,
+                    invoice?.customerName,
+                    invoice?.customer?.companyName,
+                    invoice?.salesPersonName,
+                    invoice?.currencyName,
+                    currentStatus,
+                    invoice?.notes,
+                ];
+
+                const matchesSearch = searchableValues.some(
+                    (value) =>
+                        String(value ?? "")
+                            .toLowerCase()
+                            .includes(searchValue)
+                );
+
+                if (!matchesSearch) {
+                    return false;
+                }
+            }
+
+            return true;
         });
 
     }, [
         invoices,
         invoiceStatus,
+        search,
+    ]);
+    /* =====================================================
+       OPEN CREATE INVOICE
+    ===================================================== */
+
+    const handleCreateInvoice = useCallback(() => {
+
+        if (!isAuthenticated) {
+            return;
+        }
+
+        if (
+            !hasFullAccess &&
+            (
+                permissionLoading ||
+                !permissionsLoaded
+            )
+        ) {
+            return;
+        }
+
+        if (!canCreateInvoice) {
+            toast.error(
+                "You do not have permission to create invoices."
+            );
+            return;
+        }
+
+        navigate("/invoices/create");
+
+    }, [
+        isAuthenticated,
+        hasFullAccess,
+        permissionLoading,
+        permissionsLoaded,
+        canCreateInvoice,
+        navigate,
     ]);
 
-    // ============================================================
-    // OPEN CREATE INVOICE MODAL
-    // ============================================================
+    /* =====================================================
+       CLEAR ERROR
+    ===================================================== */
 
-    const handleCreateInvoice = () => {
+    useEffect(() => {
 
-        console.log("Opening Add Invoice modal");
+        if (!error) {
+            return;
+        }
 
-        dispatch(
-            openModal({
-                type: "addInvoice",
-            })
-        );
+        const timer = setTimeout(() => {
+            dispatch(clearInvoiceState());
+        }, 2000);
 
-    };
+        return () => clearTimeout(timer);
 
+    }, [
+        error,
+        dispatch,
+    ]);
 
-    // ============================================================
-    // LOADING
-    // ============================================================
+    /* =====================================================
+       AUTH CHECKING
+    ===================================================== */
 
-    if (loading) {
+    if (authChecking) {
         return <InvoiceSkeleton />;
     }
 
-    // ============================================================
-    // PAGE
-    // ============================================================
+    /* =====================================================
+       NOT AUTHENTICATED
+    ===================================================== */
 
+    if (!isAuthenticated) {
+        return null;
+    }
 
+    /* =====================================================
+       PERMISSION LOADING
+    ===================================================== */
+
+    if (
+        !hasFullAccess &&
+        (
+            permissionLoading ||
+            !permissionsLoaded
+        )
+    ) {
+        return <InvoiceSkeleton />;
+    }
+
+    /* =====================================================
+       VIEW PERMISSION DENIED
+    ===================================================== */
+
+    if (!canViewInvoice) {
+
+        return (
+            <div
+                className="
+                    flex h-screen items-center justify-center
+                    bg-gray-50 font-sans
+                "
+            >
+                <div className="px-6 text-center">
+
+                    <div
+                        className="
+                            mx-auto mb-4 flex h-16 w-16
+                            items-center justify-center
+                            rounded-full bg-red-50
+                            text-2xl font-semibold text-red-500
+                        "
+                    >
+                        !
+                    </div>
+
+                    <h2 className="text-lg font-semibold text-gray-800">
+                        Access Denied
+                    </h2>
+
+                    <p className="mt-1 max-w-sm text-sm text-gray-500">
+                        You do not have permission to view invoices.
+                    </p>
+
+                </div>
+            </div>
+        );
+    }
+
+    /* =====================================================
+       PAGE
+    ===================================================== */
 
     return (
-        <div className="flex h-[full] bg-gray-50 rounded-lg font-sans text-[13px] overflow-x-auto mt-2">
-            <div className="flex-1 min-h-0 bg-white">
-                <div className="px-2 py-5 max-w-30xl w-full">
+
+        <div
+            className="
+                flex h-screen overflow-hidden
+                bg-gray-50 font-sans text-[13px]
+            "
+        >
+
+            <div
+                className="
+                    min-h-0 flex-1 overflow-y-auto bg-white
+                "
+            >
+
+                <div
+                    className="
+                        w-full max-w-30xl px-2 py-5
+                    "
+                >
+
+                    {/* INVOICE NAVBAR */}
+
                     <NavbarInvoice />
 
-                    {/* =================================================
-                        ERROR
-                    ================================================= */}
+                    {/* INVOICE OVERVIEW */}
+
+                    <InvoiceOverview
+                        canViewInvoice={canViewInvoice}
+                        isAuthenticated={isAuthenticated}
+                        authChecking={authChecking}
+                    />
+
+                    {/* ERROR */}
 
                     {error && (
+
                         <div
                             className="
-                                mx-2
-                                mt-4
-                                px-4
-                                py-3
-                                rounded-md
-                                border
-                                border-red-200
-                                bg-red-50
-                                text-sm
-                                text-red-600
+                                mx-2 mt-4 rounded-md
+                                border border-red-200
+                                bg-red-50 px-4 py-3
+                                text-sm text-red-600
                             "
                         >
                             {error}
                         </div>
                     )}
 
-                    {/* =================================================
-                        INVOICE TABLE / EMPTY STATE
-                    ================================================= */}
+                    {/* INVOICE TABLE / LOADING / EMPTY STATE */}
 
-                    {filteredInvoices.length > 0 ? (
+                    {loading ? (
+
+                        <div
+                            className="
+                                flex min-h-[250px]
+                                items-center justify-center
+                            "
+                        >
+                            <p className="text-sm text-gray-500">
+                                Loading invoices...
+                            </p>
+                        </div>
+
+                    ) : filteredInvoices.length > 0 ? (
 
                         <InvoiceTable
                             invoices={filteredInvoices}
+                            fetchParams={{
+                                searchParams: {
+                                    ...(invoiceStatus !== "ALL"
+                                        ? { invoiceStatus }
+                                        : {}),
+
+                                    ...(search.trim()
+                                        ? { search: search.trim() }
+                                        : {}),
+                                },
+                            }}
                         />
 
                     ) : (
 
                         <div
                             className="
-                                min-h-full
-                                flex
-                                flex-col
-                                items-center
-                                justify-center
-                                gap-3
-                                px-4
+                                flex min-h-full flex-col
+                                items-center justify-center
+                                gap-3 px-4
                             "
                         >
 
-                            {/* =================================================
-                                EMPTY STATE ICON
-                            ================================================= */}
+                            {/* EMPTY STATE ICON */}
 
                             <div
                                 className="
-                                    relative
-                                    w-24
-                                    h-24
-                                    rounded-full
-                                    bg-gray-100
-                                    flex
-                                    items-center
-                                    justify-center
-                                    mb-1
-                                    flex-shrink-0
-                                    mt-30
+                                    relative mt-30 mb-1
+                                    flex h-24 w-24 shrink-0
+                                    items-center justify-center
+                                    rounded-full bg-gray-100
                                 "
                             >
 
-                                <div className="text-gray-400 text-3xl">
-                                    ₹
+                                <div
+                                    className="
+                                        flex items-center justify-center
+                                        text-gray-400
+                                    "
+                                >
+                                    <FileText
+                                        size={42}
+                                        strokeWidth={1.7}
+                                    />
                                 </div>
 
                                 <div
                                     className="
-                                        absolute
-                                        bottom-1
-                                        right-1
-                                        w-7
-                                        h-7
-                                        rounded-full
-                                        bg-blue-600
-                                        flex
-                                        items-center
-                                        justify-center
-                                        text-white
+                                        absolute bottom-1 right-1
+                                        flex h-7 w-7 items-center
+                                        justify-center rounded-full
+                                        bg-blue-500 text-white
                                     "
                                 >
-                                    <Plus className="w-4 h-4" />
+                                    <Plus className="h-4 w-4" />
                                 </div>
 
                             </div>
 
-                            {/* =================================================
-                                EMPTY STATE TITLE
-                            ================================================= */}
+                            {/* EMPTY STATE TITLE */}
 
-                            <p className="text-base font-medium text-gray-800 text-center">
-                                Every sale starts with an invoice
+                            <p
+                                className="
+                                    text-center text-base
+                                    font-medium text-gray-800
+                                "
+                            >
+                                Create and manage your invoices
                             </p>
 
-                            {/* =================================================
-                                EMPTY STATE DESCRIPTION
-                            ================================================= */}
+                            {/* EMPTY STATE DESCRIPTION */}
 
-                            <p className="text-sm text-gray-500 text-center max-w-sm">
-                                Create and manage your customer invoices,
-                                sales details, GST calculations, and payment
-                                information, all in one place.
+                            <p
+                                className="
+                                    max-w-sm text-center
+                                    text-sm text-gray-500
+                                "
+                            >
+                                Create professional invoices, track
+                                customer payments, and manage your
+                                outstanding and paid invoices.
                             </p>
 
-                            {/* =================================================
-                                ACTION BUTTONS
-                            ================================================= */}
+                            {/* ACTION BUTTONS */}
 
                             <div
                                 className="
-                                    flex
-                                    items-center
-                                    gap-2.5
-                                    mt-1
-                                    flex-wrap
-                                    justify-center
+                                    mt-1 flex flex-wrap
+                                    items-center justify-center gap-2.5
                                 "
                             >
 
                                 {/* CREATE INVOICE */}
 
-                                <button
-                                    type="button"
-                                    onClick={handleCreateInvoice}
-                                    className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        bg-blue-600
-                                        text-white
-                                        text-sm
-                                        font-medium
-                                        px-4
-                                        py-2
-                                        rounded-md
-                                        hover:bg-blue-700
-                                        transition-colors
-                                        whitespace-nowrap
-                                    "
-                                >
-                                    <Plus className="w-4 h-4" />
+                                {canCreateInvoice && (
 
-                                    Create New Invoice
-                                </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleCreateInvoice}
+                                        className="
+                                            flex items-center gap-2
+                                            whitespace-nowrap rounded-md
+                                            bg-blue-500 px-4 py-2
+                                            text-sm font-medium text-white
+                                            transition-colors hover:bg-blue-600
+                                        "
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Create New Invoice
+                                    </button>
+
+                                )}
 
                                 {/* IMPORT */}
 
                                 <button
                                     type="button"
+                                    onClick={() => {
+                                        toast(
+                                            "Invoice import is not configured yet."
+                                        );
+                                    }}
                                     className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        bg-white
-                                        text-gray-700
-                                        text-sm
-                                        border
-                                        border-gray-300
-                                        px-4
-                                        py-2
-                                        rounded-md
-                                        hover:bg-gray-50
-                                        transition-colors
-                                        whitespace-nowrap
+                                        flex items-center gap-2
+                                        whitespace-nowrap rounded-md
+                                        border border-gray-300 bg-white
+                                        px-4 py-2 text-sm text-gray-700
+                                        transition-colors hover:bg-gray-50
                                     "
                                 >
-                                    <Download className="w-4 h-4" />
-
+                                    <Download className="h-4 w-4" />
                                     Import File
                                 </button>
 
                             </div>
 
                         </div>
+
                     )}
 
                 </div>
 
             </div>
-
-            {/* =========================================================
-                INVOICE CREATE / EDIT MODAL
-            ========================================================= */}
-
-            {/* <InvoiceCreate /> */}
 
         </div>
     );

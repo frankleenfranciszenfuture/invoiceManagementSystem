@@ -1,127 +1,381 @@
 
-import React, { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import React, {
+    useCallback,
+    useMemo,
+} from "react";
+
+import {
+    useDispatch,
+    useSelector,
+} from "react-redux";
+
+import {
+    useNavigate,
+} from "react-router-dom";
+
+import {
+    Eye,
+    FileText,
+    UserRound,
+    CalendarDays,
+    Edit,
+    Trash2,
+    Receipt,
+} from "lucide-react";
+
+import toast from "react-hot-toast";
 
 import {
     fetchInvoices,
+    fetchInvoiceById,
     removeInvoice,
 } from "../thunks/invoiceThunks";
 
 import {
     setExistingInvoice,
+    setInvoiceForEdit,
 } from "../slices/invoiceSlice";
 
-import { openModal } from "../../ui/uiSlice";
-
-import {
-    ChevronDown,
-    Edit,
-    Trash2,
-    Receipt,
-    Eye,
-} from "lucide-react";
-
-import toast from "react-hot-toast";
 import Pagination from "../../../common/pagination/table/Pagination";
 
+/* =========================================================
+   CONSTANTS
+========================================================= */
 
+const EMPTY_ARRAY = [];
+
+const INVOICE_STATUS_COLORS = {
+    DRAFT: "bg-yellow-100 text-yellow-700",
+    APPROVED: "bg-blue-100 text-blue-700",
+    SENT: "bg-purple-100 text-purple-700",
+    PAID: "bg-green-100 text-green-700",
+    PARTIAL: "bg-orange-100 text-orange-700",
+    OVERDUE: "bg-red-100 text-red-700",
+    CANCELLED: "bg-gray-100 text-gray-700",
+};
+
+const INVOICE_TYPE_COLORS = {
+    PRODUCT_INVOICE: "bg-blue-100 text-blue-700",
+    SERVICE_INVOICE: "bg-purple-100 text-purple-700",
+    SALE_INVOICE: "bg-green-100 text-green-700",
+};
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const formatDate = (value) => {
+    if (!value) return "—";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "—";
+    }
+
+    return date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+};
+
+const formatAmount = (amount, currencyCode = "INR") => {
+    const value = Number(amount);
+
+    if (!Number.isFinite(value)) {
+        return "—";
+    }
+
+    try {
+        return new Intl.NumberFormat("en-IN", {
+            style: "currency",
+            currency: currencyCode || "INR",
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(value);
+    } catch {
+        return `${currencyCode || "INR"} ${value.toFixed(2)}`;
+    }
+};
+
+const formatLabel = (value) => {
+    if (!value) return "—";
+
+    return String(value)
+        .toLowerCase()
+        .split("_")
+        .map((word) =>
+            word.charAt(0).toUpperCase() + word.slice(1)
+        )
+        .join(" ");
+};
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function InvoiceTable({
-    invoices = [],
+    invoices,
+    fetchParams = {},
 }) {
-
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
-    const [showEdit, setShowEdit] = useState(false);
-    const [showView, setShowView] = useState(false);
     /* =====================================================
        REDUX STATE
     ===================================================== */
 
     const {
-        loading,
-        error,
-        pagination,
+        invoices: reduxInvoices = EMPTY_ARRAY,
+        loading = false,
+        error = null,
+        pagination = {},
     } = useSelector(
         (state) => state.invoice || {}
     );
 
     const {
-        pageNumber,
-        pageSize,
-        totalPages,
-        totalElements,
-    } = pagination || {};
+        pageNumber = 0,
+        pageSize = 20,
+        totalPages = 0,
+        totalElements = 0,
+    } = pagination;
 
-    const currentInvoices =
-        invoices || [];
+    const currentInvoices = Array.isArray(invoices)
+        ? invoices
+        : reduxInvoices;
 
     /* =====================================================
-       DELETE INVOICE
+       AUTH STATE
     ===================================================== */
 
-    const handleDelete = async (id) => {
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
 
-        if (
-            !window.confirm(
-                "Delete this invoice?"
-            )
-        ) {
-            return;
-        }
+    const permissions = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissions || EMPTY_ARRAY
+    );
 
-        try {
+    /* =====================================================
+       ROLE
+    ===================================================== */
 
-            await dispatch(
-                removeInvoice(id)
-            ).unwrap();
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
 
-            toast.success(
-                "Invoice deleted successfully"
-            );
+    const normalizedRole = String(roleName)
+        .trim()
+        .toUpperCase();
 
-            dispatch(
-                fetchInvoices({
-                    page: Number(pageNumber) || 0,
-                    size: Number(pageSize) || 20,
-                })
-            );
+    const hasFullAccess =
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
-        } catch (error) {
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
-            toast.error(
-                typeof error === "string"
-                    ? error
-                    : error?.message ||
-                    "Failed to delete invoice"
-            );
-        }
-    };
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
+            if (hasFullAccess) return true;
+
+            if (!Array.isArray(permissions)) return false;
+
+            const requestedModule = String(moduleName)
+                .trim()
+                .toLowerCase();
+
+            const requestedAction = String(actionName)
+                .trim()
+                .toUpperCase();
+
+            return permissions.some((permission) => {
+                const permissionModule = String(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                )
+                    .trim()
+                    .toLowerCase();
+
+                if (permissionModule !== requestedModule) {
+                    return false;
+                }
+
+                if (permission?.active === false) {
+                    return false;
+                }
+
+                if (
+                    String(permission?.status || "").toUpperCase() ===
+                    "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                /* ACTION ARRAY */
+
+                if (Array.isArray(permission?.actions)) {
+                    return permission.actions.some((action) => {
+                        if (typeof action === "string") {
+                            return (
+                                action.trim().toUpperCase() ===
+                                requestedAction
+                            );
+                        }
+
+                        const permissionAction = String(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        )
+                            .trim()
+                            .toUpperCase();
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        if (action?.active === false) {
+                            return false;
+                        }
+
+                        if (
+                            String(action?.status || "").toUpperCase() ===
+                            "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
+                }
+
+                /* DIRECT / FLAT ACTION */
+
+                const permissionAction = String(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction === requestedAction &&
+                    allowed
+                );
+            });
+        },
+        [
+            hasFullAccess,
+            permissions,
+        ]
+    );
+
+    /* =====================================================
+       INVOICE PERMISSIONS
+    ===================================================== */
+
+    const canViewInvoice = hasPermission(
+        "Invoices",
+        "VIEW"
+    );
+
+    const canEditInvoice = hasPermission(
+        "Invoices",
+        "EDIT"
+    );
+
+    const canDeleteInvoice = hasPermission(
+        "Invoices",
+        "DELETE"
+    );
+
+    /* =====================================================
+       FETCH PARAMS
+    ===================================================== */
+
+    const getFetchParams = useCallback(
+        (page, size) => ({
+            page,
+            size,
+            searchParams: fetchParams?.searchParams || {},
+        }),
+        [fetchParams]
+    );
+
+    const refreshInvoices = useCallback(
+        (page = pageNumber, size = pageSize) => {
+            const params = getFetchParams(page, size);
+
+            if (!params.id) {
+                toast.error(
+                    "Branch ID is required to fetch invoices."
+                );
+                return;
+            }
+
+            dispatch(fetchInvoices(params));
+        },
+        [
+            dispatch,
+            getFetchParams,
+            pageNumber,
+            pageSize,
+        ]
+    );
 
     /* =====================================================
        VIEW INVOICE
     ===================================================== */
 
-    const handleView = (invoice) => {
+    const handleView = async (invoice) => {
+        const invoiceId = invoice?.id ?? invoice?.invoiceId;
+
+        if (!invoiceId) {
+            toast.error("Invoice ID not found.");
+            return;
+        }
 
         try {
+            const response = await dispatch(
+                fetchInvoiceById(invoiceId)
+            ).unwrap();
 
-            dispatch(
-                setExistingInvoice(
-                    invoice
-                )
-            );
+            const detailedInvoice = response?.data ?? response;
 
-            navigate(
-                `/invoices/view/${invoice.id}`
-            );
+            if (!detailedInvoice) {
+                toast.error("Invoice details not found.");
+                return;
+            }
 
+            dispatch(setExistingInvoice(detailedInvoice));
+
+            navigate(`/invoices/view/${invoiceId}`);
         } catch (error) {
-
             toast.error(
-                "Failed to open invoice"
+                error?.message ||
+                (typeof error === "string" ? error : "Failed to load invoice details.")
             );
         }
     };
@@ -130,276 +384,168 @@ export default function InvoiceTable({
        EDIT INVOICE
     ===================================================== */
 
-    const handleEditInvoice = (invoice) => {
-        const invoiceType = invoice.invoiceType;
+    // const handleEdit = (invoice) => {
+    //     if (!canEditInvoice) {
+    //         toast.error(
+    //             "You do not have permission to edit invoices."
+    //         );
+    //         return;
+    //     }
 
-        const editRoutes = {
-            PRODUCT_INVOICE: `/invoices/product/edit/${invoice.id}`,
-            SERVICE_INVOICE: `/invoices/service/edit/${invoice.id}`,
-            SALE_INVOICE: `/invoices/sale/edit/${invoice.id}`,
-            PURCHASE_INVOICE: `/invoices/purchase/edit/${invoice.id}`,
-            TAX_INVOICE: `/invoices/tax/edit/${invoice.id}`,
-        };
+    //     if (
+    //         String(invoice?.invoiceStatus || "").toUpperCase() ===
+    //         "CANCELLED"
+    //     ) {
+    //         toast.error(
+    //             "Cancelled invoices cannot be edited."
+    //         );
+    //         return;
+    //     }
 
-        const path = editRoutes[invoiceType];
+    //     dispatch(setExistingInvoice(invoice));
 
-        if (!path) {
-            toast.error("Invalid invoice type");
+    //     navigate(`/invoices/edit/${invoice.id}`);
+    // };
+
+    /* =========================================================
+   EDIT INVOICE
+========================================================= */
+
+    const handleEdit = async (invoice) => {
+        if (!canEditInvoice) {
+            toast.error("You do not have permission to edit invoices.");
             return;
         }
 
-        navigate(path, {
-            state: { invoiceType },
-        });
-    };
+        const invoiceId = invoice?.id ?? invoice?.invoiceId;
 
-    /* =====================================================
-       INVOICE INITIALS
-    ===================================================== */
-
-    const initials = (
-        invoiceNumber
-    ) =>
-        invoiceNumber
-            ?.split(" ")
-            .map(
-                (word) =>
-                    word[0]
-            )
-            .join("")
-            .slice(0, 2)
-            .toUpperCase() ||
-        "IN";
-
-    /* =====================================================
-       STATUS COLORS
-    ===================================================== */
-
-    const statusColor = {
-
-        DRAFT:
-            "bg-yellow-100 text-yellow-700",
-
-        SENT:
-            "bg-blue-100 text-blue-700",
-
-        PENDING:
-            "bg-orange-100 text-orange-700",
-
-        ACTIVE:
-            "bg-green-100 text-green-700",
-
-        INACTIVE:
-            "bg-gray-100 text-gray-700",
-
-        PAID:
-            "bg-green-100 text-green-700",
-
-        OVERDUE:
-            "bg-red-100 text-red-700",
-
-        CANCELLED:
-            "bg-red-100 text-red-700",
-
-        CLOSED:
-            "bg-gray-100 text-gray-700",
-
-        APPROVED:
-            "bg-blue-100 text-blue-700",
-
-    };
-
-    /* =====================================================
-       INVOICE TYPE COLORS
-    ===================================================== */
-
-    const invoiceTypeColor = {
-
-        SALE:
-            "bg-green-100 text-green-700",
-
-        SALE_INVOICE:
-            "bg-green-100 text-green-700",
-
-        PURCHASE:
-            "bg-blue-100 text-blue-700",
-
-        PURCHASE_INVOICE:
-            "bg-blue-100 text-blue-700",
-
-        STOCK_TRANSFER:
-            "bg-purple-100 text-purple-700",
-
-    };
-
-    /* =====================================================
-       AVATAR COLORS
-    ===================================================== */
-
-    const avatarColors = [
-
-        "bg-pink-500 text-white",
-        "bg-green-500 text-white",
-        "bg-blue-500 text-white",
-        "bg-purple-500 text-white",
-        "bg-orange-500 text-white",
-        "bg-cyan-500 text-white",
-        "bg-indigo-500 text-white",
-
-    ];
-
-    const getAvatarColor = (
-        name = ""
-    ) => {
-
-        const index =
-            name
-                .split("")
-                .reduce(
-                    (
-                        acc,
-                        char
-                    ) =>
-                        acc +
-                        char.charCodeAt(0),
-                    0
-                ) %
-            avatarColors.length;
-
-        return avatarColors[index];
-    };
-
-    /* =====================================================
-       FORMAT MONEY
-    ===================================================== */
-
-    const formatAmount = (
-        value
-    ) => {
-
-        if (
-            value === null ||
-            value === undefined ||
-            value === ""
-        ) {
-            return "0.00";
+        if (!invoiceId) {
+            toast.error("Invoice ID not found.");
+            return;
         }
 
-        return Number(value).toLocaleString(
-            "en-IN",
-            {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-            }
-        );
-    };
+        const invoiceStatus = String(
+            invoice?.invoiceStatus || invoice?.status || "DRAFT"
+        ).trim().toUpperCase();
 
-    /* =====================================================
-       FORMAT DATE
-    ===================================================== */
-
-    const formatDate = (
-        value
-    ) => {
-
-        if (!value) {
-            return "—";
+        if (invoiceStatus !== "DRAFT") {
+            toast.error("Only draft invoices can be edited.");
+            return;
         }
 
         try {
+            // Fetch complete invoice details instead of using
+            // potentially incomplete table-row data.
+            const response = await dispatch(
+                fetchInvoiceById(invoiceId)
+            ).unwrap();
 
-            return new Date(
-                value
-            ).toLocaleDateString(
-                "en-IN",
-                {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                }
+            const detailedInvoice = response?.data ?? response;
+
+            if (!detailedInvoice) {
+                toast.error("Invoice details not found.");
+                return;
+            }
+
+            const invoiceType = String(
+                detailedInvoice.invoiceType || invoice.invoiceType || ""
+            ).trim().toUpperCase();
+
+            const editRoutes = {
+                PRODUCT_INVOICE: `/invoices/product/edit/${invoiceId}`,
+                SERVICE_INVOICE: `/invoices/service/edit/${invoiceId}`,
+                SALE_INVOICE: `/invoices/sale/edit/${invoiceId}`,
+                PURCHASE_INVOICE: `/invoices/purchase/edit/${invoiceId}`,
+                TAX_INVOICE: `/invoices/tax/edit/${invoiceId}`,
+            };
+
+            const editPath = editRoutes[invoiceType];
+
+            if (!editPath) {
+                toast.error(`Unsupported invoice type: ${invoiceType || "Unknown"}`);
+                return;
+            }
+
+            // Populate the actual invoice form state.
+            dispatch(setInvoiceForEdit(detailedInvoice));
+
+            navigate(editPath, {
+                state: {
+                    invoiceId,
+                    invoiceType,
+                    isEdit: true,
+                },
+            });
+
+        } catch (error) {
+            toast.error(
+                error?.message ||
+                (typeof error === "string"
+                    ? error
+                    : "Failed to load invoice for editing.")
             );
-
-        } catch {
-
-            return value;
         }
     };
 
     /* =====================================================
-       CUSTOMER NAME
+       DELETE INVOICE
     ===================================================== */
 
-    const getCustomerName = (
-        invoice
-    ) => {
+    const handleDelete = async (invoice) => {
+        if (!canDeleteInvoice) {
+            toast.error(
+                "You do not have permission to delete invoices."
+            );
+            return;
+        }
 
-        return (
-            invoice.customerName ||
-            invoice.customer?.customerName ||
-            invoice.customer?.name ||
-            invoice.partyName ||
-            invoice.party?.partyName ||
-            invoice.party?.name ||
-            "—"
+        const confirmed = window.confirm(
+            `Are you sure you want to delete invoice ${invoice.invoiceNumber}?`
         );
+
+        if (!confirmed) return;
+
+        try {
+            await dispatch(
+                removeInvoice(invoice.id)
+            ).unwrap();
+
+            toast.success(
+                "Invoice deleted successfully."
+            );
+
+            refreshInvoices();
+        } catch (error) {
+            toast.error(
+                typeof error === "string"
+                    ? error
+                    : error?.message ||
+                    "Failed to delete invoice."
+            );
+        }
     };
 
     /* =====================================================
-       INVOICE NUMBER
+       SORTING
     ===================================================== */
 
-    const getInvoiceNumber = (
-        invoice
-    ) => {
-
-        return (
-            invoice.invoiceNumber ||
-            invoice.invoiceNo ||
-            invoice.code ||
-            `INV-${invoice.id || "—"}`
-        );
-    };
-
-    /* =====================================================
-       TOTAL AMOUNT
-    ===================================================== */
-
-    const getTotalAmount = (
-        invoice
-    ) => {
-
-        return (
-            invoice.totalAmount ??
-            invoice.grandTotal ??
-            invoice.netAmount ??
-            invoice.total ??
-            0
-        );
-    };
-
-
+    const sortedInvoices = useMemo(
+        () => [...currentInvoices],
+        [currentInvoices]
+    );
 
     /* =====================================================
        LOADING
     ===================================================== */
 
-    if (loading) {
-
+    if (loading && !currentInvoices.length) {
         return (
-
-            <div
-                className="
-                    flex
-                    items-center
-                    justify-center
-                    py-10
-                "
-            >
-
-                <p className="text-gray-500">
+            <div className="
+                flex items-center justify-center py-10
+            ">
+                <p className="text-sm text-gray-500">
                     Loading invoices...
                 </p>
-
             </div>
         );
     }
@@ -408,25 +554,29 @@ export default function InvoiceTable({
        ERROR
     ===================================================== */
 
-    if (error) {
-
+    if (error && !currentInvoices.length) {
         return (
-
-            <div
-                className="
-                    bg-white
-                    rounded-xl
-                    border
-                    border-red-200
-                    p-8
-                    text-center
-                "
-            >
-
-                <p className="text-red-500">
-                    {error}
+            <div className="
+                rounded-xl border border-red-200
+                bg-white p-8 text-center
+            ">
+                <p className="text-sm text-red-500">
+                    {typeof error === "string"
+                        ? error
+                        : "Failed to fetch invoices"}
                 </p>
 
+                <button
+                    type="button"
+                    onClick={() => refreshInvoices()}
+                    className="
+                        mt-3 rounded-lg bg-blue-600
+                        px-4 py-2 text-sm text-white
+                        transition hover:bg-blue-700
+                    "
+                >
+                    Retry
+                </button>
             </div>
         );
     }
@@ -436,502 +586,337 @@ export default function InvoiceTable({
     ===================================================== */
 
     if (!currentInvoices.length) {
-
         return (
+            <div className="
+                rounded-2xl border border-gray-200
+                bg-white p-8 text-center
+            ">
+                <FileText className="
+                    mx-auto mb-3 h-10 w-10 text-gray-300
+                " />
 
-            <div
-                className="
-                    bg-white
-                    rounded-2xl
-                    border
-                    border-gray-200
-                    p-8
-                    text-center
-                "
-            >
-
-                <Receipt
-                    className="
-                        mx-auto
-                        mb-3
-                        h-10
-                        w-10
-                        text-gray-300
-                    "
-                />
-
-                <p className="text-gray-500">
+                <p className="text-sm text-gray-500">
                     No invoices found.
                 </p>
-
             </div>
         );
     }
-
 
     /* =====================================================
        TABLE
     ===================================================== */
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
-            <div className="overflow-x-auto overflow-y-visible">
-                <table className="w-full">
+        <div className="
+            overflow-x-auto overflow-y-visible
+            rounded-xl border border-gray-200 bg-white
+        ">
+            <table className="w-full">
 
+                {/* TABLE HEADER */}
 
-                    <thead className="bg-[#FAF9F7]/20 border-b border-gray-300">
-
-                        <tr>
-
-                            {[
-                                "Invoice",
-                                "Customer",
-                                "Invoice Type",
-                                "Invoice Date",
-                                "Taxable",
-                                "Total",
-                                "Status",
-                                "Actions",
-                            ].map((header) => (
-
-                                <th
-                                    key={header}
-                                    className={`
-                                    px-5
-                                    py-3
-                                    font-medium
-                                    text-md
-                                    text-gray-400
-                                    uppercase
+                <thead className="
+                    border-b border-gray-300
+                    bg-[#FAF9F7]/20
+                ">
+                    <tr>
+                        {[
+                            "Invoice",
+                            "Customer",
+                            "Invoice Date",
+                            "Due Date",
+                            "Amount",
+                            "Status",
+                            "Actions",
+                        ].map((header) => (
+                            <th
+                                key={header}
+                                className={`
+                                    whitespace-nowrap px-5 py-3
+                                    text-left text-xs font-medium
+                                    uppercase text-gray-400
                                     ${header === "Actions"
-                                            ? "text-right"
-                                            : "text-left"
-                                        }
+                                        ? "text-right"
+                                        : ""
+                                    }
                                 `}
-                                >
-                                    {header}
-                                </th>
+                            >
+                                {header}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
 
-                            ))}
+                {/* TABLE BODY */}
 
-                        </tr>
+                <tbody>
+                    {sortedInvoices.map((invoice) => {
+                        const invoiceStatus = String(
+                            invoice.invoiceStatus || invoice.status || "DRAFT"
+                        ).trim().toUpperCase();
 
-                    </thead>
+                        const invoiceType = String(
+                            invoice.invoiceType || ""
+                        ).toUpperCase();
 
+                        const currencyCode =
+                            invoice.currencyCode ||
+                            invoice.currency?.currencyCode ||
+                            "INR";
 
-                    {/* =================================================
-        TABLE BODY
-    ================================================= */}
-
-                    <tbody>
-
-                        {[...currentInvoices]
-                            .sort(
-                                (a, b) =>
-                                    (a.id || 0) -
-                                    (b.id || 0)
-                            )
-                            .map((invoice, index) => {
-
-                                const invoiceNumber =
-                                    getInvoiceNumber(invoice);
-
-                                const customerName =
-                                    getCustomerName(invoice);
-
-                                const totalAmount =
-                                    getTotalAmount(invoice);
-
-                                const taxableAmount =
-                                    invoice.taxableAmount ??
-                                    invoice.subTotal ??
-                                    invoice.subtotal ??
-                                    0;
-
-                                const taxAmount =
-                                    invoice.totalTax ??
-                                    invoice.taxAmount ??
-                                    (
-                                        Number(invoice.cgstAmount || 0) +
-                                        Number(invoice.sgstAmount || 0) +
-                                        Number(invoice.igstAmount || 0)
-                                    );
-
-                                const invoiceStatus =
-                                    invoice.status ||
-                                    invoice.invoiceStatus ||
-                                    "DRAFT";
-
-                                const currencyCode = String(
-                                    invoice?.currency?.code ||
-                                    invoice?.currencyCode ||
-                                    invoice?.currency?.currencyCode ||
-                                    "INR"
-                                ).toUpperCase();
-
-                                const currencySymbol =
-                                    invoice?.currency?.symbol ||
-                                    invoice?.currencySymbol ||
-                                    ({
-                                        INR: "₹",
-                                        USD: "$",
-                                        EUR: "€",
-                                        GBP: "£",
-                                        AED: "د.إ",
-                                        JPY: "¥",
-                                        AUD: "A$",
-                                        CAD: "C$",
-                                    }[currencyCode] || currencyCode);
-
-                                const currencyColor = {
-                                    INR: "text-blue-700",
-                                    "₹": "text-blue-700",
-
-                                    USD: "text-emerald-700",
-                                    "$": "text-emerald-700",
-
-                                    EUR: "text-violet-700",
-                                    "€": "text-violet-700",
-
-                                    GBP: "text-rose-700",
-                                    "£": "text-rose-700",
-
-                                    AED: "text-amber-700",
-                                    "د.إ": "text-amber-700",
-
-                                    JPY: "text-pink-700",
-                                    "¥": "text-pink-700",
-
-                                    AUD: "text-teal-700",
-                                    "A$": "text-teal-700",
-
-                                    CAD: "text-indigo-700",
-                                    "C$": "text-indigo-700",
-                                };
-
-                                const symbolColor =
-                                    currencyColor[currencyCode] ||
-                                    currencyColor[currencySymbol] ||
-                                    "text-gray-600";
-
-                                return (
-                                    <tr
-                                        key={
-                                            invoice.id ||
-                                            index
-                                        }
-                                        onClick={() => handleView(invoice)}
-                                        className="
-                                                border-b
-                                                border-gray-100
-                                                hover:bg-gray-50
-                                                text-xs
-                                                cursor-pointer
-                                                transition-colors
-                                            "
-                                    >
-
-                                        {/* INVOICE */}
-
-                                        <td className="px-3 py-3 align-middle">
-                                            <div className="flex items-center gap-2 min-w-0">
-
-                                                <div
-                                                    className={`
-                                    w-9
-                                    h-9
-                                    min-w-[36px]
-                                    rounded-full
-                                    flex
-                                    items-center
-                                    justify-center
-                                    text-sm
-                                    font-bold
-                                    ${getAvatarColor(
-                                                        invoiceNumber
-                                                    )}
-                                `}
-                                                >
-                                                    {initials(invoiceNumber)}
-                                                </div>
-
-                                                <div className="min-w-0">
-
-                                                    <p
-                                                        className="
-                                        font-medium
-                                        text-gray-800
-                                        truncate
-                                    "
-                                                        title={invoiceNumber}
-                                                    >
-                                                        {invoiceNumber}
-                                                    </p>
-
-                                                    <p className="text-xs text-gray-500 truncate">
-                                                        ID: #{invoice.id}
-                                                    </p>
-
-                                                </div>
-
-                                            </div>
-                                        </td>
-
-
-                                        {/* CUSTOMER */}
-
-                                        <td className="px-3 py-3 align-middle">
-                                            <div className="min-w-0">
-
-                                                <p
-                                                    className="
-                                    font-medium
-                                    text-gray-800
-                                    truncate
+                        return (
+                            <tr
+                                key={invoice.id}
+                                className="
+                                    border-b border-gray-100
+                                    text-xs transition-colors
+                                    hover:bg-gray-50
                                 "
-                                                    title={customerName}
-                                                >
-                                                    {customerName}
-                                                </p>
+                            >
+                                {/* INVOICE */}
 
-                                                <p className="text-xs text-gray-500 truncate">
-                                                    {
-                                                        invoice.customerCode ||
-                                                        invoice.customer?.customerCode ||
-                                                        invoice.partyCode ||
-                                                        "—"
-                                                    }
-                                                </p>
+                                <td className="px-3 py-3">
+                                    <div className="
+                                        flex min-w-0 items-center gap-2
+                                    ">
+                                        <div className="
+                                            flex h-9 w-9 min-w-[36px]
+                                            items-center justify-center
+                                            rounded-full bg-blue-50
+                                            text-blue-600
+                                        ">
+                                            <Receipt
+                                                size={18}
+                                                strokeWidth={1.8}
+                                            />
+                                        </div>
 
-                                            </div>
-                                        </td>
-
-
-                                        {/* TYPE */}
-
-                                        <td className="px-3 py-3 align-middle">
+                                        <div className="min-w-0">
+                                            <p
+                                                className="
+                                                    truncate font-medium
+                                                    text-gray-800
+                                                "
+                                                title={invoice.invoiceNumber || ""}
+                                            >
+                                                {invoice.invoiceNumber || "—"}
+                                            </p>
 
                                             <span
                                                 className={`
-                                inline-flex
-                                max-w-full
-                                px-2.5
-                                py-1
-                                rounded-full
-                                text-xs
-                                font-medium
-                                whitespace-nowrap
-                                overflow-hidden
-                                text-ellipsis
-                                ${invoiceTypeColor[
-                                                    invoice.invoiceType
-                                                    ] ||
-                                                    "bg-gray-100 text-gray-700"
+                                                    mt-0.5 inline-block
+                                                    whitespace-nowrap
+                                                    rounded-full px-2 py-0.5
+                                                    text-[10px] font-medium
+                                                    ${INVOICE_TYPE_COLORS[invoiceType] ||
+                                                    "bg-gray-100 text-gray-600"
                                                     }
-                            `}
-                                                title={
-                                                    invoice.invoiceType || ""
-                                                }
+                                                `}
                                             >
-                                                {invoice.invoiceType || "—"}
+                                                {formatLabel(invoice.invoiceType)}
                                             </span>
+                                        </div>
+                                    </div>
+                                </td>
 
-                                        </td>
+                                {/* CUSTOMER */}
 
+                                <td className="px-3 py-3">
+                                    <div className="
+                                        flex min-w-0 items-center gap-2
+                                    ">
+                                        <UserRound
+                                            size={15}
+                                            className="shrink-0 text-gray-400"
+                                        />
 
-                                        {/* DATE */}
+                                        <div className="min-w-0">
+                                            <p className="
+                                                max-w-[180px] truncate
+                                                font-medium text-gray-700
+                                            ">
+                                                {invoice.customerName ||
+                                                    invoice.customer?.companyName ||
+                                                    invoice.customer?.customerName ||
+                                                    "—"}
+                                            </p>
 
-                                        <td className="px-3 py-3 align-middle whitespace-nowrap">
-                                            {formatDate(
-                                                invoice.invoiceDate ||
-                                                invoice.date ||
-                                                invoice.createdAt
+                                            {invoice.customer?.email && (
+                                                <p className="
+                                                    max-w-[180px] truncate
+                                                    text-xs text-gray-400
+                                                ">
+                                                    {invoice.customer.email}
+                                                </p>
                                             )}
-                                        </td>
+                                        </div>
+                                    </div>
+                                </td>
 
+                                {/* INVOICE DATE */}
 
-                                        {/* TAXABLE */}
+                                <td className="px-3 py-3">
+                                    <div className="
+                                        flex items-center gap-1.5
+                                        whitespace-nowrap text-gray-600
+                                    ">
+                                        <CalendarDays
+                                            size={13}
+                                            className="text-gray-400"
+                                        />
 
-                                        <td className="px-3 py-3 align-middle whitespace-nowrap">
-                                            <span className={`font-medium ${symbolColor}`}>
-                                                {currencySymbol}
-                                            </span>{" "}
-                                            {formatAmount(taxableAmount)}
-                                        </td>
+                                        {formatDate(invoice.invoiceDate)}
+                                    </div>
+                                </td>
 
+                                {/* DUE DATE */}
 
+                                <td className="px-3 py-3">
+                                    <span className="
+                                        whitespace-nowrap text-gray-600
+                                    ">
+                                        {formatDate(invoice.dueDate)}
+                                    </span>
+                                </td>
 
+                                {/* AMOUNT */}
 
-                                        {/* TOTAL */}
+                                <td className="px-3 py-3">
+                                    <p className="
+                                        whitespace-nowrap font-semibold
+                                        text-gray-800
+                                    ">
+                                        {formatAmount(
+                                            invoice.grandTotal,
+                                            currencyCode
+                                        )}
+                                    </p>
+                                </td>
 
-                                        <td
-                                            className="
-                                            px-3
-                                            py-3
-                                            align-middle
-                                        
-                                            whitespace-nowrap
-                                            font-medium
-                                        "
-                                        >
+                                {/* STATUS */}
 
-                                            <span className={`font-medium ${symbolColor}`}>
-                                                {currencySymbol}
-                                            </span>{" "}
-                                            {formatAmount(totalAmount)}
-                                        </td>
+                                <td className="px-3 py-3">
+                                    <span
+                                        className={`
+                                            inline-block whitespace-nowrap
+                                            rounded-full px-2.5 py-1
+                                            text-xs font-medium
+                                            ${INVOICE_STATUS_COLORS[invoiceStatus] ||
+                                            "bg-gray-100 text-gray-700"
+                                            }
+                                        `}
+                                    >
+                                        {formatLabel(invoiceStatus)}
+                                    </span>
+                                </td>
 
+                                {/* ACTIONS */}
 
-                                        {/* STATUS */}
+                                <td className="px-4 py-3">
+                                    <div className="
+                                        flex items-center justify-end gap-2
+                                    ">
 
-                                        <td
+                                        {/* VIEW */}
 
-                                            className="
-                            px-3
-                            py-3
-                            align-middle
-                         
-                            whitespace-nowrap
-                        "
-                                        >
-                                            <span
-                                                className={`
-                                                        inline-flex
-                                                        items-center
-                                                        justify-center
-                                                        min-w-[80px]
-                                                        px-2.5
-                                                        py-1
-                                                        rounded-full
-                                                        text-xs
-                                                        font-medium
-                                                        whitespace-nowrap
-                                                        ${statusColor[invoiceStatus] ||
-                                                    "bg-gray-100 text-gray-700"}
-                                                     `}
-                                            >
-                                                {invoiceStatus}
-                                            </span>
-                                        </td>
-                                        {/* ACTIONS */}
-
-                                        {/* Actions */}
-                                        <td className="px-2 py-2">
-                                            <div className="flex items-center justify-end gap-2">
-
-                                                {/* View */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setShowView(true);
-                                                        dispatch(setExistingInvoice(invoice));
-                                                        navigate(`/invoices/view/${invoice.id}`);
-                                                    }}
-                                                    title="View"
-                                                    className="
-                                                    flex h-8 w-8 items-center justify-center
-                                                    rounded-lg
-                                                    bg-blue-50
-                                                    text-blue-600
-                                                    transition
+                                        {canViewInvoice && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleView(invoice)
+                                                }
+                                                title="View"
+                                                className="
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg bg-blue-50
+                                                    text-blue-600 transition
                                                     hover:bg-blue-100
                                                     hover:text-blue-700
                                                 "
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
+                                            >
+                                                <Eye size={16} />
+                                            </button>
+                                        )}
 
-                                                {/* Edit */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setShowEdit(true);
-                                                        dispatch(setExistingInvoice(invoice));
-                                                        handleEditInvoice(invoice);
-                                                    }}
-                                                    title="Edit"
-                                                    className="
-                                                        flex h-8 w-8 items-center justify-center
-                                                        rounded-lg
-                                                        bg-amber-50
-                                                        text-amber-600
-                                                        transition
-                                                        hover:bg-amber-100
-                                                        hover:text-amber-700
-                                                    "
-                                                >
-                                                    <Edit size={16} />
-                                                </button>
+                                        {/* EDIT */}
 
-                                                {/* Delete */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
+                                        {canEditInvoice && (
+                                            <button
+                                                type="button"
+                                                disabled={
+                                                    invoiceStatus === "CANCELLED"
+                                                }
+                                                onClick={() =>
+                                                    handleEdit(invoice)
+                                                }
+                                                title="Edit"
+                                                className="
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg bg-green-50
+                                                    text-green-600 transition
+                                                    hover:bg-green-100
+                                                    hover:text-green-700
+                                                    disabled:cursor-not-allowed
+                                                    disabled:opacity-40
+                                                "
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                        )}
 
-                                                        // Your delete confirmation logic
-                                                        handleDelete(invoice.id);
-                                                    }}
-                                                    title="Delete"
-                                                    className="
-                                                        flex h-8 w-8 items-center justify-center
-                                                        rounded-lg
-                                                        bg-red-50
-                                                        text-red-600
-                                                        transition
-                                                        hover:bg-red-100
-                                                        hover:text-red-700
-                                                    "
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                        {/* DELETE */}
 
-                                            </div>
-                                        </td>
-
-                                    </tr>
-                                );
-                            })}
-
-                    </tbody>
-
-
-
-                </table>
-
-                {/* =====================================================
-                    PAGINATION
-                ===================================================== */}
-
-                <Pagination
-                    page={Number(pageNumber) || 0}
-                    size={Number(pageSize) || 10}
-                    totalElements={Number(totalElements) || 0}
-                    totalPages={Number(totalPages) || 0}
-                    loading={loading}
-                    label="invoices"
-                    onPageChange={(nextPage) => {
-                        dispatch(
-                            fetchInvoices({
-                                page: nextPage,
-                                size: Number(pageSize) || 10,
-                            })
+                                        {canDeleteInvoice && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleDelete(invoice)
+                                                }
+                                                title="Delete"
+                                                className="
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg bg-red-50
+                                                    text-red-600 transition
+                                                    hover:bg-red-100
+                                                    hover:text-red-700
+                                                "
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </td>
+                            </tr>
                         );
-                    }}
-                    onPageSizeChange={(nextSize) => {
-                        dispatch(
-                            fetchInvoices({
-                                page: 0,
-                                size: nextSize,
-                            })
-                        );
-                    }}
-                />
+                    })}
+                </tbody>
+            </table>
 
-            </div>
+            {/* PAGINATION */}
 
-        </div >
+            <Pagination
+                page={Number(pageNumber) || 0}
+                size={Number(pageSize) || 20}
+                totalElements={Number(totalElements) || 0}
+                totalPages={Number(totalPages) || 0}
+                loading={loading}
+                label="invoices"
+                onPageChange={(nextPage) => {
+                    refreshInvoices(
+                        nextPage,
+                        Number(pageSize) || 20
+                    );
+                }}
+                onPageSizeChange={(nextSize) => {
+                    refreshInvoices(0, nextSize);
+                }}
+            />
+        </div>
     );
 }
+
+
+

@@ -363,6 +363,7 @@ export default function BankAccountCreate() {
             currency: "INR",
             accountNumber: "",
             bankName: "",
+            branchName: "",
             ifsc: "",
             userIds: [],
             description: "",
@@ -528,12 +529,32 @@ export default function BankAccountCreate() {
 
             dispatch(
                 setBankAccountField({
+                    field: "branchName",
+                    value:
+                        existingBankAccount.branchName ??
+                        "",
+                })
+            );
+
+
+            dispatch(
+                setBankAccountField({
                     field: "ifsc",
                     value:
                         existingBankAccount.ifsc ??
                         "",
                 })
             );
+
+            dispatch(
+                setBankAccountField({
+                    field: "swiftCode",
+                    value:
+                        existingBankAccount.swiftCode ??
+                        "",
+                })
+            );
+
 
             dispatch(
                 setBankAccountField({
@@ -693,6 +714,17 @@ export default function BankAccountCreate() {
             return;
         }
 
+
+        if (
+            !form.branchName?.trim()
+        ) {
+
+            toast.error(
+                "Branch name is required"
+            );
+
+            return;
+        }
         // -----------------------------------------------------
         // IFSC
         // -----------------------------------------------------
@@ -749,6 +781,9 @@ export default function BankAccountCreate() {
 
             bankName:
                 form.bankName.trim(),
+
+            branchName:
+                form.branchName.trim(),
 
             ifsc:
                 form.ifsc
@@ -1700,6 +1735,39 @@ export default function BankAccountCreate() {
                                     />
 
                                 </div>
+
+
+                                {/* BRANCH NAME */}
+
+                                <div>
+
+                                    <label
+                                        className={getLabelClass(true)}
+                                    >
+                                        Branch Name
+                                        <span className="text-red-500 ml-1">
+                                            *
+                                        </span>
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        value={
+                                            form.branchName ??
+                                            ""
+                                        }
+                                        onChange={(e) =>
+                                            handleChange(
+                                                "branchName",
+                                                e.target.value
+                                            )
+                                        }
+                                        placeholder="Enter branch name"
+                                        className={inputClass}
+                                    />
+
+                                </div>
+
 
                                 {/* ACCOUNT NUMBER */}
 

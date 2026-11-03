@@ -1,17 +1,18 @@
-import React, { useState } from "react";
+
+import React, { useCallback, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
 import {
-    useDispatch,
-    useSelector,
-} from "react-redux";
+    Eye,
+    Users,
+    Mail,
+    Phone,
+    Edit,
+    Trash2,
+} from "lucide-react";
 
-import {
-    useNavigate,
-} from "react-router-dom";
-
-import {
-    openModal,
-} from "../../ui/uiSlice";
+import toast from "react-hot-toast";
 
 import {
     fetchAllSalesPersons,
@@ -22,74 +23,101 @@ import {
     setExistingSalesPerson,
 } from "../slices/salesPersonSlice";
 
-import {
-    ChevronDown,
-    Edit,
-    Trash2,
-    Building2,
-    Eye,
-} from "lucide-react";
-
-import toast from "react-hot-toast";
 import Pagination from "../../../common/pagination/table/Pagination";
 
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMPTY_ARRAY = [];
+
+const AVATAR_COLORS = [
+    "bg-pink-500 text-white",
+    "bg-green-500 text-white",
+    "bg-blue-500 text-white",
+    "bg-purple-500 text-white",
+    "bg-orange-500 text-white",
+    "bg-cyan-500 text-white",
+    "bg-indigo-500 text-white",
+];
+
+const SALES_PERSON_STATUS_COLORS = {
+    ACTIVE: "bg-green-100 text-green-700",
+    INACTIVE: "bg-gray-100 text-gray-700",
+    DRAFT: "bg-yellow-100 text-yellow-700",
+};
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const getInitials = (value = "") => {
+    return (
+        String(value)
+            .split(/[\s-]+/)
+            .filter(Boolean)
+            .map((word) => word[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase() || "SP"
+    );
+};
+
+const getAvatarColor = (value = "") => {
+    const index = String(value)
+        .split("")
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0)
+        % AVATAR_COLORS.length;
+
+    return AVATAR_COLORS[index];
+};
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function SalesPersonTable({
-    salesPersons = [],
+    salesPersons,
+    fetchParams = {},
 }) {
-
     const dispatch = useDispatch();
+    const navigate = useNavigate();
 
-    const navigate =
-        useNavigate();
-
-    const [showEdit, setShowEdit] = useState(false);
-    const [showView, setShowView] = useState(false);
     /* =====================================================
        REDUX STATE
     ===================================================== */
 
     const {
-        loading,
-        error,
-        pagination,
-    } = useSelector(
-        (state) =>
-            state.salesPerson
-    );
-
+        salesPersons: reduxSalesPersons = EMPTY_ARRAY,
+        loading = false,
+        actionLoading = false,
+        error = null,
+        pagination = {},
+    } = useSelector((state) => state.salesPerson || {});
 
     const {
-        pageNumber,
-        pageSize,
-        totalPages,
-        totalElements,
-    } = pagination || {};
+        pageNumber = 0,
+        pageSize = 20,
+        totalPages = 0,
+        totalElements = 0,
+    } = pagination;
 
-
-    const currentSalesPersons =
-        salesPersons || [];
-
+    const currentSalesPersons = Array.isArray(salesPersons)
+        ? salesPersons
+        : reduxSalesPersons;
 
     /* =====================================================
        AUTH STATE
     ===================================================== */
 
     const user = useSelector(
-        (state) =>
-            state.auth?.user
+        (state) => state.auth?.user
     );
-
-
-    /* =====================================================
-       PERMISSION STATE
-    ===================================================== */
 
     const permissions = useSelector(
         (state) =>
-            state.menuPermission?.userPermissions || []
+            state.menuPermission?.userPermissions || EMPTY_ARRAY
     );
-
 
     /* =====================================================
        ROLE
@@ -103,962 +131,575 @@ export default function SalesPersonTable({
         user?.authority ||
         "";
 
-
-    const normalizedRole =
-        String(roleName)
-            .trim()
-            .toUpperCase();
-
-
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
-
-
-    const isAdmin =
-        normalizedRole === "ADMIN";
-
+    const normalizedRole = String(roleName)
+        .trim()
+        .toUpperCase();
 
     const hasFullAccess =
-        isSuperAdmin ||
-        isAdmin;
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
+            if (hasFullAccess) return true;
 
+            if (!Array.isArray(permissions)) return false;
 
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
-
-        /* =================================================
-           SUPER ADMIN / ADMIN
-        ================================================= */
-
-        if (hasFullAccess) {
-            return true;
-        }
-
-
-        /* =================================================
-           INVALID PERMISSION STATE
-        ================================================= */
-
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
-
-
-        const requestedModule =
-            String(moduleName)
+            const requestedModule = String(moduleName)
                 .trim()
                 .toLowerCase();
 
-
-        const requestedAction =
-            String(actionName)
+            const requestedAction = String(actionName)
                 .trim()
                 .toUpperCase();
 
+            return permissions.some((permission) => {
+                const permissionModule = String(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                )
+                    .trim()
+                    .toLowerCase();
 
-        /* =================================================
-           SEARCH PERMISSIONS
-        ================================================= */
-
-        return permissions.some(
-            (permission) => {
-
-                /* =========================================
-                   MODULE
-                ========================================= */
-
-                const permissionModule =
-                    String(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toLowerCase();
-
-
-                if (
-                    permissionModule !==
-                    requestedModule
-                ) {
+                if (permissionModule !== requestedModule) {
                     return false;
                 }
 
-
-                /* =========================================
-                   PERMISSION STATUS
-                ========================================= */
-
-                if (
-                    permission?.active === false
-                ) {
+                if (permission?.active === false) {
                     return false;
                 }
 
-
                 if (
-                    String(
-                        permission?.status || ""
-                    )
-                        .trim()
-                        .toUpperCase() ===
+                    String(permission?.status || "").toUpperCase() ===
                     "INACTIVE"
                 ) {
                     return false;
                 }
 
+                if (Array.isArray(permission?.actions)) {
+                    return permission.actions.some((action) => {
+                        const permissionAction = String(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            ""
+                        )
+                            .trim()
+                            .toUpperCase();
 
-                /* =========================================
-                   GROUPED ACTIONS
-                ========================================= */
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
 
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
-
-                    return permission.actions.some(
-                        (action) => {
-
-                            const permissionAction =
-                                String(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.action?.name ||
-                                    ""
-                                )
-                                    .trim()
-                                    .toUpperCase();
-
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
-
-
-                            return (
-                                permissionAction ===
-                                requestedAction &&
-                                allowed
-                            );
-
-                        }
-                    );
-
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
                 }
 
-
-                /* =========================================
-                   FLAT ACTION
-                ========================================= */
-
-                const permissionAction =
-                    String(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toUpperCase();
-
+                const permissionAction = String(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
 
                 const allowed =
                     permission?.allowed === true ||
                     permission?.allowed === "true";
 
-
                 return (
-                    permissionAction ===
-                    requestedAction &&
+                    permissionAction === requestedAction &&
                     allowed
                 );
+            });
+        },
+        [hasFullAccess, permissions]
+    );
 
-            }
-        );
+    const canViewSalesPerson = hasPermission(
+        "Sales Persons",
+        "VIEW"
+    );
 
-    };
+    const canEditSalesPerson = hasPermission(
+        "Sales Persons",
+        "EDIT"
+    );
 
-
-    /* =====================================================
-       SALES PERSON PERMISSIONS
-    ===================================================== */
-
-    const canEditSalesPerson =
-        hasPermission(
-            "Sales Person Detail",
-            "EDIT"
-        );
-
-
-    const canDeleteSalesPerson =
-        hasPermission(
-            "Sales Person Detail",
-            "DELETE"
-        );
-
-    const canViewSalesPerson =
-        hasPermission(
-            "Sales Person Detail",
-            "VIEW"
-        );
-
+    const canDeleteSalesPerson = hasPermission(
+        "Sales Persons",
+        "DELETE"
+    );
 
     /* =====================================================
-       DELETE SALES PERSON
+       FETCH PARAMS
     ===================================================== */
 
-    const handleDelete = async (
-        id
-    ) => {
+    const getFetchParams = useCallback(
+        (page, size) => ({
+            ...fetchParams,
+            page,
+            size,
+        }),
+        [fetchParams]
+    );
 
-        /* =================================================
-           PERMISSION SAFETY CHECK
-        ================================================= */
-
-        if (!canDeleteSalesPerson) {
-
-            toast.error(
-                "You do not have permission to delete sales persons."
-            );
-
-            return;
-        }
-
-
-        if (
-            !window.confirm(
-                "Delete this sales person?"
-            )
-        ) {
-            return;
-        }
-
-
-        try {
-
-            await dispatch(
-                deleteSalesPerson(id)
-            ).unwrap();
-
-
-            toast.success(
-                "Sales person deleted successfully"
-            );
-
-
+    const refreshSalesPersons = useCallback(
+        (page = pageNumber, size = pageSize) => {
             dispatch(
-                fetchAllSalesPersons()
+                fetchAllSalesPersons(
+                    getFetchParams(page, size)
+                )
             );
-
-        } catch (error) {
-
-            toast.error(
-                typeof error === "string"
-                    ? error
-                    : error?.message ||
-                    "Failed to delete sales person"
-            );
-
-        }
-
-    };
-
+        },
+        [
+            dispatch,
+            getFetchParams,
+            pageNumber,
+            pageSize,
+        ]
+    );
 
     /* =====================================================
        VIEW SALES PERSON
     ===================================================== */
 
-    const handleView = (
-        salesPerson
-    ) => {
-
-
-        try {
-
-            if (!canViewSalesPerson) {
-
-                toast.error(
-                    "You do not have permission to View sales persons."
-                );
-
-                return;
-            }
-
-            dispatch(
-                setExistingSalesPerson(
-                    salesPerson
-                )
-            );
-
-
-            navigate(
-                `/salesPersons/view/${salesPerson.id}`
-            );
-
-        } catch (error) {
-
+    const handleView = (salesPerson) => {
+        if (!canViewSalesPerson) {
             toast.error(
-                "Failed to open sales person"
+                "You do not have permission to view Sales Persons."
             );
-
+            return;
         }
 
-    };
+        dispatch(setExistingSalesPerson(salesPerson));
 
+        navigate(`/salesPersons/view/${salesPerson.id}`);
+    };
 
     /* =====================================================
        EDIT SALES PERSON
     ===================================================== */
 
-    const handleEdit = (
-        salesPerson
-    ) => {
-
-        /* =================================================
-           PERMISSION SAFETY CHECK
-        ================================================= */
-
+    const handleEdit = (salesPerson) => {
         if (!canEditSalesPerson) {
-
             toast.error(
-                "You do not have permission to edit sales persons."
+                "You do not have permission to edit Sales Persons."
             );
-
             return;
         }
 
+        dispatch(setExistingSalesPerson(salesPerson));
 
-        console.log(
-            "EDIT SALES PERSON:",
-            salesPerson
+        navigate(`/salesPersons/edit/${salesPerson.id}`);
+    };
+
+    /* =====================================================
+       DELETE SALES PERSON
+    ===================================================== */
+
+    const handleDelete = async (salesPerson) => {
+        if (!canDeleteSalesPerson) {
+            toast.error(
+                "You do not have permission to delete Sales Persons."
+            );
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Are you sure you want to delete ${salesPerson.salesPersonName}?`
         );
 
+        if (!confirmed) {
+            return;
+        }
 
         try {
+            await dispatch(
+                deleteSalesPerson(salesPerson.id)
+            ).unwrap();
 
-            dispatch(
-                openModal({
-                    type: "editSalesPerson",
-                    data: salesPerson,
-                })
+            toast.success(
+                "Sales Person deleted successfully."
             );
 
-
-            console.log(
-                "SALES PERSON MODAL OPEN DISPATCHED"
-            );
-
+            refreshSalesPersons();
         } catch (error) {
-
-            console.error(
-                "SALES PERSON EDIT ERROR:",
-                error
-            );
-
-
             toast.error(
-                error?.message ||
-                "Failed to open sales person"
+                typeof error === "string"
+                    ? error
+                    : "Failed to delete Sales Person."
             );
-
         }
-
     };
-
 
     /* =====================================================
-       SALES PERSON INITIALS
+       SORTING
     ===================================================== */
 
-    const initials = (
-        salesPersonName
-    ) => {
-
-        if (!salesPersonName) {
-            return "SP";
-        }
-
-
-        return salesPersonName
-            ?.split(" ")
-            .filter(Boolean)
-            .map(
-                (word) =>
-                    word[0]
-            )
-            .join("")
-            .slice(0, 2)
-            .toUpperCase() || "SP";
-
-    };
-
-
-    /* =====================================================
-       STATUS COLORS
-    ===================================================== */
-
-    const statusColor = {
-
-        ACTIVE:
-            "bg-green-100 text-green-700",
-
-        INACTIVE:
-            "bg-gray-100 text-gray-700",
-
-        DRAFT:
-            "bg-yellow-100 text-yellow-700",
-
-    };
-
-
-    /* =====================================================
-       SALES PERSON AVATAR COLORS
-    ===================================================== */
-
-    const avatarColors = [
-
-        "bg-pink-500 text-white",
-        "bg-green-500 text-white",
-        "bg-blue-500 text-white",
-        "bg-purple-500 text-white",
-        "bg-orange-500 text-white",
-        "bg-cyan-500 text-white",
-        "bg-indigo-500 text-white",
-
-    ];
-
-
-    const getAvatarColor = (
-        name = ""
-    ) => {
-
-        const index =
-            name
-                .split("")
-                .reduce(
-                    (
-                        acc,
-                        char
-                    ) =>
-                        acc +
-                        char.charCodeAt(0),
-                    0
-                ) %
-            avatarColors.length;
-
-
-        return avatarColors[index];
-
-    };
-
+    const sortedSalesPersons = useMemo(
+        () => [...currentSalesPersons],
+        [currentSalesPersons]
+    );
 
     /* =====================================================
        LOADING
     ===================================================== */
 
-    if (loading) {
-
+    if (loading && !currentSalesPersons.length) {
         return (
-
-            <div
-                className="
-                    flex
-                    items-center
-                    justify-center
-                    py-10
-                "
-            >
-
-                <p className="text-gray-500">
-                    Loading companies...
+            <div className="flex items-center justify-center py-10">
+                <p className="text-sm text-gray-500">
+                    Loading sales persons...
                 </p>
-
             </div>
-
         );
-
     }
-
 
     /* =====================================================
        ERROR
     ===================================================== */
 
-    if (error) {
-
+    if (error && !currentSalesPersons.length) {
         return (
-
-            <div
-                className="
-                    bg-white
-                    rounded-xl
-                    border
-                    border-red-200
-                    p-8
-                    text-center
-                "
-            >
-
-                <p className="text-red-500">
-                    {error}
+            <div className="
+                rounded-xl border border-red-200
+                bg-white p-8 text-center
+            ">
+                <p className="text-sm text-red-500">
+                    {typeof error === "string"
+                        ? error
+                        : "Failed to fetch sales persons"}
                 </p>
 
+                <button
+                    type="button"
+                    onClick={() => refreshSalesPersons()}
+                    className="
+                        mt-3 rounded-lg bg-blue-600
+                        px-4 py-2 text-sm text-white
+                        transition hover:bg-blue-700
+                    "
+                >
+                    Retry
+                </button>
             </div>
-
         );
-
     }
-
 
     /* =====================================================
        EMPTY STATE
     ===================================================== */
 
     if (!currentSalesPersons.length) {
-
         return (
+            <div className="
+                rounded-2xl border border-gray-200
+                bg-white p-8 text-center
+            ">
+                <Users className="
+                    mx-auto mb-3 h-10 w-10 text-gray-300
+                " />
 
-            <div
-                className="
-                    bg-white
-                    rounded-2xl
-                    border
-                    border-gray-200
-                    p-8
-                    text-center
-                "
-            >
-
-                <Building2
-                    className="
-                        mx-auto
-                        mb-3
-                        h-10
-                        w-10
-                        text-gray-300
-                    "
-                />
-
-                <p className="text-gray-500">
+                <p className="text-sm text-gray-500">
                     No sales persons found.
                 </p>
-
             </div>
-
         );
-
     }
-
 
     /* =====================================================
        TABLE
     ===================================================== */
 
     return (
+        <div className="
+            overflow-x-auto overflow-y-visible
+            rounded-xl border border-gray-200 bg-white
+        ">
+            <table className="w-full">
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
-            <div className="overflow-x-auto overflow-y-visible">
-                <table className="w-full">
-                    <thead className="bg-[#FEFEFD] border-b border-gray-300">
+                {/* TABLE HEADER */}
 
-                        <tr>
-
-                            {[
-                                "SalesPersonName",
-                                "SalesPersonType",
-                                "Code",
-                                "Email",
-                                "Phone",
-                                "Status",
-                                "Actions",
-                            ].map((header) => (
-
-                                <th
-                                    key={header}
-                                    className={`
-                                    px-5
-                                    py-3
-                                    font-medium
-                                    text-md
-                                    text-gray-400
-                                    uppercase
-                                    ${header === "Actions"
-                                            ? "text-right"
-                                            : "text-left"
-                                        }
-                                `}
-                                >
-                                    {header}
-                                </th>
-
-                            ))}
-
-                        </tr>
-
-                    </thead>
-
-
-
-                    {/* =================================================
-                    TABLE BODY
-                ================================================= */}
-
-                    <tbody>
-
+                <thead className="
+                    border-b border-gray-300
+                    bg-[#FAF9F7]/20
+                ">
+                    <tr>
                         {[
-                            ...currentSalesPersons,
-                        ]
-                            .sort(
-                                (
-                                    a,
-                                    b
-                                ) =>
-                                    (
-                                        a.id || 0
-                                    ) -
-                                    (
-                                        b.id || 0
-                                    )
-                            )
-                            .map(
-                                (
-                                    salesPerson,
-                                    index
-                                ) => (
+                            "Sales Person",
+                            "Type",
+                            "Contact",
+                            "Status",
+                            "Actions",
+                        ].map((header) => (
+                            <th
+                                key={header}
+                                className={`
+                                    whitespace-nowrap px-5 py-3
+                                    text-left text-xs font-medium
+                                    uppercase text-gray-400
+                                    ${header === "Actions"
+                                        ? "text-right"
+                                        : ""
+                                    }
+                                `}
+                            >
+                                {header}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
 
-                                    <tr
-                                        key={
-                                            salesPerson.id ||
-                                            index
-                                        }
-                                        onClick={() =>
-                                            handleView(
-                                                salesPerson
-                                            )
-                                        }
-                                        className="
-                                        border-b
-                                        border-gray-100
-                                        hover:bg-gray-50
-                                        text-xs
-                                        cursor-pointer
-                                        transition-colors
-                                    "
-                                    >
+                {/* TABLE BODY */}
 
-                                        {/* =================================
-                                        SALES PERSON
-                                    ================================= */}
+                <tbody>
+                    {sortedSalesPersons.map((salesPerson) => {
+                        const salesPersonStatus = String(
+                            salesPerson.status || ""
+                        ).toUpperCase();
 
-                                        <td
-                                            className="
-                                            px-2
-                                            py-3
-                                        "
-                                        >
+                        const salesPersonType = String(
+                            salesPerson.salesPersonType || ""
+                        ).toUpperCase();
 
-                                            <div
-                                                className="
-                                                flex
-                                                items-center
-                                                gap-3
-                                            "
-                                            >
+                        return (
+                            <tr
+                                key={salesPerson.id}
+                                className="
+                                    border-b border-gray-100
+                                    text-xs transition-colors
+                                    hover:bg-gray-50
+                                "
+                            >
 
-                                                <div
-                                                    className={`
-                                                    w-10
-                                                    h-10
-                                                    rounded-full
-                                                    flex
-                                                    items-center
-                                                    justify-center
-                                                    text-md
-                                                    font-bold
-                                                    ${getAvatarColor(
-                                                        salesPerson.salesPersonName
-                                                    )}
-                                                `}
-                                                >
+                                {/* SALES PERSON */}
 
-                                                    {initials(
-                                                        salesPerson.salesPersonName
-                                                    )}
-
-                                                </div>
-
-
-                                                <div>
-
-                                                    <p
-                                                        className="
-                                                        font-medium
-                                                        text-gray-800
-                                                    "
-                                                    >
-                                                        {
-                                                            salesPerson.salesPersonName ||
-                                                            "—"
-                                                        }
-                                                    </p>
-
-
-                                                    <p
-                                                        className="
-                                                        text-sm
-                                                        text-gray-500
-                                                    "
-                                                    >
-                                                        ID: #
-                                                        {
-                                                            salesPerson.id
-                                                        }
-                                                    </p>
-
-                                                </div>
-
-                                            </div>
-
-                                        </td>
-
-
-                                        {/* =================================
-                                        SALES PERSON TYPE
-                                    ================================= */}
-
-                                        <td
-                                            className="
-                                            px-4
-                                            py-3
-                                        "
-                                        >
-                                            {
-                                                salesPerson.salesPersonType ||
-                                                "—"
-                                            }
-                                        </td>
-
-
-                                        {/* =================================
-                                        SALES PERSON CODE
-                                    ================================= */}
-
-                                        <td
-                                            className="
-                                            px-4
-                                            py-3
-                                        "
-                                        >
-                                            {
-                                                salesPerson.salesPersonCode ||
-                                                "—"
-                                            }
-                                        </td>
-
-
-
-                                        {/* =================================
-                                        EMAIL
-                                    ================================= */}
-
-                                        <td
-                                            className="
-                                            px-4
-                                            py-3
-                                        "
-                                        >
-                                            {
-                                                salesPerson.email ||
-                                                "—"
-                                            }
-                                        </td>
-
-
-                                        {/* =================================
-                                        PHONE
-                                    ================================= */}
-
-                                        <td
-                                            className="
-                                            px-4
-                                            py-3
-                                        "
-                                        >
-                                            {
-                                                salesPerson.mobile ||
-                                                "—"
-                                            }
-                                        </td>
-
-
-                                        {/* =================================
-                                        STATUS
-                                    ================================= */}
-
-                                        <td
-                                            className="
-                                            px-5
-                                            py-3
-                                            font-semibold
-                                        "
-                                        >
-
-                                            <span
-                                                className={`
-                                                px-2
-                                                py-1
-                                                rounded-full
-                                                text-xs
-                                                font-medium
-                                                ${statusColor[
-                                                    salesPerson.status
-                                                    ] ||
-                                                    "bg-gray-100 text-gray-700"
-                                                    }
+                                <td className="px-3 py-3">
+                                    <div className="
+                                        flex min-w-0 items-center gap-2
+                                    ">
+                                        <div
+                                            className={`
+                                                flex h-9 w-9 min-w-[36px]
+                                                items-center justify-center
+                                                rounded-full text-sm font-bold
+                                                ${getAvatarColor(
+                                                salesPerson.salesPersonName
+                                            )}
                                             `}
-                                            >
+                                        >
+                                            {getInitials(
+                                                salesPerson.salesPersonName
+                                            )}
+                                        </div>
 
-                                                {
-                                                    salesPerson.status ||
-                                                    "—"
+                                        <div className="min-w-0">
+                                            <p
+                                                className="
+                                                    truncate font-medium
+                                                    text-gray-800
+                                                "
+                                                title={
+                                                    salesPerson.salesPersonName || ""
                                                 }
+                                            >
+                                                {salesPerson.salesPersonName || "—"}
+                                            </p>
 
-                                            </span>
+                                            <p className="
+                                                mt-0.5 text-xs text-gray-500
+                                            ">
+                                                {salesPerson.salesPersonCode ||
+                                                    `ID: ${salesPerson.id}`}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </td>
 
-                                        </td>
+                                {/* SALES PERSON TYPE */}
 
+                                <td className="px-3 py-3">
+                                    <span className="
+                                        inline-block whitespace-nowrap
+                                        rounded-full bg-blue-100
+                                        px-2.5 py-1 text-xs
+                                        font-medium text-blue-700
+                                    ">
+                                        {salesPerson.salesPersonType || "—"}
+                                    </span>
+                                </td>
 
-                                        {/* =================================
-                                        ACTIONS
-                                    ================================= */}
+                                {/* CONTACT */}
 
-                                        {/* Actions */}
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center justify-end gap-2">
+                                <td className="px-3 py-3">
+                                    <div className="min-w-0 space-y-1">
 
-                                                {/* View */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setShowView(true);
-                                                        dispatch(setExistingSalesPerson(salesPerson));
-                                                        navigate(`/salesPersons/view/${salesPerson.id}`);
-                                                    }}
-                                                    title="View"
-                                                    className="
-                                                            flex h-8 w-8 items-center justify-center
-                                                            rounded-lg
-                                                            bg-blue-50
-                                                            text-blue-600
-                                                            transition
-                                                            hover:bg-blue-100
-                                                            hover:text-blue-700
-                                                        "
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
+                                        {salesPerson.email && (
+                                            <p className="
+                                                flex max-w-[200px]
+                                                items-center gap-1
+                                                truncate text-xs text-gray-500
+                                            ">
+                                                <Mail
+                                                    size={12}
+                                                    className="shrink-0"
+                                                />
 
-                                                {/* Edit */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setShowEdit(true);
-                                                        dispatch(setExistingSalesPerson(salesPerson));
-                                                        navigate(`/salesPersons/edit/${salesPerson.id}`);
-                                                    }}
-                                                    title="Edit"
-                                                    className="
-                                                        flex h-8 w-8 items-center justify-center
-                                                        rounded-lg
-                                                        bg-amber-50
-                                                        text-amber-600
-                                                        transition
-                                                        hover:bg-amber-100
-                                                        hover:text-amber-700
-                                                    "
-                                                >
-                                                    <Edit size={16} />
-                                                </button>
+                                                <span className="truncate">
+                                                    {salesPerson.email}
+                                                </span>
+                                            </p>
+                                        )}
 
-                                                {/* Delete */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
+                                        {salesPerson.mobile && (
+                                            <p className="
+                                                flex items-center gap-1
+                                                whitespace-nowrap
+                                                text-xs text-gray-400
+                                            ">
+                                                <Phone size={12} />
 
-                                                        // Your delete confirmation logic
-                                                        handleDelete(salesPerson.id);
-                                                    }}
-                                                    title="Delete"
-                                                    className="
-                                                        flex h-8 w-8 items-center justify-center
-                                                        rounded-lg
-                                                        bg-red-50
-                                                        text-red-600
-                                                        transition
-                                                        hover:bg-red-100
-                                                        hover:text-red-700
-                                                    "
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                {salesPerson.mobile}
+                                            </p>
+                                        )}
 
-                                            </div>
-                                        </td>
+                                        {!salesPerson.email &&
+                                            !salesPerson.mobile && (
+                                                <span className="text-gray-400">
+                                                    —
+                                                </span>
+                                            )}
 
+                                    </div>
+                                </td>
 
-                                    </tr>
+                                {/* STATUS */}
 
-                                )
-                            )}
+                                <td className="px-3 py-3">
+                                    <span
+                                        className={`
+                                            inline-block whitespace-nowrap
+                                            rounded-full px-2.5 py-1
+                                            text-xs font-medium
+                                            ${SALES_PERSON_STATUS_COLORS[
+                                            salesPersonStatus
+                                            ] ||
+                                            "bg-gray-100 text-gray-700"}
+                                        `}
+                                    >
+                                        {salesPerson.status || "—"}
+                                    </span>
+                                </td>
 
-                    </tbody>
+                                {/* ACTIONS */}
 
-                </table>
+                                <td className="px-4 py-3">
+                                    <div className="
+                                        flex items-center justify-end gap-2
+                                    ">
 
+                                        {canViewSalesPerson && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleView(salesPerson)
+                                                }
+                                                title="View"
+                                                className="
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg bg-blue-50
+                                                    text-blue-600 transition
+                                                    hover:bg-blue-100
+                                                    hover:text-blue-700
+                                                "
+                                            >
+                                                <Eye size={16} />
+                                            </button>
+                                        )}
 
-                {/* =====================================================
-                PAGINATION
-            ===================================================== */}
+                                        {canEditSalesPerson && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleEdit(salesPerson)
+                                                }
+                                                title="Edit"
+                                                className="
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg bg-green-50
+                                                    text-green-600 transition
+                                                    hover:bg-green-100
+                                                    hover:text-green-700
+                                                "
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                        )}
 
+                                        {canDeleteSalesPerson && (
+                                            <button
+                                                type="button"
+                                                disabled={actionLoading}
+                                                onClick={() =>
+                                                    handleDelete(salesPerson)
+                                                }
+                                                title="Delete"
+                                                className="
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg bg-red-50
+                                                    text-red-600 transition
+                                                    hover:bg-red-100
+                                                    hover:text-red-700
+                                                    disabled:cursor-not-allowed
+                                                    disabled:opacity-50
+                                                "
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
 
-                <Pagination
-                    page={Number(pageNumber) || 0}
-                    size={Number(pageSize) || 10}
-                    totalElements={Number(totalElements) || 0}
-                    totalPages={Number(totalPages) || 0}
-                    loading={loading}
-                    label="salesPersons"
-                    onPageChange={(nextPage) => {
-                        dispatch(
-                            fetchAllSalesPersons({
-                                page: nextPage,
-                                size: Number(pageSize) || 10,
-                            })
+                                    </div>
+                                </td>
+
+                            </tr>
                         );
-                    }}
-                    onPageSizeChange={(nextSize) => {
-                        dispatch(
-                            fetchAllSalesPersons({
-                                page: 0,
-                                size: nextSize,
-                            })
-                        );
-                    }}
-                />
+                    })}
+                </tbody>
+            </table>
 
-            </div>
+            {/* PAGINATION */}
 
-        </div >
+            <Pagination
+                page={Number(pageNumber) || 0}
+                size={Number(pageSize) || 20}
+                totalElements={Number(totalElements) || 0}
+                totalPages={Number(totalPages) || 0}
+                loading={loading}
+                label="sales persons"
+                onPageChange={(nextPage) => {
+                    refreshSalesPersons(
+                        nextPage,
+                        Number(pageSize) || 20
+                    );
+                }}
+                onPageSizeChange={(nextSize) => {
+                    refreshSalesPersons(0, nextSize);
+                }}
+            />
+        </div>
     );
-
 }

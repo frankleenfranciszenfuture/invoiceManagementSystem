@@ -554,7 +554,7 @@ export const resolveCompany = (invoice = {}) => {
         bankSource.branch,
         source.branchName,
         source.bankBranch,
-        invoice.bankBranch,
+        invoice.branchName,
         "",
       ),
       swiftCode: firstValue(

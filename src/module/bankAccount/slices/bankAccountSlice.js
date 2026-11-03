@@ -24,7 +24,9 @@ const emptyBankAccount = {
 
   accountNumber: "",
   bankName: "",
+  branchName: "",
   ifsc: "",
+  swiftCode: "",
 
   userIds: [],
 

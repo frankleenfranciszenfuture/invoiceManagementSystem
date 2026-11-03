@@ -1,7 +1,20 @@
 
-import React, { useState } from "react";
+import React, { useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+
+import {
+    Eye,
+    Users,
+    CalendarDays,
+    Wallet,
+    Mail,
+    Phone,
+    Edit,
+    Trash2,
+} from "lucide-react";
+
+import toast from "react-hot-toast";
 
 import {
     fetchAllParties,
@@ -12,108 +25,302 @@ import {
     setExistingParty,
 } from "../slices/partySlice";
 
-import { openModal } from "../../ui/uiSlice";
-
-import {
-    ChevronDown,
-    Edit,
-    Trash2,
-    Building2,
-    Eye,
-} from "lucide-react";
-
-import toast from "react-hot-toast";
 import Pagination from "../../../common/pagination/table/Pagination";
 
-export default function PartyTable({
-    parties = [],
-}) {
+/* =========================================================
+   CONSTANTS
+========================================================= */
 
+const EMPTY_ARRAY = [];
+
+const AVATAR_COLORS = [
+    "bg-pink-500 text-white",
+    "bg-green-500 text-white",
+    "bg-blue-500 text-white",
+    "bg-purple-500 text-white",
+    "bg-orange-500 text-white",
+    "bg-cyan-500 text-white",
+    "bg-indigo-500 text-white",
+];
+
+const PARTY_STATUS_COLORS = {
+    ACTIVE: "bg-green-100 text-green-700",
+    INACTIVE: "bg-gray-100 text-gray-700",
+};
+
+const PARTY_TYPE_COLORS = {
+    CUSTOMER: "bg-blue-100 text-blue-700",
+    SUPPLIER: "bg-purple-100 text-purple-700",
+    BOTH: "bg-indigo-100 text-indigo-700",
+};
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const getInitials = (value = "") => {
+    return (
+        String(value)
+            .split(/[\s-]+/)
+            .filter(Boolean)
+            .map((word) => word[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase() || "PT"
+    );
+};
+
+const getAvatarColor = (value = "") => {
+    const index = String(value)
+        .split("")
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0)
+        % AVATAR_COLORS.length;
+
+    return AVATAR_COLORS[index];
+};
+
+const formatAmount = (amount, currencyCode = "INR") => {
+    const value = Number(amount ?? 0);
+
+    return `${currencyCode ? `${currencyCode} ` : ""}${value.toLocaleString(
+        "en-IN",
+        {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }
+    )}`;
+};
+
+const formatDate = (date) => {
+    if (!date) return "—";
+
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return date;
+    }
+
+    return parsedDate.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+};
+
+const getPrimaryAddress = (party) => {
+    const addresses = Array.isArray(party?.addresses)
+        ? party.addresses
+        : [];
+
+    return (
+        addresses.find((address) => address?.primaryAddress) ||
+        addresses[0] ||
+        {}
+    );
+};
+
+/* =========================================================
+   COMPONENT
+========================================================= */
+
+export default function PartyTable({
+    parties,
+    fetchParams = {},
+}) {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
-    const [showEdit, setShowEdit] = useState(false);
-    const [showView, setShowView] = useState(false);
     /* =====================================================
        REDUX STATE
     ===================================================== */
 
     const {
-        loading,
-        error,
-        pagination,
-    } = useSelector(
-        (state) => state.party || {}
-    );
+        parties: reduxParties = EMPTY_ARRAY,
+        loading = false,
+        actionLoading = false,
+        error = null,
+        pagination = {},
+    } = useSelector((state) => state.party || {});
 
     const {
-        pageNumber,
-        pageSize,
-        totalPages,
-        totalElements,
-    } = pagination || {};
+        pageNumber = 0,
+        pageSize = 20,
+        totalPages = 0,
+        totalElements = 0,
+    } = pagination;
 
-    const currentParties = parties || [];
+    const currentParties = Array.isArray(parties)
+        ? parties
+        : reduxParties;
 
     /* =====================================================
-       DELETE PARTY
+       AUTH STATE
     ===================================================== */
 
-    const handleDelete = async (id) => {
+    const user = useSelector(
+        (state) => state.auth?.user
+    );
 
-        if (!window.confirm("Delete this party?")) {
-            return;
-        }
+    const permissions = useSelector(
+        (state) =>
+            state.menuPermission?.userPermissions || EMPTY_ARRAY
+    );
 
-        try {
+    /* =====================================================
+       ROLE
+    ===================================================== */
 
-            await dispatch(
-                deleteParty(id)
-            ).unwrap();
+    const roleName =
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        "";
 
-            toast.success(
-                "Party deleted successfully"
-            );
+    const normalizedRole = String(roleName)
+        .trim()
+        .toUpperCase();
 
+    const hasFullAccess =
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
+
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
+
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
+            if (hasFullAccess) return true;
+
+            if (!Array.isArray(permissions)) return false;
+
+            const requestedModule = String(moduleName)
+                .trim()
+                .toLowerCase();
+
+            const requestedAction = String(actionName)
+                .trim()
+                .toUpperCase();
+
+            return permissions.some((permission) => {
+                const permissionModule = String(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                )
+                    .trim()
+                    .toLowerCase();
+
+                if (permissionModule !== requestedModule) {
+                    return false;
+                }
+
+                if (permission?.active === false) {
+                    return false;
+                }
+
+                if (
+                    String(permission?.status || "").toUpperCase() ===
+                    "INACTIVE"
+                ) {
+                    return false;
+                }
+
+                if (Array.isArray(permission?.actions)) {
+                    return permission.actions.some((action) => {
+                        const permissionAction = String(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            ""
+                        )
+                            .trim()
+                            .toUpperCase();
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
+                }
+
+                const permissionAction = String(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction === requestedAction &&
+                    allowed
+                );
+            });
+        },
+        [hasFullAccess, permissions]
+    );
+
+    const canViewParty = hasPermission("Parties", "VIEW");
+    const canEditParty = hasPermission("Parties", "EDIT");
+    const canDeleteParty = hasPermission("Parties", "DELETE");
+
+    /* =====================================================
+       FETCH PARAMS
+    ===================================================== */
+
+    const getFetchParams = useCallback(
+        (page, size) => ({
+            ...fetchParams,
+            page,
+            size,
+        }),
+        [fetchParams]
+    );
+
+    const refreshParties = useCallback(
+        (page = pageNumber, size = pageSize) => {
             dispatch(
-                fetchAllParties()
+                fetchAllParties(
+                    getFetchParams(page, size)
+                )
             );
-
-        } catch (error) {
-
-            toast.error(
-                typeof error === "string"
-                    ? error
-                    : error?.message ||
-                    "Failed to delete party"
-            );
-        }
-    };
+        },
+        [
+            dispatch,
+            getFetchParams,
+            pageNumber,
+            pageSize,
+        ]
+    );
 
     /* =====================================================
        VIEW PARTY
     ===================================================== */
 
     const handleView = (party) => {
-
-        try {
-
-            dispatch(
-                setExistingParty(
-                    party
-                )
-            );
-
-            navigate(
-                `/parties/view/${party.id}`
-            );
-
-        } catch (error) {
-
+        if (!canViewParty) {
             toast.error(
-                "Failed to open party"
+                "You do not have permission to view Parties."
             );
+            return;
         }
+
+        dispatch(setExistingParty(party));
+
+        navigate(`/parties/view/${party.id}`);
     };
 
     /* =====================================================
@@ -121,134 +328,74 @@ export default function PartyTable({
     ===================================================== */
 
     const handleEdit = (party) => {
+        if (!canEditParty) {
+            toast.error(
+                "You do not have permission to edit Parties."
+            );
+            return;
+        }
+
+        dispatch(setExistingParty(party));
+
+        navigate(`/parties/edit/${party.id}`);
+    };
+
+    /* =====================================================
+       DELETE PARTY
+    ===================================================== */
+
+    const handleDelete = async (party) => {
+        if (!canDeleteParty) {
+            toast.error(
+                "You do not have permission to delete Parties."
+            );
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Are you sure you want to delete ${party.partyName}?`
+        );
+
+        if (!confirmed) {
+            return;
+        }
 
         try {
+            await dispatch(
+                deleteParty(party.id)
+            ).unwrap();
 
-            dispatch(
-                openModal({
-                    type: "editParty",
-                    data: party,
-                })
-            );
+            toast.success("Party deleted successfully.");
 
+            refreshParties();
         } catch (error) {
-
             toast.error(
-                "Failed to open party"
+                typeof error === "string"
+                    ? error
+                    : "Failed to delete party."
             );
         }
     };
 
     /* =====================================================
-       PARTY INITIALS
+       SORTING
     ===================================================== */
 
-    const initials = (companyName) =>
-        companyName
-            ?.split(" ")
-            .map(
-                (word) =>
-                    word[0]
-            )
-            .join("")
-            .slice(0, 2)
-            .toUpperCase() || "PT";
-
-    /* =====================================================
-       STATUS COLORS
-    ===================================================== */
-
-    const statusColor = {
-
-        ACTIVE:
-            "bg-green-100 text-green-700",
-
-        INACTIVE:
-            "bg-gray-100 text-gray-700",
-
-        DRAFT:
-            "bg-yellow-100 text-yellow-700",
-
-    };
-
-    /* =====================================================
-       PARTY NAME COLOR
-    ===================================================== */
-
-    const getPartyNameColor = (companyName) => {
-
-        if (!companyName) {
-            return "bg-gray-100 text-gray-700";
-        }
-
-        const hasNumber =
-            /\d/.test(companyName);
-
-        if (hasNumber) {
-            return "bg-blue-100 text-blue-700";
-        }
-
-        return "bg-purple-100 text-purple-700";
-    };
-
-    /* =====================================================
-       AVATAR COLORS
-    ===================================================== */
-
-    const avatarColors = [
-
-        "bg-pink-500 text-white",
-        "bg-green-500 text-white",
-        "bg-blue-500 text-white",
-        "bg-purple-500 text-white",
-        "bg-orange-500 text-white",
-        "bg-cyan-500 text-white",
-        "bg-indigo-500 text-white",
-
-    ];
-
-    const getAvatarColor = (
-        name = ""
-    ) => {
-
-        const index =
-            name
-                .split("")
-                .reduce(
-                    (
-                        acc,
-                        char
-                    ) =>
-                        acc +
-                        char.charCodeAt(0),
-                    0
-                ) %
-            avatarColors.length;
-
-        return avatarColors[index];
-    };
+    const sortedParties = useMemo(
+        () => [...currentParties],
+        [currentParties]
+    );
 
     /* =====================================================
        LOADING
     ===================================================== */
 
-    if (loading) {
-
+    if (loading && !currentParties.length) {
         return (
-
-            <div
-                className="
-                    flex
-                    items-center
-                    justify-center
-                    py-10
-                "
-            >
-
-                <p className="text-gray-500">
+            <div className="flex items-center justify-center py-10">
+                <p className="text-sm text-gray-500">
                     Loading parties...
                 </p>
-
             </div>
         );
     }
@@ -257,25 +404,29 @@ export default function PartyTable({
        ERROR
     ===================================================== */
 
-    if (error) {
-
+    if (error && !currentParties.length) {
         return (
-
-            <div
-                className="
-                    bg-white
-                    rounded-xl
-                    border
-                    border-red-200
-                    p-8
-                    text-center
-                "
-            >
-
-                <p className="text-red-500">
-                    {error}
+            <div className="
+                rounded-xl border border-red-200
+                bg-white p-8 text-center
+            ">
+                <p className="text-sm text-red-500">
+                    {typeof error === "string"
+                        ? error
+                        : "Failed to fetch parties"}
                 </p>
 
+                <button
+                    type="button"
+                    onClick={() => refreshParties()}
+                    className="
+                        mt-3 rounded-lg bg-blue-600
+                        px-4 py-2 text-sm text-white
+                        transition hover:bg-blue-700
+                    "
+                >
+                    Retry
+                </button>
             </div>
         );
     }
@@ -285,34 +436,18 @@ export default function PartyTable({
     ===================================================== */
 
     if (!currentParties.length) {
-
         return (
+            <div className="
+                rounded-2xl border border-gray-200
+                bg-white p-8 text-center
+            ">
+                <Users className="
+                    mx-auto mb-3 h-10 w-10 text-gray-300
+                " />
 
-            <div
-                className="
-                    bg-white
-                    rounded-2xl
-                    border
-                    border-gray-200
-                    p-8
-                    text-center
-                "
-            >
-
-                <Building2
-                    className="
-                        mx-auto
-                        mb-3
-                        h-10
-                        w-10
-                        text-gray-300
-                    "
-                />
-
-                <p className="text-gray-500">
+                <p className="text-sm text-gray-500">
                     No parties found.
                 </p>
-
             </div>
         );
     }
@@ -322,374 +457,345 @@ export default function PartyTable({
     ===================================================== */
 
     return (
+        <div className="
+            overflow-x-auto overflow-y-visible
+            rounded-xl border border-gray-200 bg-white
+        ">
+            <table className="w-full">
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
+                {/* TABLE HEADER */}
 
-            {/* =================================================
-                TABLE CONTAINER
-            ================================================= */}
-
-            <div className="w-full overflow-visible">
-
-                <table className="w-full table-fixed border-collapse">
-
-                    {/* =================================================
-                        TABLE HEADER
-                    ================================================= */}
-
-                    <thead className="bg-[#F3F4F6] border-b border-gray-300">
-                        <tr>
-
-                            {[
-                                "Party Name",
-                                "Party Code",
-                                "Status",
-                                "Actions",
-                            ].map((header) => (
-
-                                <th
-                                    key={header}
-                                    className={`
-                                    px-5
-                                    py-3
-                                    font-medium
-                                    text-sm
-                                    text-[#0F4659]/90
-                                    uppercase
+                <thead className="
+                    border-b border-gray-300
+                    bg-[#FAF9F7]/20
+                ">
+                    <tr>
+                        {[
+                            "Party",
+                            "Type",
+                            "Contact",
+                            "Credit Limit",
+                            "Outstanding Credit",
+                            "Status",
+                            "Actions",
+                        ].map((header) => (
+                            <th
+                                key={header}
+                                className={`
+                                    whitespace-nowrap px-5 py-3
+                                    text-left text-xs font-medium
+                                    uppercase text-gray-400
                                     ${header === "Actions"
-                                            ? "text-right"
-                                            : "text-left"
-                                        }
+                                        ? "text-right"
+                                        : ""
+                                    }
                                 `}
-                                >
-                                    {header}
-                                </th>
+                            >
+                                {header}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
 
-                            ))}
+                {/* TABLE BODY */}
 
-                        </tr>
+                <tbody>
+                    {sortedParties.map((party) => {
+                        const partyStatus = String(
+                            party.status || ""
+                        ).toUpperCase();
 
-                    </thead>
+                        const partyType = String(
+                            party.partyType || ""
+                        ).toUpperCase();
 
-                    {/* =================================================
-                        TABLE BODY
-                    ================================================= */}
+                        const address = getPrimaryAddress(party);
 
-                    <tbody>
+                        const contactName =
+                            party.contactPerson ||
+                            party.partyName ||
+                            "—";
 
-                        {[...currentParties]
-                            .sort(
-                                (a, b) =>
-                                    (a.id || 0) -
-                                    (b.id || 0)
-                            )
-                            .map(
-                                (
-                                    party,
-                                    index
-                                ) => (
+                        const location = [
+                            address.city,
+                            address.state,
+                        ]
+                            .filter(Boolean)
+                            .join(", ");
 
-                                    <tr
-                                        key={
-                                            party.id ||
-                                            index
-                                        }
-                                        onClick={() =>
-                                            handleView(
-                                                party
-                                            )
-                                        }
-                                        className="
-                                        cursor-pointer
-                                        border-b
-                                        border-gray-100
-                                        text-sm
-                                        transition-colors
-                                        cursor-pointer
-                                        hover:bg-gray-50
-                                    "
-                                    >
+                        const currencyCode =
+                            party.currencyCode || "INR";
 
-                                        {/* =================================
-                                            PARTY NAME
-                                        ================================= */}
+                        return (
+                            <tr
+                                key={party.id}
+                                className="
+                                    border-b border-gray-100
+                                    text-xs transition-colors
+                                    hover:bg-gray-50
+                                "
+                            >
 
-                                        <td
-                                            className="
-                                                px-2
-                                                py-3
-                                                overflow-hidden
-                                            "
+                                {/* PARTY */}
+
+                                <td className="px-3 py-3">
+                                    <div className="
+                                        flex min-w-0 items-center gap-2
+                                    ">
+                                        <div
+                                            className={`
+                                                flex h-9 w-9 min-w-[36px]
+                                                items-center justify-center
+                                                rounded-full text-sm font-bold
+                                                ${getAvatarColor(
+                                                party.partyName
+                                            )}
+                                            `}
                                         >
+                                            {getInitials(party.partyName)}
+                                        </div>
 
-                                            <div
-                                                className="
-                                                    flex
-                                                    items-center
-                                                    gap-2
-                                                    min-w-0
-                                                "
-                                            >
-
-                                                {/* AVATAR */}
-
-                                                <div
-                                                    className={`
-                                                        w-9
-                                                        h-9
-                                                        min-w-[36px]
-                                                        rounded-full
-                                                        flex
-                                                        items-center
-                                                        justify-center
-                                                        text-sm
-                                                        font-bold
-                                                        ${getAvatarColor(
-                                                        party.companyName
-                                                    )}
-                                                    `}
-                                                >
-
-                                                    {
-                                                        initials(
-                                                            party.companyName
-                                                        )
-                                                    }
-
-                                                </div>
-
-                                                {/* NAME */}
-
-                                                <div
-                                                    className="
-                                                        min-w-0
-                                                    "
-                                                >
-
-                                                    <p
-                                                        className="
-                                                            font-medium
-                                                            text-gray-800
-                                                            truncate
-                                                        "
-                                                        title={
-                                                            party.companyName ||
-                                                            ""
-                                                        }
-                                                    >
-                                                        {
-                                                            party.companyName ||
-                                                            "—"
-                                                        }
-                                                    </p>
-
-                                                    <p
-                                                        className="
-                                                            text-xs
-                                                            text-gray-500
-                                                        "
-                                                    >
-                                                        ID: #
-                                                        {
-                                                            party.id
-                                                        }
-                                                    </p>
-
-                                                </div>
-
-                                            </div>
-
-                                        </td>
-
-                                        {/* =================================
-                                            DESCRIPTION
-                                        ================================= */}
-
-                                        <td
-                                            className="
-                                                px-2
-                                                py-3
-                                                overflow-hidden
-                                            "
-                                        >
-
+                                        <div className="min-w-0">
                                             <p
                                                 className="
-                                                    truncate
-                                                    text-gray-700
+                                                    truncate font-medium
+                                                    text-gray-800
                                                 "
-                                                title={
-                                                    party.partyCode ||
-                                                    ""
-                                                }
+                                                title={party.partyName || ""}
                                             >
-                                                {
-                                                    party.partyCode ||
-                                                    "—"
-                                                }
+                                                {party.partyName || "—"}
                                             </p>
 
-                                        </td>
+                                            <p className="
+                                                mt-0.5 text-xs text-gray-500
+                                            ">
+                                                {party.partyCode || `ID: ${party.id}`}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </td>
 
-                                        {/* =================================
-                                            STATUS
-                                        ================================= */}
+                                {/* PARTY TYPE */}
 
-                                        <td
-                                            className="
-                                                px-2
-                                                py-3
-                                                overflow-hidden
-                                            "
-                                        >
+                                <td className="px-3 py-3">
+                                    <span
+                                        className={`
+                                            inline-block whitespace-nowrap
+                                            rounded-full px-2.5 py-1
+                                            text-xs font-medium
+                                            ${PARTY_TYPE_COLORS[partyType] ||
+                                            "bg-gray-100 text-gray-700"}
+                                        `}
+                                    >
+                                        {party.partyType || "—"}
+                                    </span>
+                                </td>
 
-                                            <span
-                                                className={`
-                                                    inline-block
-                                                    px-2
-                                                    py-1
-                                                    rounded-full
-                                                    text-xs
-                                                    font-medium
-                                                    ${statusColor[
-                                                    String(
-                                                        party.status ||
-                                                        ""
-                                                    ).toUpperCase()
-                                                    ] ||
-                                                    "bg-gray-100 text-gray-700"
-                                                    }
-                                                `}
-                                            >
-                                                {
-                                                    party.status ||
-                                                    "—"
+                                {/* CONTACT */}
+
+                                <td className="px-3 py-3">
+                                    <div className="min-w-0 space-y-1">
+
+                                        <p className="
+                                            max-w-[180px] truncate
+                                            font-medium text-gray-700
+                                        ">
+                                            {contactName}
+                                        </p>
+
+                                        {party.email && (
+                                            <p className="
+                                                flex max-w-[180px]
+                                                items-center gap-1
+                                                truncate text-xs text-gray-400
+                                            ">
+                                                <Mail
+                                                    size={12}
+                                                    className="shrink-0"
+                                                />
+                                                <span className="truncate">
+                                                    {party.email}
+                                                </span>
+                                            </p>
+                                        )}
+
+                                        {party.phone && (
+                                            <p className="
+                                                flex items-center gap-1
+                                                whitespace-nowrap
+                                                text-xs text-gray-400
+                                            ">
+                                                <Phone size={12} />
+                                                {party.phone}
+                                            </p>
+                                        )}
+
+                                        {location && (
+                                            <p className="
+                                                max-w-[180px] truncate
+                                                text-xs text-gray-400
+                                            ">
+                                                {location}
+                                            </p>
+                                        )}
+
+                                    </div>
+                                </td>
+
+                                {/* CREDIT LIMIT */}
+
+                                <td className="px-3 py-3">
+                                    <div className="
+                                        flex items-center gap-2
+                                        whitespace-nowrap
+                                    ">
+                                        <Wallet
+                                            size={14}
+                                            className="text-gray-400"
+                                        />
+
+                                        <span className="
+                                            font-medium text-gray-700
+                                        ">
+                                            {formatAmount(
+                                                party.creditLimit,
+                                                currencyCode
+                                            )}
+                                        </span>
+                                    </div>
+                                </td>
+
+                                {/* OUTSTANDING CREDIT */}
+
+                                <td className="px-3 py-3">
+                                    <p className={`
+                                        whitespace-nowrap font-semibold
+                                        ${Number(party.outstandingCredit || 0) > 0
+                                            ? "text-orange-600"
+                                            : "text-gray-700"
+                                        }
+                                    `}>
+                                        {formatAmount(
+                                            party.outstandingCredit,
+                                            currencyCode
+                                        )}
+                                    </p>
+                                </td>
+
+                                {/* STATUS */}
+
+                                <td className="px-3 py-3">
+                                    <span
+                                        className={`
+                                            inline-block whitespace-nowrap
+                                            rounded-full px-2.5 py-1
+                                            text-xs font-medium
+                                            ${PARTY_STATUS_COLORS[partyStatus] ||
+                                            "bg-gray-100 text-gray-700"}
+                                        `}
+                                    >
+                                        {party.status || "—"}
+                                    </span>
+                                </td>
+
+                                {/* ACTIONS */}
+
+                                <td className="px-4 py-3">
+                                    <div className="
+                                        flex items-center justify-end gap-2
+                                    ">
+
+                                        {canViewParty && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleView(party)
                                                 }
-                                            </span>
-
-                                        </td>
-
-                                        {/* =================================
-                                            ACTIONS
-                                        ================================= */}
-
-                                        {/* Actions */}
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center justify-end gap-2">
-
-                                                {/* View */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setShowView(true);
-                                                        dispatch(setExistingParty(party));
-                                                        navigate(`/parties/view/${party.id}`);
-                                                    }}
-                                                    title="View"
-                                                    className="
-                                                    flex h-8 w-8 items-center justify-center
-                                                    rounded-lg
-                                                    bg-blue-50
-                                                    text-blue-600
-                                                    transition
+                                                title="View"
+                                                className="
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg bg-blue-50
+                                                    text-blue-600 transition
                                                     hover:bg-blue-100
                                                     hover:text-blue-700
-                                                                               "
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
-
-                                                {/* Edit */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setShowEdit(true);
-                                                        dispatch(setExistingParty(party));
-                                                        navigate(`/parties/editSimple/${party.id}`)
-
-                                                    }}
-                                                    title="Edit"
-                                                    className="
-                                                    flex h-8 w-8 items-center justify-center
-                                                    rounded-lg
-                                                    bg-amber-50
-                                                    text-amber-600
-                                                    transition
-                                                    hover:bg-amber-100
-                                                    hover:text-amber-700
                                                 "
-                                                >
-                                                    <Edit size={16} />
-                                                </button>
+                                            >
+                                                <Eye size={16} />
+                                            </button>
+                                        )}
 
-                                                {/* Delete */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
+                                        {canEditParty && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleEdit(party)
+                                                }
+                                                title="Edit"
+                                                className="
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg bg-green-50
+                                                    text-green-600 transition
+                                                    hover:bg-green-100
+                                                    hover:text-green-700
+                                                "
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                        )}
 
-                                                        // Your delete confirmation logic
-                                                        handleDelete(party.id);
-                                                    }}
-                                                    title="Delete"
-                                                    className="
-                                                        flex h-8 w-8 items-center justify-center
-                                                        rounded-lg
-                                                        bg-red-50
-                                                        text-red-600
-                                                        transition
-                                                        hover:bg-red-100
-                                                        hover:text-red-700
-                                                    "
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                        {canDeleteParty && (
+                                            <button
+                                                type="button"
+                                                disabled={actionLoading}
+                                                onClick={() =>
+                                                    handleDelete(party)
+                                                }
+                                                title="Delete"
+                                                className="
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg bg-red-50
+                                                    text-red-600 transition
+                                                    hover:bg-red-100
+                                                    hover:text-red-700
+                                                    disabled:cursor-not-allowed
+                                                    disabled:opacity-50
+                                                "
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
 
-                                            </div>
-                                        </td>
+                                    </div>
+                                </td>
 
-                                    </tr>
-
-                                )
-                            )}
-
-                    </tbody>
-
-                </table>
-
-                {/* =====================================================
-                    PAGINATION
-                ===================================================== */}
-
-                <Pagination
-                    page={Number(pageNumber) || 0}
-                    size={Number(pageSize) || 10}
-                    totalElements={Number(totalElements) || 0}
-                    totalPages={Number(totalPages) || 0}
-                    loading={loading}
-                    label="parties"
-                    onPageChange={(nextPage) => {
-                        dispatch(
-                            fetchAllParties({
-                                page: nextPage,
-                                size: Number(pageSize) || 10,
-                            })
+                            </tr>
                         );
-                    }}
-                    onPageSizeChange={(nextSize) => {
-                        dispatch(
-                            fetchAllParties({
-                                page: 0,
-                                size: nextSize,
-                            })
-                        );
-                    }}
-                />
+                    })}
+                </tbody>
+            </table>
 
-            </div>
+            {/* PAGINATION */}
 
+            <Pagination
+                page={Number(pageNumber) || 0}
+                size={Number(pageSize) || 20}
+                totalElements={Number(totalElements) || 0}
+                totalPages={Number(totalPages) || 0}
+                loading={loading}
+                label="parties"
+                onPageChange={(nextPage) => {
+                    refreshParties(
+                        nextPage,
+                        Number(pageSize) || 20
+                    );
+                }}
+                onPageSizeChange={(nextSize) => {
+                    refreshParties(0, nextSize);
+                }}
+            />
         </div>
     );
 }

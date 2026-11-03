@@ -474,6 +474,10 @@ const BankAccountViewDetails = () => {
                     />
 
                     <ReadField
+                        label="Branch Name"
+                        value={data.branchName}
+                    />
+                    <ReadField
                         label="Account Number"
                         value={data.accountNumber}
                     />
@@ -482,6 +486,13 @@ const BankAccountViewDetails = () => {
                         label="IFSC Code"
                         value={data.ifsc}
                     />
+
+                    <ReadField
+                        label="SWIFT Code"
+                        value={data.swiftCode}
+                    />
+
+
 
                     <ReadField
                         label="Currency"

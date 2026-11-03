@@ -60,7 +60,9 @@ const emptyInvoice = {
 
   bankAccountId: "",
   bankName: "",
+  branchName: "",
   ifsc: "",
+  swiftCode: "",
 
   emailSignatureId: "",
   signatureName: "",
@@ -103,6 +105,11 @@ const initialState = {
   },
 
   selectedInvoice: structuredClone(emptyInvoice),
+
+  // Selected invoice template
+  invoiceTemplate: "InvoiceTemplate1",
+  selectedTemplateInvoiceId: null,
+
   /*
    * Invoice Number Settings
    */
@@ -130,6 +137,7 @@ const initialState = {
   previewInvoiceId: null,
   previewLoading: false,
   previewError: null,
+  previewRequestId: null,
 
   // Activity
   activities: [],
@@ -190,18 +198,68 @@ const invoiceSlice = createSlice({
 
   initialState,
 
+  invoiceTemplate: "InvoiceTemplate1",
+  selectedTemplateInvoiceId: null,
+
   reducers: {
     /* =====================================================
        SET EXISTING INVOICE
     ===================================================== */
 
     setExistingInvoice: (state, action) => {
-      state.exsistingInvoice = action.payload;
+      const newInvoice = action.payload;
 
-      state.previewInvoice = null;
-      state.previewInvoiceId = null;
-      state.previewLoading = false;
-      state.previewError = null;
+      const newId = newInvoice?.id ?? newInvoice?.invoiceId;
+      const currentId =
+        state.exsistingInvoice?.id ?? state.exsistingInvoice?.invoiceId;
+
+      state.exsistingInvoice = newInvoice;
+
+      // Clear old details only when selecting another invoice.
+      if (String(newId) !== String(currentId)) {
+        state.previewInvoice = null;
+        state.previewInvoiceId = null;
+        state.previewLoading = false;
+        state.previewError = null;
+        state.previewRequestId = null;
+      }
+    },
+
+    /* =====================================================
+   SET INVOICE FOR EDIT
+===================================================== */
+
+    setInvoiceForEdit: (state, action) => {
+      const existingInvoice = action.payload;
+
+      if (!existingInvoice) return;
+
+      state.invoice = {
+        ...emptyInvoice,
+        ...existingInvoice,
+
+        // Preserve existing invoice items.
+        invoiceItems: Array.isArray(existingInvoice.invoiceItems)
+          ? existingInvoice.invoiceItems.map((item) => ({
+              ...item,
+            }))
+          : [],
+
+        // Preserve invoice dates and values.
+        invoiceDate: existingInvoice.invoiceDate || getTodayDate(),
+
+        dueDate: existingInvoice.dueDate || "",
+
+        invoiceStatus:
+          existingInvoice.invoiceStatus || existingInvoice.status || "DRAFT",
+      };
+
+      state.exsistingInvoice = existingInvoice;
+
+      state.isDirty = false;
+      state.error = null;
+      state.success = false;
+      state.message = "";
     },
     /* =====================================================
        CLEAR INVOICE REQUEST STATE
@@ -372,9 +430,40 @@ const invoiceSlice = createSlice({
     },
 
     setInvoiceTemplate: (state, action) => {
-      console.log("Reducer called:", action.payload);
+      const { templateId, invoiceId } = action.payload;
 
-      state.invoiceTemplate = action.payload;
+      if (!templateId) return;
+
+      state.invoiceTemplate = templateId;
+      state.selectedTemplateInvoiceId = invoiceId ?? null;
+
+      // Update complete preview invoice
+      if (
+        state.previewInvoice &&
+        String(state.previewInvoice.id ?? state.previewInvoice.invoiceId) ===
+          String(invoiceId)
+      ) {
+        state.previewInvoice.invoiceTemplate = templateId;
+      }
+
+      // Update existing invoice
+      if (
+        state.exsistingInvoice &&
+        String(
+          state.exsistingInvoice.id ?? state.exsistingInvoice.invoiceId,
+        ) === String(invoiceId)
+      ) {
+        state.exsistingInvoice.invoiceTemplate = templateId;
+      }
+
+      // Update invoice listing
+      const invoiceIndex = state.invoices.findIndex(
+        (item) => String(item.id ?? item.invoiceId) === String(invoiceId),
+      );
+
+      if (invoiceIndex !== -1) {
+        state.invoices[invoiceIndex].invoiceTemplate = templateId;
+      }
     },
 
     addRecentActivity: (state, action) => {
@@ -500,96 +589,39 @@ const invoiceSlice = createSlice({
 ===================================================== */
 
     builder
+
       .addCase(fetchInvoiceById.pending, (state, action) => {
-        const requestedId = action.meta.arg;
-        const selectedId =
-          state.exsistingInvoice?.id ?? state.exsistingInvoice?.invoiceId;
-
-        // Ignore a request if a different invoice is currently selected.
-        if (selectedId != null && String(selectedId) !== String(requestedId)) {
-          return;
-        }
-
         state.previewLoading = true;
         state.previewError = null;
-
-        // Keep the shared loading state for existing components.
-        state.loading = true;
-        state.error = null;
+        state.previewRequestId = action.meta.requestId;
       })
 
       .addCase(fetchInvoiceById.fulfilled, (state, action) => {
-        const requestedId = action.meta.arg;
+        if (state.previewRequestId !== action.meta.requestId) return;
 
-        const selectedId =
-          state.exsistingInvoice?.id ?? state.exsistingInvoice?.invoiceId;
+        const response = action.payload?.data ?? action.payload;
 
-        // Prevent a late response from replacing the newly selected invoice.
-        if (selectedId != null && String(selectedId) !== String(requestedId)) {
-          return;
-        }
+        state.previewInvoice = response;
+        state.previewInvoiceId = response?.id ?? response?.invoiceId ?? null;
 
-        const invoice = extractData(action.payload);
-
-        // Validate that the API returned an invoice object.
-        if (!invoice || typeof invoice !== "object") {
-          state.previewInvoice = null;
-          state.previewInvoiceId = null;
-          state.previewLoading = false;
-          state.previewError = "Invoice details were not found.";
-          state.loading = false;
-          return;
-        }
-
-        const loadedId = invoice.id ?? invoice.invoiceId;
-
-        // Do not display a response for a different invoice.
-        if (loadedId != null && String(loadedId) !== String(requestedId)) {
-          state.previewLoading = false;
-          state.previewError =
-            "The returned invoice does not match the selection.";
-          state.loading = false;
-          return;
-        }
-
-        // Store the complete API response for the preview template.
-        state.previewInvoice = invoice;
-        state.previewInvoiceId = loadedId ?? requestedId;
-
-        // Keep existing components compatible.
-        state.invoice = invoice;
-        state.exsistingInvoice = invoice;
+        state.exsistingInvoice = response;
 
         state.previewLoading = false;
         state.previewError = null;
-        state.loading = false;
-        state.error = null;
-        state.success = true;
+        state.previewRequestId = null;
       })
 
       .addCase(fetchInvoiceById.rejected, (state, action) => {
-        const requestedId = action.meta.arg;
-
-        const selectedId =
-          state.exsistingInvoice?.id ?? state.exsistingInvoice?.invoiceId;
-
-        // Ignore errors belonging to an invoice that is no longer selected.
-        if (selectedId != null && String(selectedId) !== String(requestedId)) {
-          return;
-        }
+        if (state.previewRequestId !== action.meta.requestId) return;
 
         state.previewLoading = false;
         state.previewError =
-          action.payload ||
-          action.error?.message ||
-          "Failed to fetch invoice details.";
+          action.payload?.message ??
+          action.payload ??
+          action.error?.message ??
+          "Failed to load invoice details.";
 
-        state.loading = false;
-        state.success = false;
-        state.error = state.previewError;
-
-        state.previewInvoice = null;
-        state.previewInvoiceId = null;
+        state.previewRequestId = null;
       });
 
     /* =====================================================
@@ -789,6 +821,7 @@ const invoiceSlice = createSlice({
 
 export const {
   setExistingInvoice,
+  setInvoiceForEdit,
   clearInvoiceState,
   clearSelectedInvoice,
   resetInvoiceForm,

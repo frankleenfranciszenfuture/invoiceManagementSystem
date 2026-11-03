@@ -162,6 +162,11 @@ import CompanyViewDetails from "./module/company/pages/CompanyViewDetails";
 import CurrencyViewDetails from "./module/currency/pages/CurrencyViewDetails";
 import EmailSignatureViewDetails from "./module/emailSignature/pages/EmailSignatureViewDetails";
 import ProductCreateNew from "./module/items/pages/ProductCreateNew";
+import PartyCreateNew from "./module/parties/pages/PartyCreateNew";
+import PartyViewDetails from "./module/parties/pages/PartyViewDetails";
+import SalesPersonCreateNew from "./module/salesPerson/pages/SalesPersonCreateNew";
+import SalesPersonViewDetails from "./module/salesPerson/pages/SalesPersonViewDetails";
+import InvoiceViewDetails from "./module/invoices/pages/InvoiceViewDetails";
 
 
 
@@ -641,24 +646,18 @@ function AppContent() {
 
         {/* <Route
           path="/invoices/view/:id"
-          element={<InvoiceOverViewDashboard />}
-        /> */}
-
-        {/* <Route
-          path="/invoices/view/:id"
-          element={<InvoiceprofileOverview />}
-        /> */}
-
-        <Route
-          path="/invoices/view/:id"
           element={<InvoiceOverViewDashboard1 />}
-        />
+        /> */}
 
         <Route
           path="/invoices/preview/:id"
           element={<InvoiceOverViewPreviewDashboard />}
         />
 
+        <Route
+          path="/invoices/view/:id"
+          element={<InvoiceViewDetails />}
+        />
         {/* =================================================
                   EmailSignature
             ================================================= */}
@@ -693,17 +692,18 @@ function AppContent() {
         />
 
         <Route
-          path="/salesPersons/newSimple"
-          element={<SalesPersonCreateSimple />}
+          path="/salesPersons/create"
+          element={<SalesPersonCreateNew />}
         />
+
         <Route
           path="/salesPersons/edit/:id"
-          element={<SalesPersonCreateSimple />}
+          element={<SalesPersonCreateNew />}
         />
 
         <Route
           path="/salesPersons/view/:id"
-          element={<SalesPersonOverView />}
+          element={<SalesPersonViewDetails />}
         />
 
 
@@ -719,11 +719,6 @@ function AppContent() {
         />
 
         <Route
-          path="/parties/view/:id"
-          element={<PartyProfileView />}
-        />
-
-        <Route
           path="/parties/newSimple"
           element={<PartyCreateSimple />}
 
@@ -731,11 +726,20 @@ function AppContent() {
 
 
         <Route
-          path="/parties/editSimple/:id"
-          element={<PartyCreateSimple />}
+          path="/parties/create"
+          element={<PartyCreateNew />}
+
         />
 
+        <Route
+          path="/parties/edit/:id"
+          element={<PartyCreateNew />}
+        />
 
+        <Route
+          path="/parties/view/:id"
+          element={<PartyViewDetails />}
+        />
         {/* =================================================
                     CLEARANCE
             ================================================= */}

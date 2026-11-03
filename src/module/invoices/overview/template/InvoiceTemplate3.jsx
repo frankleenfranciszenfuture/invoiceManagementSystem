@@ -1,1327 +1,1028 @@
 
 import React from "react";
 
-/* ============================================================
-   NUMBER TO WORDS — INDIAN NUMBERING SYSTEM
-============================================================ */
+import {
+    firstValue,
+    getInvoiceTemplateData,
+} from "../../utils/invoiceTemplateHelpers";
 
-const ONES = [
-    "",
-    "One",
-    "Two",
-    "Three",
-    "Four",
-    "Five",
-    "Six",
-    "Seven",
-    "Eight",
-    "Nine",
-    "Ten",
-    "Eleven",
-    "Twelve",
-    "Thirteen",
-    "Fourteen",
-    "Fifteen",
-    "Sixteen",
-    "Seventeen",
-    "Eighteen",
-    "Nineteen",
-];
-
-const TENS = [
-    "",
-    "",
-    "Twenty",
-    "Thirty",
-    "Forty",
-    "Fifty",
-    "Sixty",
-    "Seventy",
-    "Eighty",
-    "Ninety",
-];
-
-const numberToWords = (value) => {
-    const num = Math.floor(Number(value) || 0);
-
-    if (num < 0) return `Minus ${numberToWords(Math.abs(num))} `;
-    if (num === 0) return "Zero";
-
-    if (num < 20) return ONES[num];
-
-    if (num < 100) {
-        return `${TENS[Math.floor(num / 10)]}${num % 10 ? `-${ONES[num % 10]}` : ""
-            } `;
-    }
-
-    if (num < 1000) {
-        return `${ONES[Math.floor(num / 100)]} Hundred${num % 100 ? ` ${numberToWords(num % 100)}` : ""
-            } `;
-    }
-
-    if (num < 100000) {
-        return `${numberToWords(Math.floor(num / 1000))} Thousand${num % 1000 ? ` ${numberToWords(num % 1000)}` : ""
-            } `;
-    }
-
-    if (num < 10000000) {
-        return `${numberToWords(Math.floor(num / 100000))} Lakh${num % 100000 ? ` ${numberToWords(num % 100000)}` : ""
-            } `;
-    }
-
-    return `${numberToWords(Math.floor(num / 10000000))} Crore${num % 10000000 ? ` ${numberToWords(num % 10000000)}` : ""
-        } `;
-};
-
-/* ============================================================
-   GENERAL HELPERS
-============================================================ */
-
-const firstDefined = (...values) =>
-    values.find(
-        (value) =>
-            value !== undefined &&
-            value !== null &&
-            value !== ""
-    );
-
-const asNumber = (value) => {
-    if (value === null || value === undefined || value === "") {
-        return 0;
-    }
-
-    const number = Number(value);
-    return Number.isFinite(number) ? number : 0;
-};
-
-const getItems = (invoice) => {
-    const items = firstDefined(
-        invoice?.items,
-        invoice?.invoiceItems,
-        invoice?.lineItems
-    );
-
-    return Array.isArray(items) ? items : [];
-};
-
-const getCustomer = (invoice) =>
-    invoice?.customer ||
-    invoice?.selectedCustomer ||
-    invoice?.customerDetails ||
-    {};
-
-const getCompany = (invoice) =>
-    invoice?.pdfCompanyInfo ||
-    invoice?.company ||
-    invoice?.companyDetails ||
-    invoice?.companyInfo ||
-    {};
-
-const getBank = (invoice, company) =>
-    invoice?.bankAccount ||
-    invoice?.bankDetails ||
-    company?.bankAccount ||
-    company?.bankDetails ||
-    {};
-
-const getCurrency = (invoice) =>
-    invoice?.currency ||
-    invoice?.currencyDetails ||
-    {};
-
-const formatMoney = (value, currencyCode) => {
-    const amount = asNumber(value);
-
-    try {
-        return new Intl.NumberFormat("en-IN", {
-            style: "currency",
-            currency: currencyCode || "INR",
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(amount);
-    } catch {
-        return `${currencyCode || "INR"} ${amount.toLocaleString(
-            "en-IN",
-            {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-            }
-        )
-            } `;
-    }
-};
-
-const formatDate = (value) => {
-    if (!value) return "";
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
-        const [year, month, day] = String(value).split("-");
-        return `${day} -${month} -${year} `;
-    }
-
-    return String(value);
-};
-
-const getAddress = (entity) => {
-    if (typeof entity === "string") return entity;
-
-    return [
-        entity?.addressLine1,
-        entity?.addressLine2,
-        entity?.address,
-        entity?.street,
-        entity?.city,
-        entity?.state,
-        entity?.postalCode || entity?.pinCode || entity?.zipCode,
-        entity?.country,
-    ]
-        .filter(Boolean)
-        .filter((value, index, array) => array.indexOf(value) === index)
-        .join(", ");
-};
-
-const getItemQuantity = (item) =>
-    asNumber(firstDefined(item?.quantity, item?.qty));
-
-const getItemRate = (item) =>
-    asNumber(
-        firstDefined(
-            item?.unitPrice,
-            item?.rate,
-            item?.sellingPrice,
-            item?.price
-        )
-    );
-
-const getItemDiscount = (item) =>
-    asNumber(
-        firstDefined(
-            item?.discountAmount,
-            item?.discount,
-            item?.discountValue
-        )
-    );
-
-const getItemTaxable = (item) => {
-    const explicitTaxable = firstDefined(
-        item?.taxableAmount,
-        item?.taxableValue,
-        item?.netAmount
-    );
-
-    if (explicitTaxable !== undefined) {
-        return asNumber(explicitTaxable);
-    }
-
-    return Math.max(
-        0,
-        getItemQuantity(item) * getItemRate(item) -
-        getItemDiscount(item)
-    );
-};
-
-const getTaxRate = (item) =>
-    asNumber(
-        firstDefined(
-            item?.taxRate,
-            item?.taxPercentage,
-            item?.taxPercent,
-            item?.taxMaster?.taxRate,
-            item?.taxMaster?.taxPercentage,
-            item?.taxMaster?.rate,
-            item?.taxMaster?.percentage
-        )
-    );
-
-const getTaxBreakdown = (item) => {
-    const taxable = getItemTaxable(item);
-
-    const explicitCgst = firstDefined(
-        item?.cgstAmount,
-        item?.cgst,
-        item?.centralTaxAmount
-    );
-
-    const explicitSgst = firstDefined(
-        item?.sgstAmount,
-        item?.sgst,
-        item?.stateTaxAmount
-    );
-
-    const explicitIgst = firstDefined(
-        item?.igstAmount,
-        item?.igst,
-        item?.integratedTaxAmount
-    );
-
-    const hasExplicitSplit =
-        explicitCgst !== undefined ||
-        explicitSgst !== undefined ||
-        explicitIgst !== undefined;
-
-    if (hasExplicitSplit) {
-        const cgst = asNumber(explicitCgst);
-        const sgst = asNumber(explicitSgst);
-        const igst = asNumber(explicitIgst);
-
-        return {
-            cgst,
-            sgst,
-            igst,
-            total: cgst + sgst + igst,
-            cgstRate: taxable ? (cgst / taxable) * 100 : 0,
-            sgstRate: taxable ? (sgst / taxable) * 100 : 0,
-            igstRate: taxable ? (igst / taxable) * 100 : 0,
-        };
-    }
-
-    const taxRate = getTaxRate(item);
-    const taxAmount = asNumber(
-        firstDefined(item?.taxAmount, item?.totalTaxAmount)
-    );
-
-    const tax = taxAmount || (taxable * taxRate) / 100;
-
-    const isIgst =
-        Boolean(item?.igstRate || item?.isIgst) ||
-        String(item?.taxType || "").toUpperCase() === "IGST";
-
-    if (isIgst) {
-        return {
-            cgst: 0,
-            sgst: 0,
-            igst: tax,
-            total: tax,
-            cgstRate: 0,
-            sgstRate: 0,
-            igstRate: taxRate,
-        };
-    }
-
-    return {
-        cgst: tax / 2,
-        sgst: tax / 2,
-        igst: 0,
-        total: tax,
-        cgstRate: taxRate / 2,
-        sgstRate: taxRate / 2,
-        igstRate: 0,
-    };
-};
-
-const getItemAmount = (item) =>
-    asNumber(
-        firstDefined(
-            item?.amount,
-            item?.lineTotal,
-            item?.totalAmount,
-            item?.total
-        )
-    ) ||
-    getItemTaxable(item) +
-    getTaxBreakdown(item).total;
-
-const getTerms = (invoice) => {
-    const terms = firstDefined(
-        invoice?.termsAndConditions,
-        invoice?.terms,
-        invoice?.paymentTerms
-    );
-
-    if (Array.isArray(terms)) return terms.filter(Boolean);
-
-    if (typeof terms === "string" && terms.trim()) {
-        return terms
-            .split(/\r?\n/)
-            .map((term) => term.trim())
-            .filter(Boolean);
-    }
-
-    return [];
-};
-
-const getItemName = (item) =>
-    firstDefined(
-        item?.productName,
-        item?.itemName,
-        item?.product?.productName,
-        item?.product?.name,
-        item?.description,
-        ""
-    );
-
-const getUnitName = (item) =>
-    firstDefined(
-        item?.unitName,
-        item?.unit?.unitName,
-        item?.unit?.name,
-        item?.uom,
-        item?.unitOfMeasure,
-        ""
-    );
-
-const getCurrencyCode = (invoice, currency) =>
-    firstDefined(
-        currency?.currencyCode,
-        currency?.code,
-        invoice?.currencyCode,
-        "INR"
-    );
-
-const formatRate = (rate) =>
-    `${Number(rate || 0).toLocaleString("en-IN", {
-        maximumFractionDigits: 2,
-    })
-    }% `;
-
-/* ============================================================
-   INVOICE TEMPLATE 3
-============================================================ */
-
-export default function InvoiceTemplate2({
-    invoice = {},
+export default function InvoiceTemplate3({
+    invoice,
+    taxMasters = [],
     preview = false,
+    variant = "tata",
 }) {
-    const items = getItems(invoice);
-    const customer = getCustomer(invoice);
-    const company = getCompany(invoice);
-    const bank = getBank(invoice, company);
-    const currency = getCurrency(invoice);
-    const currencyCode = getCurrencyCode(invoice, currency);
+    if (!invoice) return null;
 
-    const companyName = firstDefined(
-        company?.companyName,
-        company?.name,
-        invoice?.companyName,
-        ""
-    );
+    const data = getInvoiceTemplateData(invoice, taxMasters);
 
-    const companyGstin = firstDefined(
-        company?.gstin,
-        company?.gstNumber,
-        company?.taxRegistrationNumber,
-        invoice?.companyGstin,
-        ""
-    );
+    const {
+        company,
+        bank,
+        bankRows,
+        items,
+        breakdowns,
+        totalQuantity,
+        currency,
+        symbol,
+        fmt,
+        taxableTotal,
+        cgstTotal,
+        sgstTotal,
+        igstTotal,
+        grandTotal,
+        hasTax,
+        hasIgst,
+        isPaid,
+        partyName,
+        partyAddress,
+        partyEmail,
+        partyPhone,
+        partyGstin,
+        invoiceNumber,
+        invoiceDate,
+        dueDate,
+        placeOfSupply,
+        logo,
+        qrCode,
+        signature,
+        stamp,
+        signatureText,
+        amountInWords,
+    } = data;
 
-    const companyAddress = getAddress(company);
+    const isTata = variant === "tata";
 
-    const companyPhone = firstDefined(
-        company?.phone,
-        company?.mobile,
-        company?.phoneNumber,
-        ""
-    );
+    const pageClass = preview
+        ? "relative mx-auto"
+        : "fixed left-[-10000px] top-0";
 
-    const companyEmail = firstDefined(
-        company?.email,
-        company?.emailAddress,
-        ""
-    );
+    const companyName =
+        company.legalName || company.name || "-";
 
-    const companyLogo = firstDefined(
-        company?.logo,
-        company?.logoUrl,
-        company?.companyLogo,
-        ""
-    );
+    const companyAddress = [
+        [company.addressLine1, company.addressLine2]
+            .filter(Boolean)
+            .join(", "),
+        [
+            company.city,
+            company.state,
+            company.country,
+            company.pincode,
+        ].filter(Boolean).join(", "),
+    ].filter(Boolean);
 
-    const invoiceNumber = firstDefined(
-        invoice?.invoiceNumber,
-        invoice?.number,
-        invoice?.invoiceNo,
-        ""
-    );
+    const getItemData = (item, index) => {
+        const breakdown = breakdowns[index] || {};
 
-    const invoiceDate = formatDate(
-        firstDefined(invoice?.invoiceDate, invoice?.date, "")
-    );
+        const name = firstValue(
+            item.productName,
+            item.itemName,
+            item.product?.productName,
+            item.product?.name,
+            item.serviceName,
+            item.description,
+            "-"
+        );
 
-    const dueDate = formatDate(
-        firstDefined(invoice?.dueDate, "")
-    );
+        const description = firstValue(
+            item.description,
+            ""
+        );
 
-    const customerName = firstDefined(
-        customer?.customerName,
-        customer?.name,
-        customer?.partyName,
-        invoice?.customerName,
-        ""
-    );
+        const hsn = firstValue(
+            item.hsnCode,
+            item.sacCode,
+            item.product?.hsnCode,
+            item.product?.sacCode,
+            "-"
+        );
 
-    const customerGstin = firstDefined(
-        customer?.gstin,
-        customer?.gstNumber,
-        customer?.taxRegistrationNumber,
-        invoice?.customerGstin,
-        ""
-    );
+        const quantity = Number(item.quantity) || 0;
+        const rate = Number(item.unitPrice) || 0;
 
-    const billingAddress = firstDefined(
-        getAddress(customer?.billingAddress),
-        getAddress(customer?.address),
-        getAddress(customer),
-        invoice?.billingAddress,
-        ""
-    );
+        const taxable = Number(
+            breakdown.taxableAmount ?? 0
+        );
 
-    const shippingAddress = firstDefined(
-        getAddress(invoice?.shippingAddress),
-        getAddress(customer?.shippingAddress),
-        billingAddress,
-        ""
-    );
+        const taxRate = Number(
+            breakdown.taxRate ?? item.taxRate ?? 0
+        );
 
-    const customerPhone = firstDefined(
-        customer?.phone,
-        customer?.mobile,
-        customer?.phoneNumber,
-        invoice?.customerPhone,
-        ""
-    );
+        const taxAmount = Number(
+            breakdown.taxAmount ??
+            item.taxAmount ??
+            (taxable * taxRate / 100)
+        );
 
-    const placeOfSupply = firstDefined(
-        invoice?.placeOfSupply,
-        invoice?.placeOfSupplyName,
-        customer?.state,
-        ""
-    );
+        const amount = Number(
+            breakdown.totalAmount ??
+            item.totalAmount ??
+            (taxable + taxAmount)
+        );
 
-    const calculatedTaxable = items.reduce(
-        (sum, item) => sum + getItemTaxable(item),
-        0
-    );
+        const unit = firstValue(
+            item.unitName,
+            item.unit?.unitName,
+            item.unit?.name,
+            ""
+        );
 
-    const taxableAmount = asNumber(
-        firstDefined(
-            invoice?.taxableAmount,
-            invoice?.subtotal,
-            invoice?.subTotal,
-            invoice?.totalTaxableAmount,
-            calculatedTaxable
-        )
-    );
+        const size = firstValue(
+            item.sizeName,
+            item.size?.sizeName,
+            item.size?.name,
+            ""
+        );
 
-    const itemTaxTotals = items.reduce(
-        (totals, item) => {
-            const tax = getTaxBreakdown(item);
+        return {
+            name,
+            description,
+            hsn,
+            quantity,
+            rate,
+            taxable,
+            taxRate,
+            taxAmount,
+            amount,
+            unit,
+            size,
+        };
+    };
 
-            totals.cgst += tax.cgst;
-            totals.sgst += tax.sgst;
-            totals.igst += tax.igst;
+    const itemData = items.map(getItemData);
 
-            return totals;
-        },
-        { cgst: 0, sgst: 0, igst: 0 }
-    );
+    // Group items by HSN/SAC for tax summary.
+    const hsnGroups = Object.values(
+        itemData.reduce((groups, item) => {
+            const key = `${item.hsn}-${item.taxRate}`;
 
-    const cgst = asNumber(
-        firstDefined(invoice?.cgstAmount, invoice?.totalCgst, itemTaxTotals.cgst)
-    );
-
-    const sgst = asNumber(
-        firstDefined(invoice?.sgstAmount, invoice?.totalSgst, itemTaxTotals.sgst)
-    );
-
-    const igst = asNumber(
-        firstDefined(invoice?.igstAmount, invoice?.totalIgst, itemTaxTotals.igst)
-    );
-
-    const totalTax = asNumber(
-        firstDefined(invoice?.totalTax, invoice?.taxAmount, cgst + sgst + igst)
-    );
-
-    const calculatedGrandTotal = taxableAmount + totalTax;
-
-    const grandTotal = asNumber(
-        firstDefined(
-            invoice?.grandTotal,
-            invoice?.totalAmount,
-            invoice?.total,
-            calculatedGrandTotal
-        )
-    );
-
-    const totalQty = items.reduce(
-        (sum, item) => sum + getItemQuantity(item),
-        0
-    );
-
-    const amountWords = numberToWords(Math.round(grandTotal));
-
-    const bankName = firstDefined(
-        bank?.bankName,
-        bank?.name,
-        invoice?.bankName,
-        company?.bankName,
-        ""
-    );
-
-    const accountNumber = firstDefined(
-        bank?.accountNumber,
-        bank?.accountNo,
-        invoice?.accountNumber,
-        company?.accountNumber,
-        ""
-    );
-
-    const ifsc = firstDefined(
-        bank?.ifsc,
-        bank?.ifscCode,
-        invoice?.ifsc,
-        company?.ifsc,
-        ""
-    );
-
-    const bankBranch = firstDefined(
-        bank?.branchName,
-        bank?.bankBranch,
-        bank?.branch,
-        invoice?.bankBranch,
-        ""
-    );
-
-    const upiQr = firstDefined(
-        invoice?.upiQr,
-        invoice?.upiQrUrl,
-        company?.upiQr,
-        company?.upiQrUrl,
-        ""
-    );
-
-    const signature = firstDefined(
-        invoice?.signature,
-        invoice?.signatureUrl,
-        company?.signature,
-        company?.signatureUrl,
-        ""
-    );
-
-    const signatureName = firstDefined(
-        invoice?.signatureName,
-        company?.signatureName,
-        ""
-    );
-
-    const notes = firstDefined(invoice?.notes, invoice?.note, "");
-
-    const terms = getTerms(invoice);
-
-    const paymentStatus = firstDefined(
-        invoice?.paymentStatus,
-        invoice?.status,
-        ""
-    );
-
-    const amountPaid = asNumber(
-        firstDefined(invoice?.amountPaid, invoice?.paidAmount, 0)
-    );
-
-    const paymentMethod = firstDefined(
-        invoice?.paymentMethod,
-        invoice?.paymentMode,
-        ""
-    );
-
-    const hsnSummary = Object.values(
-        items.reduce((summary, item) => {
-            const hsn = firstDefined(
-                item?.hsnCode,
-                item?.hsnSac,
-                item?.hsnSacCode,
-                ""
-            );
-
-            const key = `${hsn}| ${getTaxRate(item)}| ${item?.taxType || ""} `;
-
-            if (!summary[key]) {
-                summary[key] = {
-                    hsn,
+            if (!groups[key]) {
+                groups[key] = {
+                    hsn: item.hsn,
                     taxable: 0,
-                    cgst: 0,
-                    sgst: 0,
-                    igst: 0,
+                    taxRate: item.taxRate,
+                    taxAmount: 0,
                 };
             }
 
-            const taxable = getItemTaxable(item);
-            const tax = getTaxBreakdown(item);
+            groups[key].taxable += item.taxable;
+            groups[key].taxAmount += item.taxAmount;
 
-            summary[key].taxable += taxable;
-            summary[key].cgst += tax.cgst;
-            summary[key].sgst += tax.sgst;
-            summary[key].igst += tax.igst;
-
-            return summary;
+            return groups;
         }, {})
     );
 
+    const dateRows = [
+        ["Invoice #:", invoiceNumber],
+        ["Invoice Date:", invoiceDate],
+        ...(dueDate ? [["Due Date:", dueDate]] : []),
+        ["Place of Supply:", placeOfSupply],
+    ];
+
+    const border = "border border-black";
+    const cell = "border border-black px-2 py-1";
+    const smallText = "text-[10px] leading-[1.4]";
+
     return (
         <div
-            id="invoice-pdf-template-3"
-            style={{
-                position: preview ? "relative" : "fixed",
-                left: preview ? "auto" : "-10000px",
-                top: 0,
-                width: "794px",
-                minHeight: "1123px",
-                boxSizing: "border-box",
-                padding: "20px 30px 15px",
-                background: "#ffffff",
-                color: "#111827",
-                fontFamily: "Arial, Helvetica, sans-serif",
-                fontSize: "12px",
-                lineHeight: 1.25,
-                margin: preview ? "0 auto" : undefined,
-                overflow: preview ? "visible" : "hidden",
-            }}
+            id="invoice-template-4"
+            className={`
+                ${pageClass}
+                box-border
+                min-h-[1123px]
+                w-[794px]
+                overflow-hidden
+                bg-white
+                px-[38px]
+                pt-[34px]
+                pb-[60px]
+                font-['Arial',Helvetica,sans-serif]
+                text-[11px]
+                leading-[1.4]
+                text-black
+                ${preview ? "shadow-[0_2px_12px_rgba(0,0,0,0.12)]" : ""}
+            `}
         >
-            <div style={{ border: "1px solid #222" }}>
-                {/* HEADER */}
-                <div
-                    style={{
-                        height: "30px",
-                        borderBottom: "1px solid #222",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        position: "relative",
-                        fontWeight: 700,
-                        letterSpacing: "3px",
-                        fontSize: "15px",
-                    }}
-                >
-                    TAX INVOICE
+            {/* =================================================
+                COMMON TITLE
+            ================================================= */}
 
-                    <span
-                        style={{
-                            position: "absolute",
-                            right: "8px",
-                            fontSize: "11px",
-                            letterSpacing: "1px",
-                        }}
-                    >
-                        ORIGINAL FOR RECIPIENT
-                    </span>
+            <div className="flex h-[30px] items-center justify-between border border-black px-2">
+                <div className="flex-1 text-center text-[15px] font-bold tracking-[3px] text-blue-700">
+                    TAX INVOICE
                 </div>
 
-                {/* COMPANY + INVOICE META */}
-                <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "52% 48%",
-                    }}
-                >
-                    <div
-                        style={{
-                            borderRight: "1px solid #222",
-                            minHeight: "112px",
-                            padding: "8px",
-                            display: "flex",
-                            gap: "10px",
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: "100px",
-                                height: "85px",
-                                flexShrink: 0,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                overflow: "hidden",
-                            }}
-                        >
-                            {companyLogo ? (
-                                <img
-                                    src={companyLogo}
-                                    alt="Company logo"
-                                    style={{
-                                        maxWidth: "100%",
-                                        maxHeight: "80px",
-                                        objectFit: "contain",
-                                    }}
-                                />
-                            ) : (
+                <div className="text-[10px] font-semibold tracking-[1px]">
+                    ORIGINAL FOR RECIPIENT
+                </div>
+            </div>
+
+            {/* =================================================
+                DESIGN 1 - TATA MOTORS
+            ================================================= */}
+
+            {isTata && (
+                <>
+                    {/* COMPANY + INVOICE DETAILS */}
+
+                    <div className="grid grid-cols-2">
+                        <div className={`${border} flex min-h-[140px] items-center gap-4 p-3`}>
+                            <div className="flex w-[125px] shrink-0 items-center justify-center">
+                                {logo && (
+                                    <img
+                                        src={logo}
+                                        alt="Company Logo"
+                                        className="max-h-[100px] max-w-[120px] object-contain"
+                                    />
+                                )}
+                            </div>
+
+                            <CompanyInfo
+                                company={company}
+                                companyName={companyName}
+                                companyAddress={companyAddress}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2">
+                            {dateRows.map(([label, value]) => (
                                 <div
-                                    style={{
-                                        fontSize: "25px",
-                                        fontWeight: 700,
-                                        color: "#172554",
-                                        textAlign: "center",
-                                    }}
+                                    key={label}
+                                    className={`${border} min-h-[35px] px-2 py-2`}
                                 >
-                                    {companyName
-                                        ? companyName.substring(0, 2).toUpperCase()
-                                        : ""}
+                                    <div className="font-bold">
+                                        {label}
+                                    </div>
+                                    <div className="mt-1 font-semibold">
+                                        {value || "-"}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* CUSTOMER + SHIPPING */}
+
+                    <div className="grid grid-cols-2">
+                        <div className={`${border} min-h-[143px] p-2`}>
+                            <div className="mb-1 font-bold">
+                                Customer Details:
+                            </div>
+
+                            <PartyInfo
+                                partyName={partyName}
+                                partyAddress={partyAddress}
+                                partyEmail={partyEmail}
+                                partyPhone={partyPhone}
+                                partyGstin={partyGstin}
+                            />
+                        </div>
+
+                        <div className={`${border} min-h-[143px] p-2`}>
+                            <div className="mb-1 font-bold">
+                                Shipping address:
+                            </div>
+
+                            <div className="whitespace-pre-line leading-[1.7]">
+                                {firstValue(
+                                    invoice.shippingAddress,
+                                    invoice.shippingAddress?.address,
+                                    partyAddress,
+                                    "-"
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ITEM TABLE */}
+
+                    <div className="mt-0">
+                        <table className="w-full table-fixed border-collapse">
+                            <colgroup>
+                                <col className="w-[5%]" />
+                                <col className="w-[29%]" />
+                                <col className="w-[10%]" />
+                                <col className="w-[13%]" />
+                                <col className="w-[10%]" />
+                                <col className="w-[11%]" />
+                                <col className="w-[12%]" />
+                                <col className="w-[10%]" />
+                            </colgroup>
+
+                            <thead>
+                                <tr className="bg-gray-50">
+                                    {[
+                                        "#",
+                                        "Item",
+                                        "HSN/SAC",
+                                        "Rate/Item",
+                                        "Qty",
+                                        "Taxable Value",
+                                        "Tax Amount",
+                                        "Amount",
+                                    ].map((heading) => (
+                                        <th
+                                            key={heading}
+                                            className={`${cell} text-[10px]`}
+                                        >
+                                            {heading}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {itemData.map((item, index) => (
+                                    <tr key={items[index].id || index}>
+                                        <td className={`${cell} align-top`}>
+                                            {index + 1}
+                                        </td>
+
+                                        <td className={`${cell} align-top`}>
+                                            <div className="font-bold">
+                                                {item.name}
+                                            </div>
+
+                                            {item.description &&
+                                                item.description !== item.name && (
+                                                    <div className="mt-1 whitespace-pre-line">
+                                                        {item.description}
+                                                    </div>
+                                                )}
+
+                                            {item.unit || item.size ? (
+                                                <div className="mt-1 text-[10px]">
+                                                    {[item.unit, item.size]
+                                                        .filter(Boolean)
+                                                        .join(" / ")}
+                                                </div>
+                                            ) : null}
+                                        </td>
+
+                                        <td className={`${cell} text-center align-top`}>
+                                            {item.hsn}
+                                        </td>
+
+                                        <td className={`${cell} text-right align-top`}>
+                                            {fmt(item.rate)}
+                                        </td>
+
+                                        <td className={`${cell} text-right align-top`}>
+                                            {item.quantity}
+                                        </td>
+
+                                        <td className={`${cell} text-right align-top`}>
+                                            {fmt(item.taxable)}
+                                        </td>
+
+                                        <td className={`${cell} text-right align-top`}>
+                                            {fmt(item.taxAmount)}
+                                            <div className="text-[9px]">
+                                                ({item.taxRate}%)
+                                            </div>
+                                        </td>
+
+                                        <td className={`${cell} text-right align-top`}>
+                                            {fmt(item.amount)}
+                                        </td>
+                                    </tr>
+                                ))}
+
+                                {/* Keep enough space for the first design */}
+
+                                <tr>
+                                    <td
+                                        colSpan={8}
+                                        className={`${border} h-[220px]`}
+                                    />
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* TOTALS */}
+
+                    <div className="border-x border-black">
+                        <TotalRow
+                            label={`Total Items / Qty : ${items.length} / ${totalQuantity}`}
+                            value={`Taxable Amount       ${symbol}${fmt(taxableTotal)}`}
+                        />
+
+                        {hasIgst ? (
+                            <TotalRow
+                                label=""
+                                labelRight="IGST"
+                                value={`${symbol}${fmt(igstTotal)}`}
+                            />
+                        ) : (
+                            <>
+                                <TotalRow
+                                    label=""
+                                    labelRight="CGST"
+                                    value={`${symbol}${fmt(cgstTotal)}`}
+                                />
+                                <TotalRow
+                                    label=""
+                                    labelRight="SGST"
+                                    value={`${symbol}${fmt(sgstTotal)}`}
+                                />
+                            </>
+                        )}
+
+                        <div className="flex justify-between border-y border-black px-2 py-1">
+                            <span className="text-[10px]">
+                                Total amount (in words): {amountInWords}
+                            </span>
+
+                            <strong className="text-[17px]">
+                                Total {symbol}{fmt(grandTotal)}
+                            </strong>
+                        </div>
+                    </div>
+
+                    {/* HSN TAX SUMMARY */}
+
+                    <TaxSummary
+                        groups={hsnGroups}
+                        fmt={fmt}
+                        symbol={symbol}
+                        border={border}
+                    />
+
+                    {/* PAYMENT STATUS */}
+
+                    <div className={`${border} flex justify-end px-2 py-1`}>
+                        <strong>
+                            {isPaid ? "✓ Amount Paid" : "Amount Payable"}
+                            {" "}
+                            {symbol}{fmt(grandTotal)}
+                        </strong>
+                    </div>
+
+                    {/* BANK + QR + SIGNATURE */}
+
+                    <div className="grid grid-cols-[1fr_1fr_1fr] min-h-[190px]">
+                        <div className={`${border} p-2`}>
+                            <div className="mb-2 font-bold">
+                                Bank Details:
+                            </div>
+
+                            <BankInfo bankRows={bankRows} />
+
+                            {bank?.upiId && (
+                                <div className="mt-2">
+                                    UPI ID: {bank.upiId}
                                 </div>
                             )}
                         </div>
 
-                        <div style={{ overflowWrap: "anywhere" }}>
-                            <div
-                                style={{
-                                    fontSize: "15px",
-                                    fontWeight: 700,
-                                }}
-                            >
-                                {companyName}
+                        <div className={`${border} flex flex-col items-center p-2`}>
+                            <div className="font-bold">
+                                Pay using UPI:
                             </div>
 
-                            {companyGstin && <div>GSTIN: {companyGstin}</div>}
-                            {companyAddress && <div>{companyAddress}</div>}
-                            {companyPhone && <div>Mobile: {companyPhone}</div>}
-                            {companyEmail && <div>Email: {companyEmail}</div>}
+                            {qrCode && (
+                                <img
+                                    src={qrCode}
+                                    alt="UPI QR"
+                                    className="mt-2 h-[115px] w-[115px] object-contain"
+                                />
+                            )}
                         </div>
+
+                        <Signatory
+                            companyName={companyName}
+                            stamp={stamp}
+                            signature={signature}
+                            signatureText={signatureText}
+                            company={company}
+                            border={border}
+                        />
                     </div>
 
-                    <div>
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns: "1fr 1fr",
-                            }}
-                        >
-                            <MetaCell label="Invoice #:" value={invoiceNumber} />
-                            <MetaCell label="Invoice Date:" value={invoiceDate} />
-                            <MetaCell label="Place of Supply:" value={placeOfSupply} />
-                            <MetaCell label="Due Date:" value={dueDate} />
+                    {/* NOTES + TERMS */}
+
+                    <div className="grid grid-cols-2">
+                        <div className={`${border} min-h-[120px] p-2`}>
+                            <strong>Notes:</strong>
+                            <div className="mt-1 whitespace-pre-line">
+                                {invoice.notes || "Thank you for the Business"}
+                            </div>
                         </div>
 
-                        <div
-                            style={{
-                                padding: "8px",
-                                minHeight: "60px",
-                                borderTop: "1px solid #222",
-                            }}
-                        >
-                            <strong>Shipping address:</strong>
-                            <div
-                                style={{
-                                    whiteSpace: "pre-line",
-                                    overflowWrap: "anywhere",
-                                    marginTop: "3px",
-                                }}
-                            >
-                                {shippingAddress}
+                        <div className={`${border} min-h-[120px] p-2`}>
+                            <strong>Terms and Conditions:</strong>
+                            <div className="mt-1 whitespace-pre-line">
+                                {invoice.termsAndConditions || "-"}
                             </div>
                         </div>
                     </div>
-                </div>
+                </>
+            )}
 
-                {/* CUSTOMER */}
-                <div
-                    style={{
-                        width: "52%",
-                        boxSizing: "border-box",
-                        borderTop: "1px solid #222",
-                        borderRight: "1px solid #222",
-                        padding: "8px",
-                        minHeight: "125px",
-                    }}
-                >
-                    <strong>Customer Details:</strong>
+            {/* =================================================
+                DESIGN 2 - RELIANCE
+            ================================================= */}
 
-                    <div style={{ fontWeight: 700 }}>
-                        {customerName}
+            {!isTata && (
+                <>
+                    {/* THREE COLUMN HEADER */}
+
+                    <div className="grid grid-cols-[40%_30%_30%]">
+                        <div className={`${border} flex gap-3 p-3`}>
+                            {logo && (
+                                <img
+                                    src={logo}
+                                    alt="Company Logo"
+                                    className="h-[65px] w-[85px] object-contain"
+                                />
+                            )}
+
+                            <CompanyInfo
+                                company={company}
+                                companyName={companyName}
+                                companyAddress={companyAddress}
+                            />
+                        </div>
+
+                        <div className={`${border} p-2`}>
+                            <div className="font-bold">
+                                Customer Details:
+                            </div>
+
+                            <PartyInfo
+                                partyName={partyName}
+                                partyAddress={partyAddress}
+                                partyEmail={partyEmail}
+                                partyPhone={partyPhone}
+                                partyGstin={partyGstin}
+                            />
+
+                            <div className="mt-2 font-bold">
+                                Place of Supply:
+                            </div>
+                            <div>{placeOfSupply || "-"}</div>
+                        </div>
+
+                        <div className={`${border} p-2`}>
+                            {dateRows.map(([label, value]) => (
+                                <div
+                                    key={label}
+                                    className="flex justify-between gap-2 py-[2px]"
+                                >
+                                    <strong>{label}</strong>
+                                    <strong>{value || "-"}</strong>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
-                    {customerGstin && <div>GSTIN: {customerGstin}</div>}
+                    {/* ITEMS TABLE */}
 
-                    <div><strong>Billing address:</strong></div>
+                    <table className="w-full table-fixed border-collapse">
+                        <colgroup>
+                            <col className="w-[4%]" />
+                            <col className="w-[28%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[17%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[11%]" />
+                            <col className="w-[12%]" />
+                            <col className="w-[10%]" />
+                        </colgroup>
 
-                    <div style={{ whiteSpace: "pre-line", overflowWrap: "anywhere" }}>
-                        {billingAddress}
-                    </div>
+                        <thead>
+                            <tr className="bg-gray-50">
+                                {[
+                                    "#",
+                                    "Item",
+                                    "HSN/SAC",
+                                    "Rate / Item",
+                                    "Qty",
+                                    "Taxable Value",
+                                    "Tax Amount",
+                                    "Amount",
+                                ].map((heading) => (
+                                    <th
+                                        key={heading}
+                                        className={`${cell} text-[9px]`}
+                                    >
+                                        {heading}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
 
-                    {customerPhone && <div>Ph: {customerPhone}</div>}
-                </div>
+                        <tbody>
+                            {itemData.map((item, index) => (
+                                <tr key={items[index].id || index}>
+                                    <td className={`${cell} align-top`}>
+                                        {index + 1}
+                                    </td>
 
-                {/* ITEM TABLE */}
-                <table
-                    style={{
-                        width: "100%",
-                        borderCollapse: "collapse",
-                        tableLayout: "fixed",
-                    }}
-                >
-                    <thead>
-                        <tr>
-                            <Th width="4%">#</Th>
-                            <Th width="28%">Item</Th>
-                            <Th width="11%">HSN/SAC</Th>
-                            <Th width="8%">Tax</Th>
-                            <Th width="10%">Qty</Th>
-                            <Th width="14%">Rate / Item</Th>
-                            <Th width="7%">Per</Th>
-                            <Th width="18%">Amount</Th>
-                        </tr>
-                    </thead>
+                                    <td className={`${cell} align-top`}>
+                                        <div className="font-bold">
+                                            {item.name}
+                                        </div>
 
-                    <tbody>
-                        {items.length > 0 ? (
-                            items.map((item, index) => {
-                                const qty = getItemQuantity(item);
-                                const rate = getItemRate(item);
-                                const taxable = getItemTaxable(item);
-                                const tax = getTaxBreakdown(item);
-                                const taxRate = getTaxRate(item);
-                                const amount = getItemAmount(item);
-
-                                return (
-                                    <tr key={item?.id || item?.invoiceItemId || index}>
-                                        <Td center>{index + 1}</Td>
-
-                                        <Td>
-                                            <strong>{getItemName(item)}</strong>
-                                            {item?.description && (
-                                                <div style={{ marginTop: "3px" }}>
+                                        {item.description &&
+                                            item.description !== item.name && (
+                                                <div className="mt-1">
                                                     {item.description}
                                                 </div>
                                             )}
-                                        </Td>
 
-                                        <Td center>
-                                            {firstDefined(item?.hsnCode, item?.hsnSac, item?.hsnSacCode, "")}
-                                        </Td>
+                                        {item.unit && (
+                                            <div className="mt-1">
+                                                {item.unit}
+                                            </div>
+                                        )}
+                                    </td>
 
-                                        <Td center>
-                                            {formatRate(taxRate)}
-                                        </Td>
+                                    <td className={`${cell} text-center align-top`}>
+                                        {item.hsn}
+                                    </td>
 
-                                        <Td center>
-                                            {qty} {getUnitName(item)}
-                                        </Td>
+                                    <td className={`${cell} text-right align-top`}>
+                                        {fmt(item.rate)}
+                                    </td>
 
-                                        <Td right>{formatMoney(rate, currencyCode)}</Td>
+                                    <td className={`${cell} text-right align-top`}>
+                                        {item.quantity}
+                                    </td>
 
-                                        <Td center>{getUnitName(item)}</Td>
+                                    <td className={`${cell} text-right align-top`}>
+                                        {fmt(item.taxable)}
+                                    </td>
 
-                                        <Td right>{formatMoney(amount || taxable + tax.total, currencyCode)}</Td>
-                                    </tr>
-                                );
-                            })
-                        ) : (
+                                    <td className={`${cell} text-right align-top`}>
+                                        {fmt(item.taxAmount)}
+                                        <div className="text-[9px]">
+                                            ({item.taxRate}%)
+                                        </div>
+                                    </td>
+
+                                    <td className={`${cell} text-right align-top`}>
+                                        {fmt(item.amount)}
+                                    </td>
+                                </tr>
+                            ))}
+
                             <tr>
                                 <td
                                     colSpan={8}
-                                    style={{
-                                        height: "120px",
-                                        textAlign: "center",
-                                        verticalAlign: "top",
-                                        paddingTop: "30px",
-                                        border: "1px solid #222",
-                                    }}
-                                >
-                                    No items
-                                </td>
+                                    className={`${border} h-[115px]`}
+                                />
                             </tr>
-                        )}
-                    </tbody>
+                        </tbody>
+                    </table>
 
-                    {/* TAXABLE + TAX */}
-                    <tbody>
-                        <tr>
-                            <td
-                                colSpan={5}
-                                style={{ border: "1px solid #222", height: "90px" }}
-                            />
+                    {/* TOTAL + BANK + QR */}
 
-                            <td
-                                colSpan={2}
-                                style={{
-                                    border: "1px solid #222",
-                                    textAlign: "right",
-                                    verticalAlign: "top",
-                                    padding: "8px",
-                                }}
-                            >
-                                <div style={{ fontWeight: 700, fontStyle: "italic", marginBottom: "12px" }}>
-                                    Taxable Amount
-                                </div>
-
-                                {cgst > 0 && <div>CGST</div>}
-                                {sgst > 0 && <div>SGST</div>}
-                                {igst > 0 && <div>IGST</div>}
-                            </td>
-
-                            <td
-                                style={{
-                                    border: "1px solid #222",
-                                    textAlign: "right",
-                                    verticalAlign: "top",
-                                    padding: "8px",
-                                }}
-                            >
-                                <div style={{ marginBottom: "12px" }}>
-                                    {formatMoney(taxableAmount, currencyCode)}
-                                </div>
-
-                                {cgst > 0 && <div>{formatMoney(cgst, currencyCode)}</div>}
-                                {sgst > 0 && <div>{formatMoney(sgst, currencyCode)}</div>}
-                                {igst > 0 && <div>{formatMoney(igst, currencyCode)}</div>}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td colSpan={4} style={{ border: "1px solid #222" }} />
-
-                            <td
-                                style={{
-                                    border: "1px solid #222",
-                                    textAlign: "center",
-                                    fontWeight: 700,
-                                }}
-                            >
-                                Total
-                            </td>
-
-                            <td
-                                colSpan={2}
-                                style={{
-                                    border: "1px solid #222",
-                                    textAlign: "right",
-                                    fontWeight: 700,
-                                }}
-                            >
-                                {totalQty.toFixed(3)}
-                            </td>
-
-                            <td
-                                style={{
-                                    border: "1px solid #222",
-                                    textAlign: "right",
-                                    fontWeight: 700,
-                                    fontSize: "13px",
-                                    padding: "7px",
-                                }}
-                            >
-                                {formatMoney(grandTotal, currencyCode)}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                {/* AMOUNT IN WORDS */}
-                <div
-                    style={{
-                        borderTop: "1px solid #222",
-                        borderBottom: "1px solid #222",
-                        padding: "5px 8px",
-                        fontWeight: 500,
-                    }}
-                >
-                    Amount Chargeable (in words):{" "}
-                    <strong>
-                        {currency?.currencyName || currencyCode} {amountWords} Only.
-                    </strong>
-
-                    <span style={{ float: "right", fontWeight: 700 }}>
-                        E &amp; O.E
-                    </span>
-                </div>
-
-                {/* HSN TAX SUMMARY */}
-                <table
-                    style={{
-                        width: "100%",
-                        borderCollapse: "collapse",
-                        tableLayout: "fixed",
-                    }}
-                >
-                    <thead>
-                        <tr>
-                            <Th rowSpan={2}>HSN/SAC</Th>
-                            <Th rowSpan={2}>Taxable Value</Th>
-                            <Th colSpan={2}>Central Tax</Th>
-                            <Th colSpan={2}>State Tax</Th>
-                            <Th rowSpan={2}>Total Tax Amount</Th>
-                        </tr>
-
-                        <tr>
-                            <Th>Rate</Th>
-                            <Th>Amount</Th>
-                            <Th>Rate</Th>
-                            <Th>Amount</Th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {hsnSummary.map((entry, index) => {
-                            const cgstRate = entry.taxable
-                                ? (entry.cgst / entry.taxable) * 100
-                                : 0;
-                            const sgstRate = entry.taxable
-                                ? (entry.sgst / entry.taxable) * 100
-                                : 0;
-                            const taxTotal = entry.cgst + entry.sgst + entry.igst;
-
-                            return (
-                                <tr key={`${entry.hsn} -${index} `}>
-                                    <Td>{entry.hsn}</Td>
-                                    <Td right>{formatMoney(entry.taxable, currencyCode)}</Td>
-                                    <Td center>{formatRate(cgstRate)}</Td>
-                                    <Td right>{formatMoney(entry.cgst, currencyCode)}</Td>
-                                    <Td center>{formatRate(sgstRate)}</Td>
-                                    <Td right>{formatMoney(entry.sgst, currencyCode)}</Td>
-                                    <Td right>{formatMoney(taxTotal, currencyCode)}</Td>
-                                </tr>
-                            );
-                        })}
-
-                        <tr>
-                            <Td style={{ fontWeight: 700, textAlign: "right" }}>TOTAL</Td>
-                            <Td style={{ fontWeight: 700, textAlign: "right" }}>
-                                {formatMoney(hsnSummary.reduce((sum, row) => sum + row.taxable, 0), currencyCode)}
-                            </Td>
-                            <Td />
-                            <Td style={{ fontWeight: 700, textAlign: "right" }}>
-                                {formatMoney(cgst, currencyCode)}
-                            </Td>
-                            <Td />
-                            <Td style={{ fontWeight: 700, textAlign: "right" }}>
-                                {formatMoney(sgst, currencyCode)}
-                            </Td>
-                            <Td style={{ fontWeight: 700, textAlign: "right" }}>
-                                {formatMoney(totalTax, currencyCode)}
-                            </Td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                {/* PAYMENT DETAILS */}
-                <div
-                    style={{
-                        borderTop: "1px solid #222",
-                        padding: "6px 8px",
-                        textAlign: "right",
-                    }}
-                >
-                    <strong>Payment Details</strong>
-
-                    <div style={{ marginTop: "5px" }}>
-                        {paymentStatus && <>Status: {paymentStatus}</>}
-                        {paymentStatus && (paymentMethod || amountPaid > 0) && " | "}
-                        {paymentMethod && <>Method: {paymentMethod}</>}
-                        {(paymentStatus || paymentMethod || amountPaid > 0) && amountPaid > 0 && " | "}
-                        {amountPaid > 0 && <>Amount Paid: {formatMoney(amountPaid, currencyCode)}</>}
-                        {!paymentStatus && !paymentMethod && amountPaid === 0 && "No payment recorded"}
-                    </div>
-                </div>
-
-                {/* BANK + UPI + SIGNATURE */}
-                <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "50% 25% 25%",
-                        borderTop: "1px solid #222",
-                    }}
-                >
-                    <div
-                        style={{
-                            minHeight: "150px",
-                            padding: "8px",
-                            borderRight: "1px solid #222",
-                            overflowWrap: "anywhere",
-                        }}
-                    >
-                        <strong>Bank Details:</strong>
-
-                        {bankName && <div style={{ marginTop: "6px" }}>Bank: <strong>{bankName}</strong></div>}
-                        {accountNumber && <div>Account #: <strong>{accountNumber}</strong></div>}
-                        {ifsc && <div>IFSC: <strong>{ifsc}</strong></div>}
-                        {bankBranch && <div>Branch: <strong>{bankBranch}</strong></div>}
-                    </div>
-
-                    <div
-                        style={{
-                            minHeight: "150px",
-                            padding: "8px",
-                            borderRight: "1px solid #222",
-                            textAlign: "center",
-                        }}
-                    >
-                        <strong>Pay using UPI:</strong>
-
-                        {upiQr && (
-                            <img
-                                src={upiQr}
-                                alt="UPI QR"
-                                style={{
-                                    width: "100px",
-                                    height: "100px",
-                                    objectFit: "contain",
-                                    display: "block",
-                                    margin: "10px auto",
-                                }}
-                            />
-                        )}
-                    </div>
-
-                    <div
-                        style={{
-                            minHeight: "150px",
-                            padding: "8px",
-                            textAlign: "center",
-                            position: "relative",
-                            overflowWrap: "anywhere",
-                        }}
-                    >
-                        <div style={{ textAlign: "right", marginBottom: "20px" }}>
-                            For {companyName}
-                        </div>
-
-                        {signature && (
-                            <img
-                                src={signature}
-                                alt="Authorized signature"
-                                style={{
-                                    width: "100px",
-                                    height: "70px",
-                                    objectFit: "contain",
-                                    marginTop: "15px",
-                                }}
-                            />
-                        )}
-
-                        {signatureName && (
-                            <div style={{ marginTop: "6px", fontWeight: 700 }}>
-                                {signatureName}
+                    <div className="grid grid-cols-[60%_40%]">
+                        <div className={`${border} p-2`}>
+                            <div className="mb-1">
+                                Total Items / Qty : {items.length} / {totalQuantity}
                             </div>
-                        )}
 
-                        <div style={{ marginTop: "20px" }}>
-                            Authorized Signatory
-                        </div>
-                    </div>
-                </div>
-
-                {/* NOTES + TERMS */}
-                <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "50% 50%",
-                        borderTop: "1px solid #222",
-                    }}
-                >
-                    <div
-                        style={{
-                            minHeight: "125px",
-                            padding: "8px",
-                            borderRight: "1px solid #222",
-                            overflowWrap: "anywhere",
-                        }}
-                    >
-                        <strong>Notes:</strong>
-                        <div style={{ marginTop: "6px", whiteSpace: "pre-line" }}>
-                            {notes}
-                        </div>
-                    </div>
-
-                    <div style={{ minHeight: "125px", padding: "8px" }}>
-                        <strong>Terms and Conditions:</strong>
-
-                        {terms.length > 0 ? (
-                            <ol style={{ marginTop: "5px", paddingLeft: "18px" }}>
-                                {terms.map((term, index) => (
-                                    <li key={index}>{term}</li>
-                                ))}
-                            </ol>
-                        ) : (
-                            <div style={{ marginTop: "6px" }}>
-                                No terms and conditions provided.
+                            <div className="mb-2">
+                                Total amount (in words): {amountInWords}
                             </div>
-                        )}
+
+                            <div className="font-bold">
+                                Bank Details:
+                            </div>
+
+                            <BankInfo bankRows={bankRows} />
+
+                            {bank?.upiId && (
+                                <div className="mt-1">
+                                    UPI ID: {bank.upiId}
+                                </div>
+                            )}
+
+                            {qrCode && (
+                                <img
+                                    src={qrCode}
+                                    alt="UPI QR"
+                                    className="absolute ml-[355px] -mt-[110px] h-[100px] w-[100px] object-contain"
+                                />
+                            )}
+                        </div>
+
+                        <div className={`${border} p-2`}>
+                            <TotalRow
+                                label="Taxable Amount"
+                                value={`${symbol}${fmt(taxableTotal)}`}
+                            />
+
+                            {hasIgst ? (
+                                <TotalRow
+                                    label="IGST"
+                                    value={`${symbol}${fmt(igstTotal)}`}
+                                />
+                            ) : (
+                                <>
+                                    <TotalRow
+                                        label="CGST"
+                                        value={`${symbol}${fmt(cgstTotal)}`}
+                                    />
+                                    <TotalRow
+                                        label="SGST"
+                                        value={`${symbol}${fmt(sgstTotal)}`}
+                                    />
+                                </>
+                            )}
+
+                            <div className="mt-1 flex justify-between border-t border-black py-2 text-[17px] font-bold">
+                                <span>Total</span>
+                                <span>{symbol}{fmt(grandTotal)}</span>
+                            </div>
+
+                            <div className="flex justify-between border-t border-black pt-1 font-bold">
+                                <span>
+                                    {isPaid ? "Amount Paid" : "Amount Payable"}
+                                </span>
+                                <span>{symbol}{fmt(grandTotal)}</span>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
+
+                    {/* HSN SUMMARY */}
+
+                    <TaxSummary
+                        groups={hsnGroups}
+                        fmt={fmt}
+                        symbol={symbol}
+                        border={border}
+                    />
+
+                    {/* NOTES + TERMS + SIGNATURE */}
+
+                    <div className="grid grid-cols-[40%_40%_20%]">
+                        <div className={`${border} min-h-[105px] p-2`}>
+                            <strong>Notes:</strong>
+
+                            <div className="mt-2 whitespace-pre-line">
+                                {invoice.notes || "Thanks for your business."}
+                            </div>
+
+                            <div className="mt-8 w-[75%] border-t border-black pt-1">
+                                Receiver's Signature
+                            </div>
+                        </div>
+
+                        <div className={`${border} min-h-[105px] p-2`}>
+                            <strong>Terms and Conditions:</strong>
+
+                            <div className="mt-2 whitespace-pre-line">
+                                {invoice.termsAndConditions || "-"}
+                            </div>
+                        </div>
+
+                        <Signatory
+                            companyName={companyName}
+                            stamp={stamp}
+                            signature={signature}
+                            signatureText={signatureText}
+                            company={company}
+                            border={border}
+                        />
+                    </div>
+                </>
+            )}
 
             {/* FOOTER */}
-            <div
-                style={{
-                    marginTop: "25px",
-                    display: "flex",
-                    gap: "20px",
-                    fontSize: "11px",
-                    fontWeight: 600,
-                }}
-            >
-                <span>Page 1 / 1</span>
-                <span>This is a digitally signed document.</span>
+
+            <div className="absolute bottom-[26px] left-[38px] text-[10px] font-bold">
+                Page 1 / 1 &nbsp; This is a digitally signed document.
             </div>
         </div>
     );
 }
 
-/* ============================================================
-   SMALL COMPONENTS
-============================================================ */
+/* =========================================================
+   REUSABLE COMPONENTS
+========================================================= */
 
-function MetaCell({ label, value }) {
-    return (
-        <div
-            style={{
-                minHeight: "45px",
-                padding: "7px",
-                borderBottom: "1px solid #222",
-                borderLeft: "1px solid #222",
-                overflowWrap: "anywhere",
-            }}
-        >
-            <strong>{label}</strong>
-
-            <div style={{ marginTop: "3px", fontWeight: 600 }}>
-                {value || "-"}
-            </div>
-        </div>
-    );
-}
-
-function Th({ children, width, colSpan, rowSpan }) {
-    return (
-        <th
-            colSpan={colSpan}
-            rowSpan={rowSpan}
-            style={{
-                width,
-                border: "1px solid #222",
-                padding: "4px 3px",
-                textAlign: "center",
-                fontWeight: 700,
-                fontSize: "11px",
-                background: "#fff",
-            }}
-        >
-            {children}
-        </th>
-    );
-}
-
-function Td({
-    children,
-    width,
-    center,
-    right,
-    colSpan,
-    rowSpan,
-    style = {},
+function CompanyInfo({
+    company,
+    companyName,
+    companyAddress,
 }) {
     return (
-        <td
-            colSpan={colSpan}
-            rowSpan={rowSpan}
-            style={{
-                width,
-                border: "1px solid #222",
-                padding: "4px",
-                verticalAlign: "top",
-                textAlign: center ? "center" : right ? "right" : "left",
-                fontSize: "11px",
-                overflowWrap: "anywhere",
-                ...style,
-            }}
-        >
-            {children}
-        </td>
+        <div className="min-w-0 flex-1 text-[10px]">
+            <div className="text-[14px] font-bold">
+                {companyName}
+            </div>
+
+            {company.gstin && (
+                <div className="font-bold">
+                    GSTIN {company.gstin}
+                </div>
+            )}
+
+            {companyAddress.map((line, index) => (
+                <div key={index}>{line}</div>
+            ))}
+
+            {company.contact && (
+                <div>
+                    Mobile {company.countryCode || "+91"} {company.contact}
+                </div>
+            )}
+
+            {company.email && (
+                <div>Email {company.email}</div>
+            )}
+
+            {company.website && (
+                <div>{company.website}</div>
+            )}
+        </div>
+    );
+}
+
+function PartyInfo({
+    partyName,
+    partyAddress,
+    partyEmail,
+    partyPhone,
+    partyGstin,
+}) {
+    return (
+        <div className="text-[10px] leading-[1.5]">
+            <div className="font-bold">{partyName}</div>
+
+            {partyGstin && <div>GSTIN: {partyGstin}</div>}
+
+            {partyAddress && (
+                <div className="whitespace-pre-line">
+                    {partyAddress}
+                </div>
+            )}
+
+            {partyPhone && <div>Ph: {partyPhone}</div>}
+
+            {partyEmail && <div>Email: {partyEmail}</div>}
+        </div>
+    );
+}
+
+function BankInfo({ bankRows = [] }) {
+    return (
+        <table className="text-[10px]">
+            <tbody>
+                {bankRows.map(([label, value]) => (
+                    <tr key={label}>
+                        <td className="pr-3 py-[2px]">{label}:</td>
+                        <td className="font-semibold">{value}</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+}
+
+function TotalRow({
+    label,
+    labelRight,
+    value,
+}) {
+    return (
+        <div className="flex justify-between border-b border-gray-300 px-2 py-[3px] text-[10px]">
+            <span>{label}</span>
+            <div className="flex gap-4 font-bold">
+                {labelRight && <span>{labelRight}</span>}
+                <span>{value}</span>
+            </div>
+        </div>
+    );
+}
+
+function TaxSummary({
+    groups = [],
+    fmt,
+    border,
+}) {
+    const taxableTotal = groups.reduce(
+        (sum, item) => sum + item.taxable,
+        0
+    );
+
+    const taxTotal = groups.reduce(
+        (sum, item) => sum + item.taxAmount,
+        0
+    );
+
+    return (
+        <table className="w-full border-collapse text-[10px]">
+            <thead>
+                <tr>
+                    <th className={border}>HSN/SAC</th>
+                    <th className={border}>Taxable Value</th>
+                    <th className={border} colSpan={2}>
+                        Integrated Tax
+                    </th>
+                    <th className={border}>Total Tax Amount</th>
+                </tr>
+
+                <tr>
+                    <th className={border}></th>
+                    <th className={border}></th>
+                    <th className={border}>Rate</th>
+                    <th className={border}>Amount</th>
+                    <th className={border}></th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {groups.map((item, index) => (
+                    <tr key={`${item.hsn}-${index}`}>
+                        <td className={`${border} px-2`}>
+                            {item.hsn}
+                        </td>
+
+                        <td className={`${border} px-2 text-right`}>
+                            {fmt(item.taxable)}
+                        </td>
+
+                        <td className={`${border} px-2 text-center`}>
+                            {item.taxRate}%
+                        </td>
+
+                        <td className={`${border} px-2 text-right`}>
+                            {fmt(item.taxAmount)}
+                        </td>
+
+                        <td className={`${border} px-2 text-right`}>
+                            {fmt(item.taxAmount)}
+                        </td>
+                    </tr>
+                ))}
+
+                <tr className="font-bold">
+                    <td className={`${border} px-2 text-right`}>
+                        TOTAL
+                    </td>
+
+                    <td className={`${border} px-2 text-right`}>
+                        {fmt(taxableTotal)}
+                    </td>
+
+                    <td className={border}></td>
+
+                    <td className={`${border} px-2 text-right`}>
+                        {fmt(taxTotal)}
+                    </td>
+
+                    <td className={`${border} px-2 text-right`}>
+                        {fmt(taxTotal)}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    );
+}
+
+function Signatory({
+    companyName,
+    stamp,
+    signature,
+    signatureText,
+    company,
+    border,
+}) {
+    return (
+        <div className={`${border} flex min-w-0 flex-col items-center justify-between p-2 text-right`}>
+            <div className="w-full text-[10px]">
+                For {companyName}
+            </div>
+
+            <div className="flex min-h-[85px] items-center justify-center">
+                {(stamp || signature) ? (
+                    <img
+                        src={stamp || signature}
+                        alt="Authorized Signature"
+                        className="h-[85px] w-[100px] object-contain"
+                    />
+                ) : (
+                    <div className="whitespace-pre-line text-[10px]">
+                        {signatureText || ""}
+                    </div>
+                )}
+            </div>
+
+            {company.signatureName && (
+                <div className="text-[10px] font-bold">
+                    {company.signatureName}
+                </div>
+            )}
+
+            <div className="text-[10px]">
+                Authorized Signatory
+            </div>
+        </div>
     );
 }
