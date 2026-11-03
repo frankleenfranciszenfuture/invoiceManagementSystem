@@ -1097,7 +1097,7 @@ export default function SalesOrderCreate({ onClose }) {
             if (onClose) {
                 onClose();
             } else {
-                navigate("/sale-orders");
+                navigate("/inventory/salesOrders");
             }
         } catch (error) {
             console.log("Backend error:", error);

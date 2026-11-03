@@ -215,3 +215,26 @@
   width: 190mm;
   box-sizing: border-box;
 }
+
+/* =========================================================
+   SIDEBAR CUSTOM SCROLLBAR
+========================================================= */
+
+/* Scroll enabled, scrollbar hidden */
+
+.sidebar-scrollbar {
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* Firefox */
+  scrollbar-width: none;
+
+  /* IE and Edge legacy */
+  -ms-overflow-style: none;
+}
+
+/* Chrome, Edge, Safari */
+.sidebar-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+}

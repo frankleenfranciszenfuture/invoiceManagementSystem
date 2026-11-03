@@ -616,12 +616,12 @@ function AppContent() {
 
         <Route
           path="/invoices/service/new"
-          element={<ServiceInvoice />}
+          element={<InvoiceCreate />}
         />
 
         <Route
           path="/invoices/sale/new"
-          element={<SaleInvoice />}
+          element={<InvoiceCreate />}
         />
 
         <Route

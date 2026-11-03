@@ -1008,7 +1008,9 @@ const Sidebar = ({ onLogout }) => {
 
                 <nav
                     className={`
-                        flex-1 space-y-1 px-3 py-1 
+                         sidebar-scrollbar
+                        flex-1 min-h-0 min-w-0
+                        space-y-1 px-3 py-1 
                         ${open ? "overflow-y-auto" : "overflow-visible"}
                     `}
                 >

@@ -1,3 +1,4 @@
+
 import React, {
     useEffect,
     useMemo,
@@ -11,18 +12,22 @@ import {
     ArrowLeft,
     Wallet,
     Receipt,
-    Building2,
     Save,
     ChevronDown,
     Loader2,
     RotateCcw,
     FileText,
+    Plus,
+    Trash2,
+    IndianRupee,
+    CircleDollarSign,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
 import {
     createPayment,
+    fetchPaymentsBySource,
 } from "../thunks/paymentThunks";
 
 import {
@@ -70,17 +75,9 @@ const getToday = () => {
 
 /* =========================================================
    REDUX RESPONSE NORMALIZER
-
-   Supports:
-   - Array
-   - { content: [] }
-   - { data: [] }
-   - { data: { content: [] } }
-   - { data: { data: { content: [] } } }
 ========================================================= */
 
 const getList = (value) => {
-
     if (Array.isArray(value)) {
         return value;
     }
@@ -109,6 +106,107 @@ const getList = (value) => {
 };
 
 /* =========================================================
+   PAYMENT RESPONSE NORMALIZER
+========================================================= */
+
+const getPaymentList = (response) => {
+    if (Array.isArray(response)) {
+        return response;
+    }
+
+    if (Array.isArray(response?.data)) {
+        return response.data;
+    }
+
+    if (Array.isArray(response?.data?.content)) {
+        return response.data.content;
+    }
+
+    if (Array.isArray(response?.content)) {
+        return response.content;
+    }
+
+    if (Array.isArray(response?.data?.data)) {
+        return response.data.data;
+    }
+
+    return [];
+};
+
+/* =========================================================
+   PAYMENT STATUS
+========================================================= */
+
+const isCompletedPayment = (payment) => {
+    const status = String(
+        payment?.paymentStatus ||
+        payment?.status ||
+        ""
+    ).toUpperCase();
+
+    return status === "COMPLETED";
+};
+
+/* =========================================================
+   GET PAYMENT AMOUNT
+========================================================= */
+
+const getPaymentAmount = (payment) => {
+    const amount = Number(
+        payment?.paymentAmount ??
+        payment?.amount ??
+        0
+    );
+
+    return Number.isFinite(amount) && amount > 0
+        ? amount
+        : 0;
+};
+
+/* =========================================================
+   CALCULATE PAID AMOUNT
+
+   Supports:
+   1. Normal payment records
+   2. Split payment allocation records
+   3. Parent records containing allocations
+
+   Do not count parent and allocation amounts together.
+========================================================= */
+
+const calculatePaidAmount = (response) => {
+    const payments = getPaymentList(response);
+
+    return payments.reduce((total, payment) => {
+        if (!isCompletedPayment(payment)) {
+            return total;
+        }
+
+        const allocations =
+            payment?.allocations ||
+            payment?.paymentAllocations ||
+            [];
+
+        if (Array.isArray(allocations) && allocations.length > 0) {
+            const allocationTotal = allocations.reduce(
+                (allocationSum, allocation) => {
+                    if (!isCompletedPayment(allocation)) {
+                        return allocationSum;
+                    }
+
+                    return allocationSum + getPaymentAmount(allocation);
+                },
+                0
+            );
+
+            return total + allocationTotal;
+        }
+
+        return total + getPaymentAmount(payment);
+    }, 0);
+};
+
+/* =========================================================
    INITIAL FORM DATA
 ========================================================= */
 
@@ -125,6 +223,127 @@ const initialFormData = {
 
     referenceNumber: "",
     notes: "",
+};
+
+/* =========================================================
+   INITIAL SPLIT ALLOCATION
+========================================================= */
+
+const createEmptyAllocation = () => ({
+    paymentAmount: "",
+    paymentMethod: "BANK_TRANSFER",
+    bankAccountId: "",
+    cashAccountId: "",
+});
+
+/* =========================================================
+   FORMAT AMOUNT
+========================================================= */
+
+const formatAmount = (amount, currencyCode = "INR") => {
+    const numericAmount = Number(amount || 0);
+
+    return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: currencyCode || "INR",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(
+        Number.isFinite(numericAmount) ? numericAmount : 0
+    );
+};
+
+
+/* =========================================================
+   SOURCE DOCUMENT EXCHANGE RATE
+
+   Exchange rate means:
+   1 unit of source currency = X INR
+
+   Prefer the API exchange rate.
+   If unavailable, calculate it using base amount / source amount.
+========================================================= */
+
+const getSourceExchangeRate = (source, paymentType) => {
+    if (!source) return null;
+
+    const currencyCode = String(
+        source.currencyCode || "INR"
+    ).toUpperCase();
+
+    if (currencyCode === "INR") {
+        return 1;
+    }
+
+    const directRate = Number(
+        source.exchangeRate ??
+        source.exchangeRateToBase ??
+        source.conversionRate ??
+        0
+    );
+
+    if (Number.isFinite(directRate) && directRate > 0) {
+        return directRate;
+    }
+
+    let sourceAmount = 0;
+    let baseAmount = 0;
+
+    if (paymentType === "EXPENSE") {
+        sourceAmount = Number(source.totalAmount || 0);
+        baseAmount = Number(source.baseTotalAmount || 0);
+    } else {
+        sourceAmount = Number(source.grandTotal || 0);
+        baseAmount = Number(source.baseGrandTotal || 0);
+    }
+
+    if (
+        sourceAmount > 0 &&
+        baseAmount > 0
+    ) {
+        return baseAmount / sourceAmount;
+    }
+
+    return null;
+};
+
+/* =========================================================
+   PAYMENT AMOUNT INR PREVIEW
+========================================================= */
+
+const PaymentAmountInrHint = ({
+    amount,
+    currencyCode,
+    exchangeRate,
+}) => {
+    const numericAmount = Number(amount);
+
+    const code = String(currencyCode || "INR").toUpperCase();
+
+    if (
+        code === "INR" ||
+        !Number.isFinite(numericAmount) ||
+        numericAmount <= 0 ||
+        !exchangeRate ||
+        exchangeRate <= 0
+    ) {
+        return null;
+    }
+
+    const inrAmount = numericAmount * exchangeRate;
+
+    return (
+        <div className="mt-1.5 space-y-0.5">
+            <p className="text-xs font-medium text-emerald-600">
+                ≈ {formatAmount(inrAmount, "INR")} INR
+            </p>
+
+            <p className="text-[11px] text-gray-400">
+                Exchange rate: 1 {code} ={" "}
+                {formatAmount(exchangeRate, "INR")}
+            </p>
+        </div>
+    );
 };
 
 /* =========================================================
@@ -209,7 +428,6 @@ const SectionHeading = ({
     description,
 }) => (
     <div className="mb-5 flex items-center gap-3">
-
         <div className="
             flex h-10 w-10 items-center justify-center
             rounded-xl bg-blue-50 text-[#408DFB]
@@ -228,16 +446,165 @@ const SectionHeading = ({
                 </p>
             )}
         </div>
-
     </div>
 );
+
+/* =========================================================
+   SOURCE PAYMENT SUMMARY
+========================================================= */
+
+const SourcePaymentSummary = ({
+    source,
+    paymentType,
+    paymentLoading,
+    paidAmount,
+    exchangeRate,
+}) => {
+    if (!source) {
+        return null;
+    }
+
+    const isExpense = paymentType === "EXPENSE";
+
+    const currencyCode = source.currencyCode || "INR";
+
+    const totalAmount = Number(
+        isExpense
+            ? source.totalAmount || 0
+            : source.grandTotal || 0
+    );
+
+    const actualPaidAmount = isExpense
+        ? Number(source.paidAmount || 0)
+        : Number(paidAmount || 0);
+
+    const remainingAmount = isExpense
+        ? Number(source.dueAmount || 0)
+        : Math.max(0, totalAmount - actualPaidAmount);
+
+    const summaryItems = [
+        {
+            label: "Total Amount",
+            amount: totalAmount,
+            color: "text-gray-800",
+            background: "bg-gray-50",
+        },
+        {
+            label: "Paid Amount",
+            amount: actualPaidAmount,
+            color: "text-emerald-600",
+            background: "bg-emerald-50",
+        },
+        {
+            label: "Remaining Amount",
+            amount: remainingAmount,
+            color: remainingAmount <= 0
+                ? "text-emerald-600"
+                : "text-orange-600",
+            background: remainingAmount <= 0
+                ? "bg-emerald-50"
+                : "bg-orange-50",
+        },
+    ];
+
+    return (
+        <div className="
+            mt-5 overflow-hidden rounded-xl
+            border border-blue-100 bg-white
+        ">
+            <div className="
+                flex flex-wrap items-center
+                justify-between gap-2
+                border-b border-gray-100
+                px-4 py-3
+            ">
+                <div className="flex items-center gap-2">
+                    <div className="
+                        flex h-8 w-8 items-center
+                        justify-center rounded-lg
+                        bg-blue-50 text-[#408DFB]
+                    ">
+                        <IndianRupee size={16} />
+                    </div>
+
+                    <div>
+                        <h4 className="text-sm font-semibold text-gray-800">
+                            Source Payment Summary
+                        </h4>
+
+                        <p className="text-xs text-gray-400">
+                            {source.orderNo || source.expenseNo || "Selected document"}
+                        </p>
+                    </div>
+                </div>
+
+                {paymentLoading && (
+                    <div className="
+                        flex items-center gap-2
+                        text-xs text-gray-400
+                    ">
+                        <Loader2
+                            size={14}
+                            className="animate-spin"
+                        />
+                        Updating paid amount...
+                    </div>
+                )}
+            </div>
+
+            <div className="
+                grid grid-cols-1 gap-3 p-4
+                sm:grid-cols-3
+            ">
+                {summaryItems.map((item) => (
+                    <div
+                        key={item.label}
+                        className={`
+                            rounded-lg p-3
+                            ${item.background}
+                        `}
+                    >
+                        <p className="text-xs text-gray-500">
+                            {item.label}
+                        </p>
+
+                        <p className={`
+    mt-2 text-base font-semibold
+    ${item.color}
+`}>
+                            {formatAmount(
+                                item.amount,
+                                currencyCode
+                            )}
+                        </p>
+
+                        <PaymentAmountInrHint
+                            amount={item.amount}
+                            currencyCode={currencyCode}
+                            exchangeRate={exchangeRate}
+                        />
+                    </div>
+                ))}
+            </div>
+
+            {!isExpense && (
+                <p className="
+                    border-t border-gray-100
+                    px-4 py-2 text-[11px]
+                    text-gray-400
+                ">
+                    Paid amount is calculated from completed payment records.
+                </p>
+            )}
+        </div>
+    );
+};
 
 /* =========================================================
    MAIN COMPONENT
 ========================================================= */
 
 const PaymentCreate = () => {
-
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
@@ -348,9 +715,25 @@ const PaymentCreate = () => {
         ...initialFormData,
     });
 
+    const [isSplitPayment, setIsSplitPayment] = useState(false);
+
+    const [allocations, setAllocations] = useState([
+        createEmptyAllocation(),
+        createEmptyAllocation(),
+    ]);
+
     const [saveMode, setSaveMode] = useState("close");
 
     const [showSaveOptions, setShowSaveOptions] = useState(false);
+
+    /* =====================================================
+       SELECTED SOURCE PAYMENT DATA
+    ===================================================== */
+
+    const [sourcePayments, setSourcePayments] = useState([]);
+
+    const [sourcePaymentLoading, setSourcePaymentLoading] =
+        useState(false);
 
     /* =====================================================
        NORMALIZATION
@@ -386,7 +769,6 @@ const PaymentCreate = () => {
     ===================================================== */
 
     const hasPermission = (moduleName, actionName) => {
-
         if (hasFullAccess) {
             return true;
         }
@@ -399,7 +781,6 @@ const PaymentCreate = () => {
         }
 
         return permissions.some((permission) => {
-
             const permissionModule = normalizeModule(
                 permission?.moduleName ||
                 permission?.module?.moduleName ||
@@ -418,10 +799,8 @@ const PaymentCreate = () => {
             }
 
             if (Array.isArray(permission?.actions)) {
-
                 const groupedPermission = permission.actions.some(
                     (action) => {
-
                         if (typeof action === "string") {
                             return (
                                 normalizeAction(action) === requestedAction
@@ -479,7 +858,6 @@ const PaymentCreate = () => {
     ===================================================== */
 
     useEffect(() => {
-
         if (authChecking || !isAuthenticated || hasFullAccess) {
             return;
         }
@@ -487,7 +865,6 @@ const PaymentCreate = () => {
         if (!permissionsLoaded && !permissionLoading) {
             dispatch(getUserPermission());
         }
-
     }, [
         authChecking,
         isAuthenticated,
@@ -502,15 +879,12 @@ const PaymentCreate = () => {
     ===================================================== */
 
     useEffect(() => {
-
         if (authChecking || !isAuthenticated) {
             return;
         }
 
         const loadPaymentDropdowns = async () => {
-
             const results = await Promise.allSettled([
-
                 dispatch(
                     fetchAllSalesOrders({
                         page: 0,
@@ -532,9 +906,7 @@ const PaymentCreate = () => {
                     })
                 ).unwrap(),
 
-                dispatch(
-                    fetchAllBankAccounts()
-                ).unwrap(),
+                dispatch(fetchAllBankAccounts()).unwrap(),
 
                 dispatch(
                     fetchAllCashAccounts({
@@ -543,24 +915,19 @@ const PaymentCreate = () => {
                         status: "ACTIVE",
                     })
                 ).unwrap(),
-
             ]);
 
             results.forEach((result, index) => {
-
                 if (result.status === "rejected") {
                     console.error(
                         `Payment dropdown request ${index + 1} failed:`,
                         result.reason
                     );
                 }
-
             });
-
         };
 
         loadPaymentDropdowns();
-
     }, [
         dispatch,
         authChecking,
@@ -590,37 +957,54 @@ const PaymentCreate = () => {
        PAYMENT METHOD OPTIONS
     ===================================================== */
 
-    const paymentMethodOptions = useMemo(() => [
-        {
-            label: "Bank Transfer",
-            value: "BANK_TRANSFER",
-        },
-        {
-            label: "UPI",
-            value: "UPI",
-        },
-        {
-            label: "Card",
-            value: "CARD",
-        },
-        {
-            label: "Cheque",
-            value: "CHEQUE",
-        },
-        {
-            label: "Cash",
-            value: "CASH",
-        },
-    ], []);
+    const getPaymentMethodOptions = (paymentType) => {
+        const options = [
+            {
+                label: "Bank Transfer",
+                value: "BANK_TRANSFER",
+            },
+            {
+                label: "UPI",
+                value: "UPI",
+            },
+            {
+                label: "Card",
+                value: "CARD",
+            },
+            {
+                label: "Cheque",
+                value: "CHEQUE",
+            },
+            {
+                label: "Cash",
+                value: "CASH",
+            },
+        ];
+
+        if (
+            paymentType === "SALES" ||
+            paymentType === "PURCHASE"
+        ) {
+            options.push({
+                label: "Party Credit",
+                value: "PARTY_CREDIT",
+            });
+        }
+
+        return options;
+    };
+
+    const paymentMethodOptions = useMemo(
+        () => getPaymentMethodOptions(formData.paymentType),
+        [formData.paymentType]
+    );
 
     /* =====================================================
        SOURCE DOCUMENT LABEL
     ===================================================== */
 
     const sourceLabel = useMemo(() => {
-
         switch (formData.paymentType) {
-
             case "SALES":
                 return "Sales Order";
 
@@ -633,44 +1017,37 @@ const PaymentCreate = () => {
             default:
                 return "Source Document";
         }
-
     }, [formData.paymentType]);
 
     /* =====================================================
        SOURCE DOCUMENT DROPDOWN OPTIONS
+       NO STATUS FILTERING
     ===================================================== */
 
     const sourceOptions = useMemo(() => {
-
         switch (formData.paymentType) {
-
             case "SALES":
+                return salesOrders.map((order) => {
+                    const customerName =
+                        order.customer?.displayName ||
+                        order.customer?.name ||
+                        order.party?.companyName ||
+                        order.party?.name ||
+                        "Customer";
 
-                return salesOrders
-                    .filter((order) =>
-                        order.salesOrderStatus === "DISPATCHED"
-                    )
-                    .map((order) => {
-
-                        const customerName =
-                            order.customer?.displayName ||
-                            order.customer?.name ||
-                            order.party?.name ||
-                            "Customer";
-
-                        return {
-                            label: `${order.orderNo || `SO-${order.id}`} - ${customerName} - ${order.currencyCode || "INR"} ${order.grandTotal ?? 0}`,
-                            value: String(order.id),
-                        };
-                    });
+                    return {
+                        label: `${order.orderNo || `SO-${order.id}`} - ${customerName} - ${order.currencyCode || "INR"} ${order.grandTotal ?? 0}`,
+                        value: String(order.id),
+                    };
+                });
 
             case "PURCHASE":
-
                 return purchaseOrders.map((order) => {
-
                     const partyName =
-                        order.party?.name ||
                         order.party?.companyName ||
+                        order.party?.name ||
+                        order.supplier?.companyName ||
+                        order.supplier?.name ||
                         order.partyName ||
                         "Party";
 
@@ -681,16 +1058,14 @@ const PaymentCreate = () => {
                 });
 
             case "EXPENSE":
-
                 return expenses.map((expense) => ({
-                    label: `${expense.expenseNo || `Expense-${expense.id}`} - ${expense.vendorName || expense.description || "Expense"} - ${expense.totalAmount ?? 0}`,
+                    label: `${expense.expenseNo || `Expense-${expense.id}`} - ${expense.vendorName || expense.description || "Expense"} - ${expense.currencyCode || "INR"} ${expense.totalAmount ?? 0}`,
                     value: String(expense.id),
                 }));
 
             default:
                 return [];
         }
-
     }, [
         formData.paymentType,
         salesOrders,
@@ -699,17 +1074,187 @@ const PaymentCreate = () => {
     ]);
 
     /* =====================================================
+       SELECTED SOURCE DOCUMENT
+    ===================================================== */
+
+    const selectedSource = useMemo(() => {
+        if (!formData.sourceId) {
+            return null;
+        }
+
+        let sourceList = [];
+
+        switch (formData.paymentType) {
+            case "SALES":
+                sourceList = salesOrders;
+                break;
+
+            case "PURCHASE":
+                sourceList = purchaseOrders;
+                break;
+
+            case "EXPENSE":
+                sourceList = expenses;
+                break;
+
+            default:
+                sourceList = [];
+        }
+
+        return sourceList.find(
+            (item) => String(item.id) === String(formData.sourceId)
+        ) || null;
+    }, [
+        formData.paymentType,
+        formData.sourceId,
+        salesOrders,
+        purchaseOrders,
+        expenses,
+    ]);
+
+
+    /* =========================================================
+   SELECTED SOURCE EXCHANGE RATE
+========================================================= */
+
+    const sourceExchangeRate = useMemo(
+        () => getSourceExchangeRate(
+            selectedSource,
+            formData.paymentType
+        ),
+        [
+            selectedSource,
+            formData.paymentType,
+        ]
+    );
+
+    const sourceCurrencyCode = (
+        selectedSource?.currencyCode || "INR"
+    ).toUpperCase();
+
+    /* =====================================================
+       FETCH SELECTED SOURCE PAYMENTS
+
+       Sales and Purchase use completed payment records.
+       Expense summary comes directly from its API fields.
+    ===================================================== */
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadSourcePayments = async () => {
+            setSourcePayments([]);
+
+            if (
+                !formData.sourceId ||
+                !selectedSource ||
+                formData.paymentType === "EXPENSE"
+            ) {
+                setSourcePaymentLoading(false);
+                return;
+            }
+
+            setSourcePaymentLoading(true);
+
+            try {
+                const response = await dispatch(
+                    fetchPaymentsBySource({
+                        paymentType: formData.paymentType,
+                        sourceId: Number(formData.sourceId),
+                    })
+                ).unwrap();
+
+                if (!cancelled) {
+                    setSourcePayments(getPaymentList(response));
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    setSourcePayments([]);
+
+                    toast.error(
+                        typeof error === "string"
+                            ? error
+                            : "Unable to load source payment history"
+                    );
+                }
+            } finally {
+                if (!cancelled) {
+                    setSourcePaymentLoading(false);
+                }
+            }
+        };
+
+        loadSourcePayments();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        dispatch,
+        formData.paymentType,
+        formData.sourceId,
+        selectedSource,
+    ]);
+
+    /* =====================================================
+       SELECTED SOURCE PAID AMOUNT
+    ===================================================== */
+
+    const sourcePaidAmount = useMemo(
+        () => calculatePaidAmount(sourcePayments),
+        [sourcePayments]
+    );
+
+    /* =====================================================
+       SELECTED PARTY ID
+    ===================================================== */
+
+    const selectedPartyId = useMemo(() => {
+        if (!selectedSource) {
+            return null;
+        }
+
+        if (formData.paymentType === "SALES") {
+            return (
+                selectedSource.customer?.id ||
+                selectedSource.party?.id ||
+                selectedSource.customerId ||
+                selectedSource.partyId ||
+                selectedSource.customerParty?.id ||
+                null
+            );
+        }
+
+        if (formData.paymentType === "PURCHASE") {
+            return (
+                selectedSource.party?.id ||
+                selectedSource.supplier?.id ||
+                selectedSource.partyId ||
+                selectedSource.supplierId ||
+                selectedSource.supplierParty?.id ||
+                null
+            );
+        }
+
+        return null;
+    }, [
+        selectedSource,
+        formData.paymentType,
+    ]);
+
+    const isPartyCredit =
+        formData.paymentMethod === "PARTY_CREDIT";
+
+    /* =====================================================
        BANK ACCOUNT DROPDOWN OPTIONS
     ===================================================== */
 
     const bankAccountOptions = useMemo(() => {
-
         return bankAccounts
             .filter((account) =>
                 String(account.status ?? "").toUpperCase() !== "INACTIVE"
             )
             .map((account) => {
-
                 const accountName =
                     account.accountName ||
                     account.bankName ||
@@ -728,7 +1273,6 @@ const PaymentCreate = () => {
                     value: String(account.id),
                 };
             });
-
     }, [bankAccounts]);
 
     /* =====================================================
@@ -736,7 +1280,6 @@ const PaymentCreate = () => {
     ===================================================== */
 
     const cashAccountOptions = useMemo(() => {
-
         return cashAccounts
             .filter((account) =>
                 String(account.status ?? "").toUpperCase() === "ACTIVE"
@@ -745,15 +1288,29 @@ const PaymentCreate = () => {
                 label: `${account.accountName} - ${account.accountCode} (${account.currency})`,
                 value: String(account.id),
             }));
-
     }, [cashAccounts]);
 
     /* =====================================================
-       HANDLE FIELD CHANGE
+       SPLIT PAYMENT TOTAL
+    ===================================================== */
+
+    const splitTotal = useMemo(() => {
+        return allocations.reduce((total, allocation) => {
+            const amount = Number(allocation.paymentAmount);
+
+            return total + (
+                Number.isFinite(amount) && amount > 0
+                    ? amount
+                    : 0
+            );
+        }, 0);
+    }, [allocations]);
+
+    /* =====================================================
+       FIELD CHANGE
     ===================================================== */
 
     const handleChange = (field, value) => {
-
         setFormData((previous) => ({
             ...previous,
             [field]: value,
@@ -765,13 +1322,36 @@ const PaymentCreate = () => {
     ===================================================== */
 
     const handlePaymentTypeChange = (value) => {
-
         setFormData((previous) => ({
             ...previous,
             paymentType: value,
             sourceId: "",
             paymentAmount: "",
+
+            paymentMethod:
+                value === "EXPENSE" &&
+                    previous.paymentMethod === "PARTY_CREDIT"
+                    ? "BANK_TRANSFER"
+                    : previous.paymentMethod,
+
+            bankAccountId: "",
+            cashAccountId: "",
         }));
+
+        setSourcePayments([]);
+
+        setAllocations((previous) =>
+            previous.map((allocation) => ({
+                ...allocation,
+                paymentMethod:
+                    value === "EXPENSE" &&
+                        allocation.paymentMethod === "PARTY_CREDIT"
+                        ? "BANK_TRANSFER"
+                        : allocation.paymentMethod,
+                bankAccountId: "",
+                cashAccountId: "",
+            }))
+        );
     };
 
     /* =====================================================
@@ -779,7 +1359,6 @@ const PaymentCreate = () => {
     ===================================================== */
 
     const handlePaymentMethodChange = (value) => {
-
         setFormData((previous) => ({
             ...previous,
             paymentMethod: value,
@@ -789,15 +1368,90 @@ const PaymentCreate = () => {
     };
 
     /* =====================================================
+       SPLIT ALLOCATION HANDLERS
+    ===================================================== */
+
+    const handleAllocationChange = (index, field, value) => {
+        setAllocations((previous) =>
+            previous.map((allocation, allocationIndex) => {
+                if (allocationIndex !== index) {
+                    return allocation;
+                }
+
+                return {
+                    ...allocation,
+                    [field]: value,
+                };
+            })
+        );
+    };
+
+    const handleAllocationMethodChange = (index, value) => {
+        setAllocations((previous) =>
+            previous.map((allocation, allocationIndex) => {
+                if (allocationIndex !== index) {
+                    return allocation;
+                }
+
+                return {
+                    ...allocation,
+                    paymentMethod: value,
+                    bankAccountId: "",
+                    cashAccountId: "",
+                };
+            })
+        );
+    };
+
+    const handleAddAllocation = () => {
+        setAllocations((previous) => [
+            ...previous,
+            createEmptyAllocation(),
+        ]);
+    };
+
+    const handleRemoveAllocation = (index) => {
+        if (allocations.length <= 2) {
+            toast.error("Split payment requires at least two allocations");
+            return;
+        }
+
+        setAllocations((previous) =>
+            previous.filter((_, allocationIndex) => allocationIndex !== index)
+        );
+    };
+
+    /* =====================================================
+       SPLIT MODE CHANGE
+    ===================================================== */
+
+    const handleSplitModeChange = (enabled) => {
+        setIsSplitPayment(enabled);
+
+        setAllocations([
+            createEmptyAllocation(),
+            createEmptyAllocation(),
+        ]);
+    };
+
+    /* =====================================================
        RESET FORM
     ===================================================== */
 
     const handleReset = () => {
-
         setFormData({
             ...initialFormData,
             paymentDate: getToday(),
         });
+
+        setIsSplitPayment(false);
+
+        setAllocations([
+            createEmptyAllocation(),
+            createEmptyAllocation(),
+        ]);
+
+        setSourcePayments([]);
 
         setSaveMode("close");
         setShowSaveOptions(false);
@@ -806,32 +1460,10 @@ const PaymentCreate = () => {
     };
 
     /* =====================================================
-       VALIDATION
+       VALIDATE NORMAL PAYMENT
     ===================================================== */
 
-    const validateForm = () => {
-
-        if (!formData.paymentType) {
-            toast.error("Payment type is required");
-            return false;
-        }
-
-        const sourceId = Number(formData.sourceId);
-
-        if (
-            !formData.sourceId ||
-            !Number.isInteger(sourceId) ||
-            sourceId <= 0
-        ) {
-            toast.error(`Select a valid ${sourceLabel.toLowerCase()}`);
-            return false;
-        }
-
-        if (!formData.paymentDate) {
-            toast.error("Payment date is required");
-            return false;
-        }
-
+    const validateNormalPayment = () => {
         const amount = Number(formData.paymentAmount);
 
         if (
@@ -848,8 +1480,34 @@ const PaymentCreate = () => {
             return false;
         }
 
-        if (formData.paymentMethod === "CASH") {
+        if (isPartyCredit) {
+            if (
+                formData.paymentType !== "SALES" &&
+                formData.paymentType !== "PURCHASE"
+            ) {
+                toast.error(
+                    "Party Credit is available only for Sales and Purchase"
+                );
+                return false;
+            }
 
+            const partyId = Number(selectedPartyId);
+
+            if (
+                !selectedPartyId ||
+                !Number.isInteger(partyId) ||
+                partyId <= 0
+            ) {
+                toast.error(
+                    "The selected order does not contain a valid party"
+                );
+                return false;
+            }
+
+            return true;
+        }
+
+        if (formData.paymentMethod === "CASH") {
             const cashAccountId = Number(formData.cashAccountId);
 
             if (
@@ -860,9 +1518,7 @@ const PaymentCreate = () => {
                 toast.error("Select a valid cash account");
                 return false;
             }
-
         } else {
-
             const bankAccountId = Number(formData.bankAccountId);
 
             if (
@@ -879,11 +1535,183 @@ const PaymentCreate = () => {
     };
 
     /* =====================================================
+       VALIDATE SPLIT PAYMENT
+    ===================================================== */
+
+    const validateSplitPayment = () => {
+        if (!Array.isArray(allocations) || allocations.length < 2) {
+            toast.error("Add at least two payment allocations");
+            return false;
+        }
+
+        let total = 0;
+
+        for (let index = 0; index < allocations.length; index++) {
+            const allocation = allocations[index];
+
+            const amount = Number(allocation.paymentAmount);
+
+            if (
+                allocation.paymentAmount === "" ||
+                !Number.isFinite(amount) ||
+                amount <= 0
+            ) {
+                toast.error(
+                    `Enter a valid amount for allocation ${index + 1}`
+                );
+                return false;
+            }
+
+            total += amount;
+
+            if (!allocation.paymentMethod) {
+                toast.error(
+                    `Select payment method for allocation ${index + 1}`
+                );
+                return false;
+            }
+
+            if (
+                allocation.paymentMethod === "PARTY_CREDIT" &&
+                formData.paymentType === "EXPENSE"
+            ) {
+                toast.error(
+                    "Party Credit is not available for expenses"
+                );
+                return false;
+            }
+
+            if (allocation.paymentMethod === "CASH") {
+                const cashAccountId = Number(
+                    allocation.cashAccountId
+                );
+
+                if (
+                    !allocation.cashAccountId ||
+                    !Number.isInteger(cashAccountId) ||
+                    cashAccountId <= 0
+                ) {
+                    toast.error(
+                        `Select a cash account for allocation ${index + 1}`
+                    );
+                    return false;
+                }
+
+                if (allocation.bankAccountId) {
+                    toast.error(
+                        `Remove the bank account from allocation ${index + 1}`
+                    );
+                    return false;
+                }
+            } else if (
+                allocation.paymentMethod !== "PARTY_CREDIT"
+            ) {
+                const bankAccountId = Number(
+                    allocation.bankAccountId
+                );
+
+                if (
+                    !allocation.bankAccountId ||
+                    !Number.isInteger(bankAccountId) ||
+                    bankAccountId <= 0
+                ) {
+                    toast.error(
+                        `Select a bank account for allocation ${index + 1}`
+                    );
+                    return false;
+                }
+
+                if (allocation.cashAccountId) {
+                    toast.error(
+                        `Remove the cash account from allocation ${index + 1}`
+                    );
+                    return false;
+                }
+            } else if (
+                allocation.bankAccountId ||
+                allocation.cashAccountId
+            ) {
+                toast.error(
+                    `Party Credit allocation ${index + 1} must not contain a bank or cash account`
+                );
+                return false;
+            }
+        }
+
+        if (!Number.isFinite(total) || total <= 0) {
+            toast.error("Enter a valid total split payment amount");
+            return false;
+        }
+
+        return true;
+    };
+
+    /* =====================================================
+       COMMON VALIDATION
+    ===================================================== */
+
+    const validateForm = () => {
+        if (!formData.paymentType) {
+            toast.error("Payment type is required");
+            return false;
+        }
+
+        const sourceId = Number(formData.sourceId);
+
+        if (
+            !formData.sourceId ||
+            !Number.isInteger(sourceId) ||
+            sourceId <= 0
+        ) {
+            toast.error(`Select a valid ${sourceLabel.toLowerCase()}`);
+            return false;
+        }
+
+        if (!selectedSource) {
+            toast.error("Selected source document was not found");
+            return false;
+        }
+
+        if (!formData.paymentDate) {
+            toast.error("Payment date is required");
+            return false;
+        }
+
+        if (isSplitPayment) {
+            return validateSplitPayment();
+        }
+
+        return validateNormalPayment();
+    };
+
+    /* =====================================================
+       BUILD SPLIT ALLOCATIONS
+    ===================================================== */
+
+    const buildAllocationsPayload = () => {
+        return allocations.map((allocation) => ({
+            paymentAmount: Number(allocation.paymentAmount),
+
+            paymentMethod: allocation.paymentMethod,
+
+            bankAccountId:
+                allocation.paymentMethod === "PARTY_CREDIT" ||
+                    allocation.paymentMethod === "CASH"
+                    ? null
+                    : Number(allocation.bankAccountId),
+
+            cashAccountId:
+                allocation.paymentMethod === "CASH"
+                    ? Number(allocation.cashAccountId)
+                    : null,
+        }));
+    };
+
+    /* =====================================================
        SAVE PAYMENT
     ===================================================== */
 
     const handleSubmit = async (e) => {
-
         e.preventDefault();
 
         if (actionLoading || loading) {
@@ -909,27 +1737,10 @@ const PaymentCreate = () => {
             return;
         }
 
-        const payload = {
-
+        const commonPayload = {
             paymentType: formData.paymentType,
-
             sourceId: Number(formData.sourceId),
-
             paymentDate: formData.paymentDate,
-
-            paymentAmount: Number(formData.paymentAmount),
-
-            paymentMethod: formData.paymentMethod,
-
-            bankAccountId:
-                formData.paymentMethod === "CASH"
-                    ? null
-                    : Number(formData.bankAccountId),
-
-            cashAccountId:
-                formData.paymentMethod === "CASH"
-                    ? Number(formData.cashAccountId)
-                    : null,
 
             referenceNumber:
                 formData.referenceNumber.trim() || null,
@@ -938,23 +1749,63 @@ const PaymentCreate = () => {
                 formData.notes.trim() || null,
         };
 
-        try {
+        const payload = isSplitPayment
+            ? {
+                ...commonPayload,
+                allocations: buildAllocationsPayload(),
+            }
+            : {
+                ...commonPayload,
 
+                ...(isPartyCredit && {
+                    partyId: Number(selectedPartyId),
+                }),
+
+                paymentAmount: Number(formData.paymentAmount),
+
+                paymentMethod: formData.paymentMethod,
+
+                bankAccountId: isPartyCredit
+                    ? null
+                    : formData.paymentMethod === "CASH"
+                        ? null
+                        : Number(formData.bankAccountId),
+
+                cashAccountId: isPartyCredit
+                    ? null
+                    : formData.paymentMethod === "CASH"
+                        ? Number(formData.cashAccountId)
+                        : null,
+            };
+
+        try {
             const response = await dispatch(
                 createPayment(payload)
             ).unwrap();
 
             toast.success(
                 response?.message ||
-                "Payment recorded successfully"
+                (
+                    isSplitPayment
+                        ? "Split payment recorded successfully"
+                        : "Payment recorded successfully"
+                )
             );
 
             if (saveMode === "new") {
-
                 setFormData({
                     ...initialFormData,
                     paymentDate: getToday(),
                 });
+
+                setIsSplitPayment(false);
+
+                setAllocations([
+                    createEmptyAllocation(),
+                    createEmptyAllocation(),
+                ]);
+
+                setSourcePayments([]);
 
                 dispatch(resetPaymentForm());
 
@@ -966,9 +1817,7 @@ const PaymentCreate = () => {
             dispatch(resetPaymentForm());
 
             navigate("/inventory/payments");
-
         } catch (error) {
-
             console.error("Payment creation error:", error);
 
             toast.error(
@@ -985,9 +1834,7 @@ const PaymentCreate = () => {
     ===================================================== */
 
     useEffect(() => {
-
         const handleEscape = (event) => {
-
             if (event.key === "Escape") {
                 setShowSaveOptions(false);
             }
@@ -998,7 +1845,6 @@ const PaymentCreate = () => {
         return () => {
             window.removeEventListener("keydown", handleEscape);
         };
-
     }, []);
 
     /* =====================================================
@@ -1006,7 +1852,6 @@ const PaymentCreate = () => {
     ===================================================== */
 
     if (authChecking) {
-
         return (
             <div className="
                 flex h-full items-center justify-center bg-gray-50
@@ -1027,7 +1872,6 @@ const PaymentCreate = () => {
         !hasFullAccess &&
         (permissionLoading || !permissionsLoaded)
     ) {
-
         return (
             <div className="
                 flex h-full items-center justify-center bg-gray-50
@@ -1045,14 +1889,12 @@ const PaymentCreate = () => {
     ===================================================== */
 
     if (!hasRequiredPermission) {
-
         return (
             <div className="
                 flex h-full items-center justify-center
                 rounded-xl bg-white p-8
             ">
                 <div className="text-center">
-
                     <div className="
                         mx-auto mb-3 flex h-12 w-12
                         items-center justify-center
@@ -1081,7 +1923,6 @@ const PaymentCreate = () => {
                     >
                         Go Back
                     </button>
-
                 </div>
             </div>
         );
@@ -1105,9 +1946,7 @@ const PaymentCreate = () => {
                 border-b-[3px] border-[#B7E34A]
                 bg-white px-5 py-4 shadow-sm
             ">
-
                 <div className="flex items-center gap-3">
-
                     <button
                         type="button"
                         onClick={() => navigate(-1)}
@@ -1130,7 +1969,6 @@ const PaymentCreate = () => {
                             Record money received or paid for a business transaction
                         </p>
                     </div>
-
                 </div>
 
                 <div className="
@@ -1143,7 +1981,6 @@ const PaymentCreate = () => {
                         Payment
                     </span>
                 </div>
-
             </div>
 
             {/* FORM */}
@@ -1164,7 +2001,6 @@ const PaymentCreate = () => {
                     {/* PAYMENT DETAILS */}
 
                     <section className="mb-7">
-
                         <SectionHeading
                             icon={Receipt}
                             title="Payment Details"
@@ -1177,21 +2013,18 @@ const PaymentCreate = () => {
                         ">
 
                             <FormField label="Payment Type" required>
-
                                 <CustomSelect
                                     value={formData.paymentType}
                                     onChange={handlePaymentTypeChange}
                                     options={paymentTypeOptions}
                                     placeholder="Select payment type"
                                 />
-
                             </FormField>
 
                             <FormField
                                 label={sourceLabel}
                                 required
                             >
-
                                 <CustomSelect
                                     value={formData.sourceId}
                                     onChange={(value) =>
@@ -1200,11 +2033,9 @@ const PaymentCreate = () => {
                                     options={sourceOptions}
                                     placeholder={`Select ${sourceLabel.toLowerCase()}`}
                                 />
-
                             </FormField>
 
                             <FormField label="Payment Date" required>
-
                                 <TextInput
                                     type="date"
                                     value={formData.paymentDate}
@@ -1215,36 +2046,6 @@ const PaymentCreate = () => {
                                         )
                                     }
                                 />
-
-                            </FormField>
-
-                            <FormField label="Payment Amount" required>
-
-                                <TextInput
-                                    type="number"
-                                    value={formData.paymentAmount}
-                                    onChange={(e) =>
-                                        handleChange(
-                                            "paymentAmount",
-                                            e.target.value
-                                        )
-                                    }
-                                    placeholder="Enter payment amount"
-                                    min="0.01"
-                                    step="0.01"
-                                />
-
-                            </FormField>
-
-                            <FormField label="Payment Method" required>
-
-                                <CustomSelect
-                                    value={formData.paymentMethod}
-                                    onChange={handlePaymentMethodChange}
-                                    options={paymentMethodOptions}
-                                    placeholder="Select payment method"
-                                />
-
                             </FormField>
 
                         </div>
@@ -1255,78 +2056,454 @@ const PaymentCreate = () => {
                             </p>
                         )}
 
+                        {/* SOURCE PAYMENT SUMMARY */}
+
+                        <SourcePaymentSummary
+                            source={selectedSource}
+                            paymentType={formData.paymentType}
+                            paymentLoading={sourcePaymentLoading}
+                            paidAmount={sourcePaidAmount}
+                            exchangeRate={sourceExchangeRate}
+                        />
                     </section>
 
                     <div className="my-6 border-t border-gray-100" />
 
-                    {/* PAYMENT ACCOUNT */}
+                    {/* PAYMENT MODE */}
 
                     <section className="mb-7">
 
-                        <SectionHeading
-                            icon={Building2}
-                            title="Payment Account"
-                            description="Select the bank or cash account used for this transaction"
-                        />
-
                         <div className="
-                            grid grid-cols-1 gap-5
-                            md:grid-cols-2 lg:grid-cols-3
+                            mb-5 flex flex-wrap items-center
+                            justify-between gap-3
                         ">
+                            <SectionHeading
+                                icon={Wallet}
+                                title="Payment Method"
+                                description="Choose normal payment or split the payment across multiple methods"
+                            />
 
-                            {formData.paymentMethod !== "CASH" ? (
-
-                                <FormField
-                                    label="Bank Account"
-                                    required
-                                >
-
-                                    <CustomSelect
-                                        value={formData.bankAccountId}
-                                        onChange={(value) =>
-                                            handleChange(
-                                                "bankAccountId",
-                                                value
-                                            )
+                            <div className="
+                                flex items-center gap-1 rounded-lg
+                                border border-gray-200 bg-gray-50 p-1
+                            ">
+                                <button
+                                    type="button"
+                                    onClick={() => handleSplitModeChange(false)}
+                                    className={`
+                                        rounded-md px-3 py-2 text-xs
+                                        font-medium transition
+                                        ${!isSplitPayment
+                                            ? "bg-white text-[#408DFB] shadow-sm"
+                                            : "text-gray-500 hover:text-gray-700"
                                         }
-                                        options={bankAccountOptions}
-                                        placeholder="Select bank account"
-                                    />
-
-                                </FormField>
-
-                            ) : (
-
-                                <FormField
-                                    label="Cash Account"
-                                    required
+                                    `}
                                 >
+                                    Normal Payment
+                                </button>
 
-                                    <CustomSelect
-                                        value={formData.cashAccountId}
-                                        onChange={(value) =>
-                                            handleChange(
-                                                "cashAccountId",
-                                                value
-                                            )
+                                <button
+                                    type="button"
+                                    onClick={() => handleSplitModeChange(true)}
+                                    className={`
+                                        rounded-md px-3 py-2 text-xs
+                                        font-medium transition
+                                        ${isSplitPayment
+                                            ? "bg-white text-[#408DFB] shadow-sm"
+                                            : "text-gray-500 hover:text-gray-700"
                                         }
-                                        options={cashAccountOptions}
-                                        placeholder="Select cash account"
-                                    />
-
-                                </FormField>
-
-                            )}
-
+                                    `}
+                                >
+                                    Split Payment
+                                </button>
+                            </div>
                         </div>
 
-                        <p className="mt-4 text-xs text-gray-400">
-                            {formData.paymentMethod === "CASH"
-                                ? "The selected cash account will be used for this payment."
-                                : "The selected bank account will be used for this payment."
-                            }
-                        </p>
+                        {!isSplitPayment ? (
+                            <>
+                                <div className="
+                                    grid grid-cols-1 gap-5
+                                    md:grid-cols-2 lg:grid-cols-3
+                                ">
+                                    <FormField label="Payment Amount" required>
+                                        <div>
+                                            <TextInput
+                                                type="number"
+                                                value={formData.paymentAmount}
+                                                onChange={(e) =>
+                                                    handleChange(
+                                                        "paymentAmount",
+                                                        e.target.value
+                                                    )
+                                                }
+                                                placeholder="Enter payment amount"
+                                                min="0.01"
+                                                step="0.01"
+                                            />
 
+                                            <PaymentAmountInrHint
+                                                amount={formData.paymentAmount}
+                                                currencyCode={sourceCurrencyCode}
+                                                exchangeRate={sourceExchangeRate}
+                                            />
+                                        </div>
+                                    </FormField>
+
+                                    <FormField label="Payment Method" required>
+                                        <CustomSelect
+                                            value={formData.paymentMethod}
+                                            onChange={handlePaymentMethodChange}
+                                            options={paymentMethodOptions}
+                                            placeholder="Select payment method"
+                                        />
+                                    </FormField>
+                                </div>
+
+                                {isPartyCredit ? (
+                                    <div className="
+                                        mt-5 rounded-xl border border-blue-100
+                                        bg-blue-50/60 p-4
+                                    ">
+                                        <div className="flex items-start gap-3">
+                                            <div className="
+                                                flex h-10 w-10 shrink-0
+                                                items-center justify-center
+                                                rounded-lg bg-white
+                                                text-[#408DFB]
+                                            ">
+                                                <Wallet size={19} />
+                                            </div>
+
+                                            <div className="min-w-0 flex-1">
+                                                <h4 className="text-sm font-semibold text-gray-800">
+                                                    {formData.paymentType === "SALES"
+                                                        ? "Customer Credit"
+                                                        : "Supplier Credit"
+                                                    }
+                                                </h4>
+
+                                                <p className="mt-1 text-xs leading-5 text-gray-600">
+                                                    {formData.paymentType === "SALES"
+                                                        ? "The payment amount will be added to the customer's outstanding receivable balance."
+                                                        : "The payment amount will be added to the supplier's outstanding payable balance."
+                                                    }
+                                                </p>
+
+                                                <div className="
+                                                    mt-3 flex flex-wrap
+                                                    items-center gap-x-5 gap-y-2
+                                                ">
+                                                    <div>
+                                                        <p className="text-[11px] text-gray-400">
+                                                            Party ID
+                                                        </p>
+
+                                                        <p className="mt-0.5 text-sm font-semibold text-gray-700">
+                                                            {selectedPartyId || "Not available"}
+                                                        </p>
+                                                    </div>
+
+                                                    <div>
+                                                        <p className="text-[11px] text-gray-400">
+                                                            Payment Amount
+                                                        </p>
+
+                                                        <p className="mt-0.5 text-sm font-semibold text-gray-700">
+                                                            {formData.paymentAmount
+                                                                ? Number(formData.paymentAmount).toLocaleString(
+                                                                    "en-IN",
+                                                                    {
+                                                                        minimumFractionDigits: 2,
+                                                                        maximumFractionDigits: 2,
+                                                                    }
+                                                                )
+                                                                : "0.00"
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {!selectedPartyId && formData.sourceId && (
+                                                    <p className="mt-3 text-xs font-medium text-red-500">
+                                                        A valid party could not be identified from this order. Please check the source document response.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <p className="mt-3 text-xs text-gray-400">
+                                            No bank or cash account is required for Party Credit.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="
+                                        mt-5 grid grid-cols-1 gap-5
+                                        md:grid-cols-2 lg:grid-cols-3
+                                    ">
+                                        {formData.paymentMethod === "CASH" ? (
+                                            <FormField
+                                                label="Cash Account"
+                                                required
+                                            >
+                                                <CustomSelect
+                                                    value={formData.cashAccountId}
+                                                    onChange={(value) =>
+                                                        handleChange(
+                                                            "cashAccountId",
+                                                            value
+                                                        )
+                                                    }
+                                                    options={cashAccountOptions}
+                                                    placeholder="Select cash account"
+                                                />
+                                            </FormField>
+                                        ) : (
+                                            <FormField
+                                                label="Bank Account"
+                                                required
+                                            >
+                                                <CustomSelect
+                                                    value={formData.bankAccountId}
+                                                    onChange={(value) =>
+                                                        handleChange(
+                                                            "bankAccountId",
+                                                            value
+                                                        )
+                                                    }
+                                                    options={bankAccountOptions}
+                                                    placeholder="Select bank account"
+                                                />
+                                            </FormField>
+                                        )}
+                                    </div>
+                                )}
+
+                            </>
+                        ) : (
+                            <div className="
+                                rounded-xl border border-gray-200
+                                bg-gray-50/60 p-4
+                            ">
+
+                                <div className="
+                                    mb-4 flex flex-wrap items-center
+                                    justify-between gap-3
+                                ">
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-gray-800">
+                                            Payment Allocations
+                                        </h4>
+
+                                        <p className="mt-1 text-xs text-gray-400">
+                                            Add separate payment methods and accounts for this transaction.
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleAddAllocation}
+                                        className="
+                                            flex items-center gap-2
+                                            rounded-lg bg-[#408DFB]
+                                            px-3 py-2 text-xs
+                                            font-medium text-white
+                                            transition hover:bg-blue-600
+                                        "
+                                    >
+                                        <Plus size={15} />
+                                        Add Allocation
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {allocations.map((allocation, index) => {
+                                        const allocationIsCredit =
+                                            allocation.paymentMethod === "PARTY_CREDIT";
+
+                                        const allocationIsCash =
+                                            allocation.paymentMethod === "CASH";
+
+                                        return (
+                                            <div
+                                                key={index}
+                                                className="
+                                                    rounded-xl border
+                                                    border-gray-200 bg-white p-4
+                                                "
+                                            >
+                                                <div className="
+                                                    mb-4 flex items-center
+                                                    justify-between
+                                                ">
+                                                    <h5 className="text-sm font-semibold text-gray-700">
+                                                        Allocation {index + 1}
+                                                    </h5>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleRemoveAllocation(index)
+                                                        }
+                                                        disabled={allocations.length <= 2}
+                                                        className="
+                                                            flex h-8 w-8 items-center
+                                                            justify-center rounded-lg
+                                                            text-gray-400 transition
+                                                            hover:bg-red-50 hover:text-red-500
+                                                            disabled:cursor-not-allowed
+                                                            disabled:opacity-30
+                                                        "
+                                                        title="Remove allocation"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+
+                                                <div className="
+                                                    grid grid-cols-1 gap-4
+                                                    md:grid-cols-2 lg:grid-cols-3
+                                                ">
+                                                    <FormField
+                                                        label="Payment Amount"
+                                                        required
+                                                    >
+                                                        <div>
+                                                            <TextInput
+                                                                type="number"
+                                                                value={allocation.paymentAmount}
+                                                                onChange={(e) =>
+                                                                    handleAllocationChange(
+                                                                        index,
+                                                                        "paymentAmount",
+                                                                        e.target.value
+                                                                    )
+                                                                }
+                                                                placeholder="Enter amount"
+                                                                min="0.01"
+                                                                step="0.01"
+                                                            />
+
+                                                            <PaymentAmountInrHint
+                                                                amount={allocation.paymentAmount}
+                                                                currencyCode={sourceCurrencyCode}
+                                                                exchangeRate={sourceExchangeRate}
+                                                            />
+                                                        </div>
+                                                    </FormField>
+                                                    <FormField
+                                                        label="Payment Method"
+                                                        required
+                                                    >
+                                                        <CustomSelect
+                                                            value={allocation.paymentMethod}
+                                                            onChange={(value) =>
+                                                                handleAllocationMethodChange(
+                                                                    index,
+                                                                    value
+                                                                )
+                                                            }
+                                                            options={paymentMethodOptions}
+                                                            placeholder="Select payment method"
+                                                        />
+                                                    </FormField>
+
+                                                    {allocationIsCredit ? (
+                                                        <div className="
+                                                            flex items-center
+                                                            rounded-lg border
+                                                            border-blue-100
+                                                            bg-blue-50 px-3 py-2
+                                                        ">
+                                                            <div>
+                                                                <p className="text-xs font-semibold text-blue-700">
+                                                                    Party Credit
+                                                                </p>
+
+                                                                <p className="mt-0.5 text-[11px] text-blue-600">
+                                                                    No account required
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    ) : allocationIsCash ? (
+                                                        <FormField
+                                                            label="Cash Account"
+                                                            required
+                                                        >
+                                                            <CustomSelect
+                                                                value={allocation.cashAccountId}
+                                                                onChange={(value) =>
+                                                                    handleAllocationChange(
+                                                                        index,
+                                                                        "cashAccountId",
+                                                                        value
+                                                                    )
+                                                                }
+                                                                options={cashAccountOptions}
+                                                                placeholder="Select cash account"
+                                                            />
+                                                        </FormField>
+                                                    ) : (
+                                                        <FormField
+                                                            label="Bank Account"
+                                                            required
+                                                        >
+                                                            <CustomSelect
+                                                                value={allocation.bankAccountId}
+                                                                onChange={(value) =>
+                                                                    handleAllocationChange(
+                                                                        index,
+                                                                        "bankAccountId",
+                                                                        value
+                                                                    )
+                                                                }
+                                                                options={bankAccountOptions}
+                                                                placeholder="Select bank account"
+                                                            />
+                                                        </FormField>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* SPLIT TOTAL */}
+
+                                <div className="
+                                    mt-4 flex flex-wrap
+                                    items-center justify-between
+                                    gap-3 rounded-lg border
+                                    border-blue-100 bg-blue-50
+                                    px-4 py-3
+                                ">
+                                    <div>
+                                        <p className="text-xs text-gray-500">
+                                            Total Allocated Amount
+                                        </p>
+
+                                        <p className="mt-1 text-lg font-semibold text-gray-800">
+                                            {splitTotal.toLocaleString(
+                                                "en-IN",
+                                                {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2,
+                                                }
+                                            )}
+                                        </p>
+                                    </div>
+
+                                    <p className="text-xs text-gray-500">
+                                        {allocations.length} allocations
+                                    </p>
+                                </div>
+
+                                {formData.paymentType === "EXPENSE" && (
+                                    <p className="mt-3 text-xs text-gray-400">
+                                        Party Credit is not available for expenses.
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </section>
 
                     <div className="my-6 border-t border-gray-100" />
@@ -1334,7 +2511,6 @@ const PaymentCreate = () => {
                     {/* ADDITIONAL INFORMATION */}
 
                     <section>
-
                         <SectionHeading
                             icon={FileText}
                             title="Additional Information"
@@ -1345,9 +2521,7 @@ const PaymentCreate = () => {
                             grid grid-cols-1 gap-5
                             md:grid-cols-2
                         ">
-
                             <FormField label="Reference Number">
-
                                 <TextInput
                                     value={formData.referenceNumber}
                                     onChange={(e) =>
@@ -1359,11 +2533,9 @@ const PaymentCreate = () => {
                                     placeholder="Enter transaction reference number"
                                     maxLength={100}
                                 />
-
                             </FormField>
 
                             <FormField label="Notes">
-
                                 <TextAreaField
                                     value={formData.notes}
                                     onChange={(e) =>
@@ -1375,13 +2547,9 @@ const PaymentCreate = () => {
                                     placeholder="Enter payment notes"
                                     rows={3}
                                 />
-
                             </FormField>
-
                         </div>
-
                     </section>
-
                 </div>
 
                 {/* FOOTER */}
@@ -1391,7 +2559,6 @@ const PaymentCreate = () => {
                     justify-between gap-3 border-t
                     border-gray-100 bg-white px-5 py-3
                 ">
-
                     <button
                         type="button"
                         onClick={() => navigate(-1)}
@@ -1407,7 +2574,6 @@ const PaymentCreate = () => {
                     </button>
 
                     <div className="flex items-center gap-2">
-
                         <button
                             type="button"
                             onClick={handleReset}
@@ -1436,7 +2602,6 @@ const PaymentCreate = () => {
                                 disabled:opacity-60
                             "
                         >
-
                             {actionLoading ? (
                                 <Loader2
                                     size={16}
@@ -1450,11 +2615,9 @@ const PaymentCreate = () => {
                                 ? "Saving..."
                                 : "Save"
                             }
-
                         </button>
 
                         <div className="relative">
-
                             <button
                                 type="button"
                                 disabled={actionLoading || loading}
@@ -1472,14 +2635,12 @@ const PaymentCreate = () => {
                             </button>
 
                             {showSaveOptions && (
-
                                 <div className="
                                     absolute bottom-11 right-0 z-20
                                     w-44 overflow-hidden rounded-lg
                                     border border-gray-100 bg-white
                                     py-1 shadow-lg
                                 ">
-
                                     <button
                                         type="submit"
                                         onClick={() => {
@@ -1511,18 +2672,12 @@ const PaymentCreate = () => {
                                     >
                                         Save & Close
                                     </button>
-
                                 </div>
                             )}
-
                         </div>
-
                     </div>
-
                 </div>
-
             </form>
-
         </div>
     );
 };

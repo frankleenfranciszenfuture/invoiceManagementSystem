@@ -15,58 +15,49 @@ import {
 export const emptyPayment = {
   id: null,
 
-  // Payment details
   paymentNumber: "",
   paymentType: "SALES",
   paymentDirection: "RECEIVED",
 
-  // Source document
   sourceId: null,
   sourceNumber: "",
 
-  // Payment date
   paymentDate: "",
 
-  // Amount details
   paymentAmount: 0,
   baseAmount: 0,
   exchangeRate: 1,
 
-  // Currency
   currencyId: null,
   currencyCode: "",
   currencyName: "",
 
-  // Payment method
   paymentMethod: "BANK_TRANSFER",
 
-  // Bank account
   bankAccountId: null,
   bankAccountName: "",
 
-  // Cash account
   cashAccountId: null,
   cashAccountName: "",
 
-  // Customer
   customerId: null,
   customerName: "",
 
-  // Party / Supplier
   partyId: null,
   partyName: "",
 
-  // Additional details
   referenceNumber: "",
   notes: "",
 
-  // Status
   paymentStatus: "COMPLETED",
 
-  // Reversal details
   reversalReason: "",
 
-  // Audit
+  // Split payment response
+  allocations: [],
+  totalAllocatedAmount: 0,
+  allocationCount: 0,
+
   audit: {
     createdAt: null,
     updatedAt: null,
@@ -88,6 +79,9 @@ const initialState = {
 
   sourcePayments: [],
 
+  // Latest create payment response
+  createdPayment: null,
+
   loading: false,
   actionLoading: false,
   error: null,
@@ -103,6 +97,35 @@ const initialState = {
 };
 
 /* =========================================================
+   HELPERS
+========================================================= */
+
+const normalizePayment = (payment) => ({
+  ...emptyPayment,
+  ...payment,
+  audit: {
+    ...emptyPayment.audit,
+    ...(payment?.audit ?? {}),
+  },
+});
+
+const getCreatedPayments = (response) => {
+  if (!response) return [];
+
+  // Split payment response
+  if (Array.isArray(response.allocations) && response.allocations.length > 0) {
+    return response.allocations;
+  }
+
+  // Normal payment response
+  if (response.id) {
+    return [response];
+  }
+
+  return [];
+};
+
+/* =========================================================
    SLICE
 ========================================================= */
 
@@ -113,14 +136,7 @@ const paymentSlice = createSlice({
   reducers: {
     // Set existing payment
     setExistingPayment: (state, action) => {
-      state.payment = {
-        ...emptyPayment,
-        ...action.payload,
-        audit: {
-          ...emptyPayment.audit,
-          ...(action.payload?.audit ?? {}),
-        },
-      };
+      state.payment = normalizePayment(action.payload);
     },
 
     // Update payment form field
@@ -149,12 +165,18 @@ const paymentSlice = createSlice({
       state.success = false;
     },
 
+    // Clear latest created payment response
+    clearCreatedPayment: (state) => {
+      state.createdPayment = null;
+    },
+
     // Reset complete payment state
     resetPaymentState: () => ({
       ...initialState,
       payment: { ...emptyPayment },
       payments: [],
       sourcePayments: [],
+      createdPayment: null,
       pagination: { ...initialState.pagination },
     }),
   },
@@ -216,14 +238,7 @@ const paymentSlice = createSlice({
 
         const fetchedPayment = action.payload?.data ?? {};
 
-        state.payment = {
-          ...emptyPayment,
-          ...fetchedPayment,
-          audit: {
-            ...emptyPayment.audit,
-            ...(fetchedPayment.audit ?? {}),
-          },
-        };
+        state.payment = normalizePayment(fetchedPayment);
 
         state.error = null;
       })
@@ -243,17 +258,46 @@ const paymentSlice = createSlice({
         state.actionLoading = true;
         state.error = null;
         state.success = false;
+        state.createdPayment = null;
       })
 
       .addCase(createPayment.fulfilled, (state, action) => {
         state.actionLoading = false;
         state.success = true;
 
-        const createdPayment = action.payload?.data ?? null;
+        const response = action.payload?.data ?? null;
 
-        if (createdPayment?.id) {
-          state.payments.unshift(createdPayment);
-          state.pagination.totalElements += 1;
+        state.createdPayment = response;
+
+        const createdPayments = getCreatedPayments(response);
+
+        if (createdPayments.length > 0) {
+          const normalizedPayments = createdPayments.map(normalizePayment);
+
+          // Add individual payments, not the summary object.
+          const existingIds = new Set(state.payments.map((item) => item.id));
+
+          const newPayments = normalizedPayments.filter(
+            (item) => !existingIds.has(item.id),
+          );
+
+          state.payments = [...newPayments, ...state.payments];
+
+          state.pagination.totalElements += newPayments.length;
+
+          // Update source payments with individual allocations.
+          const existingSourceIds = new Set(
+            state.sourcePayments.map((item) => item.id),
+          );
+
+          const newSourcePayments = normalizedPayments.filter(
+            (item) => !existingSourceIds.has(item.id),
+          );
+
+          state.sourcePayments = [
+            ...newSourcePayments,
+            ...state.sourcePayments,
+          ];
         }
 
         state.payment = { ...emptyPayment };
@@ -314,22 +358,19 @@ const paymentSlice = createSlice({
 
         if (reversedPayment?.id) {
           state.payments = state.payments.map((item) =>
-            item.id === reversedPayment.id ? reversedPayment : item,
+            item.id === reversedPayment.id
+              ? normalizePayment(reversedPayment)
+              : item,
           );
 
           state.sourcePayments = state.sourcePayments.map((item) =>
-            item.id === reversedPayment.id ? reversedPayment : item,
+            item.id === reversedPayment.id
+              ? normalizePayment(reversedPayment)
+              : item,
           );
 
           if (state.payment.id === reversedPayment.id) {
-            state.payment = {
-              ...emptyPayment,
-              ...reversedPayment,
-              audit: {
-                ...emptyPayment.audit,
-                ...(reversedPayment.audit ?? {}),
-              },
-            };
+            state.payment = normalizePayment(reversedPayment);
           }
         }
 
@@ -355,6 +396,7 @@ export const {
   clearSelectedPayment,
   clearPaymentError,
   clearPaymentSuccess,
+  clearCreatedPayment,
   resetPaymentState,
 } = paymentSlice.actions;
 

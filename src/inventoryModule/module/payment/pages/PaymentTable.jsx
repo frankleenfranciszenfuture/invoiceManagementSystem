@@ -307,7 +307,7 @@ export default function PaymentTable({
 
         dispatch(setExistingPayment(payment));
 
-        navigate(`/payments/view/${payment.id}`);
+        navigate(`/inventory/payments/view/${payment.id}`);
     };
 
     /* =====================================================
