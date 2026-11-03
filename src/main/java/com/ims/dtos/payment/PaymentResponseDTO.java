@@ -10,6 +10,7 @@ import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @SuperBuilder
@@ -64,9 +65,15 @@ public class PaymentResponseDTO extends BaseResponse {
 
     private String referenceNumber;
 
+
+    private List<PaymentResponseDTO> allocations;
+    private BigDecimal totalAllocatedAmount;
+    private Integer allocationCount;
+
     private String notes;
 
     private PaymentStatus paymentStatus;
 
     private String reversalReason;
+
 }

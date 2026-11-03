@@ -1,6 +1,5 @@
 package com.ims.mapper.payment;
 
-
 import com.ims.dtos.payment.PaymentResponseDTO;
 import com.ims.entity.PaymentEntity;
 import org.mapstruct.Mapper;
@@ -29,6 +28,11 @@ public interface PaymentMapper {
 
     @Mapping(target = "partyId", source = "party.id")
     @Mapping(target = "partyName", source = "party.companyName")
+
+    // Split-payment summary fields are populated in the service.
+    @Mapping(target = "allocations", ignore = true)
+    @Mapping(target = "totalAllocatedAmount", ignore = true)
+    @Mapping(target = "allocationCount", ignore = true)
 
     PaymentResponseDTO toResponse(PaymentEntity entity);
 }

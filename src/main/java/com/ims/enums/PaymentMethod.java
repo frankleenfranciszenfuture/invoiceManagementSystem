@@ -9,6 +9,7 @@ public enum PaymentMethod {
     CARD,
     CREDIT,
     PAY_LATER,
-    DEPOSIT
+    DEPOSIT,
+    PARTY_CREDIT
 
 }

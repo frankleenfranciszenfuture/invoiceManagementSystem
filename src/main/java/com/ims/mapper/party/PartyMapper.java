@@ -33,9 +33,7 @@ public interface PartyMapper {
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "addresses", ignore = true)
     @Mapping(target = "bankAccounts", ignore = true)
-    PartyEntity toEntity(
-            PartyRequest request
-    );
+    PartyEntity toEntity(PartyRequest request);
 
 
     //=====================================================
@@ -45,13 +43,12 @@ public interface PartyMapper {
     @Mapping(target = "audit", source = ".")
     @Mapping(target = "addresses", source = "addresses")
     @Mapping(target = "bankAccounts", source = "bankAccounts")
-    PartyResponse toResponse(
-            PartyEntity entity
-    );
+    @Mapping(target = "outstandingCredit", source = "outstandingCredit")
+    @Mapping(target = "outstandingReceivable", source = "outstandingReceivable")
+    @Mapping(target = "outstandingPayable", source = "outstandingPayable")
+    PartyResponse toResponse(PartyEntity entity);
 
-    List<PartyResponse> toResponseList(
-            List<PartyEntity> entities
-    );
+    List<PartyResponse> toResponseList(List<PartyEntity> entities);
 
 
     //=====================================================
@@ -64,6 +61,8 @@ public interface PartyMapper {
     @Mapping(target = "addresses", ignore = true)
     @Mapping(target = "bankAccounts", ignore = true)
     @Mapping(target = "outstandingCredit", ignore = true)
+    @Mapping(target = "outstandingReceivable", ignore = true)
+    @Mapping(target = "outstandingPayable", ignore = true)
     @Mapping(target = "active", ignore = true)
 
     @Mapping(target = "createdAt", ignore = true)
@@ -82,9 +81,7 @@ public interface PartyMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "party", ignore = true)
-    PartyAddressEntity toAddressEntity(
-            PartyAddressRequest request
-    );
+    PartyAddressEntity toAddressEntity(PartyAddressRequest request);
 
     List<PartyAddressEntity> toAddressEntityList(
             List<PartyAddressRequest> requests
@@ -96,9 +93,7 @@ public interface PartyMapper {
     //=====================================================
 
     @Mapping(target = "audit", source = ".")
-    PartyAddressResponse toAddressResponse(
-            PartyAddressEntity entity
-    );
+    PartyAddressResponse toAddressResponse(PartyAddressEntity entity);
 
     List<PartyAddressResponse> toAddressResponseList(
             List<PartyAddressEntity> entities

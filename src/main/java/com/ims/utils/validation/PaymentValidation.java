@@ -1,5 +1,6 @@
 package com.ims.utils.validation;
 
+import com.ims.dtos.payment.PaymentAllocationRequestDTO;
 import com.ims.entity.BankAccount;
 import com.ims.entity.CashAccountEntity;
 import com.ims.enums.BankAccountStatus;
@@ -95,4 +96,52 @@ public class PaymentValidation {
             validateBankAccount(request.getBankAccountId());
         }
     }
+
+    public void validatePaymentAccount(PaymentAllocationRequestDTO request) {
+
+        PaymentMethod method = request.getPaymentMethod();
+
+        if (method == PaymentMethod.PARTY_CREDIT) {
+            if (request.getBankAccountId() != null ||
+                    request.getCashAccountId() != null) {
+                throw new IllegalArgumentException(
+                        "Party Credit cannot have a bank or cash account"
+                );
+            }
+            return;
+        }
+
+        if (method == PaymentMethod.CASH) {
+
+            if (request.getCashAccountId() == null) {
+                throw new IllegalArgumentException(
+                        "Cash account is required for cash payment"
+                );
+            }
+
+            if (request.getBankAccountId() != null) {
+                throw new IllegalArgumentException(
+                        "Bank account is not allowed for cash payment"
+                );
+            }
+
+            validateCashAccount(request.getCashAccountId());
+            return;
+        }
+
+        if (request.getBankAccountId() == null) {
+            throw new IllegalArgumentException(
+                    "Bank account is required for this payment method"
+            );
+        }
+
+        if (request.getCashAccountId() != null) {
+            throw new IllegalArgumentException(
+                    "Cash account is not allowed for this payment method"
+            );
+        }
+
+        validateBankAccount(request.getBankAccountId());
+    }
+
 }

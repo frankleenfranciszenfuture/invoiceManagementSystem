@@ -45,6 +45,9 @@ public class PartyResponse extends BaseResponse {
     private BigDecimal creditLimit;
 
     private BigDecimal outstandingCredit;
+
+    private BigDecimal outstandingReceivable;
+    private BigDecimal outstandingPayable;
     private BigDecimal availableCredit;
 
     private String paymentTerms;

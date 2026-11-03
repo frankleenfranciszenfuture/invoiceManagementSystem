@@ -273,8 +273,23 @@ public class PartyEntity extends BaseEntity {
     }
 
     public BigDecimal getAvailableCredit() {
-        return getSafeCreditLimit()
-                .subtract(getSafeOutstandingCredit())
-                .max(BigDecimal.ZERO);
+
+        BigDecimal limit = creditLimit != null
+                ? creditLimit
+                : BigDecimal.ZERO;
+
+        BigDecimal outstanding;
+
+        if (partyType == PartyType.CUSTOMER) {
+            outstanding = outstandingReceivable != null
+                    ? outstandingReceivable
+                    : BigDecimal.ZERO;
+        } else {
+            outstanding = outstandingCredit != null
+                    ? outstandingCredit
+                    : BigDecimal.ZERO;
+        }
+
+        return limit.subtract(outstanding).max(BigDecimal.ZERO);
     }
 }

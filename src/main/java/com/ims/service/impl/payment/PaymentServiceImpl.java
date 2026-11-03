@@ -2,6 +2,7 @@
 package com.ims.service.impl.payment;
 
 import com.ims.common.PageResponse;
+import com.ims.dtos.payment.PaymentAllocationRequestDTO;
 import com.ims.dtos.payment.PaymentRequestDTO;
 import com.ims.dtos.payment.PaymentResponseDTO;
 import com.ims.entity.*;
@@ -17,6 +18,7 @@ import com.ims.utils.validation.PaymentValidation;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
@@ -65,8 +68,27 @@ public class PaymentServiceImpl implements PaymentService {
 
         validateRequest(request);
 
-        paymentValidation.validatePaymentAccount(request);
+        boolean splitMode =
+                request.getAllocations() != null
+                        && !request.getAllocations().isEmpty();
 
+        // Convert a normal payment into a single allocation.
+        List<PaymentAllocationRequestDTO> allocations;
+
+        if (splitMode) {
+            allocations = request.getAllocations();
+        } else {
+            allocations = List.of(
+                    PaymentAllocationRequestDTO.builder()
+                            .paymentAmount(request.getPaymentAmount())
+                            .paymentMethod(request.getPaymentMethod())
+                            .bankAccountId(request.getBankAccountId())
+                            .cashAccountId(request.getCashAccountId())
+                            .build()
+            );
+        }
+
+        // Lock source document once for the complete payment operation.
         SourceDetails source = getAndLockSource(
                 request.getPaymentType(),
                 request.getSourceId()
@@ -84,12 +106,13 @@ public class PaymentServiceImpl implements PaymentService {
                 request.getSourceId()
         );
 
-        BigDecimal dueAmount = source.totalAmount().subtract(alreadyPaid);
+        BigDecimal remainingDue = source.totalAmount()
+                .subtract(alreadyPaid)
+                .max(ZERO);
 
-        if (request.getPaymentAmount().compareTo(dueAmount) > 0) {
+        if (remainingDue.compareTo(ZERO) <= 0) {
             throw new IllegalArgumentException(
-                    "Payment amount cannot exceed the remaining due amount: "
-                            + dueAmount
+                    "This source document is already fully paid."
             );
         }
 
@@ -102,101 +125,81 @@ public class PaymentServiceImpl implements PaymentService {
             );
         }
 
+        // All allocations share the same source currency and payment date.
         BigDecimal exchangeRate = getExchangeRate(
                 sourceCurrency,
                 request.getPaymentDate()
         );
 
-        BigDecimal baseAmount = request.getPaymentAmount()
-                .multiply(exchangeRate)
-                .setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
+        BigDecimal totalAllocated = ZERO;
+        BigDecimal totalBaseAmount = ZERO;
 
-        PaymentDirection direction =
-                request.getPaymentType() == PaymentType.SALES
-                        ? PaymentDirection.RECEIVED
-                        : PaymentDirection.PAID;
+        List<PaymentResponseDTO> createdPayments = new java.util.ArrayList<>();
 
-        BankAccount bankAccount = null;
-        CashAccountEntity cashAccount = null;
+        for (PaymentAllocationRequestDTO allocation : allocations) {
 
-        if (request.getPaymentMethod() == PaymentMethod.CASH) {
-
-            cashAccount = cashAccountRepository
-                    .findActiveByIdForUpdate(request.getCashAccountId())
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "Cash account not found or inactive"
-                    ));
-
-        } else {
-
-            bankAccount = bankAccountRepository
-                    .findById(request.getBankAccountId())
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "Bank account not found"
-                    ));
-
-            entityManager.lock(
-                    bankAccount,
-                    LockModeType.PESSIMISTIC_WRITE
+            validateAllocation(
+                    request.getPaymentType(),
+                    allocation
             );
 
-            if (!Boolean.TRUE.equals(bankAccount.getActive())
-                    || bankAccount.getStatus() != BankAccountStatus.ACTIVE) {
+            BigDecimal allocationAmount = allocation.getPaymentAmount();
+
+            if (allocationAmount.compareTo(remainingDue) > 0) {
                 throw new IllegalArgumentException(
-                        "Selected bank account is inactive"
+                        "Payment allocation of "
+                                + allocationAmount
+                                + " exceeds the remaining due amount: "
+                                + remainingDue
                 );
             }
+
+            PaymentEntity payment = createPaymentAllocation(
+                    request,
+                    source,
+                    sourceCurrency,
+                    exchangeRate,
+                    allocation
+            );
+
+            PaymentResponseDTO response = paymentMapper.toResponse(payment);
+
+            createdPayments.add(response);
+
+            remainingDue = remainingDue.subtract(allocationAmount);
+            totalAllocated = totalAllocated.add(allocationAmount);
+            totalBaseAmount = totalBaseAmount.add(
+                    payment.getBaseAmount()
+            );
         }
 
-        PaymentEntity payment = PaymentEntity.builder()
-                .paymentNumber(generatePaymentNumber())
-                .paymentType(request.getPaymentType())
-                .paymentDirection(direction)
+        // Existing single-payment response remains unchanged.
+        if (!splitMode) {
+            return createdPayments.get(0);
+        }
 
-                .sourceId(request.getSourceId())
-                .sourceNumber(source.sourceNumber())
-
-                .paymentDate(request.getPaymentDate())
-                .paymentAmount(request.getPaymentAmount())
-                .baseAmount(baseAmount)
-                .exchangeRate(exchangeRate)
-
-                .currency(sourceCurrency)
-                .currencyCode(sourceCurrency.getCurrencyCode())
-
-                .paymentMethod(request.getPaymentMethod())
-
-                .bankAccount(bankAccount)
-                .cashAccount(cashAccount)
-
-                .customer(source.customer())
-                .party(source.party())
-
-                .referenceNumber(request.getReferenceNumber())
-                .notes(request.getNotes())
-
-                .paymentStatus(PaymentStatus.COMPLETED)
-                .active(true)
-                .build();
-
-        payment = paymentRepository.save(payment);
-
-        // Create bank or cash ledger transaction.
-        createLedgerTransaction(payment);
-
-        // Update bank account balance.
-        // Cash payments are skipped here.
-        updateBankAccountBalance(payment, false);
-        updateCashAccountBalance(payment, false);
-        // Update expense / party payment details.
-        updateSourcePaymentDetails(
-                request.getPaymentType(),
-                source,
-                request.getPaymentAmount(),
-                baseAmount
+        // Split-payment response.
+        PaymentResponseDTO summary = paymentMapper.toResponse(
+                paymentRepository.findById(
+                        createdPayments.get(0).getId()
+                ).orElseThrow()
         );
 
-        return paymentMapper.toResponse(payment);
+        summary.setId(null);
+        summary.setPaymentNumber(null);
+        summary.setPaymentAmount(totalAllocated);
+        summary.setBaseAmount(totalBaseAmount);
+        summary.setPaymentMethod(null);
+        summary.setBankAccountId(null);
+        summary.setBankAccountName(null);
+        summary.setCashAccountId(null);
+        summary.setCashAccountName(null);
+
+        summary.setAllocations(createdPayments);
+        summary.setTotalAllocatedAmount(totalAllocated);
+        summary.setAllocationCount(createdPayments.size());
+
+        return summary;
     }
 
     // =========================================================
@@ -414,7 +417,6 @@ public class PaymentServiceImpl implements PaymentService {
             PaymentType paymentType,
             Long sourceId
     ) {
-
         BigDecimal amount =
                 paymentRepository.calculateCompletedPaymentAmount(
                         paymentType,
@@ -422,7 +424,7 @@ public class PaymentServiceImpl implements PaymentService {
                         PaymentStatus.COMPLETED
                 );
 
-        return amount == null ? ZERO : amount;
+        return amount == null ? BigDecimal.ZERO : amount;
     }
 
     // =========================================================
@@ -549,7 +551,8 @@ public class PaymentServiceImpl implements PaymentService {
             PaymentType paymentType,
             SourceDetails source,
             BigDecimal paymentAmount,
-            BigDecimal baseAmount
+            BigDecimal baseAmount,
+            boolean partyCredit
     ) {
 
         if (paymentType == PaymentType.EXPENSE) {
@@ -566,44 +569,56 @@ public class PaymentServiceImpl implements PaymentService {
             expense.setPaidAmount(paid);
             expense.setDueAmount(due);
 
-            if (due.compareTo(ZERO) == 0) {
-                expense.setPaymentStatus(ExpensePaymentStatus.PAID);
-            } else {
-                expense.setPaymentStatus(
-                        ExpensePaymentStatus.PARTIALLY_PAID
-                );
-            }
+            expense.setPaymentStatus(
+                    due.compareTo(ZERO) == 0
+                            ? ExpensePaymentStatus.PAID
+                            : ExpensePaymentStatus.PARTIALLY_PAID
+            );
 
             return;
         }
 
-        if (source.party() != null) {
+        if (source.party() == null) {
+            return;
+        }
 
-            PartyEntity party = entityManager.find(
-                    PartyEntity.class,
-                    source.party().getId(),
-                    LockModeType.PESSIMISTIC_WRITE
+        PartyEntity party = entityManager.find(
+                PartyEntity.class,
+                source.party().getId(),
+                LockModeType.PESSIMISTIC_WRITE
+        );
+
+        if (party == null) {
+            throw new IllegalStateException("Party not found");
+        }
+
+        if (paymentType == PaymentType.SALES) {
+
+            BigDecimal outstanding = safeAmount(
+                    party.getOutstandingReceivable()
             );
 
-            if (party != null) {
-
-                if (paymentType == PaymentType.SALES) {
-
-                    party.setOutstandingReceivable(
-                            safeAmount(party.getOutstandingReceivable())
-                                    .subtract(baseAmount)
-                                    .max(ZERO)
-                    );
-
-                } else if (paymentType == PaymentType.PURCHASE) {
-
-                    party.setOutstandingPayable(
-                            safeAmount(party.getOutstandingPayable())
-                                    .subtract(baseAmount)
-                                    .max(ZERO)
-                    );
-                }
+            if (partyCredit) {
+                outstanding = outstanding.add(baseAmount);
+            } else {
+                outstanding = outstanding.subtract(baseAmount).max(ZERO);
             }
+
+            party.setOutstandingReceivable(outstanding);
+
+        } else if (paymentType == PaymentType.PURCHASE) {
+
+            BigDecimal outstanding = safeAmount(
+                    party.getOutstandingPayable()
+            );
+
+            if (partyCredit) {
+                outstanding = outstanding.add(baseAmount);
+            } else {
+                outstanding = outstanding.subtract(baseAmount).max(ZERO);
+            }
+
+            party.setOutstandingPayable(outstanding);
         }
     }
 
@@ -635,6 +650,24 @@ public class PaymentServiceImpl implements PaymentService {
             throw new IllegalArgumentException(
                     "Payment date is required"
             );
+        }
+
+        boolean splitMode =
+                request.getAllocations() != null
+                        && !request.getAllocations().isEmpty();
+
+        if (splitMode) {
+
+            if (request.getPaymentAmount() != null
+                    || request.getPaymentMethod() != null
+                    || request.getBankAccountId() != null
+                    || request.getCashAccountId() != null) {
+                throw new IllegalArgumentException(
+                        "Use either payment details or allocations, not both"
+                );
+            }
+
+            return;
         }
 
         if (request.getPaymentAmount() == null
@@ -720,99 +753,111 @@ public class PaymentServiceImpl implements PaymentService {
             );
         }
 
-        BankTransactionEntity bankTransaction =
-                bankTransactionRepository
-                        .findByPayment_IdAndActiveTrue(payment.getId())
-                        .orElse(null);
+        boolean partyCredit =
+                payment.getPaymentMethod() == PaymentMethod.PARTY_CREDIT;
 
-        if (bankTransaction != null) {
+// Party credit has no bank or cash ledger transaction.
+        if (!partyCredit) {
 
-            if (bankTransactionRepository.existsByReversalOf_Id(
-                    bankTransaction.getId())) {
-                throw new IllegalStateException(
-                        "Payment transaction is already reversed"
-                );
-            }
-
-            BankTransactionDirection reverseDirection =
-                    bankTransaction.getDirection()
-                            == BankTransactionDirection.CREDIT
-                            ? BankTransactionDirection.DEBIT
-                            : BankTransactionDirection.CREDIT;
-
-            BankTransactionEntity reversal =
-                    BankTransactionEntity.builder()
-                            .transactionNumber(
-                                    generateTransactionNumber("BT")
-                            )
-                            .bankAccount(bankTransaction.getBankAccount())
-                            .direction(reverseDirection)
-                            .transactionDate(LocalDate.now())
-                            .amount(bankTransaction.getAmount())
-                            .baseAmount(bankTransaction.getBaseAmount())
-                            .exchangeRate(bankTransaction.getExchangeRate())
-                            .currencyCode(bankTransaction.getCurrencyCode())
-                            .referenceNumber(payment.getReferenceNumber())
-                            .description(
-                                    "Reversal of "
-                                            + bankTransaction.getTransactionNumber()
-                            )
-                            .reversalOf(bankTransaction)
-                            .active(true)
-                            .build();
-
-            bankTransactionRepository.save(reversal);
-
-        } else {
-
-            CashBookTransactionEntity cashTransaction =
-                    cashBookTransactionRepository
+            BankTransactionEntity bankTransaction =
+                    bankTransactionRepository
                             .findByPayment_IdAndActiveTrue(payment.getId())
-                            .orElseThrow(() -> new IllegalStateException(
-                                    "Payment ledger transaction not found"
-                            ));
+                            .orElse(null);
 
-            if (cashBookTransactionRepository.existsByReversalOf_Id(
-                    cashTransaction.getId())) {
-                throw new IllegalStateException(
-                        "Payment transaction is already reversed"
-                );
+            if (bankTransaction != null) {
+
+                if (bankTransactionRepository.existsByReversalOf_Id(
+                        bankTransaction.getId())) {
+                    throw new IllegalStateException(
+                            "Payment transaction is already reversed"
+                    );
+                }
+
+                BankTransactionDirection reverseDirection =
+                        bankTransaction.getDirection()
+                                == BankTransactionDirection.CREDIT
+                                ? BankTransactionDirection.DEBIT
+                                : BankTransactionDirection.CREDIT;
+
+                BankTransactionEntity reversal =
+                        BankTransactionEntity.builder()
+                                .transactionNumber(
+                                        generateTransactionNumber("BT")
+                                )
+                                .bankAccount(bankTransaction.getBankAccount())
+                                .party(bankTransaction.getParty())
+                                .direction(reverseDirection)
+                                .transactionDate(LocalDate.now())
+                                .amount(bankTransaction.getAmount())
+                                .baseAmount(bankTransaction.getBaseAmount())
+                                .exchangeRate(bankTransaction.getExchangeRate())
+                                .currencyCode(bankTransaction.getCurrencyCode())
+                                .referenceNumber(payment.getReferenceNumber())
+                                .description(
+                                        "Reversal of "
+                                                + bankTransaction.getTransactionNumber()
+                                )
+                                .reversalOf(bankTransaction)
+                                .active(true)
+                                .build();
+
+                bankTransactionRepository.save(reversal);
+
+            } else {
+
+                CashBookTransactionEntity cashTransaction =
+                        cashBookTransactionRepository
+                                .findByPayment_IdAndActiveTrue(payment.getId())
+                                .orElseThrow(() -> new IllegalStateException(
+                                        "Payment ledger transaction not found"
+                                ));
+
+                if (cashBookTransactionRepository.existsByReversalOf_Id(
+                        cashTransaction.getId())) {
+                    throw new IllegalStateException(
+                            "Payment transaction is already reversed"
+                    );
+                }
+
+                BankTransactionDirection reverseDirection =
+                        cashTransaction.getDirection()
+                                == BankTransactionDirection.CREDIT
+                                ? BankTransactionDirection.DEBIT
+                                : BankTransactionDirection.CREDIT;
+
+                CashBookTransactionEntity reversal =
+                        CashBookTransactionEntity.builder()
+                                .transactionNumber(
+                                        generateTransactionNumber("CBT")
+                                )
+                                .cashAccount(cashTransaction.getCashAccount())
+                                .direction(reverseDirection)
+                                .transactionDate(LocalDate.now())
+                                .amount(cashTransaction.getAmount())
+                                .baseAmount(cashTransaction.getBaseAmount())
+                                .exchangeRate(cashTransaction.getExchangeRate())
+                                .currencyCode(cashTransaction.getCurrencyCode())
+                                .referenceNumber(payment.getReferenceNumber())
+                                .description(
+                                        "Reversal of "
+                                                + cashTransaction.getTransactionNumber()
+                                )
+                                .reversalOf(cashTransaction)
+                                .active(true)
+                                .build();
+
+                cashBookTransactionRepository.save(reversal);
             }
-
-            BankTransactionDirection reverseDirection =
-                    cashTransaction.getDirection()
-                            == BankTransactionDirection.CREDIT
-                            ? BankTransactionDirection.DEBIT
-                            : BankTransactionDirection.CREDIT;
-
-            CashBookTransactionEntity reversal =
-                    CashBookTransactionEntity.builder()
-                            .transactionNumber(
-                                    generateTransactionNumber("CBT")
-                            )
-                            .cashAccount(cashTransaction.getCashAccount())
-                            .direction(reverseDirection)
-                            .transactionDate(LocalDate.now())
-                            .amount(cashTransaction.getAmount())
-                            .baseAmount(cashTransaction.getBaseAmount())
-                            .exchangeRate(cashTransaction.getExchangeRate())
-                            .currencyCode(cashTransaction.getCurrencyCode())
-                            .referenceNumber(payment.getReferenceNumber())
-                            .description(
-                                    "Reversal of "
-                                            + cashTransaction.getTransactionNumber()
-                            )
-                            .reversalOf(cashTransaction)
-                            .active(true)
-                            .build();
-
-            cashBookTransactionRepository.save(reversal);
         }
 
-        // Restore bank account balance.
-        updateBankAccountBalance(payment, true);
-        updateCashAccountBalance(payment, true);
-        // Restore expense / party payment details.
+// Actual payment balance restoration.
+// These methods naturally skip when accounts are null.
+        if (!partyCredit) {
+            updateBankAccountBalance(payment, true);
+            updateCashAccountBalance(payment, true);
+        }
+
+// Restore party / expense balances.
         restoreSourcePaymentDetails(payment);
 
         payment.setPaymentStatus(PaymentStatus.REVERSED);
@@ -862,31 +907,60 @@ public class PaymentServiceImpl implements PaymentService {
             return;
         }
 
-        if (payment.getParty() != null) {
+        if (payment.getParty() == null) {
+            return;
+        }
 
-            PartyEntity party = entityManager.find(
-                    PartyEntity.class,
-                    payment.getParty().getId(),
-                    LockModeType.PESSIMISTIC_WRITE
+        PartyEntity party = entityManager.find(
+                PartyEntity.class,
+                payment.getParty().getId(),
+                LockModeType.PESSIMISTIC_WRITE
+        );
+
+        if (party == null) {
+            throw new IllegalStateException(
+                    "Party not found while reversing payment"
+            );
+        }
+
+        boolean partyCredit =
+                payment.getPaymentMethod() == PaymentMethod.PARTY_CREDIT;
+
+        if (payment.getPaymentType() == PaymentType.SALES) {
+
+            BigDecimal outstanding = safeAmount(
+                    party.getOutstandingReceivable()
             );
 
-            if (party != null) {
-
-                if (payment.getPaymentType() == PaymentType.SALES) {
-
-                    party.setOutstandingReceivable(
-                            safeAmount(party.getOutstandingReceivable())
-                                    .add(payment.getBaseAmount())
-                    );
-
-                } else if (payment.getPaymentType() == PaymentType.PURCHASE) {
-
-                    party.setOutstandingPayable(
-                            safeAmount(party.getOutstandingPayable())
-                                    .add(payment.getBaseAmount())
-                    );
-                }
+            if (partyCredit) {
+                // Reverse credit sale: reduce outstanding receivable.
+                outstanding = outstanding
+                        .subtract(payment.getBaseAmount())
+                        .max(ZERO);
+            } else {
+                // Reverse actual received payment: restore receivable.
+                outstanding = outstanding.add(payment.getBaseAmount());
             }
+
+            party.setOutstandingReceivable(outstanding);
+
+        } else if (payment.getPaymentType() == PaymentType.PURCHASE) {
+
+            BigDecimal outstanding = safeAmount(
+                    party.getOutstandingPayable()
+            );
+
+            if (partyCredit) {
+                // Reverse credit purchase: reduce outstanding payable.
+                outstanding = outstanding
+                        .subtract(payment.getBaseAmount())
+                        .max(ZERO);
+            } else {
+                // Reverse actual supplier payment: restore payable.
+                outstanding = outstanding.add(payment.getBaseAmount());
+            }
+
+            party.setOutstandingPayable(outstanding);
         }
     }
 
@@ -1030,4 +1104,236 @@ public class PaymentServiceImpl implements PaymentService {
 
         cashAccountRepository.save(cashAccount);
     }
+
+    private PartyEntity validateAndLockPartyCredit(
+            PaymentType paymentType,
+            PartyEntity sourceParty,
+            BigDecimal baseAmount
+    ) {
+
+        if (paymentType == PaymentType.EXPENSE) {
+            throw new IllegalArgumentException(
+                    "Party credit is not supported for expenses"
+            );
+        }
+
+        if (sourceParty == null || sourceParty.getId() == null) {
+            throw new IllegalArgumentException(
+                    "Party is required for party credit payment"
+            );
+        }
+
+        PartyEntity party = entityManager.find(
+                PartyEntity.class,
+                sourceParty.getId(),
+                LockModeType.PESSIMISTIC_WRITE
+        );
+
+        if (party == null || !Boolean.TRUE.equals(party.getActive())) {
+            throw new IllegalArgumentException(
+                    "Party not found or inactive"
+            );
+        }
+
+        BigDecimal creditLimit = safeAmount(party.getCreditLimit());
+
+        if (creditLimit.compareTo(ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "Credit limit is not configured for this party"
+            );
+        }
+
+        BigDecimal outstanding;
+
+        if (paymentType == PaymentType.SALES) {
+
+            if (party.getPartyType() != PartyType.CUSTOMER) {
+                throw new IllegalArgumentException(
+                        "Only customer parties can use credit for sales"
+                );
+            }
+
+            outstanding = safeAmount(party.getOutstandingReceivable());
+
+        } else {
+
+            if (party.getPartyType() != PartyType.SUPPLIER) {
+                throw new IllegalArgumentException(
+                        "Only supplier parties can use credit for purchases"
+                );
+            }
+
+            outstanding = safeAmount(party.getOutstandingPayable());
+        }
+
+        BigDecimal availableCredit = creditLimit.subtract(outstanding);
+
+        if (baseAmount.compareTo(availableCredit) > 0) {
+            throw new IllegalArgumentException(
+                    "Insufficient party credit. Available credit: "
+                            + availableCredit
+            );
+        }
+
+        return party;
+    }
+
+    private PaymentEntity createPaymentAllocation(
+            PaymentRequestDTO request,
+            SourceDetails source,
+            Currency sourceCurrency,
+            BigDecimal exchangeRate,
+            PaymentAllocationRequestDTO allocation
+    ) {
+
+        PaymentMethod paymentMethod = allocation.getPaymentMethod();
+
+        boolean partyCredit =
+                paymentMethod == PaymentMethod.PARTY_CREDIT;
+
+        BigDecimal paymentAmount = allocation.getPaymentAmount();
+
+        BigDecimal baseAmount = paymentAmount
+                .multiply(exchangeRate)
+                .setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
+
+        PaymentDirection direction =
+                request.getPaymentType() == PaymentType.SALES
+                        ? PaymentDirection.RECEIVED
+                        : PaymentDirection.PAID;
+
+        PartyEntity party = null;
+
+        if (partyCredit) {
+            party = validateAndLockPartyCredit(
+                    request.getPaymentType(),
+                    source.party(),
+                    baseAmount
+            );
+        }
+
+        BankAccount bankAccount = null;
+        CashAccountEntity cashAccount = null;
+
+        if (!partyCredit) {
+
+            if (paymentMethod == PaymentMethod.CASH) {
+
+                cashAccount = cashAccountRepository
+                        .findActiveByIdForUpdate(
+                                allocation.getCashAccountId()
+                        )
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                "Cash account not found or inactive"
+                        ));
+
+            } else {
+
+                bankAccount = bankAccountRepository
+                        .findById(allocation.getBankAccountId())
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                "Bank account not found"
+                        ));
+
+                entityManager.lock(
+                        bankAccount,
+                        LockModeType.PESSIMISTIC_WRITE
+                );
+
+                if (!Boolean.TRUE.equals(bankAccount.getActive())
+                        || bankAccount.getStatus() != BankAccountStatus.ACTIVE) {
+                    throw new IllegalArgumentException(
+                            "Selected bank account is inactive"
+                    );
+                }
+            }
+        }
+
+        PaymentEntity payment = PaymentEntity.builder()
+                .paymentNumber(generatePaymentNumber())
+                .paymentType(request.getPaymentType())
+                .paymentDirection(direction)
+
+                .sourceId(request.getSourceId())
+                .sourceNumber(source.sourceNumber())
+
+                .paymentDate(request.getPaymentDate())
+                .paymentAmount(paymentAmount)
+                .baseAmount(baseAmount)
+                .exchangeRate(exchangeRate)
+
+                .currency(sourceCurrency)
+                .currencyCode(sourceCurrency.getCurrencyCode())
+
+                .paymentMethod(paymentMethod)
+
+                .bankAccount(bankAccount)
+                .cashAccount(cashAccount)
+
+                .customer(source.customer())
+                .party(partyCredit ? party : source.party())
+
+                .referenceNumber(request.getReferenceNumber())
+                .notes(request.getNotes())
+
+                .paymentStatus(PaymentStatus.COMPLETED)
+                .active(true)
+                .build();
+
+        payment = paymentRepository.save(payment);
+
+        // Only actual payments create bank/cash transactions.
+        if (!partyCredit) {
+            createLedgerTransaction(payment);
+
+            updateBankAccountBalance(payment, false);
+            updateCashAccountBalance(payment, false);
+        }
+
+        // Preserve the existing source balance logic.
+        updateSourcePaymentDetails(
+                request.getPaymentType(),
+                source,
+                paymentAmount,
+                baseAmount,
+                partyCredit
+        );
+
+        return payment;
+    }
+
+    private void validateAllocation(
+            PaymentType paymentType,
+            PaymentAllocationRequestDTO allocation
+    ) {
+
+        if (allocation == null) {
+            throw new IllegalArgumentException(
+                    "Payment allocation is required"
+            );
+        }
+
+        if (allocation.getPaymentAmount() == null
+                || allocation.getPaymentAmount().compareTo(ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "Payment allocation amount must be greater than zero"
+            );
+        }
+
+        if (allocation.getPaymentMethod() == null) {
+            throw new IllegalArgumentException(
+                    "Payment allocation method is required"
+            );
+        }
+
+        if (paymentType == PaymentType.EXPENSE
+                && allocation.getPaymentMethod() == PaymentMethod.PARTY_CREDIT) {
+            throw new IllegalArgumentException(
+                    "Party Credit is not allowed for expense payments"
+            );
+        }
+
+        paymentValidation.validatePaymentAccount(allocation);
+    }
+
 }

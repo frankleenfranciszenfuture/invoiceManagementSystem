@@ -1,5 +1,5 @@
-package com.ims.service.impl.party;
 
+package com.ims.service.impl.party;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
@@ -37,8 +37,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Transactional
 @Slf4j
-public class CreditClearanceServiceImpl
-        implements CreditClearanceService {
+public class CreditClearanceServiceImpl implements CreditClearanceService {
 
     private final CreditClearanceRepository creditClearanceRepository;
     private final PartyRepository partyRepository;
@@ -68,18 +67,15 @@ public class CreditClearanceServiceImpl
 
         // 1. VALIDATE PARTY
 
-        PartyEntity party =
-                partyValidation.validateParty(
-                        request.getPartyId()
-                );
+        PartyEntity party = partyValidation.validateParty(
+                request.getPartyId()
+        );
 
         validateParty(party);
 
-        // 2. CURRENT OUTSTANDING CREDIT
+        // 2. GET CURRENT OUTSTANDING
 
-        BigDecimal outstanding =
-                nullSafe(party.getOutstandingCredit())
-                        .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal outstanding = getPartyOutstanding(party);
 
         if (outstanding.compareTo(BigDecimal.ZERO) <= 0) {
             throw new ValidationException(
@@ -87,10 +83,9 @@ public class CreditClearanceServiceImpl
             );
         }
 
-        // 3. CLEARANCE AMOUNT
+        // 3. VALIDATE CLEARANCE AMOUNT
 
-        BigDecimal clearanceAmount =
-                request.getClearanceAmount();
+        BigDecimal clearanceAmount = request.getClearanceAmount();
 
         if (clearanceAmount == null) {
             throw new ValidationException(
@@ -98,11 +93,7 @@ public class CreditClearanceServiceImpl
             );
         }
 
-        clearanceAmount =
-                clearanceAmount.setScale(
-                        2,
-                        RoundingMode.HALF_UP
-                );
+        clearanceAmount = scaleAmount(clearanceAmount);
 
         if (clearanceAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new ValidationException(
@@ -117,19 +108,19 @@ public class CreditClearanceServiceImpl
             );
         }
 
-        // 4. PAYMENT METHOD
+        // 4. VALIDATE PAYMENT METHOD
 
         validatePaymentMethod(request.getPaymentMethod());
 
         // 5. CALCULATE REMAINING OUTSTANDING
 
-        BigDecimal creditLimit =
+        BigDecimal creditLimit = scaleAmount(
                 nullSafe(party.getCreditLimit())
-                        .setScale(2, RoundingMode.HALF_UP);
+        );
 
-        BigDecimal remainingOutstanding =
+        BigDecimal remainingOutstanding = scaleAmount(
                 outstanding.subtract(clearanceAmount)
-                        .setScale(2, RoundingMode.HALF_UP);
+        );
 
         // 6. GENERATE CLEARANCE NUMBER
 
@@ -137,8 +128,7 @@ public class CreditClearanceServiceImpl
 
         // 7. CREATE ENTITY
 
-        CreditClearanceEntity entity =
-                new CreditClearanceEntity();
+        CreditClearanceEntity entity = new CreditClearanceEntity();
 
         entity.setClearanceNo(clearanceNo);
         entity.setParty(party);
@@ -161,13 +151,14 @@ public class CreditClearanceServiceImpl
 
         entity.setStatus(Status.ACTIVE);
 
-        // 8. AUDIT
+        // 8. PREPARE AUDIT
 
         baseEntityUtil.prepareForCreate(entity);
 
-        // 9. UPDATE PARTY
+        // 9. UPDATE PARTY OUTSTANDING
 
-        party.setOutstandingCredit(remainingOutstanding);
+        setPartyOutstanding(party, remainingOutstanding);
+
         baseEntityUtil.prepareForUpdate(party);
 
         // 10. SAVE
@@ -214,38 +205,70 @@ public class CreditClearanceServiceImpl
         // 1. VALIDATE EXISTING CLEARANCE
 
         CreditClearanceEntity entity =
-                creditClearanceValidation
-                        .validateCreditClearance(id);
+                creditClearanceValidation.validateCreditClearance(id);
 
-        // 2. VALIDATE PARTY
+        // 2. GET OLD PARTY
 
-        PartyEntity party =
-                partyValidation.validateParty(
-                        request.getPartyId()
-                );
+        PartyEntity oldParty = entity.getParty();
 
-        validateParty(party);
+        if (oldParty == null) {
+            throw new ValidationException(
+                    "Existing clearance party information is missing."
+            );
+        }
 
-        // 3. OLD CLEARANCE AMOUNT
+        // 3. VALIDATE NEW PARTY
 
-        BigDecimal oldClearanceAmount =
-                nullSafe(entity.getClearanceAmount());
+        PartyEntity newParty = partyValidation.validateParty(
+                request.getPartyId()
+        );
 
-        // 4. CURRENT PARTY OUTSTANDING
+        validateParty(newParty);
 
-        BigDecimal currentOutstanding =
-                nullSafe(party.getOutstandingCredit());
+        // 4. CHECK WHETHER PARTY IS CHANGED
 
-        // 5. RESTORE OLD CLEARANCE
+        boolean sameParty = oldParty.getId().equals(newParty.getId());
 
-        BigDecimal outstandingAfterReversal =
-                currentOutstanding.add(oldClearanceAmount)
-                        .setScale(2, RoundingMode.HALF_UP);
+        /*
+         * When the party is unchanged, use the existing managed entity.
+         * This ensures that restoring the old clearance and applying
+         * the new clearance operate on the same outstanding balance.
+         */
+
+        if (sameParty) {
+            newParty = oldParty;
+        }
+
+        // 5. RESTORE OLD CLEARANCE TO OLD PARTY
+
+        BigDecimal oldPartyOutstanding = getPartyOutstanding(oldParty);
+
+        BigDecimal oldClearanceAmount = scaleAmount(
+                nullSafe(entity.getClearanceAmount())
+        );
+
+        BigDecimal restoredOldOutstanding = scaleAmount(
+                oldPartyOutstanding.add(oldClearanceAmount)
+        );
+
+        setPartyOutstanding(oldParty, restoredOldOutstanding);
+
+        baseEntityUtil.prepareForUpdate(oldParty);
+
+        /*
+         * If the party is unchanged, the restored amount is also
+         * the outstanding amount available for the new clearance.
+         *
+         * If the party has changed, read the new party's own balance.
+         */
+
+        BigDecimal newPartyOutstanding = sameParty
+                ? restoredOldOutstanding
+                : getPartyOutstanding(newParty);
 
         // 6. VALIDATE NEW CLEARANCE AMOUNT
 
-        BigDecimal newClearanceAmount =
-                request.getClearanceAmount();
+        BigDecimal newClearanceAmount = request.getClearanceAmount();
 
         if (newClearanceAmount == null) {
             throw new ValidationException(
@@ -253,11 +276,7 @@ public class CreditClearanceServiceImpl
             );
         }
 
-        newClearanceAmount =
-                newClearanceAmount.setScale(
-                        2,
-                        RoundingMode.HALF_UP
-                );
+        newClearanceAmount = scaleAmount(newClearanceAmount);
 
         if (newClearanceAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new ValidationException(
@@ -265,46 +284,48 @@ public class CreditClearanceServiceImpl
             );
         }
 
-        if (newClearanceAmount.compareTo(
-                outstandingAfterReversal
-        ) > 0) {
+        if (newClearanceAmount.compareTo(newPartyOutstanding) > 0) {
             throw new ValidationException(
-                    "Clearance amount cannot exceed outstanding credit."
+                    "Clearance amount cannot exceed outstanding credit of "
+                            + newPartyOutstanding
             );
         }
 
-        // 7. PAYMENT METHOD
+        // 7. VALIDATE PAYMENT METHOD
 
         validatePaymentMethod(request.getPaymentMethod());
 
         // 8. CALCULATE NEW OUTSTANDING
 
-        BigDecimal newOutstanding =
-                outstandingAfterReversal
-                        .subtract(newClearanceAmount)
-                        .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal newOutstanding = scaleAmount(
+                newPartyOutstanding.subtract(newClearanceAmount)
+        );
 
-        // 9. UPDATE PARTY
+        // 9. UPDATE NEW PARTY OUTSTANDING
 
-        party.setOutstandingCredit(newOutstanding);
-        baseEntityUtil.prepareForUpdate(party);
+        setPartyOutstanding(newParty, newOutstanding);
 
-        // 10. UPDATE CLEARANCE
+        baseEntityUtil.prepareForUpdate(newParty);
 
-        entity.setParty(party);
-        entity.setPartyType(party.getPartyType());
+        // 10. UPDATE CLEARANCE ENTITY
+
+        entity.setParty(newParty);
+        entity.setPartyType(newParty.getPartyType());
 
         entity.setCreditLimit(
-                nullSafe(party.getCreditLimit())
+                scaleAmount(nullSafe(newParty.getCreditLimit()))
         );
 
         entity.setClearanceAmount(newClearanceAmount);
 
         entity.setPreviousOutstandingCredit(
-                outstandingAfterReversal
+                newPartyOutstanding
         );
 
-        entity.setRemainingOutstandingCredit(newOutstanding);
+        entity.setRemainingOutstandingCredit(
+                newOutstanding
+        );
+
         entity.setPaymentMethod(request.getPaymentMethod());
 
         entity.setPaymentReferenceNumber(
@@ -321,12 +342,30 @@ public class CreditClearanceServiceImpl
 
         baseEntityUtil.prepareForUpdate(entity);
 
-        // 11. SAVE
+        // 11. SAVE PARTIES
 
-        partyRepository.save(party);
+        partyRepository.save(oldParty);
+
+        if (!sameParty) {
+            partyRepository.save(newParty);
+        }
+
+        // 12. SAVE CLEARANCE
 
         CreditClearanceEntity updated =
                 creditClearanceRepository.save(entity);
+
+        log.info(
+                "Credit clearance updated -> clearanceNo={}, "
+                        + "oldPartyId={}, newPartyId={}, amount={}, remaining={}",
+                updated.getClearanceNo(),
+                oldParty.getId(),
+                newParty.getId(),
+                newClearanceAmount,
+                newOutstanding
+        );
+
+        // 13. RESPONSE
 
         return ApiResponse
                 .<CreditClearanceResponse>builder()
@@ -342,12 +381,10 @@ public class CreditClearanceServiceImpl
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<CreditClearanceResponse> getById(
-            Long id) {
+    public ApiResponse<CreditClearanceResponse> getById(Long id) {
 
         CreditClearanceEntity clearance =
-                creditClearanceValidation
-                        .validateCreditClearance(id);
+                creditClearanceValidation.validateCreditClearance(id);
 
         return ApiResponse
                 .<CreditClearanceResponse>builder()
@@ -366,8 +403,7 @@ public class CreditClearanceServiceImpl
     public ApiResponse<List<CreditClearanceResponse>> getByParty(
             Long partyId) {
 
-        PartyEntity party =
-                partyValidation.validateParty(partyId);
+        PartyEntity party = partyValidation.validateParty(partyId);
 
         List<CreditClearanceResponse> response =
                 creditClearanceRepository
@@ -399,15 +435,14 @@ public class CreditClearanceServiceImpl
 
         validatePagination(page, size);
 
-        Pageable pageable =
-                PageRequest.of(
-                        page,
-                        size,
-                        Sort.by(
-                                Sort.Direction.DESC,
-                                "clearanceDate"
-                        )
-                );
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(
+                        Sort.Direction.DESC,
+                        "clearanceDate"
+                )
+        );
 
         Page<CreditClearanceEntity> clearances =
                 creditClearanceRepository.findByStatus(
@@ -429,26 +464,23 @@ public class CreditClearanceServiceImpl
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<PageResponse<CreditClearanceResponse>>
-    getByPartyPaged(
+    public ApiResponse<PageResponse<CreditClearanceResponse>> getByPartyPaged(
             Long partyId,
             int page,
             int size) {
 
         validatePagination(page, size);
 
-        PartyEntity party =
-                partyValidation.validateParty(partyId);
+        PartyEntity party = partyValidation.validateParty(partyId);
 
-        Pageable pageable =
-                PageRequest.of(
-                        page,
-                        size,
-                        Sort.by(
-                                Sort.Direction.DESC,
-                                "clearanceDate"
-                        )
-                );
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(
+                        Sort.Direction.DESC,
+                        "clearanceDate"
+                )
+        );
 
         Page<CreditClearanceEntity> clearances =
                 creditClearanceRepository.findByPartyIdAndStatus(
@@ -471,8 +503,7 @@ public class CreditClearanceServiceImpl
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<List<CreditClearanceResponse>>
-    getByDateRange(
+    public ApiResponse<List<CreditClearanceResponse>> getByDateRange(
             LocalDate fromDate,
             LocalDate toDate) {
 
@@ -514,7 +545,7 @@ public class CreditClearanceServiceImpl
     }
 
     // =====================================================
-    // DELETE / REVERSE
+    // DELETE / REVERSE CREDIT CLEARANCE
     // =====================================================
 
     @Override
@@ -523,8 +554,7 @@ public class CreditClearanceServiceImpl
         // 1. VALIDATE CLEARANCE
 
         CreditClearanceEntity entity =
-                creditClearanceValidation
-                        .validateCreditClearance(id);
+                creditClearanceValidation.validateCreditClearance(id);
 
         // 2. GET PARTY
 
@@ -536,44 +566,42 @@ public class CreditClearanceServiceImpl
             );
         }
 
-        // 3. CURRENT OUTSTANDING
+        // 3. GET CURRENT OUTSTANDING
 
-        BigDecimal currentOutstanding =
-                nullSafe(party.getOutstandingCredit());
+        BigDecimal currentOutstanding = getPartyOutstanding(party);
 
-        BigDecimal clearanceAmount =
-                nullSafe(entity.getClearanceAmount());
+        BigDecimal clearanceAmount = scaleAmount(
+                nullSafe(entity.getClearanceAmount())
+        );
 
         // 4. RESTORE OUTSTANDING
 
-        BigDecimal restoredOutstanding =
+        BigDecimal restoredOutstanding = scaleAmount(
                 currentOutstanding.add(clearanceAmount)
-                        .setScale(2, RoundingMode.HALF_UP);
+        );
 
-        // 5. VALIDATE CREDIT LIMIT
+        /*
+         * Do not reject a reversal merely because the restored
+         * outstanding exceeds the current credit limit.
+         *
+         * Reversal must undo the original clearance transaction.
+         */
 
-        BigDecimal creditLimit =
-                nullSafe(party.getCreditLimit());
+        // 5. UPDATE PARTY
 
-        if (restoredOutstanding.compareTo(creditLimit) > 0) {
-            throw new ValidationException(
-                    "Cannot reverse clearance because restored "
-                            + "outstanding credit exceeds credit limit."
-            );
-        }
+        setPartyOutstanding(party, restoredOutstanding);
 
-        // 6. UPDATE PARTY
-
-        party.setOutstandingCredit(restoredOutstanding);
         baseEntityUtil.prepareForUpdate(party);
+
         partyRepository.save(party);
 
-        // 7. MARK CLEARANCE INACTIVE
+        // 6. MARK CLEARANCE INACTIVE
 
         entity.setStatus(Status.INACTIVE);
         entity.setActive(false);
 
         baseEntityUtil.prepareForUpdate(entity);
+
         creditClearanceRepository.save(entity);
 
         log.info(
@@ -585,6 +613,8 @@ public class CreditClearanceServiceImpl
                 currentOutstanding,
                 restoredOutstanding
         );
+
+        // 7. RESPONSE
 
         return ApiResponse
                 .<Void>builder()
@@ -598,6 +628,12 @@ public class CreditClearanceServiceImpl
     // =====================================================
 
     private void validateParty(PartyEntity party) {
+
+        if (party == null) {
+            throw new ValidationException(
+                    "Party information is required."
+            );
+        }
 
         if (!Boolean.TRUE.equals(party.getActive())) {
             throw new ValidationException(
@@ -613,6 +649,7 @@ public class CreditClearanceServiceImpl
 
         if (!PartyType.SUPPLIER.equals(party.getPartyType())
                 && !PartyType.CUSTOMER.equals(party.getPartyType())) {
+
             throw new ValidationException(
                     "Credit clearance is supported only "
                             + "for customers and suppliers."
@@ -624,8 +661,7 @@ public class CreditClearanceServiceImpl
     // PAYMENT METHOD VALIDATION
     // =====================================================
 
-    private void validatePaymentMethod(
-            PaymentMethod paymentMethod) {
+    private void validatePaymentMethod(PaymentMethod paymentMethod) {
 
         if (paymentMethod == null) {
             throw new ValidationException(
@@ -642,13 +678,68 @@ public class CreditClearanceServiceImpl
     }
 
     // =====================================================
+    // GET PARTY OUTSTANDING
+    // =====================================================
+
+    private BigDecimal getPartyOutstanding(PartyEntity party) {
+
+        BigDecimal outstanding;
+
+        if (PartyType.CUSTOMER.equals(party.getPartyType())) {
+
+            // Customer: amount receivable from customer
+            outstanding = party.getOutstandingReceivable();
+
+        } else if (PartyType.SUPPLIER.equals(party.getPartyType())) {
+
+            // Supplier: amount payable to supplier
+            outstanding = party.getOutstandingPayable();
+
+        } else {
+
+            throw new ValidationException(
+                    "Credit clearance is supported only "
+                            + "for customers and suppliers."
+            );
+        }
+
+        return scaleAmount(nullSafe(outstanding));
+    }
+
+    // =====================================================
+    // UPDATE PARTY OUTSTANDING
+    // =====================================================
+
+    private void setPartyOutstanding(
+            PartyEntity party,
+            BigDecimal outstanding) {
+
+        BigDecimal amount = scaleAmount(nullSafe(outstanding));
+
+        if (PartyType.CUSTOMER.equals(party.getPartyType())) {
+
+            party.setOutstandingReceivable(amount);
+
+        } else if (PartyType.SUPPLIER.equals(party.getPartyType())) {
+
+            party.setOutstandingPayable(amount);
+
+        } else {
+
+            throw new ValidationException(
+                    "Credit clearance is supported only "
+                            + "for customers and suppliers."
+            );
+        }
+    }
+
+    // =====================================================
     // GENERATE GLOBAL CLEARANCE NUMBER
     // =====================================================
 
     private String generateClearanceNumber() {
 
-        String prefix =
-                "CC-" + LocalDate.now().getYear() + "-";
+        String prefix = "CC-" + LocalDate.now().getYear() + "-";
 
         Optional<CreditClearanceEntity> latest =
                 creditClearanceRepository
@@ -668,7 +759,9 @@ public class CreditClearanceServiceImpl
 
             try {
                 nextNumber = Integer.parseInt(sequence) + 1;
+
             } catch (NumberFormatException exception) {
+
                 throw new ValidationException(
                         "Unable to generate the next credit clearance number."
                 );
@@ -732,6 +825,14 @@ public class CreditClearanceServiceImpl
 
     private BigDecimal nullSafe(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    // =====================================================
+    // AMOUNT SCALE
+    // =====================================================
+
+    private BigDecimal scaleAmount(BigDecimal amount) {
+        return amount.setScale(2, RoundingMode.HALF_UP);
     }
 
     // =====================================================
