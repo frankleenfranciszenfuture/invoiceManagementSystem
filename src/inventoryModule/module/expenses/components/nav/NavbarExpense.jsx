@@ -35,6 +35,7 @@ import {
 } from "../../thunks/expenseThunks";
 
 import CustomSelect from "../../../../../common/custom/CustomSelect";
+import ToolTipText from "../../../../../common/toolTip/ToolTipText";
 
 /* =========================================================
    CONSTANTS
@@ -379,7 +380,7 @@ export default function NavbarExpense() {
 
                 {/* LEFT */}
 
-                <div className="flex items-center gap-2">
+                <div className="relative flex items-center gap-2">
 
                     {/* HOME */}
 
@@ -387,6 +388,8 @@ export default function NavbarExpense() {
                         type="button"
                         onClick={() => navigate("/")}
                         className="
+                        group
+                        relative
                             flex
                             items-center
                             justify-center
@@ -399,9 +402,10 @@ export default function NavbarExpense() {
                             transition
                             hover:bg-[#0095FD]/20
                         "
-                        title="Home"
+
                     >
                         <Home size={18} />
+                        <ToolTipText text="Home" position="bottom" />
                     </button>
 
                     {/* TITLE */}
@@ -498,6 +502,8 @@ export default function NavbarExpense() {
                         type="button"
                         onClick={handleCreateExpense}
                         className="
+                        group
+                        relative
                             flex
                             items-center
                             gap-1
@@ -515,6 +521,7 @@ export default function NavbarExpense() {
                         <Plus size={14} />
 
                         <span>New</span>
+                        <ToolTipText text="New Expenses" position="bottom" />
                     </button>
 
                     {/* SETTINGS */}
@@ -523,6 +530,8 @@ export default function NavbarExpense() {
                         type="button"
                         onClick={() => navigate("/settings")}
                         className="
+                        group
+                        relative
                             rounded-md
                             border
                             border-gray-300
@@ -530,9 +539,10 @@ export default function NavbarExpense() {
                             text-[#0095FD]
                             hover:bg-[#0095FD]/20
                         "
-                        title="Settings"
+
                     >
                         <Settings size={18} />
+                        <ToolTipText text="Settings" position="bottom" />
                     </button>
 
                 </div>

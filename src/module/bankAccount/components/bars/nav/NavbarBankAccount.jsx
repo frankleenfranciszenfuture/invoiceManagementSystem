@@ -1,3 +1,4 @@
+
 import React, {
     useState,
     useEffect,
@@ -26,15 +27,17 @@ import {
 } from "lucide-react";
 
 import {
+    setSearch,
     setBankAccountStatus,
     setSelectedBankAccountView,
-} from "../../../slices/bankAccountSlice";
+} from "../../../slices/bankAccountViewSlice";
 
 import {
     fetchAllBankAccounts,
 } from "../../../thunks/bankAccountThunks";
 
 import CustomSelect from "../../../../../common/custom/CustomSelect";
+import ToolTipText from "../../../../../common/toolTip/ToolTipText";
 
 /* =========================================================
    CONSTANTS
@@ -49,12 +52,16 @@ const VALID_STATUSES = [
     "ALL",
     "ACTIVE",
     "INACTIVE",
+    "DRAFT",
+    "PRIMARY",
 ];
 
 const STATUS_LABELS = {
     ALL: "All Bank Accounts",
     ACTIVE: "Active Bank Accounts",
     INACTIVE: "Inactive Bank Accounts",
+    DRAFT: "Draft Bank Accounts",
+    PRIMARY: "Primary Bank Accounts",
 };
 
 /* =========================================================
@@ -62,7 +69,6 @@ const STATUS_LABELS = {
 ========================================================= */
 
 export default function NavbarBankAccount() {
-
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
@@ -76,22 +82,23 @@ export default function NavbarBankAccount() {
 
     const [filters, setFilters] = useState(INITIAL_FILTERS);
 
-    const [appliedFilters, setAppliedFilters] = useState(
-        INITIAL_FILTERS
-    );
-
     /* =====================================================
        REDUX STATE
     ===================================================== */
 
     const selectedBankAccountView = useSelector(
         (state) =>
-            state.bankAccount?.selectedBankAccountView
+            state.bankAccountView?.selectedBankAccountView
     );
 
     const bankAccountStatus = useSelector(
         (state) =>
-            state.bankAccount?.bankAccountStatus || "ALL"
+            state.bankAccountView?.bankAccountStatus || "ALL"
+    );
+
+    const search = useSelector(
+        (state) =>
+            state.bankAccountView?.search || ""
     );
 
     const loading = useSelector(
@@ -103,7 +110,7 @@ export default function NavbarBankAccount() {
        URL STATUS
     ===================================================== */
 
-    const urlStatus = searchParams.get("status");
+    const urlStatus = searchParams.get("bankAccountStatus");
 
     const normalizedUrlStatus = String(
         urlStatus || ""
@@ -121,16 +128,15 @@ export default function NavbarBankAccount() {
     ===================================================== */
 
     useEffect(() => {
-
         const selectedStatus = VALID_STATUSES.includes(
             normalizedUrlStatus
         )
             ? normalizedUrlStatus
-            : bankAccountStatus;
+            : "ALL";
 
         const selectedLabel =
             STATUS_LABELS[selectedStatus] ||
-            "All Bank Accounts";
+            STATUS_LABELS.ALL;
 
         if (bankAccountStatus !== selectedStatus) {
             dispatch(
@@ -155,50 +161,18 @@ export default function NavbarBankAccount() {
 
     /* =====================================================
        FETCH BANK ACCOUNTS
+
+       Fetch all records only.
+       Filtering is handled by the dashboard.
     ===================================================== */
 
-    const loadBankAccounts = useCallback(
-        (filterValues, selectedViewStatus) => {
-
-            dispatch(
-                fetchAllBankAccounts({
-
-                    ...filterValues,
-
-                    status:
-                        filterValues.status ||
-                        (
-                            selectedViewStatus === "ALL"
-                                ? undefined
-                                : selectedViewStatus
-                        ),
-
-                    page: 0,
-                    size: 10,
-
-                })
-            );
-
-        },
-        [dispatch]
-    );
-
-    /* =====================================================
-       FETCH WHEN FILTERS OR STATUS CHANGE
-    ===================================================== */
+    const loadBankAccounts = useCallback(() => {
+        dispatch(fetchAllBankAccounts());
+    }, [dispatch]);
 
     useEffect(() => {
-
-        loadBankAccounts(
-            appliedFilters,
-            effectiveBankAccountStatus
-        );
-
-    }, [
-        loadBankAccounts,
-        appliedFilters,
-        effectiveBankAccountStatus,
-    ]);
+        loadBankAccounts();
+    }, [loadBankAccounts]);
 
     /* =====================================================
        FILTER INPUT CHANGE
@@ -206,7 +180,6 @@ export default function NavbarBankAccount() {
 
     const handleFilterChange = useCallback(
         (eOrName, selectedValue) => {
-
             const name =
                 typeof eOrName === "string"
                     ? eOrName
@@ -221,20 +194,32 @@ export default function NavbarBankAccount() {
                 ...previous,
                 [name]: value,
             }));
-
         },
         []
     );
 
     /* =====================================================
        APPLY FILTERS
+
+       These values are consumed by BankAccountDashboard.
     ===================================================== */
 
     const handleApplyFilters = () => {
+        dispatch(setSearch(filters.search.trim()));
 
-        setAppliedFilters({
-            ...filters,
-        });
+        const selectedStatus = filters.status || "ALL";
+
+        dispatch(setBankAccountStatus(selectedStatus));
+
+        const selectedLabel =
+            STATUS_LABELS[selectedStatus] ||
+            STATUS_LABELS.ALL;
+
+        dispatch(setSelectedBankAccountView(selectedLabel));
+
+        navigate(
+            `/settings/bankAccount?bankAccountStatus=${selectedStatus}`
+        );
 
         setFilterOpen(false);
     };
@@ -244,15 +229,15 @@ export default function NavbarBankAccount() {
     ===================================================== */
 
     const handleResetFilters = () => {
-
         setFilters({
             ...INITIAL_FILTERS,
         });
 
-        setAppliedFilters({
-            ...INITIAL_FILTERS,
-        });
+        dispatch(setSearch(""));
+        dispatch(setBankAccountStatus("ALL"));
+        dispatch(setSelectedBankAccountView(STATUS_LABELS.ALL));
 
+        navigate("/settings/bankAccount?bankAccountStatus=ALL");
     };
 
     /* =====================================================
@@ -260,12 +245,7 @@ export default function NavbarBankAccount() {
     ===================================================== */
 
     const handleRefresh = () => {
-
-        loadBankAccounts(
-            appliedFilters,
-            effectiveBankAccountStatus
-        );
-
+        loadBankAccounts();
     };
 
     /* =====================================================
@@ -273,7 +253,6 @@ export default function NavbarBankAccount() {
     ===================================================== */
 
     const handleViewChange = (view) => {
-
         if (!view) return;
 
         dispatch(
@@ -285,9 +264,8 @@ export default function NavbarBankAccount() {
         );
 
         navigate(
-            `/settings/bankAccount?status=${view.value}`
+            `/settings/bankAccount?bankAccountStatus=${view.value}`
         );
-
     };
 
     /* =====================================================
@@ -342,12 +320,9 @@ export default function NavbarBankAccount() {
     ===================================================== */
 
     return (
-
         <div className="relative">
 
-            {/* ==================================================
-                NAVBAR
-            ================================================== */}
+            {/* NAVBAR */}
 
             <div
                 className="
@@ -357,31 +332,26 @@ export default function NavbarBankAccount() {
                     px-2 py-2
                 "
             >
-
                 {/* LEFT */}
 
-                <div className="flex items-center gap-2">
-
-                    {/* HOME */}
+                <div className="relative flex items-center gap-2">
 
                     <button
                         type="button"
                         onClick={() => navigate("/")}
                         className="
-                            flex items-center justify-center
+                            group relative flex items-center justify-center
                             rounded-md border border-blue-300
                             bg-white p-2 text-[#0095FD]
                             transition hover:bg-[#0095FD]/20
                         "
-                        title="Home"
+
                     >
                         <Home size={18} />
+                        <ToolTipText text="Home" position="bottom" />
                     </button>
 
-                    {/* TITLE */}
-
                     <div>
-
                         <h2 className="
                             text-xl font-semibold text-gray-800
                         ">
@@ -393,9 +363,7 @@ export default function NavbarBankAccount() {
                         ">
                             Monitor and manage your business bank accounts.
                         </p>
-
                     </div>
-
                 </div>
 
                 {/* RIGHT */}
@@ -420,7 +388,6 @@ export default function NavbarBankAccount() {
                             size={15}
                             className={loading ? "animate-spin" : ""}
                         />
-
                         Refresh
                     </button>
 
@@ -452,7 +419,6 @@ export default function NavbarBankAccount() {
                                 ${filterOpen ? "rotate-180" : ""}
                             `}
                         />
-
                     </button>
 
                     {/* NEW BANK ACCOUNT */}
@@ -461,16 +427,16 @@ export default function NavbarBankAccount() {
                         type="button"
                         onClick={handleCreateBankAccount}
                         className="
-                            flex items-center gap-1 rounded-md
+                            group relative flex items-center gap-1 rounded-md
                             bg-[#0095FD] px-3 py-2
                             text-sm font-medium text-white
                             hover:bg-[#0095FD]/90
                         "
-                        title="Create New Bank Account"
+
                     >
                         <Plus size={14} />
-
                         <span>New</span>
+                        <ToolTipText text="New BankAcoount" position="bottom" />
                     </button>
 
                     {/* SETTINGS */}
@@ -479,25 +445,21 @@ export default function NavbarBankAccount() {
                         type="button"
                         onClick={() => navigate("/settings")}
                         className="
-                            rounded-md border border-gray-300
+                            group relative rounded-md border border-gray-300
                             p-2 text-[#0095FD]
                             hover:bg-[#0095FD]/20
                         "
-                        title="Settings"
+
                     >
                         <Settings size={18} />
+                        <ToolTipText text="Settings" position="bottom" />
                     </button>
-
                 </div>
-
             </div>
 
-            {/* ==================================================
-                FILTER PANEL
-            ================================================== */}
+            {/* FILTER PANEL */}
 
             {filterOpen && (
-
                 <div
                     className="
                         absolute left-0 right-0 top-full
@@ -505,15 +467,12 @@ export default function NavbarBankAccount() {
                         border-gray-200 bg-white p-4 shadow-xl
                     "
                 >
-
                     {/* FILTER HEADER */}
 
                     <div className="
                         mb-4 flex items-center justify-between
                     ">
-
                         <div className="flex items-center gap-2">
-
                             <Filter
                                 size={17}
                                 className="text-[#0095FD]"
@@ -524,7 +483,6 @@ export default function NavbarBankAccount() {
                             ">
                                 Filter Bank Accounts
                             </h3>
-
                         </div>
 
                         <button
@@ -538,7 +496,6 @@ export default function NavbarBankAccount() {
                         >
                             <X size={17} />
                         </button>
-
                     </div>
 
                     {/* FILTER INPUTS */}
@@ -551,7 +508,6 @@ export default function NavbarBankAccount() {
                         {/* SEARCH */}
 
                         <div>
-
                             <label className={labelClass}>
                                 Search
                             </label>
@@ -564,13 +520,11 @@ export default function NavbarBankAccount() {
                                 placeholder="Account name, code, bank name, account number..."
                                 className={inputClass}
                             />
-
                         </div>
 
                         {/* ACCOUNT STATUS */}
 
                         <div>
-
                             <label className={labelClass}>
                                 Account Status
                             </label>
@@ -579,20 +533,16 @@ export default function NavbarBankAccount() {
                                 name="status"
                                 value={filters.status}
                                 onChange={(value) => {
-
                                     handleFilterChange(
                                         "status",
                                         typeof value === "object"
                                             ? value.value
                                             : value
                                     );
-
                                 }}
                                 options={bankAccountStatusOptions}
                             />
-
                         </div>
-
                     </div>
 
                     {/* ACTION BUTTONS */}
@@ -650,15 +600,10 @@ export default function NavbarBankAccount() {
                                 <Search size={14} />
                                 Apply Filters
                             </button>
-
                         </div>
-
                     </div>
-
                 </div>
-
             )}
-
         </div>
     );
 }

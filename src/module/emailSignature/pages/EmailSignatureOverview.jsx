@@ -1,16 +1,14 @@
 
-import React, {
-    useEffect,
-    useMemo,
-    useState,
-} from "react";
+import React, { useMemo } from "react";
 
 import {
+    useDispatch,
     useSelector,
 } from "react-redux";
 
 import {
     useNavigate,
+    useSearchParams,
 } from "react-router-dom";
 
 import {
@@ -19,15 +17,16 @@ import {
     XCircle,
 } from "lucide-react";
 
+import {
+    setSelectedEmailSignatureView,
+    setEmailSignatureStatus,
+} from "../slices/emailSignatureViewSlice";
+
 // ============================================================
 // CONSTANTS
 // ============================================================
 
 const EMPTY_ARRAY = [];
-
-// ============================================================
-// STATUS CARDS
-// ============================================================
 
 const STATUS_CARDS = [
     {
@@ -50,19 +49,11 @@ const STATUS_CARDS = [
     },
 ];
 
-// ============================================================
-// STATUS LABELS
-// ============================================================
-
 const STATUS_LABELS = {
     ALL: "All Email Signatures",
     ACTIVE: "Active Email Signatures",
     INACTIVE: "Inactive Email Signatures",
 };
-
-// ============================================================
-// CARD STYLES
-// ============================================================
 
 const CARD_STYLES = {
     blue: {
@@ -87,10 +78,10 @@ const CARD_STYLES = {
 // ============================================================
 
 export default function EmailSignatureOverview() {
-
+    const dispatch = useDispatch();
     const navigate = useNavigate();
 
-    const [selectedStatus, setSelectedStatus] = useState("ALL");
+    const [searchParams] = useSearchParams();
 
     // ========================================================
     // REDUX STATE
@@ -98,39 +89,38 @@ export default function EmailSignatureOverview() {
 
     const emailSignatures = useSelector(
         (state) =>
-            Array.isArray(state.emailSignatures?.emailSignatures)
+            Array.isArray(
+                state.emailSignatures?.emailSignatures
+            )
                 ? state.emailSignatures.emailSignatures
                 : EMPTY_ARRAY
     );
 
+    const selectedStatus = useSelector(
+        (state) =>
+            state.emailSignatureView?.emailSignatureStatus ||
+            "ALL"
+    );
+
     // ========================================================
-    // STATUS SYNCHRONIZATION
+    // URL STATUS
     // ========================================================
 
-    useEffect(() => {
+    const urlStatus = (
+        searchParams.get("status") || "ALL"
+    )
+        .trim()
+        .toUpperCase();
 
-        const params = new URLSearchParams(
-            window.location.search
-        );
-
-        const urlStatus = (
-            params.get("status") || "ALL"
-        ).trim().toUpperCase();
-
-        const status = STATUS_LABELS[urlStatus]
-            ? urlStatus
-            : "ALL";
-
-        setSelectedStatus(status);
-
-    }, []);
+    const activeStatus = STATUS_LABELS[urlStatus]
+        ? urlStatus
+        : "ALL";
 
     // ========================================================
     // STATISTICS
     // ========================================================
 
     const statistics = useMemo(() => {
-
         const result = {
             ALL: emailSignatures.length,
             ACTIVE: 0,
@@ -138,7 +128,6 @@ export default function EmailSignatureOverview() {
         };
 
         emailSignatures.forEach((signature) => {
-
             const status = String(
                 signature?.status || ""
             )
@@ -153,11 +142,9 @@ export default function EmailSignatureOverview() {
             ) {
                 result[status] += 1;
             }
-
         });
 
         return result;
-
     }, [emailSignatures]);
 
     // ========================================================
@@ -165,23 +152,23 @@ export default function EmailSignatureOverview() {
     // ========================================================
 
     const handleStatusChange = (status) => {
-
-        if (
-            !STATUS_LABELS[status] ||
-            status === selectedStatus
-        ) {
+        if (!STATUS_LABELS[status]) {
             return;
         }
 
-        setSelectedStatus(status);
-
-        navigate(
-            `/settings/emailSignatures?status=${status}`,
-            {
-                replace: false,
-            }
+        dispatch(
+            setEmailSignatureStatus(status)
         );
 
+        dispatch(
+            setSelectedEmailSignatureView(
+                STATUS_LABELS[status]
+            )
+        );
+
+        navigate(
+            `/settings/emailSignatures?status=${status}`
+        );
     };
 
     // ========================================================
@@ -189,7 +176,6 @@ export default function EmailSignatureOverview() {
     // ========================================================
 
     return (
-
         <div className="w-full space-y-5">
 
             {/* STATUS CARDS */}
@@ -200,9 +186,7 @@ export default function EmailSignatureOverview() {
                     sm:grid-cols-2 lg:grid-cols-3
                 "
             >
-
                 {STATUS_CARDS.map((card) => {
-
                     const Icon = card.icon;
 
                     const active =
@@ -212,7 +196,6 @@ export default function EmailSignatureOverview() {
                         CARD_STYLES[card.color];
 
                     return (
-
                         <button
                             type="button"
                             key={card.value}
@@ -231,31 +214,16 @@ export default function EmailSignatureOverview() {
                                 ${style.hover}
                             `}
                         >
-
-                            <div
-                                className="
-                                    flex items-center justify-between
-                                "
-                            >
+                            <div className="flex items-center justify-between">
 
                                 <div>
-
-                                    <p
-                                        className="
-                                            text-sm font-medium text-gray-500
-                                        "
-                                    >
+                                    <p className="text-sm font-medium text-gray-500">
                                         {card.label}
                                     </p>
 
-                                    <h3
-                                        className="
-                                            mt-3 text-2xl font-bold text-gray-800
-                                        "
-                                    >
+                                    <h3 className="mt-3 text-2xl font-bold text-gray-800">
                                         {statistics[card.value] ?? 0}
                                     </h3>
-
                                 </div>
 
                                 <div
@@ -269,20 +237,11 @@ export default function EmailSignatureOverview() {
                                 >
                                     <Icon size={23} />
                                 </div>
-
                             </div>
 
-                            <div
-                                className="
-                                    mt-4 flex items-center justify-between
-                                "
-                            >
+                            <div className="mt-4 flex items-center justify-between">
 
-                                <span
-                                    className="
-                                        text-xs text-gray-400
-                                    "
-                                >
+                                <span className="text-xs text-gray-400">
                                     {active
                                         ? "Currently selected"
                                         : "View signatures"
@@ -298,46 +257,28 @@ export default function EmailSignatureOverview() {
                                 >
                                     View →
                                 </span>
-
                             </div>
-
                         </button>
-
                     );
-
                 })}
-
             </div>
 
             {/* SELECTED STATUS */}
 
-            <div
-                className="
-                    flex flex-wrap items-center justify-between gap-2
-                "
-            >
+            <div className="flex flex-wrap items-center justify-between gap-2">
 
                 <p className="text-sm text-gray-500">
-
                     Showing:{" "}
 
-                    <span
-                        className="
-                            font-semibold text-gray-800
-                        "
-                    >
-                        {
-                            STATUS_LABELS[selectedStatus] ||
-                            STATUS_LABELS.ALL
-                        }
+                    <span className="font-semibold text-gray-800">
+                        {STATUS_LABELS[selectedStatus] ||
+                            STATUS_LABELS.ALL}
                     </span>
-
                 </p>
 
                 <p className="text-xs text-gray-400">
                     {emailSignatures.length} total records
                 </p>
-
             </div>
 
         </div>

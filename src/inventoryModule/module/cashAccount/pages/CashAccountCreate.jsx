@@ -36,6 +36,11 @@ import {
 
 import CustomSelect from "../../../../common/custom/CustomSelect";
 
+
+
+import LeaveConfirmationModal from "../../../../common/confirmation/LeaveConfirmationModal";
+import useLeaveConfirmation from "../../../../common/confirmation/useLeaveConfirmation";
+
 /* =========================================================
    INITIAL FORM DATA
 ========================================================= */
@@ -156,7 +161,7 @@ const SectionHeading = ({
    MAIN COMPONENT
 ========================================================= */
 
-const CashAccountCreate = () => {
+const CashAccountCreate = ({ onClose }) => {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -211,6 +216,14 @@ const CashAccountCreate = () => {
         (state) =>
             state.menuPermission?.userPermissionsLoaded === true
     );
+
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
+
 
     /* =====================================================
        LOCAL STATE
@@ -470,6 +483,16 @@ const CashAccountCreate = () => {
             ...previous,
             [field]: value,
         }));
+    };
+
+    const handleClose = () => {
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/inventory/cash-accounts")
+            }
+        });
     };
 
     /* =====================================================
@@ -987,7 +1010,7 @@ const CashAccountCreate = () => {
                         ">
 
                             <FormField label="Description">
-                                <TextAreaField
+                                <TextInput
                                     value={formData.description}
                                     onChange={(e) =>
                                         handleChange(
@@ -1027,7 +1050,7 @@ const CashAccountCreate = () => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         disabled={actionLoading || loading}
                         className="
                             rounded-lg border border-gray-200
@@ -1164,6 +1187,16 @@ const CashAccountCreate = () => {
                 </div>
 
             </form>
+
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave CashAccount?"
+                message="Are you sure you want to leave this expense page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
         </div>
     );
 };

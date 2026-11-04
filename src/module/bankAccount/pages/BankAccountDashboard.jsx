@@ -1,3 +1,4 @@
+
 import React, {
     useEffect,
     useMemo,
@@ -32,6 +33,11 @@ import {
     getUserPermission,
 } from "../../menuPermission/thunks/menuPermissionThunks";
 
+import {
+    setSearch,
+    setBankAccountStatus,
+} from "../slices/bankAccountViewSlice";
+
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
 
 import BankAccountOverview from "../../bankAccount/pages/BankAccountOverview";
@@ -42,6 +48,14 @@ import BankAccountOverview from "../../bankAccount/pages/BankAccountOverview";
 
 const EMPTY_ARRAY = [];
 
+const VALID_STATUSES = [
+    "ALL",
+    "ACTIVE",
+    "INACTIVE",
+    "DRAFT",
+    "PRIMARY",
+];
+
 /* =========================================================
    NORMALIZE HELPERS
 ========================================================= */
@@ -51,6 +65,63 @@ const normalizeModule = (value) =>
 
 const normalizeAction = (value) =>
     String(value ?? "").trim().toUpperCase();
+
+const normalizeSearch = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+/* =========================================================
+   BANK ACCOUNT STATUS HELPER
+========================================================= */
+
+const getBankAccountStatus = (bankAccount) => {
+
+    const status = normalizeAction(bankAccount?.status);
+
+    if (status) {
+        return status;
+    }
+
+    if (bankAccount?.audit?.active === true) {
+        return "ACTIVE";
+    }
+
+    if (bankAccount?.audit?.active === false) {
+        return "INACTIVE";
+    }
+
+    return "";
+};
+
+/* =========================================================
+   BANK ACCOUNT SEARCH HELPER
+========================================================= */
+
+const matchesBankAccountSearch = (
+    bankAccount,
+    search
+) => {
+
+    if (!search) {
+        return true;
+    }
+
+    const searchableFields = [
+        bankAccount?.accountName,
+        bankAccount?.accountCode,
+        bankAccount?.accountNumber,
+        bankAccount?.bankName,
+        bankAccount?.ifsc,
+        bankAccount?.accountType,
+        bankAccount?.currencyName,
+        bankAccount?.currencyCode,
+        bankAccount?.branchName,
+        bankAccount?.accountHolderName,
+    ];
+
+    return searchableFields.some((field) =>
+        normalizeSearch(field).includes(search)
+    );
+};
 
 /* =========================================================
    COMPONENT
@@ -261,6 +332,27 @@ export default function BankAccountDashboard() {
     );
 
     /* =====================================================
+       BANK ACCOUNT VIEW STATE
+    ===================================================== */
+
+    const search = useSelector(
+        (state) => state.bankAccountView?.search || ""
+    );
+
+    const bankAccountStatus = useSelector(
+        (state) => {
+            const status =
+                state.bankAccountView?.bankAccountStatus || "ALL";
+
+            return VALID_STATUSES.includes(
+                normalizeAction(status)
+            )
+                ? normalizeAction(status)
+                : "ALL";
+        }
+    );
+
+    /* =====================================================
        LOAD USER PERMISSIONS
     ===================================================== */
 
@@ -292,15 +384,64 @@ export default function BankAccountDashboard() {
 
     /* =====================================================
        FILTER BANK ACCOUNTS
+
+       All filtering is performed locally.
+       No status-specific API request is required.
     ===================================================== */
 
     const filteredBankAccounts = useMemo(() => {
 
-        return bankAccounts;
+        const normalizedSearch = normalizeSearch(search);
+
+        return bankAccounts.filter((bankAccount) => {
+
+            /* SEARCH FILTER */
+
+            const matchesSearch = matchesBankAccountSearch(
+                bankAccount,
+                normalizedSearch
+            );
+
+            if (!matchesSearch) {
+                return false;
+            }
+
+            /* STATUS FILTER */
+
+            if (bankAccountStatus === "ALL") {
+                return true;
+            }
+
+            /* PRIMARY ACCOUNT FILTER */
+
+            if (bankAccountStatus === "PRIMARY") {
+                return bankAccount?.primaryAccount === true;
+            }
+
+            /* ACTIVE / INACTIVE / DRAFT FILTER */
+
+            const accountStatus = getBankAccountStatus(
+                bankAccount
+            );
+
+            return accountStatus === bankAccountStatus;
+
+        });
 
     }, [
         bankAccounts,
+        search,
+        bankAccountStatus,
     ]);
+
+    /* =====================================================
+       FILTER ACTIVE STATE
+    ===================================================== */
+
+    const hasActiveFilters = Boolean(
+        normalizeSearch(search) ||
+        bankAccountStatus !== "ALL"
+    );
 
     /* =====================================================
        OPEN CREATE BANK ACCOUNT MODAL
@@ -508,7 +649,68 @@ export default function BankAccountDashboard() {
                             bankAccounts={filteredBankAccounts}
                         />
 
+                    ) : hasActiveFilters ? (
+
+                        /* FILTERED EMPTY STATE */
+
+                        <div
+                            className="
+                                flex min-h-[300px] flex-col
+                                items-center justify-center
+                                gap-3 px-4
+                            "
+                        >
+
+                            <div
+                                className="
+                                    flex h-20 w-20 items-center
+                                    justify-center rounded-full
+                                    bg-gray-100 text-gray-400
+                                "
+                            >
+                                <Landmark
+                                    size={36}
+                                    strokeWidth={1.7}
+                                />
+                            </div>
+
+                            <p className="
+                                text-center text-base
+                                font-medium text-gray-800
+                            ">
+                                No matching bank accounts found
+                            </p>
+
+                            <p className="
+                                max-w-sm text-center
+                                text-sm text-gray-500
+                            ">
+                                No bank accounts match your current
+                                search or filter. Try changing your
+                                search or selecting another status.
+                            </p>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    dispatch(setSearch(""));
+                                    dispatch(setBankAccountStatus("ALL"));
+                                }}
+                                className="
+                                    mt-1 rounded-md bg-blue-500
+                                    px-4 py-2 text-sm font-medium
+                                    text-white transition
+                                    hover:bg-blue-600
+                                "
+                            >
+                                Clear Filters
+                            </button>
+
+                        </div>
+
                     ) : (
+
+                        /* ORIGINAL EMPTY STATE */
 
                         <div
                             className="

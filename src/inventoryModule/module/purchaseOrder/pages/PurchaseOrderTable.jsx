@@ -29,6 +29,7 @@ import {
 import toast from "react-hot-toast";
 import Pagination from "../../../../common/pagination/table/Pagination";
 import { openModal } from "../../../../module/ui/uiSlice";
+import ToolTipText from "../../../../common/toolTip/ToolTipText";
 
 export default function PurchaseOrderTable({ purchaseOrders = [] }) {
     const dispatch = useDispatch();
@@ -730,15 +731,14 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
                                 {/* ACTIONS */}
 
                                 <td className="px-4 py-3">
-                                    <div className="flex items-center justify-end gap-2">
+                                    <div className="relative flex items-center justify-end gap-2">
 
                                         {/* RECEIVE GOODS */}
                                         {["CONFIRMED", "PARTIALLY_RECEIVED"].includes(status) && (
                                             <button
                                                 type="button"
                                                 onClick={() => handleCreateGoodsReceipt(order)}
-                                                title="Create Goods Receipt"
-                                                className="
+                                                className=" group relative
             flex h-8 w-8
             items-center justify-center
             rounded-lg
@@ -746,9 +746,11 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
             transition
             hover:bg-green-100
             hover:text-green-700
+            
         "
                                             >
                                                 <PackageCheck size={16} />
+                                                <ToolTipText text="Create Goods Receipt" position="bottom" />
                                             </button>
                                         )}
 
@@ -757,18 +759,20 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
                                             <button
                                                 type="button"
                                                 onClick={() => handleConfirmPurchaseOrder(order)}
-                                                title="Confirm Purchase Order"
+
                                                 className="
-                    flex h-8 w-8
-                    items-center justify-center
-                    rounded-lg
-                    bg-green-50 text-green-600
-                    transition
-                    hover:bg-green-100
-                    hover:text-green-700
-                "
+        group relative
+        flex h-8 w-8
+        items-center justify-center
+        rounded-lg
+        bg-green-50 text-green-600
+        transition
+        hover:bg-green-100
+        hover:text-green-700
+    "
                                             >
                                                 <CheckCircle size={16} />
+                                                <ToolTipText text="Confirm Purchase Order" position="bottom" />
                                             </button>
                                         )}
 
@@ -777,8 +781,9 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
                                             <button
                                                 type="button"
                                                 onClick={() => handleView(order)}
-                                                title="View"
+
                                                 className="
+                                                 group relative
                     flex h-8 w-8
                     items-center justify-center
                     rounded-lg
@@ -789,6 +794,7 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
                 "
                                             >
                                                 <Eye size={16} />
+                                                <ToolTipText text="View" position="bottom" />
                                             </button>
                                         )}
 
@@ -797,8 +803,9 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
                                             <button
                                                 type="button"
                                                 onClick={() => handleEdit(order)}
-                                                title="Edit"
-                                                className="
+
+                                                className=" 
+                                                group relative
                     flex h-8 w-8
                     items-center justify-center
                     rounded-lg
@@ -809,6 +816,7 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
                 "
                                             >
                                                 <Edit size={16} />
+                                                <ToolTipText text="Edit" position="bottom" />
                                             </button>
                                         )}
 
@@ -819,6 +827,7 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
                                                 onClick={() => handleDelete(order)}
                                                 title="Delete"
                                                 className="
+                                                group relative
                     flex h-8 w-8
                     items-center justify-center
                     rounded-lg
@@ -829,6 +838,7 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
                 "
                                             >
                                                 <Trash2 size={16} />
+                                                <ToolTipText text="Delete" position="bottom" />
                                             </button>
                                         )}
                                     </div>
@@ -860,3 +870,34 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
         </div>
     );
 }
+
+// const Tooltip = ({ text, position = "top" }) => {
+//     const positionClasses = {
+//         top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
+//         bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
+//         left: "right-full top-1/2 -translate-y-1/2 mr-2",
+//         right: "left-full top-1/2 -translate-y-1/2 ml-2",
+//     };
+
+//     return (
+//         <span
+//             className={`
+//                 pointer-events-none
+//                 absolute ${positionClasses[position]}
+//                 z-[9999]
+//                 whitespace-nowrap
+//                 rounded-md
+//                 bg-gray-900
+//                 px-2.5 py-1.5
+//                 text-[11px] font-medium text-white
+//                 shadow-lg
+//                 opacity-0 invisible
+//                 group-hover:opacity-100
+//                 group-hover:visible
+//                 transition-all duration-150
+//             `}
+//         >
+//             {text}
+//         </span>
+//     );
+// };

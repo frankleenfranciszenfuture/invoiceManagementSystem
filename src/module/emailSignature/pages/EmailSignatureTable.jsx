@@ -1,11 +1,7 @@
 
-import React from "react";
+import React, { useCallback } from "react";
 
-import {
-    useDispatch,
-    useSelector,
-} from "react-redux";
-
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -22,7 +18,6 @@ import {
     Trash2,
     Mail,
     Eye,
-    Hash,
     User,
     Star,
     Reply,
@@ -31,11 +26,11 @@ import {
 import toast from "react-hot-toast";
 
 import Pagination from "../../../common/pagination/table/Pagination";
+import ToolTipText from "../../../common/toolTip/ToolTipText";
 
 export default function EmailSignatureTable({
     emailSignatures = [],
 }) {
-
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
@@ -44,10 +39,12 @@ export default function EmailSignatureTable({
     ===================================================== */
 
     const {
-        loading,
-        error,
+        loading = false,
+        error = null,
         pagination = {},
-    } = useSelector((state) => state.emailSignatures || {});
+    } = useSelector(
+        (state) => state.emailSignatures || {}
+    );
 
     const {
         pageNumber = 0,
@@ -56,7 +53,9 @@ export default function EmailSignatureTable({
         totalElements = 0,
     } = pagination;
 
-    const currentEmailSignatures = emailSignatures || [];
+    const currentEmailSignatures = Array.isArray(emailSignatures)
+        ? emailSignatures
+        : [];
 
     /* =====================================================
        AUTH STATE
@@ -69,17 +68,13 @@ export default function EmailSignatureTable({
     const userId = user?.id;
 
     /* =====================================================
-       PERMISSION STATE
+       PERMISSIONS
     ===================================================== */
 
     const permissions = useSelector(
         (state) =>
             state.menuPermission?.userPermissions || []
     );
-
-    /* =====================================================
-       ROLE
-    ===================================================== */
 
     const roleName =
         user?.roleName ||
@@ -93,141 +88,118 @@ export default function EmailSignatureTable({
         .trim()
         .toUpperCase();
 
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
+    const hasFullAccess = [
+        "SUPER_ADMIN",
+        "ADMIN",
+    ].includes(normalizedRole);
 
-    const isAdmin =
-        normalizedRole === "ADMIN";
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
+            if (hasFullAccess) {
+                return true;
+            }
 
-    const hasFullAccess =
-        isSuperAdmin || isAdmin;
+            if (!Array.isArray(permissions)) {
+                return false;
+            }
 
-    /* =====================================================
-       PERMISSION CHECK
-    ===================================================== */
-
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
-
-        if (hasFullAccess) {
-            return true;
-        }
-
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
-
-        const requestedModule = String(moduleName)
-            .trim()
-            .toLowerCase();
-
-        const requestedAction = String(actionName)
-            .trim()
-            .toUpperCase();
-
-        return permissions.some((permission) => {
-
-            const permissionModule = String(
-                permission?.moduleName ||
-                permission?.module?.moduleName ||
-                permission?.module?.name ||
-                ""
-            )
+            const requestedModule = String(moduleName)
                 .trim()
                 .toLowerCase();
 
-            if (permissionModule !== requestedModule) {
-                return false;
-            }
-
-            if (permission?.active === false) {
-                return false;
-            }
-
-            if (
-                String(permission?.status || "")
-                    .trim()
-                    .toUpperCase() === "INACTIVE"
-            ) {
-                return false;
-            }
-
-            /* GROUPED ACTIONS */
-
-            if (Array.isArray(permission?.actions)) {
-
-                return permission.actions.some((action) => {
-
-                    if (typeof action === "string") {
-                        return (
-                            action.trim().toUpperCase() ===
-                            requestedAction
-                        );
-                    }
-
-                    const permissionAction = String(
-                        action?.actionName ||
-                        action?.action?.actionName ||
-                        action?.action?.name ||
-                        action?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toUpperCase();
-
-                    const allowed =
-                        action?.allowed === true ||
-                        action?.allowed === "true";
-
-                    if (action?.active === false) {
-                        return false;
-                    }
-
-                    if (
-                        String(action?.status || "")
-                            .trim()
-                            .toUpperCase() === "INACTIVE"
-                    ) {
-                        return false;
-                    }
-
-                    return (
-                        permissionAction === requestedAction &&
-                        allowed
-                    );
-
-                });
-            }
-
-            /* FLAT ACTION */
-
-            const permissionAction = String(
-                permission?.actionName ||
-                permission?.action?.actionName ||
-                permission?.action?.name ||
-                ""
-            )
+            const requestedAction = String(actionName)
                 .trim()
                 .toUpperCase();
 
-            const allowed =
-                permission?.allowed === true ||
-                permission?.allowed === "true";
+            return permissions.some((permission) => {
+                const permissionModule = String(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                )
+                    .trim()
+                    .toLowerCase();
 
-            return (
-                permissionAction === requestedAction &&
-                allowed
-            );
+                if (permissionModule !== requestedModule) {
+                    return false;
+                }
 
-        });
+                if (permission?.active === false) {
+                    return false;
+                }
 
-    };
+                if (
+                    String(permission?.status || "")
+                        .trim()
+                        .toUpperCase() === "INACTIVE"
+                ) {
+                    return false;
+                }
 
-    /* =====================================================
-       EMAIL SIGNATURE PERMISSIONS
-    ===================================================== */
+                if (Array.isArray(permission?.actions)) {
+                    return permission.actions.some((action) => {
+                        if (typeof action === "string") {
+                            return (
+                                action.trim().toUpperCase() ===
+                                requestedAction
+                            );
+                        }
+
+                        const permissionAction = String(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        )
+                            .trim()
+                            .toUpperCase();
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        if (action?.active === false) {
+                            return false;
+                        }
+
+                        if (
+                            String(action?.status || "")
+                                .trim()
+                                .toUpperCase() === "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
+                }
+
+                const permissionAction = String(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction === requestedAction &&
+                    allowed
+                );
+            });
+        },
+        [permissions, hasFullAccess]
+    );
 
     const canViewEmailSignature = hasPermission(
         "Email Signatures",
@@ -248,33 +220,35 @@ export default function EmailSignatureTable({
        FETCH EMAIL SIGNATURES
     ===================================================== */
 
-    const reloadEmailSignatures = (
-        page = Number(pageNumber) || 0,
-        size = Number(pageSize) || 10
-    ) => {
+    const reloadEmailSignatures = useCallback(
+        (
+            page = Number(pageNumber) || 0,
+            size = Number(pageSize) || 10
+        ) => {
+            if (!userId) {
+                return;
+            }
 
-        if (!userId) {
-            return;
-        }
-
-        dispatch(
-            fetchAllEmailSignatures(userId)
-        );
-
-    };
+            dispatch(
+                fetchAllEmailSignatures({
+                    userId,
+                    page,
+                    size,
+                })
+            );
+        },
+        [dispatch, userId, pageNumber, pageSize]
+    );
 
     /* =====================================================
        DELETE EMAIL SIGNATURE
     ===================================================== */
 
     const handleDelete = async (id) => {
-
         if (!canDeleteEmailSignature) {
-
             toast.error(
                 "You do not have permission to delete email signatures."
             );
-
             return;
         }
 
@@ -283,16 +257,11 @@ export default function EmailSignatureTable({
             return;
         }
 
-        if (
-            !window.confirm(
-                "Delete this email signature?"
-            )
-        ) {
+        if (!window.confirm("Delete this email signature?")) {
             return;
         }
 
         try {
-
             await dispatch(
                 deleteEmailSignature({
                     id,
@@ -304,19 +273,18 @@ export default function EmailSignatureTable({
                 "Email signature deleted successfully"
             );
 
-            reloadEmailSignatures();
-
+            reloadEmailSignatures(
+                pageNumber,
+                pageSize
+            );
         } catch (error) {
-
             toast.error(
                 typeof error === "string"
                     ? error
                     : error?.message ||
                     "Failed to delete email signature"
             );
-
         }
-
     };
 
     /* =====================================================
@@ -324,34 +292,20 @@ export default function EmailSignatureTable({
     ===================================================== */
 
     const handleView = (signature) => {
-
         if (!canViewEmailSignature) {
-
             toast.error(
                 "You do not have permission to view email signatures."
             );
-
             return;
         }
 
-        try {
+        dispatch(
+            setExistingEmailSignature(signature)
+        );
 
-            dispatch(
-                setExistingEmailSignature(signature)
-            );
-
-            navigate(
-                `/settings/emailSignatures/view/${signature.id} `
-            );
-
-        } catch (error) {
-
-            toast.error(
-                "Failed to open email signature"
-            );
-
-        }
-
+        navigate(
+            `/settings/emailSignatures/view/${signature.id}`
+        );
     };
 
     /* =====================================================
@@ -359,34 +313,20 @@ export default function EmailSignatureTable({
     ===================================================== */
 
     const handleEdit = (signature) => {
-
         if (!canEditEmailSignature) {
-
             toast.error(
                 "You do not have permission to edit email signatures."
             );
-
             return;
         }
 
-        try {
+        dispatch(
+            setExistingEmailSignature(signature)
+        );
 
-            dispatch(
-                setExistingEmailSignature(signature)
-            );
-
-            navigate(
-                `/settings/emailSignatures/edit/${signature.id} `
-            );
-
-        } catch (error) {
-
-            toast.error(
-                "Failed to open email signature"
-            );
-
-        }
-
+        navigate(
+            `/settings/emailSignatures/edit/${signature.id}`
+        );
     };
 
     /* =====================================================
@@ -394,19 +334,19 @@ export default function EmailSignatureTable({
     ===================================================== */
 
     const initials = (signatureName) => {
-
         if (!signatureName) {
             return "ES";
         }
 
-        return signatureName
-            .split(" ")
-            .filter(Boolean)
-            .map((word) => word[0])
-            .join("")
-            .slice(0, 2)
-            .toUpperCase() || "ES";
-
+        return (
+            signatureName
+                .split(" ")
+                .filter(Boolean)
+                .map((word) => word[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase() || "ES"
+        );
     };
 
     /* =====================================================
@@ -414,16 +354,9 @@ export default function EmailSignatureTable({
     ===================================================== */
 
     const statusColor = {
-
-        ACTIVE:
-            "bg-green-100 text-green-700",
-
-        INACTIVE:
-            "bg-gray-100 text-gray-700",
-
-        DRAFT:
-            "bg-yellow-100 text-yellow-700",
-
+        ACTIVE: "bg-green-100 text-green-700",
+        INACTIVE: "bg-gray-100 text-gray-700",
+        DRAFT: "bg-yellow-100 text-yellow-700",
     };
 
     /* =====================================================
@@ -431,7 +364,6 @@ export default function EmailSignatureTable({
     ===================================================== */
 
     const avatarColors = [
-
         "bg-pink-500 text-white",
         "bg-green-500 text-white",
         "bg-blue-500 text-white",
@@ -439,66 +371,45 @@ export default function EmailSignatureTable({
         "bg-orange-500 text-white",
         "bg-cyan-500 text-white",
         "bg-indigo-500 text-white",
-
     ];
 
     const getAvatarColor = (name = "") => {
-
         const index = name
             .split("")
             .reduce(
-                (acc, char) =>
-                    acc + char.charCodeAt(0),
+                (acc, char) => acc + char.charCodeAt(0),
                 0
             ) % avatarColors.length;
 
         return avatarColors[index];
-
     };
 
     /* =====================================================
        LOADING
     ===================================================== */
 
-    if (loading) {
-
+    if (loading && !currentEmailSignatures.length) {
         return (
-
             <div className="flex items-center justify-center py-10">
-
                 <p className="text-gray-500">
                     Loading email signatures...
                 </p>
-
             </div>
-
         );
-
     }
 
     /* =====================================================
        ERROR
     ===================================================== */
 
-    if (error) {
-
+    if (error && !currentEmailSignatures.length) {
         return (
-
-            <div
-                className="
-                    rounded-xl border border-red-200
-                    bg-white p-8 text-center
-                "
-            >
-
+            <div className="rounded-xl border border-red-200 bg-white p-8 text-center">
                 <p className="text-red-500">
                     {error}
                 </p>
-
             </div>
-
         );
-
     }
 
     /* =====================================================
@@ -506,31 +417,15 @@ export default function EmailSignatureTable({
     ===================================================== */
 
     if (!currentEmailSignatures.length) {
-
         return (
-
-            <div
-                className="
-                    rounded-2xl border border-gray-200
-                    bg-white p-8 text-center
-                "
-            >
-
-                <Mail
-                    className="
-                        mx-auto mb-3 h-10 w-10
-                        text-gray-300
-                    "
-                />
+            <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
+                <Mail className="mx-auto mb-3 h-10 w-10 text-gray-300" />
 
                 <p className="text-gray-500">
                     No email signatures found.
                 </p>
-
             </div>
-
         );
-
     }
 
     /* =====================================================
@@ -538,66 +433,53 @@ export default function EmailSignatureTable({
     ===================================================== */
 
     return (
+        <div className="overflow-x-auto overflow-y-visible rounded-xl border border-gray-200 bg-white">
 
-        <div className="
-            overflow-x-auto overflow-y-visible
-            rounded-xl border border-gray-200 bg-white
-        ">
+            <table className="w-full min-w-[850px]">
 
-            <div className="overflow-x-auto overflow-y-visible">
+                {/* TABLE HEADER */}
 
-                <table className="w-full">
+                <thead className="border-b border-gray-300 bg-[#FAF9F7]/20">
+                    <tr>
+                        {[
+                            "Signature",
+                            "User ID",
+                            "Default for New",
+                            "Default for Replies",
+                            "Status",
+                            "Actions",
+                        ].map((header) => (
+                            <th
+                                key={header}
+                                className={`
+                                    px-5 py-3 text-xs font-semibold
+                                    uppercase tracking-wide text-gray-500
+                                    ${header === "Actions"
+                                        ? "text-right"
+                                        : "text-left"
+                                    }
+                                `}
+                            >
+                                {header}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
 
-                    {/* TABLE HEADER */}
+                {/* TABLE BODY */}
 
-                    <thead className="
-                        border-b border-gray-300
-                        bg-[#FAF9F7]/20
-                    ">
+                <tbody>
+                    {[...currentEmailSignatures]
+                        .sort(
+                            (a, b) =>
+                                (a.id || 0) - (b.id || 0)
+                        )
+                        .map((signature, index) => {
+                            const status = String(
+                                signature.status || ""
+                            ).toUpperCase();
 
-                        <tr>
-
-                            {[
-                                "Signature",
-                                "User ID",
-                                "Default for New",
-                                "Default for Replies",
-                                "Status",
-                                "Actions",
-                            ].map((header) => (
-
-                                <th
-                                    key={header}
-                                    className={`
-px - 5 py - 3
-text - md font - medium
-                                        uppercase text - gray - 400
-                                        ${header === "Actions"
-                                            ? "text-right"
-                                            : "text-left"
-                                        }
-`}
-                                >
-                                    {header}
-                                </th>
-
-                            ))}
-
-                        </tr>
-
-                    </thead>
-
-                    {/* TABLE BODY */}
-
-                    <tbody>
-
-                        {[...currentEmailSignatures]
-                            .sort(
-                                (a, b) =>
-                                    (a.id || 0) - (b.id || 0)
-                            )
-                            .map((signature, index) => (
-
+                            return (
                                 <tr
                                     key={signature.id || index}
                                     className="
@@ -609,34 +491,30 @@ text - md font - medium
 
                                     {/* SIGNATURE */}
 
-                                    <td className="overflow-hidden px-2 py-3">
+                                    <td className="overflow-hidden px-5 py-3">
+                                        <div className="flex min-w-0 items-center gap-3">
 
-                                        <div className="
-                                            flex min-w-0 items-center gap-2
-                                        ">
-
-                                            <div className={`
-                                                flex h - 9 min - w - [36px]
-w - 9 items - center justify - center
-rounded - full text - sm font - bold
-                                                ${getAvatarColor(
-                                                signature.signatureName
-                                            )
-                                                }
-`}>
-
-                                                {initials(signature.signatureName)}
-
+                                            <div
+                                                className={`
+                                                    flex h-9 w-9 shrink-0
+                                                    items-center justify-center
+                                                    rounded-full text-sm font-bold
+                                                    ${getAvatarColor(
+                                                    signature.signatureName
+                                                )}
+                                                `}
+                                            >
+                                                {initials(
+                                                    signature.signatureName
+                                                )}
                                             </div>
 
                                             <div className="min-w-0">
-
                                                 <p
-                                                    className="
-                                                        truncate font-medium
-                                                        text-gray-800
-                                                    "
-                                                    title={signature.signatureName || ""}
+                                                    className="truncate font-medium text-gray-800"
+                                                    title={
+                                                        signature.signatureName || ""
+                                                    }
                                                 >
                                                     {signature.signatureName || "—"}
                                                 </p>
@@ -644,44 +522,29 @@ rounded - full text - sm font - bold
                                                 <p className="text-xs text-gray-500">
                                                     ID: #{signature.id}
                                                 </p>
-
                                             </div>
-
                                         </div>
-
                                     </td>
 
                                     {/* USER ID */}
 
-                                    <td className="overflow-hidden px-2 py-3">
-
-                                        <div className="
-                                            flex items-center gap-1.5
-                                        ">
-
+                                    <td className="overflow-hidden px-5 py-3">
+                                        <div className="flex items-center gap-1.5">
                                             <User
                                                 size={13}
                                                 className="text-gray-400"
                                             />
 
-                                            <p className="
-                                                font-medium text-gray-700
-                                            ">
+                                            <p className="font-medium text-gray-700">
                                                 {signature.userId ?? "—"}
                                             </p>
-
                                         </div>
-
                                     </td>
 
-                                    {/* DEFAULT FOR NEW MESSAGES */}
+                                    {/* DEFAULT FOR NEW */}
 
-                                    <td className="overflow-hidden px-2 py-3">
-
-                                        <div className="
-                                            flex items-center gap-1.5
-                                        ">
-
+                                    <td className="overflow-hidden px-5 py-3">
+                                        <div className="flex items-center gap-2">
                                             <Star
                                                 size={14}
                                                 className={
@@ -691,32 +554,28 @@ rounded - full text - sm font - bold
                                                 }
                                             />
 
-                                            <span className={`
-inline - block rounded - full
-px - 2 py - 1 text - xs font - medium
-                                                ${signature.defaultForNewMessages
-                                                    ? "bg-green-100 text-green-700"
-                                                    : "bg-gray-100 text-gray-600"
-                                                }
-`}>
+                                            <span
+                                                className={`
+                                                    inline-block rounded-full
+                                                    px-2 py-1 text-xs font-medium
+                                                    ${signature.defaultForNewMessages
+                                                        ? "bg-green-100 text-green-700"
+                                                        : "bg-gray-100 text-gray-600"
+                                                    }
+                                                `}
+                                            >
                                                 {signature.defaultForNewMessages
                                                     ? "Default"
                                                     : "No"
                                                 }
                                             </span>
-
                                         </div>
-
                                     </td>
 
                                     {/* DEFAULT FOR REPLIES */}
 
-                                    <td className="overflow-hidden px-2 py-3">
-
-                                        <div className="
-                                            flex items-center gap-1.5
-                                        ">
-
+                                    <td className="overflow-hidden px-5 py-3">
+                                        <div className="flex items-center gap-2">
                                             <Reply
                                                 size={14}
                                                 className={
@@ -726,56 +585,48 @@ px - 2 py - 1 text - xs font - medium
                                                 }
                                             />
 
-                                            <span className={`
-inline - block rounded - full
-px - 2 py - 1 text - xs font - medium
-                                                ${signature.defaultForReplies
-                                                    ? "bg-green-100 text-green-700"
-                                                    : "bg-gray-100 text-gray-600"
-                                                }
-`}>
+                                            <span
+                                                className={`
+                                                    inline-block rounded-full
+                                                    px-2 py-1 text-xs font-medium
+                                                    ${signature.defaultForReplies
+                                                        ? "bg-green-100 text-green-700"
+                                                        : "bg-gray-100 text-gray-600"
+                                                    }
+                                                `}
+                                            >
                                                 {signature.defaultForReplies
                                                     ? "Default"
                                                     : "No"
                                                 }
                                             </span>
-
                                         </div>
-
                                     </td>
 
                                     {/* STATUS */}
 
-                                    <td className="overflow-hidden px-2 py-3">
-
-                                        <span className={`
-inline - block rounded - full
-px - 2 py - 1 text - xs font - medium
-                                            ${statusColor[
-                                            String(
-                                                signature.status || ""
-                                            ).toUpperCase()
-                                            ] ||
-                                            "bg-gray-100 text-gray-700"
-                                            }
-`}>
+                                    <td className="overflow-hidden px-5 py-3">
+                                        <span
+                                            className={`
+                                                inline-block rounded-full
+                                                px-2 py-1 text-xs font-medium
+                                                ${statusColor[status] ||
+                                                "bg-gray-100 text-gray-700"
+                                                }
+                                            `}
+                                        >
                                             {signature.status || "—"}
                                         </span>
-
                                     </td>
 
                                     {/* ACTIONS */}
 
-                                    <td className="px-4 py-3">
-
-                                        <div className="
-                                            flex items-center justify-end gap-2
-                                        ">
+                                    <td className="px-5 py-3">
+                                        <div className="flex items-center justify-end gap-2">
 
                                             {/* VIEW */}
 
                                             {canViewEmailSignature && (
-
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
@@ -784,7 +635,7 @@ px - 2 py - 1 text - xs font - medium
                                                     }}
                                                     title="View"
                                                     className="
-                                                        flex h-8 w-8 items-center
+                                                        group relative flex h-8 w-8 items-center
                                                         justify-center rounded-lg
                                                         bg-blue-50 text-blue-600
                                                         transition hover:bg-blue-100
@@ -792,14 +643,13 @@ px - 2 py - 1 text - xs font - medium
                                                     "
                                                 >
                                                     <Eye size={16} />
+                                                    <ToolTipText text="View" position="bottom" />
                                                 </button>
-
                                             )}
 
                                             {/* EDIT */}
 
                                             {canEditEmailSignature && (
-
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
@@ -808,7 +658,7 @@ px - 2 py - 1 text - xs font - medium
                                                     }}
                                                     title="Edit"
                                                     className="
-                                                        flex h-8 w-8 items-center
+                                                        group relative flex h-8 w-8 items-center
                                                         justify-center rounded-lg
                                                         bg-amber-50 text-amber-600
                                                         transition hover:bg-amber-100
@@ -816,23 +666,21 @@ px - 2 py - 1 text - xs font - medium
                                                     "
                                                 >
                                                     <Edit size={16} />
+                                                    <ToolTipText text="Edit" position="bottom" />
                                                 </button>
-
                                             )}
 
                                             {/* DELETE */}
 
                                             {canDeleteEmailSignature && (
-
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleDelete(signature.id);
                                                     }}
-                                                    title="Delete"
                                                     className="
-                                                        flex h-8 w-8 items-center
+                                                        group relative flex h-8 w-8 items-center
                                                         justify-center rounded-lg
                                                         bg-red-50 text-red-600
                                                         transition hover:bg-red-100
@@ -840,43 +688,41 @@ px - 2 py - 1 text - xs font - medium
                                                     "
                                                 >
                                                     <Trash2 size={16} />
+                                                    <ToolTipText text="Delete" position="bottom" />
                                                 </button>
-
                                             )}
 
                                         </div>
-
                                     </td>
-
                                 </tr>
+                            );
+                        })}
+                </tbody>
+            </table>
 
-                            ))}
+            {/* PAGINATION */}
 
-                    </tbody>
-
-                </table>
-
-                {/* PAGINATION */}
-
-                <Pagination
-                    page={Number(pageNumber) || 0}
-                    size={Number(pageSize) || 10}
-                    totalElements={Number(totalElements) || 0}
-                    totalPages={Number(totalPages) || 0}
-                    loading={loading}
-                    label="email signatures"
-                    onPageChange={() => {
-                        reloadEmailSignatures();
-                    }}
-                    onPageSizeChange={() => {
-                        reloadEmailSignatures(0);
-                    }}
-                />
-
-            </div>
+            <Pagination
+                page={Number(pageNumber) || 0}
+                size={Number(pageSize) || 10}
+                totalElements={Number(totalElements) || 0}
+                totalPages={Number(totalPages) || 0}
+                loading={loading}
+                label="email signatures"
+                onPageChange={(page) => {
+                    reloadEmailSignatures(
+                        page,
+                        pageSize
+                    );
+                }}
+                onPageSizeChange={(size) => {
+                    reloadEmailSignatures(
+                        0,
+                        size
+                    );
+                }}
+            />
 
         </div>
-
     );
-
 }

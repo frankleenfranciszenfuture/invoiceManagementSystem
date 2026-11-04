@@ -36,6 +36,8 @@ import {
 } from "../../menuPermission/thunks/menuPermissionThunks";
 
 import CustomSelect from "../../../common/custom/CustomSelect";
+import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
+import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
 
 /* =========================================================
    INITIAL FORM DATA
@@ -192,7 +194,7 @@ const CheckboxField = ({
    MAIN COMPONENT
 ========================================================= */
 
-const EmailSignatureCreateSimple = () => {
+const EmailSignatureCreateSimple = ({ onClose }) => {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -213,6 +215,14 @@ const EmailSignatureCreateSimple = () => {
         emailSignature,
         loading = false,
     } = emailSignatureState;
+
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
+
 
     /* =====================================================
        AUTH STATE
@@ -487,6 +497,15 @@ const EmailSignatureCreateSimple = () => {
         }));
     };
 
+    const handleClose = () => {
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/settings/emailSignatures")
+            }
+        });
+    };
     /* =====================================================
        RESET FORM
     ===================================================== */
@@ -1000,7 +1019,7 @@ const EmailSignatureCreateSimple = () => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         disabled={loading}
                         className="
                             rounded-lg border border-gray-200
@@ -1133,6 +1152,16 @@ const EmailSignatureCreateSimple = () => {
                 </div>
 
             </form>
+
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave EmailSignature?"
+                message="Are you sure you want to leave this emailSignature page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
         </div>
     );
 };

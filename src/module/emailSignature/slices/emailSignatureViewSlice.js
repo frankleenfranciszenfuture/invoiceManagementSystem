@@ -1,71 +1,44 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-  selectedEmailSignatureView: "All EmailSignatures",
-
+  selectedEmailSignatureView: "All Email Signatures",
   emailSignatureStatus: "ALL",
-
   search: "",
 
   views: [
     {
-      label: "All EmailSignatures",
+      label: "All Email Signatures",
       value: "ALL",
     },
     {
-      label: "Active EmailSignatures",
+      label: "Active Email Signatures",
       value: "ACTIVE",
     },
     {
-      label: "Inactive EmailSignatures",
+      label: "Inactive Email Signatures",
       value: "INACTIVE",
-    },
-    {
-      label: "Draft EmailSignatures",
-      value: "DRAFT",
     },
   ],
 };
 
 const emailSignatureViewSlice = createSlice({
   name: "emailSignatureView",
-
   initialState,
 
   reducers: {
-    /* =====================================================
-       SEARCH
-    ===================================================== */
-
-    setSearch(state, action) {
+    setSearch: (state, action) => {
       state.search = action.payload;
     },
 
-    /* =====================================================
-       SELECTED VIEW
-    ===================================================== */
-
-    setSelectedEmailSignatureView(state, action) {
+    setSelectedEmailSignatureView: (state, action) => {
       state.selectedEmailSignatureView = action.payload;
     },
 
-    /* =====================================================
-       CURRENCY STATUS
-    ===================================================== */
-
-    setEmailSignatureStatus(state, action) {
+    setEmailSignatureStatus: (state, action) => {
       state.emailSignatureStatus = action.payload;
     },
 
-    /* =====================================================
-       RESET VIEW
-    ===================================================== */
-
-    resetEmailSignatureView(state) {
-      state.selectedEmailSignatureView = "All EmailSignatures";
-      state.emailSignatureStatus = "ALL";
-      state.search = "";
-    },
+    resetEmailSignatureView: () => initialState,
   },
 });
 

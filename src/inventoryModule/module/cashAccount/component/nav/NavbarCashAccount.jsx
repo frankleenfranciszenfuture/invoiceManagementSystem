@@ -35,6 +35,7 @@ import {
 } from "../../thunks/cashAccountThunks";
 
 import CustomSelect from "../../../../../common/custom/CustomSelect";
+import ToolTipText from "../../../../../common/toolTip/ToolTipText";
 
 /* =========================================================
    CONSTANTS
@@ -360,7 +361,7 @@ export default function NavbarCashAccount() {
 
                 {/* LEFT */}
 
-                <div className="flex items-center gap-2">
+                <div className="relative flex items-center gap-2">
 
                     {/* HOME */}
 
@@ -368,14 +369,16 @@ export default function NavbarCashAccount() {
                         type="button"
                         onClick={() => navigate("/")}
                         className="
+                            group relative 
                             flex items-center justify-center
                             rounded-md border border-blue-300
                             bg-white p-2 text-[#0095FD]
                             transition hover:bg-[#0095FD]/20
                         "
-                        title="Home"
+
                     >
                         <Home size={18} />
+                        <ToolTipText text="Home" position="bottom" />
                     </button>
 
                     {/* TITLE */}
@@ -461,16 +464,19 @@ export default function NavbarCashAccount() {
                         type="button"
                         onClick={handleCreateCashAccount}
                         className="
+                            group relative
                             flex items-center gap-1 rounded-md
                             bg-[#0095FD] px-3 py-2
                             text-sm font-medium text-white
                             hover:bg-[#0095FD]/90
                         "
-                        title="Create New Cash Account"
+
                     >
                         <Plus size={14} />
 
                         <span>New</span>
+
+                        <ToolTipText text="Create New Cash Account" position="bottom" />
                     </button>
 
                     {/* SETTINGS */}
@@ -479,13 +485,15 @@ export default function NavbarCashAccount() {
                         type="button"
                         onClick={() => navigate("/settings")}
                         className="
+                            group relative
                             rounded-md border border-gray-300
                             p-2 text-[#0095FD]
                             hover:bg-[#0095FD]/20
                         "
-                        title="Settings"
+
                     >
                         <Settings size={18} />
+                        <ToolTipText text="Settings" position="bottom" />
                     </button>
 
                 </div>

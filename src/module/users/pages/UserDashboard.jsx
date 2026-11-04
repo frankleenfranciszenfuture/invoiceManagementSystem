@@ -2,6 +2,7 @@
 import React, {
     useEffect,
     useMemo,
+    useCallback,
 } from "react";
 
 import {
@@ -12,22 +13,25 @@ import {
 import {
     Plus,
     Download,
+    Users,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
-import UserTable from "./UserTable";
 import NavbarUser from "../components/bars/nav/NavbarUser";
+import UserTable from "../pages/UserTable";
+import UserOverview from "../pages/UserOverview";
 
 import {
     fetchAllUsers,
 } from "../thunks/userThunks";
 
 import {
-    getUserPermission,
-} from "../../menuPermission/thunks/menuPermissionThunks";
+    clearUserState,
+} from "../slices/userSlice";
 
 import {
+    setSearch,
     setUserStatus,
     setSelectedUserView,
 } from "../slices/userViewSlice";
@@ -36,63 +40,96 @@ import {
     openModal,
 } from "../../ui/uiSlice";
 
+import {
+    getUserPermission,
+} from "../../menuPermission/thunks/menuPermissionThunks";
+
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
 
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMPTY_ARRAY = [];
+
+/* =========================================================
+   NORMALIZE HELPERS
+========================================================= */
+
+const normalizeModule = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+const normalizeAction = (value) =>
+    String(value ?? "").trim().toUpperCase();
+
+/* =========================================================
+   USER STATUS HELPER
+========================================================= */
+
+const getUserStatus = (user) => {
+
+    if (user?.status) {
+        return String(user.status).trim().toUpperCase();
+    }
+
+    if (typeof user?.audit?.active === "boolean") {
+        return user.audit.active ? "ACTIVE" : "INACTIVE";
+    }
+
+    return "UNKNOWN";
+};
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function UserDashboard() {
 
     const dispatch = useDispatch();
 
-
-    // ============================================================
-    // AUTH STATE
-    // ============================================================
+    /* =====================================================
+       AUTH STATE
+    ===================================================== */
 
     const user = useSelector(
-        (state) =>
-            state.auth?.user
+        (state) => state.auth?.user
     );
 
     const isAuthenticated = useSelector(
-        (state) =>
-            state.auth?.isAuthenticated === true
+        (state) => state.auth?.isAuthenticated === true
     );
 
     const authChecking = useSelector(
-        (state) =>
-            state.auth?.authChecking === true
+        (state) => state.auth?.authChecking === true
     );
 
-
-    // ============================================================
-    // PERMISSION STATE
-    // ============================================================
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
 
     const permissions = useSelector(
-        (state) =>
-            Array.isArray(
-                state.menuPermission?.userPermissions
-            )
-                ? state.menuPermission.userPermissions
-                : []
+        (state) => {
+            const value = state.menuPermission?.userPermissions;
+
+            return Array.isArray(value)
+                ? value
+                : EMPTY_ARRAY;
+        }
     );
 
     const permissionLoading = useSelector(
         (state) =>
-            state.menuPermission
-                ?.userPermissionsLoading === true
+            state.menuPermission?.userPermissionsLoading === true
     );
 
     const permissionsLoaded = useSelector(
         (state) =>
-            state.menuPermission
-                ?.userPermissionsLoaded === true
+            state.menuPermission?.userPermissionsLoaded === true
     );
 
-
-    // ============================================================
-    // ROLE
-    // ============================================================
+    /* =====================================================
+       ROLE
+    ===================================================== */
 
     const roleName =
         user?.roleName ||
@@ -102,357 +139,197 @@ export default function UserDashboard() {
         user?.authority ||
         "";
 
-    const normalizedRole =
-        String(roleName)
-            .trim()
-            .toUpperCase();
-
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
-
-    const isAdmin =
-        normalizedRole === "ADMIN";
+    const normalizedRole = normalizeAction(roleName);
 
     const hasFullAccess =
-        isSuperAdmin ||
-        isAdmin;
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
-    // ============================================================
-    // PERMISSION CHECK
-    // ============================================================
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
 
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
+            if (hasFullAccess) {
+                return true;
+            }
 
-        // --------------------------------------------------------
-        // SUPER ADMIN / ADMIN
-        // --------------------------------------------------------
+            if (!Array.isArray(permissions)) {
+                return false;
+            }
 
-        if (hasFullAccess) {
-            return true;
-        }
+            const requestedModule = normalizeModule(moduleName);
+            const requestedAction = normalizeAction(actionName);
 
-        // --------------------------------------------------------
-        // PERMISSION ARRAY
-        // --------------------------------------------------------
+            return permissions.some((permission) => {
 
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
+                const permissionModule = normalizeModule(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                );
 
-        const requestedModule =
-            String(moduleName)
-                .trim()
-                .toLowerCase();
+                if (permissionModule !== requestedModule) {
+                    return false;
+                }
 
-        const requestedAction =
-            String(actionName)
-                .trim()
-                .toUpperCase();
-
-
-        return permissions.some(
-            (permission) => {
-
-                // ==================================================
-                // MODULE
-                // ==================================================
-
-                const permissionModule =
-                    String(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toLowerCase();
-
+                if (permission?.active === false) {
+                    return false;
+                }
 
                 if (
-                    permissionModule !==
-                    requestedModule
+                    normalizeAction(permission?.status) === "INACTIVE"
                 ) {
                     return false;
                 }
 
+                /* ACTION ARRAY */
 
-                // ==================================================
-                // ACTIVE STATUS
-                // ==================================================
+                if (Array.isArray(permission?.actions)) {
 
-                if (
-                    permission?.active === false
-                ) {
-                    return false;
-                }
+                    return permission.actions.some((action) => {
 
-
-                if (
-                    String(
-                        permission?.status || ""
-                    )
-                        .trim()
-                        .toUpperCase() ===
-                    "INACTIVE"
-                ) {
-                    return false;
-                }
-
-
-                // ==================================================
-                // GROUPED ACTIONS
-                // ==================================================
-
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
-
-                    return permission.actions.some(
-                        (action) => {
-
-                            // --------------------------------------
-                            // ACTION AS STRING
-                            // --------------------------------------
-
-                            if (
-                                typeof action ===
-                                "string"
-                            ) {
-
-                                return (
-                                    String(action)
-                                        .trim()
-                                        .toUpperCase() ===
-                                    requestedAction
-                                );
-                            }
-
-
-                            // --------------------------------------
-                            // ACTION NAME
-                            // --------------------------------------
-
-                            const permissionAction =
-                                String(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.action?.name ||
-                                    action?.name ||
-                                    ""
-                                )
-                                    .trim()
-                                    .toUpperCase();
-
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
-
-
-                            // --------------------------------------
-                            // ACTION STATUS
-                            // --------------------------------------
-
-                            if (
-                                action?.active === false
-                            ) {
-                                return false;
-                            }
-
-
-                            if (
-                                String(
-                                    action?.status || ""
-                                )
-                                    .trim()
-                                    .toUpperCase() ===
-                                "INACTIVE"
-                            ) {
-                                return false;
-                            }
-
-
+                        if (typeof action === "string") {
                             return (
-                                permissionAction ===
-                                requestedAction &&
-                                allowed
+                                normalizeAction(action) === requestedAction
                             );
                         }
-                    );
+
+                        const permissionAction = normalizeAction(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        );
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        if (action?.active === false) {
+                            return false;
+                        }
+
+                        if (
+                            normalizeAction(action?.status) === "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
                 }
 
+                /* DIRECT / FLAT ACTION */
 
-                // ==================================================
-                // FLAT ACTION
-                // ==================================================
-
-                const permissionAction =
-                    String(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toUpperCase();
-
+                const permissionAction = normalizeAction(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                );
 
                 const allowed =
                     permission?.allowed === true ||
                     permission?.allowed === "true";
 
-
                 return (
-                    permissionAction ===
-                    requestedAction &&
+                    permissionAction === requestedAction &&
                     allowed
                 );
-            }
-        );
-    };
+            });
 
+        },
+        [
+            hasFullAccess,
+            permissions,
+        ]
+    );
 
-    // ============================================================
-    // USER PERMISSIONS
-    // ============================================================
+    /* =====================================================
+       USER PERMISSIONS
+    ===================================================== */
 
-    const canViewUser =
-        hasPermission(
-            "Users",
-            "VIEW"
-        );
+    const canViewUser = hasPermission(
+        "Users",
+        "VIEW"
+    );
 
-    const canCreateUser =
-        hasPermission(
-            "Users",
-            "CREATE"
-        );
+    const canCreateUser = hasPermission(
+        "Users",
+        "CREATE"
+    );
 
+    const canEditUser = hasPermission(
+        "Users",
+        "EDIT"
+    );
 
-    // ============================================================
-    // USER STATE
-    // ============================================================
+    const canDeleteUser = hasPermission(
+        "Users",
+        "DELETE"
+    );
+
+    /* =====================================================
+       USER STATE
+    ===================================================== */
 
     const usersFromRedux = useSelector(
-        (state) =>
-            state.user?.users
+        (state) => state.user?.users
     );
 
-    const users =
-        usersFromRedux ?? [];
-
+    const users = Array.isArray(usersFromRedux)
+        ? usersFromRedux
+        : EMPTY_ARRAY;
 
     const loading = useSelector(
-        (state) =>
-            state.user?.loading ||
-            false
+        (state) => state.user?.loading === true
     );
-
 
     const error = useSelector(
-        (state) =>
-            state.user?.error
+        (state) => state.user?.error
     );
 
-
-    // ============================================================
-    // PAGINATION
-    // ============================================================
-
-    const pagination = useSelector(
-        (state) =>
-            state.user?.pagination || {
-                pageNumber: 0,
-                pageSize: 10,
-                totalElements: 0,
-                totalPages: 0,
-                last: true,
-            }
-    );
-
-
-    // ============================================================
-    // USER FILTER STATE
-    // ============================================================
+    /* =====================================================
+       USER VIEW STATE
+    ===================================================== */
 
     const userStatus = useSelector(
         (state) =>
-            state.userView?.userStatus ||
-            "ALL"
+            state.userView?.userStatus || "ALL"
     );
-
 
     const search = useSelector(
         (state) =>
-            state.userView?.search ||
-            ""
+            state.userView?.search || ""
     );
 
-
-    // ============================================================
-    // LOAD CURRENT USER PERMISSIONS
-    // ============================================================
+    /* =====================================================
+       LOAD USER PERMISSIONS
+    ===================================================== */
 
     useEffect(() => {
 
-        // --------------------------------------------------------
-        // AUTH STILL CHECKING
-        // --------------------------------------------------------
-
-        if (authChecking) {
+        if (authChecking || !isAuthenticated) {
             return;
         }
-
-
-        // --------------------------------------------------------
-        // NOT AUTHENTICATED
-        // --------------------------------------------------------
-
-        if (!isAuthenticated) {
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // ADMIN / SUPER ADMIN
-        // --------------------------------------------------------
 
         if (hasFullAccess) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // ALREADY LOADED
-        // --------------------------------------------------------
-
-        if (permissionsLoaded) {
+        if (permissionsLoaded || permissionLoading) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // CURRENTLY LOADING
-        // --------------------------------------------------------
-
-        if (permissionLoading) {
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // LOAD PERMISSIONS
-        // --------------------------------------------------------
-
-        dispatch(
-            getUserPermission()
-        );
+        dispatch(getUserPermission());
 
     }, [
         authChecking,
@@ -463,421 +340,100 @@ export default function UserDashboard() {
         dispatch,
     ]);
 
-
-    // ============================================================
-    // FETCH USERS
-    // ============================================================
-
-    useEffect(() => {
-
-        // --------------------------------------------------------
-        // AUTH CHECKING
-        // --------------------------------------------------------
-
-        if (authChecking) {
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // NOT AUTHENTICATED
-        // --------------------------------------------------------
-
-        if (!isAuthenticated) {
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // STAFF / OTHER ROLE
-        //
-        // Wait until permissions are loaded.
-        // --------------------------------------------------------
-
-        if (!hasFullAccess) {
-
-            if (!permissionsLoaded) {
-                return;
-            }
-
-            if (permissionLoading) {
-                return;
-            }
-
-
-            // ----------------------------------------------------
-            // NO VIEW PERMISSION
-            // ----------------------------------------------------
-
-            if (!canViewUser) {
-                return;
-            }
-        }
-
-
-        // --------------------------------------------------------
-        // FETCH USERS
-        // --------------------------------------------------------
-
-        console.log(
-            "Fetching users..."
-        );
-
-        dispatch(
-            fetchAllUsers({
-                page: 0,
-                size: 10,
-            })
-        );
-
-    }, [
-        authChecking,
-        isAuthenticated,
-        hasFullAccess,
-        permissionsLoaded,
-        permissionLoading,
-        canViewUser,
-        dispatch,
-    ]);
-
-
-    // ============================================================
-    // SYNC URL STATUS → REDUX
-    // ============================================================
+    /* =====================================================
+       FETCH ALL USERS
+    ===================================================== */
 
     useEffect(() => {
-
-        const params =
-            new URLSearchParams(
-                window.location.search
-            );
-
-
-        const urlStatus =
-            params.get(
-                "userStatus"
-            );
-
-
-        if (!urlStatus) {
-            return;
-        }
-
-
-        const normalizedStatus =
-            String(
-                urlStatus
-            ).toUpperCase();
-
-
-        const validStatuses = [
-            "ALL",
-            "ACTIVE",
-            "INACTIVE",
-            "DRAFT",
-        ];
-
 
         if (
-            !validStatuses.includes(
-                normalizedStatus
-            )
+            authChecking ||
+            !isAuthenticated ||
+            !canViewUser
         ) {
             return;
         }
 
-
-        dispatch(
-            setUserStatus(
-                normalizedStatus
-            )
-        );
-
-
-        const statusLabels = {
-
-            ALL:
-                "All Users",
-
-            ACTIVE:
-                "Active Users",
-
-            INACTIVE:
-                "Inactive Users",
-
-            DRAFT:
-                "Draft Users",
-
-        };
-
-
-        dispatch(
-            setSelectedUserView(
-                statusLabels[
-                normalizedStatus
-                ]
-            )
-        );
+        dispatch(fetchAllUsers());
 
     }, [
+        authChecking,
+        isAuthenticated,
+        canViewUser,
         dispatch,
     ]);
 
+    /* =====================================================
+       FILTER USERS BY STATUS AND SEARCH
+    ===================================================== */
 
-    // ============================================================
-    // DEBUG
-    // ============================================================
+    const filteredUsers = useMemo(() => {
 
-    useEffect(() => {
+        const selectedStatus = String(
+            userStatus || "ALL"
+        )
+            .trim()
+            .toUpperCase();
 
-        console.log(
-            "================================"
-        );
+        const searchValue = String(search ?? "")
+            .trim()
+            .toLowerCase();
 
-        console.log(
-            "USER:",
-            user
-        );
+        return users.filter((user) => {
 
-        console.log(
-            "USER ROLE:",
-            normalizedRole
-        );
+            /* STATUS FILTER */
 
-        console.log(
-            "USER FULL ACCESS:",
-            hasFullAccess
-        );
+            const currentStatus = getUserStatus(user);
 
-        console.log(
-            "USER PERMISSIONS LOADING:",
-            permissionLoading
-        );
+            if (
+                selectedStatus !== "ALL" &&
+                currentStatus !== selectedStatus
+            ) {
+                return false;
+            }
 
-        console.log(
-            "USER PERMISSIONS LOADED:",
-            permissionsLoaded
-        );
+            /* SEARCH FILTER */
 
-        console.log(
-            "USER PERMISSIONS:",
-            permissions
-        );
+            if (searchValue) {
 
-        console.log(
-            "USER VIEW PERMISSION:",
-            canViewUser
-        );
+                const searchableValues = [
+                    user?.userId,
+                    user?.name,
+                    user?.email,
+                    user?.role,
+                    user?.roleName,
+                    user?.id,
+                ];
 
-        console.log(
-            "USER CREATE PERMISSION:",
-            canCreateUser
-        );
+                const matchesSearch = searchableValues.some((value) =>
+                    String(value ?? "")
+                        .toLowerCase()
+                        .includes(searchValue)
+                );
 
-        console.log(
-            "USERS FROM REDUX:",
-            users
-        );
+                if (!matchesSearch) {
+                    return false;
+                }
+            }
 
-        console.log(
-            "USER LOADING:",
-            loading
-        );
-
-        console.log(
-            "USER ERROR:",
-            error
-        );
-
-        console.log(
-            "USER STATUS:",
-            userStatus
-        );
-
-        console.log(
-            "USER SEARCH:",
-            search
-        );
-
-        console.log(
-            "USER PAGINATION:",
-            pagination
-        );
-
-        console.log(
-            "================================"
-        );
+            return true;
+        });
 
     }, [
-        user,
-        normalizedRole,
-        hasFullAccess,
-        permissionLoading,
-        permissionsLoaded,
-        permissions,
-        canViewUser,
-        canCreateUser,
         users,
-        loading,
-        error,
         userStatus,
         search,
-        pagination,
     ]);
 
+    /* =====================================================
+       OPEN CREATE USER MODAL
+    ===================================================== */
 
-    // ============================================================
-    // FILTER USERS BY STATUS + SEARCH
-    // ============================================================
-
-    const filteredUsers =
-        useMemo(() => {
-
-            const selectedStatus =
-                String(
-                    userStatus ||
-                    "ALL"
-                ).toUpperCase();
-
-
-            const normalizedSearch =
-                String(
-                    search ||
-                    ""
-                )
-                    .trim()
-                    .toLowerCase();
-
-
-            let result =
-                users;
-
-
-            // ====================================================
-            // STATUS FILTER
-            // ====================================================
-
-            if (
-                selectedStatus !==
-                "ALL"
-            ) {
-
-                result =
-                    result.filter(
-                        (user) => {
-
-                            const backendStatus =
-                                String(
-                                    user?.status ||
-                                    ""
-                                ).toUpperCase();
-
-
-                            return (
-                                backendStatus ===
-                                selectedStatus
-                            );
-                        }
-                    );
-            }
-
-
-            // ====================================================
-            // SEARCH FILTER
-            // ====================================================
-
-            if (
-                normalizedSearch
-            ) {
-
-                result =
-                    result.filter(
-                        (user) => {
-
-                            const name =
-                                String(
-                                    user?.name ||
-                                    ""
-                                )
-                                    .toLowerCase();
-
-
-                            const email =
-                                String(
-                                    user?.email ||
-                                    ""
-                                )
-                                    .toLowerCase();
-
-
-                            const userId =
-                                String(
-                                    user?.userId ||
-                                    ""
-                                )
-                                    .toLowerCase();
-
-
-                            const role =
-                                String(
-                                    user?.role ||
-                                    ""
-                                )
-                                    .toLowerCase();
-
-
-                            return (
-                                name.includes(
-                                    normalizedSearch
-                                ) ||
-                                email.includes(
-                                    normalizedSearch
-                                ) ||
-                                userId.includes(
-                                    normalizedSearch
-                                ) ||
-                                role.includes(
-                                    normalizedSearch
-                                )
-                            );
-
-                        }
-                    );
-            }
-
-
-            return result;
-
-        }, [
-            users,
-            userStatus,
-            search,
-        ]);
-
-
-    // ============================================================
-    // OPEN CREATE USER MODAL
-    // ============================================================
-
-    const handleCreateUser = () => {
-
-        // --------------------------------------------------------
-        // AUTH CHECK
-        // --------------------------------------------------------
+    const handleCreateUser = useCallback(() => {
 
         if (!isAuthenticated) {
-
-            toast.error(
-                "Please login to create users."
-            );
-
             return;
         }
-
-
-        // --------------------------------------------------------
-        // PERMISSION LOADING
-        // --------------------------------------------------------
 
         if (
             !hasFullAccess &&
@@ -886,37 +442,15 @@ export default function UserDashboard() {
                 !permissionsLoaded
             )
         ) {
-
-            toast.error(
-                "Permissions are still loading. Please try again."
-            );
-
             return;
         }
 
-
-        // --------------------------------------------------------
-        // CREATE PERMISSION
-        // --------------------------------------------------------
-
         if (!canCreateUser) {
-
             toast.error(
                 "You do not have permission to create users."
             );
-
             return;
         }
-
-
-        // --------------------------------------------------------
-        // OPEN MODAL
-        // --------------------------------------------------------
-
-        console.log(
-            "Opening Add User modal"
-        );
-
 
         dispatch(
             openModal({
@@ -924,33 +458,55 @@ export default function UserDashboard() {
             })
         );
 
-    };
+    }, [
+        isAuthenticated,
+        hasFullAccess,
+        permissionLoading,
+        permissionsLoaded,
+        canCreateUser,
+        dispatch,
+    ]);
 
+    /* =====================================================
+       CLEAR ERROR
+    ===================================================== */
 
-    // ============================================================
-    // AUTH CHECKING
-    // ============================================================
+    useEffect(() => {
+
+        if (!error) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            dispatch(clearUserState());
+        }, 2000);
+
+        return () => clearTimeout(timer);
+
+    }, [
+        error,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       AUTH CHECKING
+    ===================================================== */
 
     if (authChecking) {
-
-        return (
-            <InvoiceSkeleton />
-        );
+        return <InvoiceSkeleton />;
     }
 
-
-    // ============================================================
-    // NOT AUTHENTICATED
-    // ============================================================
+    /* =====================================================
+       NOT AUTHENTICATED
+    ===================================================== */
 
     if (!isAuthenticated) {
         return null;
     }
 
-
-    // ============================================================
-    // PERMISSION LOADING
-    // ============================================================
+    /* =====================================================
+       PERMISSION LOADING
+    ===================================================== */
 
     if (
         !hasFullAccess &&
@@ -959,375 +515,244 @@ export default function UserDashboard() {
             !permissionsLoaded
         )
     ) {
-
-        return (
-            <InvoiceSkeleton />
-        );
+        return <InvoiceSkeleton />;
     }
 
-
-    // ============================================================
-    // VIEW PERMISSION DENIED
-    // ============================================================
+    /* =====================================================
+       VIEW PERMISSION DENIED
+    ===================================================== */
 
     if (!canViewUser) {
 
         return (
             <div
                 className="
-                    flex
-                    h-screen
-                    items-center
-                    justify-center
-                    bg-gray-50
-                    font-sans
+                    flex h-screen items-center justify-center
+                    bg-gray-50 font-sans
                 "
             >
-
-                <div
-                    className="
-                        text-center
-                        px-6
-                    "
-                >
+                <div className="px-6 text-center">
 
                     <div
                         className="
-                            mx-auto
-                            mb-4
-                            w-16
-                            h-16
-                            rounded-full
-                            bg-red-50
-                            flex
-                            items-center
-                            justify-center
-                            text-red-500
-                            text-2xl
-                            font-semibold
+                            mx-auto mb-4 flex h-16 w-16
+                            items-center justify-center
+                            rounded-full bg-red-50
+                            text-2xl font-semibold text-red-500
                         "
                     >
                         !
                     </div>
 
-
-                    <h2
-                        className="
-                            text-lg
-                            font-semibold
-                            text-gray-800
-                        "
-                    >
+                    <h2 className="text-lg font-semibold text-gray-800">
                         Access Denied
                     </h2>
 
-
-                    <p
-                        className="
-                            mt-1
-                            text-sm
-                            text-gray-500
-                            max-w-sm
-                        "
-                    >
-                        You do not have permission
-                        to view users.
+                    <p className="mt-1 max-w-sm text-sm text-gray-500">
+                        You do not have permission to view users.
                     </p>
 
                 </div>
-
             </div>
         );
     }
 
-
-    // ============================================================
-    // USER LOADING
-    // ============================================================
-
-    if (loading) {
-
-        return (
-            <InvoiceSkeleton />
-        );
-    }
-
-
-    // ============================================================
-    // PAGE
-    // ============================================================
+    /* =====================================================
+       PAGE
+    ===================================================== */
 
     return (
 
         <div
             className="
-                flex
-                h-screen
-                bg-gray-50
-                font-sans
-                text-[13px]
-                overflow-hidden
+                flex h-screen overflow-hidden
+                bg-gray-50 font-sans text-[13px]
             "
         >
 
             <div
                 className="
-                    flex-1
-                    min-h-0
-                    bg-white
-                    overflow-y-auto
+                    min-h-0 flex-1 overflow-y-auto bg-white
                 "
             >
 
                 <div
                     className="
-                        px-2
-                        py-5
-                        max-w-30xl
-                        w-full
+                        w-full max-w-30xl px-2 py-5
                     "
                 >
 
-                    {/* =================================================
-                        USER NAVBAR
-                    ================================================= */}
+                    {/* USER NAVBAR */}
 
                     <NavbarUser />
 
+                    {/* USER OVERVIEW */}
 
-                    {/* =================================================
-                        ERROR
-                    ================================================= */}
+                    <UserOverview
+                        canViewUser={canViewUser}
+                        isAuthenticated={isAuthenticated}
+                        authChecking={authChecking}
+                    />
+
+                    {/* ERROR */}
 
                     {error && (
 
                         <div
                             className="
-                                mx-2
-                                mt-4
-                                px-4
-                                py-3
-                                rounded-md
-                                border
-                                border-red-200
-                                bg-red-50
-                                text-sm
-                                text-red-600
+                                mx-2 mt-4 rounded-md
+                                border border-red-200
+                                bg-red-50 px-4 py-3
+                                text-sm text-red-600
                             "
                         >
                             {error}
                         </div>
-
                     )}
 
+                    {/* USER TABLE / LOADING / EMPTY STATE */}
 
-                    {/* =================================================
-                        USER TABLE / EMPTY STATE
-                    ================================================= */}
+                    {loading ? (
 
-                    {filteredUsers.length > 0 ? (
+                        <div
+                            className="
+                                flex min-h-[250px]
+                                items-center justify-center
+                            "
+                        >
+                            <p className="text-sm text-gray-500">
+                                Loading users...
+                            </p>
+                        </div>
+
+                    ) : filteredUsers.length > 0 ? (
 
                         <UserTable
-                            users={
-                                filteredUsers
-                            }
+                            users={filteredUsers}
+                            canEditUser={canEditUser}
+                            canDeleteUser={canDeleteUser}
                         />
 
                     ) : (
 
                         <div
                             className="
-                                min-h-full
-                                flex
-                                flex-col
-                                items-center
-                                justify-center
-                                gap-3
-                                px-4
+                                flex min-h-full flex-col
+                                items-center justify-center
+                                gap-3 px-4
                             "
                         >
 
-                            {/* =================================================
-                                EMPTY STATE ICON
-                            ================================================= */}
+                            {/* EMPTY STATE ICON */}
 
                             <div
                                 className="
-                                    relative
-                                    w-24
-                                    h-24
-                                    rounded-full
-                                    bg-gray-100
-                                    flex
-                                    items-center
-                                    justify-center
-                                    mb-1
-                                    flex-shrink-0
-                                    mt-30
+                                    relative mt-30 mb-1
+                                    flex h-24 w-24 shrink-0
+                                    items-center justify-center
+                                    rounded-full bg-gray-100
                                 "
                             >
 
                                 <div
                                     className="
+                                        flex items-center justify-center
                                         text-gray-400
-                                        text-4xl
                                     "
                                 >
-                                    U
+                                    <Users
+                                        size={42}
+                                        strokeWidth={1.7}
+                                    />
                                 </div>
-
 
                                 <div
                                     className="
-                                        absolute
-                                        bottom-1
-                                        right-1
-                                        w-7
-                                        h-7
-                                        rounded-full
-                                        bg-blue-500
-                                        flex
-                                        items-center
-                                        justify-center
-                                        text-white
+                                        absolute bottom-1 right-1
+                                        flex h-7 w-7 items-center
+                                        justify-center rounded-full
+                                        bg-blue-500 text-white
                                     "
                                 >
-
-                                    <Plus
-                                        className="
-                                            w-4
-                                            h-4
-                                        "
-                                    />
-
+                                    <Plus className="h-4 w-4" />
                                 </div>
 
                             </div>
 
-
-                            {/* =================================================
-                                EMPTY STATE TITLE
-                            ================================================= */}
+                            {/* EMPTY STATE TITLE */}
 
                             <p
                                 className="
-                                    text-base
-                                    font-medium
-                                    text-gray-800
-                                    text-center
+                                    text-center text-base
+                                    font-medium text-gray-800
                                 "
                             >
-                                Every setup starts with a user
+                                Manage your organization users
                             </p>
 
-
-                            {/* =================================================
-                                EMPTY STATE DESCRIPTION
-                            ================================================= */}
+                            {/* EMPTY STATE DESCRIPTION */}
 
                             <p
                                 className="
-                                    text-sm
-                                    text-gray-500
-                                    text-center
-                                    max-w-sm
+                                    max-w-sm text-center
+                                    text-sm text-gray-500
                                 "
                             >
-                                Create and manage your users
-                                in one place.
+                                Create and manage users for your
+                                organization. Assign roles and
+                                control access to different
+                                modules and features.
                             </p>
 
-
-                            {/* =================================================
-                                ACTION BUTTONS
-                            ================================================= */}
+                            {/* ACTION BUTTONS */}
 
                             <div
                                 className="
-                                    flex
-                                    items-center
-                                    gap-2.5
-                                    mt-1
-                                    flex-wrap
-                                    justify-center
+                                    mt-1 flex flex-wrap
+                                    items-center justify-center gap-2.5
                                 "
                             >
 
-                                {/* =================================================
-                                    CREATE USER
-                                ================================================= */}
+                                {/* CREATE USER */}
 
                                 {canCreateUser && (
 
                                     <button
                                         type="button"
-                                        onClick={
-                                            handleCreateUser
-                                        }
+                                        onClick={handleCreateUser}
                                         className="
-                                            flex
-                                            items-center
-                                            gap-2
-                                            bg-blue-500
-                                            text-white
-                                            text-sm
-                                            font-medium
-                                            px-4
-                                            py-2
-                                            rounded-md
-                                            hover:bg-blue-600
-                                            transition-colors
-                                            whitespace-nowrap
+                                            flex items-center gap-2
+                                            whitespace-nowrap rounded-md
+                                            bg-blue-500 px-4 py-2
+                                            text-sm font-medium text-white
+                                            transition-colors hover:bg-blue-600
                                         "
                                     >
-
-                                        <Plus
-                                            className="
-                                                w-4
-                                                h-4
-                                            "
-                                        />
-
+                                        <Plus className="h-4 w-4" />
                                         Create New User
-
                                     </button>
 
                                 )}
 
-
-                                {/* =================================================
-                                    IMPORT
-                                ================================================= */}
+                                {/* IMPORT */}
 
                                 <button
                                     type="button"
+                                    onClick={() => {
+                                        toast(
+                                            "User import is not configured yet."
+                                        );
+                                    }}
                                     className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        bg-white
-                                        text-gray-700
-                                        text-sm
-                                        border
-                                        border-gray-300
-                                        px-4
-                                        py-2
-                                        rounded-md
-                                        hover:bg-gray-50
-                                        transition-colors
-                                        whitespace-nowrap
+                                        flex items-center gap-2
+                                        whitespace-nowrap rounded-md
+                                        border border-gray-300 bg-white
+                                        px-4 py-2 text-sm text-gray-700
+                                        transition-colors hover:bg-gray-50
                                     "
                                 >
-
-                                    <Download
-                                        className="
-                                            w-4
-                                            h-4
-                                        "
-                                    />
-
+                                    <Download className="h-4 w-4" />
                                     Import File
-
                                 </button>
 
                             </div>
@@ -1339,13 +764,6 @@ export default function UserDashboard() {
                 </div>
 
             </div>
-
-
-            {/* =========================================================
-                USER CREATE / EDIT MODAL
-            ========================================================= */}
-
-            {/* Global Modal handles UserCreate */}
 
         </div>
     );

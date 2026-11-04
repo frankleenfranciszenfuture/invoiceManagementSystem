@@ -35,6 +35,7 @@ import {
 import toast from "react-hot-toast";
 
 import Pagination from "../../../common/pagination/table/Pagination";
+import ToolTipText from "../../../common/toolTip/ToolTipText";
 
 
 export default function CompanyTable({
@@ -51,11 +52,15 @@ export default function CompanyTable({
     const {
         loading,
         error,
+        pagination,
+    } = useSelector((state) => state.company || {});
+
+    const {
         pageNumber = 0,
-        pageSize = 10,
+        pageSize = 20,
         totalPages = 0,
         totalElements = 0,
-    } = useSelector((state) => state.company || {});
+    } = pagination || {};
 
     const currentCompanies = companies || [];
 
@@ -352,12 +357,8 @@ export default function CompanyTable({
                 setExsistingCompany(company)
             );
 
-            dispatch(
-                openModal({
-                    type: "editCompany",
-                    data: company,
-                })
-            );
+            navigate(`/settings/companies/edit/${company.id}`);
+
 
         } catch (error) {
 
@@ -791,7 +792,7 @@ export default function CompanyTable({
 
                                     <td className="px-4 py-3">
 
-                                        <div className="
+                                        <div className=" relative
                                             flex items-center justify-end gap-2
                                         ">
 
@@ -807,7 +808,7 @@ export default function CompanyTable({
                                                     }}
                                                     title="View"
                                                     className="
-                                                        flex h-8 w-8 items-center
+                                                        group relative flex h-8 w-8 items-center
                                                         justify-center rounded-lg
                                                         bg-blue-50 text-blue-600
                                                         transition hover:bg-blue-100
@@ -815,6 +816,7 @@ export default function CompanyTable({
                                                     "
                                                 >
                                                     <Eye size={16} />
+                                                    <ToolTipText text="View" position="bottom" />
                                                 </button>
 
                                             )}
@@ -831,7 +833,7 @@ export default function CompanyTable({
                                                     }}
                                                     title="Edit"
                                                     className="
-                                                        flex h-8 w-8 items-center
+                                                        group relative flex h-8 w-8 items-center
                                                         justify-center rounded-lg
                                                         bg-amber-50 text-amber-600
                                                         transition hover:bg-amber-100
@@ -839,6 +841,7 @@ export default function CompanyTable({
                                                     "
                                                 >
                                                     <Edit size={16} />
+                                                    <ToolTipText text="Edit" position="bottom" />
                                                 </button>
 
                                             )}
@@ -855,7 +858,7 @@ export default function CompanyTable({
                                                     }}
                                                     title="Delete"
                                                     className="
-                                                        flex h-8 w-8 items-center
+                                                        group relative flex h-8 w-8 items-center
                                                         justify-center rounded-lg
                                                         bg-red-50 text-red-600
                                                         transition hover:bg-red-100
@@ -863,6 +866,7 @@ export default function CompanyTable({
                                                     "
                                                 >
                                                     <Trash2 size={16} />
+                                                    <ToolTipText text="Delete" position="bottom" />
                                                 </button>
 
                                             )}
@@ -880,7 +884,6 @@ export default function CompanyTable({
                 </table>
 
                 {/* PAGINATION */}
-
                 <Pagination
                     page={Number(pageNumber) || 0}
                     size={Number(pageSize) || 10}
@@ -905,6 +908,7 @@ export default function CompanyTable({
                         );
                     }}
                 />
+
 
             </div>
 

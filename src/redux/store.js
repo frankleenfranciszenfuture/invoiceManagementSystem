@@ -15,7 +15,7 @@ import sizeReducer from "../module/sizes/slices/sizeSlice";
 
 // Tax Master
 import taxMasterReducer from "../module/taxMaster/slices/taxMasterSlice";
-
+import taxMasterViewRedcer from "../module/taxMaster/slices/taxMasterViewSlice";
 //unit
 import unitReducer from "../module/units/slices/unitSlice";
 
@@ -97,6 +97,7 @@ export const store = configureStore({
 
     // Tax Master
     taxMaster: taxMasterReducer,
+    taxMasterView: taxMasterViewRedcer,
 
     //unit
 

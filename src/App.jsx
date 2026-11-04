@@ -111,7 +111,6 @@ import BankAccountProfileOverview from "./module/bankAccount/pages/BankAccountPr
 import SalesPersonCreateSimple from "./module/salesPerson/pages/SalesPersonCreateSimple";
 
 import SalesPersonDashboard from "./module/salesPerson/pages/SalesPersonDashboard";
-import SalesPersonOverView from "./module/salesPerson/pages/SalesPersonOverView";
 import CurrencyDashboard from "./module/currency/pages/CurrencyDashboard";
 import CurrencyCreateSimple from "./module/currency/pages/CurrencyCreateSimple";
 import SaleInvoice from "./module/invoices/pages/SaleInvoice";
@@ -167,6 +166,13 @@ import PartyViewDetails from "./module/parties/pages/PartyViewDetails";
 import SalesPersonCreateNew from "./module/salesPerson/pages/SalesPersonCreateNew";
 import SalesPersonViewDetails from "./module/salesPerson/pages/SalesPersonViewDetails";
 import InvoiceViewDetails from "./module/invoices/pages/InvoiceViewDetails";
+import RoleViewDetails from "./module/role/pages/RoleViewDetails";
+import RoleCreateSimple from "./module/role/pages/RoleCreateSimple";
+import UserCreateSimple from "./module/users/pages/UserCreateSimple";
+import UserViewDetails from "./module/users/pages/UserViewDetails";
+import TaxMasterCreate from "./module/taxMaster/pages/TaxMasterCreate";
+import TaxCreateSimple from "./module/taxMaster/pages/TaxCreateSimple";
+import TaxMasterViewDetails from "./module/taxMaster/pages/TaxMasterViewDetails";
 
 
 
@@ -438,6 +444,22 @@ function AppContent() {
           element={<TaxMasterDashboard />}
         />
 
+        <Route
+          path="/settings/taxes/create"
+          element={<TaxCreateSimple />}
+        />
+
+        <Route
+          path="/settings/taxes/edit/:id"
+          element={<TaxCreateSimple />}
+        />
+
+        <Route
+          path="/settings/taxes/view/:id"
+          element={<TaxMasterViewDetails />}
+        />
+
+
 
         {/* =================================================
                     SIZES
@@ -491,35 +513,6 @@ function AppContent() {
           path="/categories/view/:id"
           element={<CategoryProfileView />}
         />
-        {/* =================================================
-                    ROLE
-            ================================================= */}
-
-        <Route
-          path="/settings/roles"
-          element={<RoleDashboard />}
-        />
-
-        <Route
-          path="/roles/view/:id"
-          element={<RoleProfileOverview />}
-        />
-
-
-        {/* =================================================
-                    USER
-            ================================================= */}
-
-        <Route
-          path="/settings/users"
-          element={<UserDashboard />}
-        />
-
-        <Route
-          path="/users/view/:id"
-          element={<UserProfileOverview />}
-        />
-
 
         {/* =================================================
                     BANK ACCOUNT
@@ -762,25 +755,6 @@ function AppContent() {
           element={<ClearanceCreateSimple />}
         />
 
-        {/* =================================================
-                    MENU PERMISSION
-            ================================================= */}
-
-
-        <Route
-          path="/settings/menuPermission"
-          element={<MenuPermissions />}
-        />
-
-
-        {/* =================================================
-                    Settings
-            ================================================= */}
-
-        <Route
-          path="/settings"
-          element={<SettingsDashboard />}
-        />
 
         {/* =================================================
                     inventory
@@ -959,6 +933,77 @@ function AppContent() {
           path="/inventory/cash-accounts/view/:id"
           element={<CashAccountViewDetails />}
         />
+
+
+
+        {/* =================================================
+                    ROLE
+            ================================================= */}
+
+        <Route
+          path="/settings/roles"
+          element={<RoleDashboard />}
+        />
+
+        <Route
+          path="/settings/roles/create"
+          element={<RoleCreateSimple />}
+        />
+
+        <Route
+          path="/settings/roles/edit/:id"
+          element={<RoleCreateSimple />}
+        />
+
+        <Route
+          path="/settings/roles/view/:id"
+          element={<RoleViewDetails />}
+        />
+
+
+        {/* =================================================
+                    USER
+            ================================================= */}
+
+        <Route
+          path="/settings/users"
+          element={<UserDashboard />}
+        />
+
+        <Route
+          path="/settings/users/create"
+          element={<UserCreateSimple />}
+        />
+        <Route
+          path="/settings/users/view/:id"
+          element={<UserViewDetails />}
+        />
+
+        <Route
+          path="/settings/users/edit/:id"
+          element={<UserCreateSimple />}
+        />
+
+        {/* =================================================
+                    MENU PERMISSION
+            ================================================= */}
+
+
+        <Route
+          path="/settings/menuPermission"
+          element={<MenuPermissions />}
+        />
+
+
+        {/* =================================================
+                    Settings
+            ================================================= */}
+
+        <Route
+          path="/settings"
+          element={<SettingsDashboard />}
+        />
+
 
       </Route>
 

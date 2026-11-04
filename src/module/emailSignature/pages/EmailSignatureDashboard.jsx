@@ -37,11 +37,23 @@ import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
 
 import EmailSignatureOverview from "../../emailSignature/pages/EmailSignatureOverview";
 
+import {
+    setEmailSignatureStatus,
+    setSelectedEmailSignatureView,
+    setSearch,
+} from "../slices/emailSignatureViewSlice";
+
 /* =========================================================
    CONSTANTS
 ========================================================= */
 
 const EMPTY_ARRAY = [];
+
+const VALID_STATUSES = [
+    "ALL",
+    "ACTIVE",
+    "INACTIVE",
+];
 
 /* =========================================================
    NORMALIZE HELPERS
@@ -53,12 +65,45 @@ const normalizeModule = (value) =>
 const normalizeAction = (value) =>
     String(value ?? "").trim().toUpperCase();
 
+const normalizeSearch = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+const STATUS_LABELS = {
+    ALL: "All Email Signatures",
+    ACTIVE: "Active Email Signatures",
+    INACTIVE: "Inactive Email Signatures",
+};
+
+/* =========================================================
+   SEARCH HELPER
+========================================================= */
+
+const matchesEmailSignatureSearch = (
+    signature,
+    search
+) => {
+    if (!search) {
+        return true;
+    }
+
+    const searchableFields = [
+        signature?.signatureName,
+        signature?.userId,
+        signature?.status,
+        signature?.signatureContent,
+        signature?.id,
+    ];
+
+    return searchableFields.some((value) =>
+        normalizeSearch(value).includes(search)
+    );
+};
+
 /* =========================================================
    COMPONENT
 ========================================================= */
 
 export default function EmailSignatureDashboard() {
-
     const dispatch = useDispatch();
 
     /* =====================================================
@@ -72,11 +117,13 @@ export default function EmailSignatureDashboard() {
     const userId = user?.id;
 
     const isAuthenticated = useSelector(
-        (state) => state.auth?.isAuthenticated === true
+        (state) =>
+            state.auth?.isAuthenticated === true
     );
 
     const authChecking = useSelector(
-        (state) => state.auth?.authChecking === true
+        (state) =>
+            state.auth?.authChecking === true
     );
 
     /* =====================================================
@@ -85,7 +132,8 @@ export default function EmailSignatureDashboard() {
 
     const permissions = useSelector(
         (state) => {
-            const value = state.menuPermission?.userPermissions;
+            const value =
+                state.menuPermission?.userPermissions;
 
             return Array.isArray(value)
                 ? value
@@ -127,7 +175,6 @@ export default function EmailSignatureDashboard() {
 
     const hasPermission = useCallback(
         (moduleName, actionName) => {
-
             if (hasFullAccess) {
                 return true;
             }
@@ -136,11 +183,13 @@ export default function EmailSignatureDashboard() {
                 return false;
             }
 
-            const requestedModule = normalizeModule(moduleName);
-            const requestedAction = normalizeAction(actionName);
+            const requestedModule =
+                normalizeModule(moduleName);
+
+            const requestedAction =
+                normalizeAction(actionName);
 
             return permissions.some((permission) => {
-
                 const permissionModule = normalizeModule(
                     permission?.moduleName ||
                     permission?.module?.moduleName ||
@@ -148,7 +197,9 @@ export default function EmailSignatureDashboard() {
                     ""
                 );
 
-                if (permissionModule !== requestedModule) {
+                if (
+                    permissionModule !== requestedModule
+                ) {
                     return false;
                 }
 
@@ -157,20 +208,20 @@ export default function EmailSignatureDashboard() {
                 }
 
                 if (
-                    normalizeAction(permission?.status) === "INACTIVE"
+                    normalizeAction(permission?.status) ===
+                    "INACTIVE"
                 ) {
                     return false;
                 }
 
-                /* ACTION ARRAY */
+                /* GROUPED ACTIONS */
 
                 if (Array.isArray(permission?.actions)) {
-
                     return permission.actions.some((action) => {
-
                         if (typeof action === "string") {
                             return (
-                                normalizeAction(action) === requestedAction
+                                normalizeAction(action) ===
+                                requestedAction
                             );
                         }
 
@@ -191,7 +242,8 @@ export default function EmailSignatureDashboard() {
                         }
 
                         if (
-                            normalizeAction(action?.status) === "INACTIVE"
+                            normalizeAction(action?.status) ===
+                            "INACTIVE"
                         ) {
                             return false;
                         }
@@ -221,7 +273,6 @@ export default function EmailSignatureDashboard() {
                     allowed
                 );
             });
-
         },
         [
             hasFullAccess,
@@ -248,19 +299,39 @@ export default function EmailSignatureDashboard() {
     ===================================================== */
 
     const emailSignaturesFromRedux = useSelector(
-        (state) => state.emailSignatures?.emailSignatures
+        (state) =>
+            state.emailSignatures?.emailSignatures
     );
 
-    const emailSignatures = Array.isArray(emailSignaturesFromRedux)
+    const emailSignatures = Array.isArray(
+        emailSignaturesFromRedux
+    )
         ? emailSignaturesFromRedux
         : EMPTY_ARRAY;
 
     const loading = useSelector(
-        (state) => state.emailSignatures?.loading === true
+        (state) =>
+            state.emailSignatures?.loading === true
     );
 
     const error = useSelector(
-        (state) => state.emailSignatures?.error
+        (state) =>
+            state.emailSignatures?.error
+    );
+
+    /* =====================================================
+       EMAIL SIGNATURE VIEW STATE
+    ===================================================== */
+
+    const search = useSelector(
+        (state) =>
+            state.emailSignatureView?.search || ""
+    );
+
+    const emailSignatureStatus = useSelector(
+        (state) =>
+            state.emailSignatureView?.emailSignatureStatus ||
+            "ALL"
     );
 
     /* =====================================================
@@ -268,22 +339,22 @@ export default function EmailSignatureDashboard() {
     ===================================================== */
 
     useEffect(() => {
-
         if (authChecking || !isAuthenticated) {
             return;
         }
 
-        // Admin and Super Admin have full access.
         if (hasFullAccess) {
             return;
         }
 
-        if (permissionsLoaded || permissionLoading) {
+        if (
+            permissionsLoaded ||
+            permissionLoading
+        ) {
             return;
         }
 
         dispatch(getUserPermission());
-
     }, [
         authChecking,
         isAuthenticated,
@@ -298,23 +369,87 @@ export default function EmailSignatureDashboard() {
     ===================================================== */
 
     const filteredEmailSignatures = useMemo(() => {
+        const normalizedStatus = VALID_STATUSES.includes(
+            String(emailSignatureStatus).toUpperCase()
+        )
+            ? String(emailSignatureStatus).toUpperCase()
+            : "ALL";
 
-        return emailSignatures.filter(
-            (signature) =>
-                String(signature?.userId) === String(userId)
-        );
+        const normalizedQuery =
+            normalizeSearch(search);
 
+        return emailSignatures.filter((signature) => {
+            /* USER FILTER */
+
+            if (
+                String(signature?.userId) !==
+                String(userId)
+            ) {
+                return false;
+            }
+
+            /* STATUS FILTER */
+
+            const signatureStatus = String(
+                signature?.status || ""
+            )
+                .trim()
+                .toUpperCase();
+
+            if (
+                normalizedStatus !== "ALL" &&
+                signatureStatus !== normalizedStatus
+            ) {
+                return false;
+            }
+
+            /* SEARCH FILTER */
+
+            if (
+                !matchesEmailSignatureSearch(
+                    signature,
+                    normalizedQuery
+                )
+            ) {
+                return false;
+            }
+
+            return true;
+        });
     }, [
         emailSignatures,
         userId,
+        emailSignatureStatus,
+        search,
     ]);
+
+    /* =====================================================
+       ACTIVE FILTER CHECK
+    ===================================================== */
+
+    const hasActiveFilters =
+        normalizeSearch(search) !== "" ||
+        emailSignatureStatus !== "ALL";
+
+    /* =====================================================
+       CLEAR FILTERS
+    ===================================================== */
+
+    const handleClearFilters = useCallback(() => {
+        dispatch(setSearch(""));
+        dispatch(setEmailSignatureStatus("ALL"));
+        dispatch(
+            setSelectedEmailSignatureView(
+                STATUS_LABELS.ALL
+            )
+        );
+    }, [dispatch]);
 
     /* =====================================================
        OPEN CREATE EMAIL SIGNATURE MODAL
     ===================================================== */
 
     const handleCreateEmailSignature = useCallback(() => {
-
         if (!isAuthenticated || !userId) {
             return;
         }
@@ -341,7 +476,6 @@ export default function EmailSignatureDashboard() {
                 type: "addEmailSignature",
             })
         );
-
     }, [
         isAuthenticated,
         userId,
@@ -357,7 +491,6 @@ export default function EmailSignatureDashboard() {
     ===================================================== */
 
     useEffect(() => {
-
         if (!error) {
             return;
         }
@@ -367,7 +500,6 @@ export default function EmailSignatureDashboard() {
         }, 2000);
 
         return () => clearTimeout(timer);
-
     }, [
         error,
         dispatch,
@@ -408,7 +540,6 @@ export default function EmailSignatureDashboard() {
     ===================================================== */
 
     if (!canViewEmailSignature) {
-
         return (
             <div
                 className="
@@ -417,7 +548,6 @@ export default function EmailSignatureDashboard() {
                 "
             >
                 <div className="px-6 text-center">
-
                     <div
                         className="
                             mx-auto mb-4 flex h-16 w-16
@@ -436,7 +566,6 @@ export default function EmailSignatureDashboard() {
                     <p className="mt-1 max-w-sm text-sm text-gray-500">
                         You do not have permission to view email signatures.
                     </p>
-
                 </div>
             </div>
         );
@@ -447,26 +576,22 @@ export default function EmailSignatureDashboard() {
     ===================================================== */
 
     return (
-
         <div
             className="
                 flex h-screen overflow-hidden
                 bg-gray-50 font-sans text-[13px]
             "
         >
-
             <div
                 className="
                     min-h-0 flex-1 overflow-y-auto bg-white
                 "
             >
-
                 <div
                     className="
                         w-full max-w-30xl px-2 py-5
                     "
                 >
-
                     {/* EMAIL SIGNATURE NAVBAR */}
 
                     <NavbarEmailSignature />
@@ -482,7 +607,6 @@ export default function EmailSignatureDashboard() {
                     {/* ERROR */}
 
                     {error && (
-
                         <div
                             className="
                                 mx-2 mt-4 rounded-md
@@ -493,13 +617,11 @@ export default function EmailSignatureDashboard() {
                         >
                             {error}
                         </div>
-
                     )}
 
-                    {/* EMAIL SIGNATURE TABLE / LOADING / EMPTY STATE */}
+                    {/* TABLE / LOADING / EMPTY STATE */}
 
                     {loading ? (
-
                         <div
                             className="
                                 flex min-h-[250px]
@@ -510,14 +632,58 @@ export default function EmailSignatureDashboard() {
                                 Loading email signatures...
                             </p>
                         </div>
-
                     ) : filteredEmailSignatures.length > 0 ? (
-
                         <EmailSignatureTable
                             emailSignatures={filteredEmailSignatures}
                         />
+                    ) : hasActiveFilters ? (
+                        /* FILTERED EMPTY STATE */
 
+                        <div
+                            className="
+                                flex min-h-[300px] flex-col
+                                items-center justify-center gap-3
+                                px-4
+                            "
+                        >
+                            <div
+                                className="
+                                    flex h-20 w-20 items-center
+                                    justify-center rounded-full
+                                    bg-gray-100 text-gray-400
+                                "
+                            >
+                                <Mail
+                                    size={36}
+                                    strokeWidth={1.7}
+                                />
+                            </div>
+
+                            <p className="text-center text-base font-medium text-gray-800">
+                                No matching email signatures found
+                            </p>
+
+                            <p className="max-w-sm text-center text-sm text-gray-500">
+                                No email signatures match your current
+                                search or status filter. Try changing
+                                your search or clearing the filters.
+                            </p>
+
+                            <button
+                                type="button"
+                                onClick={handleClearFilters}
+                                className="
+                                    mt-1 rounded-md bg-blue-500
+                                    px-4 py-2 text-sm font-medium
+                                    text-white transition-colors
+                                    hover:bg-blue-600
+                                "
+                            >
+                                Clear Filters
+                            </button>
+                        </div>
                     ) : (
+                        /* ORIGINAL EMPTY STATE */
 
                         <div
                             className="
@@ -526,9 +692,6 @@ export default function EmailSignatureDashboard() {
                                 gap-3 px-4
                             "
                         >
-
-                            {/* EMPTY STATE ICON */}
-
                             <div
                                 className="
                                     relative mt-30 mb-1
@@ -537,7 +700,6 @@ export default function EmailSignatureDashboard() {
                                     rounded-full bg-gray-100
                                 "
                             >
-
                                 <div
                                     className="
                                         flex items-center justify-center
@@ -560,10 +722,7 @@ export default function EmailSignatureDashboard() {
                                 >
                                     <Plus className="h-4 w-4" />
                                 </div>
-
                             </div>
-
-                            {/* EMPTY STATE TITLE */}
 
                             <p
                                 className="
@@ -573,8 +732,6 @@ export default function EmailSignatureDashboard() {
                             >
                                 Manage your email signatures
                             </p>
-
-                            {/* EMPTY STATE DESCRIPTION */}
 
                             <p
                                 className="
@@ -588,19 +745,13 @@ export default function EmailSignatureDashboard() {
                                 and maintain your professional email identity.
                             </p>
 
-                            {/* ACTION BUTTONS */}
-
                             <div
                                 className="
                                     mt-1 flex flex-wrap
                                     items-center justify-center gap-2.5
                                 "
                             >
-
-                                {/* CREATE EMAIL SIGNATURE */}
-
                                 {canCreateEmailSignature && (
-
                                     <button
                                         type="button"
                                         onClick={handleCreateEmailSignature}
@@ -615,10 +766,7 @@ export default function EmailSignatureDashboard() {
                                         <Plus className="h-4 w-4" />
                                         Create Email Signature
                                     </button>
-
                                 )}
-
-                                {/* IMPORT */}
 
                                 <button
                                     type="button"
@@ -638,17 +786,11 @@ export default function EmailSignatureDashboard() {
                                     <Download className="h-4 w-4" />
                                     Import File
                                 </button>
-
                             </div>
-
                         </div>
-
                     )}
-
                 </div>
-
             </div>
-
         </div>
     );
 }

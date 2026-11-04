@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo } from "react";
 
 import {
@@ -5,7 +6,10 @@ import {
     useSelector,
 } from "react-redux";
 
-import { useNavigate } from "react-router-dom";
+import {
+    useNavigate,
+    useSearchParams,
+} from "react-router-dom";
 
 import {
     Landmark,
@@ -16,17 +20,13 @@ import {
 import {
     setBankAccountStatus,
     setSelectedBankAccountView,
-} from "../slices/bankAccountSlice";
+} from "../slices/bankAccountViewSlice";
 
 // ============================================================
 // CONSTANTS
 // ============================================================
 
 const EMPTY_ARRAY = [];
-
-// ============================================================
-// STATUS CARDS
-// ============================================================
 
 const STATUS_CARDS = [
     {
@@ -49,19 +49,12 @@ const STATUS_CARDS = [
     },
 ];
 
-// ============================================================
-// STATUS LABELS
-// ============================================================
-
 const STATUS_LABELS = {
     ALL: "All Bank Accounts",
     ACTIVE: "Active Bank Accounts",
     INACTIVE: "Inactive Bank Accounts",
+    PRIMARY: "Primary Bank Accounts",
 };
-
-// ============================================================
-// CARD STYLES
-// ============================================================
 
 const CARD_STYLES = {
     blue: {
@@ -82,17 +75,40 @@ const CARD_STYLES = {
 };
 
 // ============================================================
+// HELPERS
+// ============================================================
+
+const getAccountStatus = (account) => {
+    const status = String(account?.status || "")
+        .trim()
+        .toUpperCase();
+
+    if (status === "ACTIVE" || status === "INACTIVE") {
+        return status;
+    }
+
+    if (typeof account?.audit?.active === "boolean") {
+        return account.audit.active ? "ACTIVE" : "INACTIVE";
+    }
+
+    if (typeof account?.active === "boolean") {
+        return account.active ? "ACTIVE" : "INACTIVE";
+    }
+
+    return "UNKNOWN";
+};
+
+// ============================================================
 // COMPONENT
 // ============================================================
 
 export default function BankAccountOverview() {
-
     const dispatch = useDispatch();
-
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
     // ========================================================
-    // REDUX STATE
+    // BANK ACCOUNT DATA
     // ========================================================
 
     const bankAccounts = useSelector(
@@ -102,24 +118,27 @@ export default function BankAccountOverview() {
                 : EMPTY_ARRAY
     );
 
+    // ========================================================
+    // BANK ACCOUNT VIEW STATE
+    // ========================================================
+
     const selectedStatus = useSelector(
         (state) =>
-            state.bankAccount?.bankAccountStatus || "ACTIVE"
+            state.bankAccountView?.bankAccountStatus || "ALL"
     );
 
     // ========================================================
-    // STATUS SYNCHRONIZATION
+    // URL STATUS SYNCHRONIZATION
     // ========================================================
 
     useEffect(() => {
-
-        const params = new URLSearchParams(
-            window.location.search
-        );
-
-        const urlStatus = (
-            params.get("status") || "ALL"
-        ).trim().toUpperCase();
+        const urlStatus = String(
+            searchParams.get("bankAccountStatus") ||
+            searchParams.get("status") ||
+            "ALL"
+        )
+            .trim()
+            .toUpperCase();
 
         const status = STATUS_LABELS[urlStatus]
             ? urlStatus
@@ -132,15 +151,13 @@ export default function BankAccountOverview() {
                 STATUS_LABELS[status]
             )
         );
-
-    }, [dispatch]);
+    }, [searchParams, dispatch]);
 
     // ========================================================
     // STATISTICS
     // ========================================================
 
     const statistics = useMemo(() => {
-
         const result = {
             ALL: bankAccounts.length,
             ACTIVE: 0,
@@ -148,25 +165,18 @@ export default function BankAccountOverview() {
         };
 
         bankAccounts.forEach((account) => {
+            const status = getAccountStatus(account);
 
-            const status = String(
-                account?.status || ""
-            )
-                .trim()
-                .toUpperCase();
+            if (status === "ACTIVE") {
+                result.ACTIVE += 1;
+            }
 
-            if (
-                Object.prototype.hasOwnProperty.call(
-                    result,
-                    status
-                )
-            ) {
-                result[status] += 1;
+            if (status === "INACTIVE") {
+                result.INACTIVE += 1;
             }
         });
 
         return result;
-
     }, [bankAccounts]);
 
     // ========================================================
@@ -174,7 +184,6 @@ export default function BankAccountOverview() {
     // ========================================================
 
     const handleStatusChange = (status) => {
-
         if (
             !STATUS_LABELS[status] ||
             status === selectedStatus
@@ -191,8 +200,7 @@ export default function BankAccountOverview() {
         );
 
         navigate(
-            `/settings/bankAccount?status=${status}`,
-            { replace: false }
+            `/settings/bankAccount?bankAccountStatus=${status}`
         );
     };
 
@@ -201,7 +209,6 @@ export default function BankAccountOverview() {
     // ========================================================
 
     return (
-
         <div className="w-full space-y-5">
 
             {/* STATUS CARDS */}
@@ -210,9 +217,7 @@ export default function BankAccountOverview() {
                 grid w-full grid-cols-1 gap-4
                 sm:grid-cols-2 lg:grid-cols-3
             ">
-
                 {STATUS_CARDS.map((card) => {
-
                     const Icon = card.icon;
 
                     const active =
@@ -222,7 +227,6 @@ export default function BankAccountOverview() {
                         CARD_STYLES[card.color];
 
                     return (
-
                         <button
                             type="button"
                             key={card.value}
@@ -241,13 +245,10 @@ export default function BankAccountOverview() {
                                 ${style.hover}
                             `}
                         >
-
                             <div className="
                                 flex items-center justify-between
                             ">
-
                                 <div>
-
                                     <p className="
                                         text-sm font-medium text-gray-500
                                     ">
@@ -259,7 +260,6 @@ export default function BankAccountOverview() {
                                     ">
                                         {statistics[card.value] ?? 0}
                                     </h3>
-
                                 </div>
 
                                 <div
@@ -273,13 +273,11 @@ export default function BankAccountOverview() {
                                 >
                                     <Icon size={23} />
                                 </div>
-
                             </div>
 
                             <div className="
                                 mt-4 flex items-center justify-between
                             ">
-
                                 <span className="
                                     text-xs text-gray-400
                                 ">
@@ -295,15 +293,10 @@ export default function BankAccountOverview() {
                                 ">
                                     View →
                                 </span>
-
                             </div>
-
                         </button>
-
                     );
-
                 })}
-
             </div>
 
             {/* SELECTED STATUS */}
@@ -311,11 +304,8 @@ export default function BankAccountOverview() {
             <div className="
                 flex flex-wrap items-center justify-between gap-2
             ">
-
                 <p className="text-sm text-gray-500">
-
                     Showing:{" "}
-
                     <span className="
                         font-semibold text-gray-800
                     ">
@@ -324,15 +314,12 @@ export default function BankAccountOverview() {
                             STATUS_LABELS.ALL
                         }
                     </span>
-
                 </p>
 
                 <p className="text-xs text-gray-400">
                     {bankAccounts.length} total records
                 </p>
-
             </div>
-
         </div>
     );
 }

@@ -25,6 +25,10 @@ import CurrencyModel from "../../module/currency/pages/CurrencyModel";
 import SalesPersonCreateModel from "../../module/salesPerson/pages/SalesPersonCreateModel";
 import CreateGoodsReceiptModel from "../../inventoryModule/module/purchaseOrder/pages/CreateGoodsReceiptModel";
 import ExpenseCategoryCreate from "../../inventoryModule/module/expenses/pages/ExpenseCategoryCreate";
+import PartyCreate from "../../module/parties/pages/PartyCreate";
+import PartyCreateNew from "../../module/parties/pages/PartyCreateNew";
+import WarehouseCreate from "../../inventoryModule/module/warehouse/pages/WarehouseCreate";
+import CurrencyCreateSimple from "../../module/currency/pages/CurrencyCreateSimple";
 
 export default function Modal() {
 
@@ -47,8 +51,8 @@ export default function Modal() {
         addContactPerson: AddContactPerson,
 
         //CURRENCY
-        addCurrency: CurrencyModel,
-        editCurrency: CurrencyModel,
+        addCurrency: CurrencyCreateSimple,
+        editCurrency: CurrencyCreateSimple,
 
         // TAX MASTER
         addTaxMaster: TaxMasterCreate,
@@ -119,6 +123,15 @@ export default function Modal() {
         //expenseCategroy
         addExpenseCategory: ExpenseCategoryCreate,
         editExpenseCategory: ExpenseCategoryCreate,
+
+        //parties
+        addParty: PartyCreateNew,
+        editParty: PartyCreateNew,
+
+        //wareHouse
+        addWarehouse: WarehouseCreate,
+        editWarehouse: WarehouseCreate,
+
     };
 
 
@@ -265,6 +278,16 @@ export default function Modal() {
         //PurchaseOrderGoodsReceipt
         addExpenseCategory: "w-[900px] max-w-[92vw] max-h-[82vh]",
         editExpenseCategory: "w-[900px] max-w-[92vw] max-h-[82vh]",
+
+
+        //Party
+        addParty: "w-[980px] max-w-[92vw] max-h-[92vh]",
+        editParty: "w-[980px] max-w-[92vw] max-h-[92vh]",
+
+
+        //warehouse
+        addWarehouse: "w-[980px] max-w-[92vw] max-h-[92vh]",
+        editWarehouse: "w-[980px] max-w-[92vw] max-h-[92vh]",
 
 
         // Permissions
@@ -462,7 +485,7 @@ export default function Modal() {
         min-w-0
         flex-col
         overflow-hidden
-        rounded-md
+        rounded-lg
         bg-white
         shadow-2xl
         left-20

@@ -30,6 +30,7 @@ import {
 
 import toast from "react-hot-toast";
 import Pagination from "../../../common/pagination/table/Pagination";
+import ToolTipText from "../../../common/toolTip/ToolTipText";
 
 
 export default function BankAccountTable({
@@ -1094,8 +1095,9 @@ export default function BankAccountTable({
                                                         dispatch(setExsistingBankAccount(bankAccount));
                                                         navigate(`/settings/bankAccount/view/${bankAccount.id}`);
                                                     }}
-                                                    title="View"
+
                                                     className="
+                                                    group relative 
                                                     flex h-8 w-8 items-center justify-center
                                                     rounded-lg
                                                     bg-blue-50
@@ -1106,6 +1108,7 @@ export default function BankAccountTable({
                                                 "
                                                 >
                                                     <Eye size={16} />
+                                                    <ToolTipText text="View" position="bottom" />
                                                 </button>
 
                                                 {/* Edit */}
@@ -1120,6 +1123,7 @@ export default function BankAccountTable({
                                                     }}
                                                     title="Edit"
                                                     className="
+                                                    group relative
                                                     flex h-8 w-8 items-center justify-center
                                                     rounded-lg
                                                     bg-amber-50
@@ -1130,6 +1134,7 @@ export default function BankAccountTable({
                                                 "
                                                 >
                                                     <Edit size={16} />
+                                                    <ToolTipText text="Edit" position="bottom" />
                                                 </button>
 
                                                 {/* Delete */}
@@ -1143,16 +1148,18 @@ export default function BankAccountTable({
                                                     }}
                                                     title="Delete"
                                                     className="
-                                                            flex h-8 w-8 items-center justify-center
-                                                            rounded-lg
-                                                            bg-red-50
-                                                            text-red-600
-                                                            transition
-                                                            hover:bg-red-100
-                                                            hover:text-red-700
-                                                        "
+                                                    group relative
+                                                    flex h-8 w-8 items-center justify-center
+                                                    rounded-lg
+                                                    bg-red-50
+                                                    text-red-600
+                                                    transition
+                                                    hover:bg-red-100
+                                                    hover:text-red-700
+                                                "
                                                 >
                                                     <Trash2 size={16} />
+                                                    <ToolTipText text="Delete" position="bottom" />
                                                 </button>
 
                                             </div>

@@ -10,12 +10,16 @@ import {
     CalendarDays,
     UserRound,
     Wallet,
+    CheckCircle,
+    X,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
 import {
     fetchAllExpenses,
+    approveExpense,
+    rejectExpense,
 } from "../thunks/expenseThunks";
 
 import {
@@ -23,6 +27,7 @@ import {
 } from "../slices/expenseSlice";
 
 import Pagination from "../../../../common/pagination/table/Pagination";
+import ToolTipText from "../../../../common/toolTip/ToolTipText";
 
 /* =========================================================
    CONSTANTS
@@ -152,6 +157,8 @@ export default function ExpenseTable({
         (state) =>
             state.menuPermission?.userPermissions || EMPTY_ARRAY
     );
+
+
 
     /* =====================================================
        ROLE
@@ -326,6 +333,56 @@ export default function ExpenseTable({
         navigate(`/inventory/expenses/edit/${expense.id}`);
     };
 
+
+    const handleConfirmExpense = async (expense) => {
+        try {
+            await dispatch(approveExpense(expense.id)).unwrap();
+
+            toast.success("Expenses confirmed successfully");
+
+            // Refresh the current purchase order list
+            dispatch(fetchAllExpenses({
+                page: pagination?.page ?? 0,
+                size: pagination?.size ?? 10,
+            }));
+        } catch (error) {
+            toast.error(
+                error?.message || "Failed to confirm purchase order"
+            );
+        }
+    };
+
+
+    const handleRejectExpense = async (expense) => {
+        try {
+            await dispatch(
+                rejectExpense({
+                    id: expense.id,
+                    reason: "Expense rejected",
+                })
+            ).unwrap();
+
+            toast.success("Expenses rejected successfully");
+
+            // Refresh the current purchase order list
+            dispatch(fetchAllExpenses({
+                page: pagination?.page ?? 0,
+                size: pagination?.size ?? 10,
+            }));
+        } catch (error) {
+            console.log("Backend error:", error);
+
+            const message =
+                typeof error === "string"
+                    ? error
+                    : error?.message ||
+                    error?.data?.message ||
+                    "Unable to save purchase order";
+
+            toast.error(message);
+        }
+    };
+
     /* =====================================================
        SORTING
     ===================================================== */
@@ -334,6 +391,25 @@ export default function ExpenseTable({
         () => [...currentExpenses],
         [currentExpenses]
     );
+
+
+    const getExpenseStatus = (order) => {
+        return String(
+            order?.status ||
+            order?.expenseStatus ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+    };
+
+    const statusColor = {
+        DRAFT: "bg-yellow-100 text-yellow-700",
+        CONFIRMED: "bg-blue-100 text-blue-700",
+        PARTIALLY_RECEIVED: "bg-amber-100 text-amber-700",
+        RECEIVED: "bg-green-100 text-green-700",
+        CANCELLED: "bg-red-100 text-red-700",
+    };
 
     /* =====================================================
        LOADING
@@ -450,24 +526,13 @@ export default function ExpenseTable({
                 {/* TABLE BODY */}
 
                 <tbody>
-                    {sortedExpenses.map((expense) => {
-                        const expenseStatus = String(
-                            expense.expenseStatus || ""
-                        ).toUpperCase();
-
-                        const paymentStatus = String(
-                            expense.paymentStatus || ""
-                        ).toUpperCase();
-
-                        const categoryName =
-                            expense.categoryName || "Uncategorized";
-
-                        const vendorName =
-                            expense.vendorName || "—";
+                    {sortedExpenses.map((expense, index) => {
+                        const status = getExpenseStatus(expense);
+                        const isDraft = status === "DRAFT";
 
                         return (
                             <tr
-                                key={expense.id}
+                                key={expense.id || index}
                                 className="
                                     border-b border-gray-100
                                     text-xs transition-colors
@@ -522,9 +587,9 @@ export default function ExpenseTable({
                                             max-w-[180px] truncate
                                             font-medium text-gray-700
                                         "
-                                        title={categoryName}
+                                        title={expense.categoryName}
                                     >
-                                        {categoryName}
+                                        {expense.categoryName}
                                     </p>
 
                                     <p className="
@@ -566,9 +631,9 @@ export default function ExpenseTable({
                                                 max-w-[160px] truncate
                                                 font-medium text-gray-700
                                             "
-                                            title={vendorName}
+                                            title={expense.vendorName}
                                         >
-                                            {vendorName}
+                                            {expense.vendorName}
                                         </p>
                                     </div>
                                 </td>
@@ -616,7 +681,7 @@ export default function ExpenseTable({
                                             rounded-full px-2.5 py-1
                                             text-xs font-medium
                                             ${EXPENSE_STATUS_COLORS[
-                                            expenseStatus
+                                            getExpenseStatus
                                             ] ||
                                             "bg-gray-100 text-gray-700"
                                             }
@@ -635,7 +700,7 @@ export default function ExpenseTable({
                                             rounded-full px-2.5 py-1
                                             text-xs font-medium
                                             ${PAYMENT_STATUS_COLORS[
-                                            paymentStatus
+                                            expense.paymentStatus
                                             ] ||
                                             "bg-gray-100 text-gray-700"
                                             }
@@ -657,8 +722,10 @@ export default function ExpenseTable({
                                                 onClick={() =>
                                                     handleView(expense)
                                                 }
-                                                title="View"
+
                                                 className="
+                                                group
+                                                relative
                                                     flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-blue-50
@@ -668,6 +735,51 @@ export default function ExpenseTable({
                                                 "
                                             >
                                                 <Eye size={16} />
+                                                <ToolTipText text="View" position="bottom" />
+                                            </button>
+                                        )}
+
+                                        {/* CONFIRM */}
+                                        {canEditExpense && isDraft && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleConfirmExpense(expense)}
+
+                                                className="
+                                                    group relative
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg
+                                                    bg-green-50 text-green-600
+                                                    transition
+                                                    hover:bg-green-100
+                                                    hover:text-green-700
+                                                "
+                                            >
+                                                <CheckCircle size={16} />
+                                                <ToolTipText text="Confirm Expenses" position="bottom" />
+                                            </button>
+                                        )}
+
+
+                                        {/* Reject */}
+                                        {canEditExpense && isDraft && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRejectExpense(expense)}
+                                                className="
+            group relative
+            flex h-8 w-8
+            items-center justify-center
+            rounded-lg
+            bg-red-50 text-red-600
+            transition
+            hover:bg-red-100
+            hover:text-red-700
+        "
+                                            >
+                                                <X size={16} />
+                                                <ToolTipText text="Reject Expense" position="bottom" />
                                             </button>
                                         )}
 
@@ -677,8 +789,10 @@ export default function ExpenseTable({
                                                 onClick={() =>
                                                     handleEdit(expense)
                                                 }
-                                                title="Edit"
+
                                                 className="
+                                                group
+                                                relative
                                                     flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-amber-50
@@ -688,6 +802,7 @@ export default function ExpenseTable({
                                                 "
                                             >
                                                 <Edit size={16} />
+                                                <ToolTipText text="Edit" position="bottom" />
                                             </button>
                                         )}
                                     </div>

@@ -41,6 +41,8 @@ import { fetchAllSizes } from "../../../../module/sizes/thunks/sizeThunks";
 import { fetchAllTaxMasters } from "../../../../module/taxMaster/thunks/taxMasterThunks";
 import { fetchAllCurrencies, fetchExchangeRate } from "../../../../module/currency/thunks/currencyThunks"
 
+import LeaveConfirmationModal from "../../../../common/confirmation/LeaveConfirmationModal";
+import useLeaveConfirmation from "../.../../../../../common/confirmation/useLeaveConfirmation";
 
 const getArray = (value) => {
     if (Array.isArray(value)) return value;
@@ -226,6 +228,12 @@ export default function SalesOrderCreate({ onClose }) {
         useSelector((state) => state.currency?.currencies)
     );
 
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
 
     // ---------------------------------------------------------
     // LOCAL FORM STATE
@@ -1118,11 +1126,13 @@ export default function SalesOrderCreate({ onClose }) {
     const handleSave = () => handleSubmit("SAVE");
 
     const handleClose = () => {
-        if (onClose) {
-            onClose();
-        } else {
-            navigate("/inventory/salesOrders");
-        }
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/inventory/salesOrders");
+            }
+        })
     };
 
     // ---------------------------------------------------------
@@ -2229,6 +2239,16 @@ export default function SalesOrderCreate({ onClose }) {
                     </div>
                 </div>
             )}
+
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave Purchase Order?"
+                message="You have unsaved changes. Do you want to leave this page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
         </div>
     );
 }

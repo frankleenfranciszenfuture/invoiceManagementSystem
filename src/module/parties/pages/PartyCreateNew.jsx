@@ -24,6 +24,7 @@ import {
     createParty,
     fetchPartyById,
     updateParty,
+    fetchAllParties
 } from "../thunks/partyThunks";
 
 import {
@@ -38,11 +39,21 @@ import {
     clearError,
 } from "../slices/partySlice";
 
+
 import {
     getUserPermission,
 } from "../../menuPermission/thunks/menuPermissionThunks";
 
 import CustomSelect from "../../../common/custom/CustomSelect";
+
+import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
+import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
+
+import { closeModal } from "../../../module/ui/uiSlice";
+
+import {
+    setCreatedExpenseReferenceSelection,
+} from "../../../inventoryModule/module/expenses/slices/expenseSlice";
 
 /* =========================================================
    FORM FIELD
@@ -161,13 +172,17 @@ const SectionHeading = ({
    MAIN COMPONENT
 ========================================================= */
 
-const PartyCreateNew = () => {
+const PartyCreateNew = ({ onClose }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
     const { id } = useParams();
 
     const isEditMode = Boolean(id);
+
+    const modalData = useSelector(
+        (state) => state.ui.modal?.data
+    );
 
     /* =====================================================
        PARTY REDUX STATE
@@ -222,6 +237,12 @@ const PartyCreateNew = () => {
     const [saveMode, setSaveMode] = useState("close");
     const [showSaveOptions, setShowSaveOptions] = useState(false);
 
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
     /* =====================================================
        NORMALIZATION
     ===================================================== */
@@ -330,6 +351,16 @@ const PartyCreateNew = () => {
         "Parties",
         isEditMode ? "EDIT" : "CREATE"
     );
+
+    const handleClose = () => {
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                dispatch(closeModal());
+            }
+        });
+    };
 
     /* =====================================================
        LOAD PERMISSIONS
@@ -671,15 +702,34 @@ const PartyCreateNew = () => {
                     : "Party created successfully")
             );
 
+            // Automatically select newly created party in Expense Vendor
+            if (!isEditMode && modalData?.selectAfterCreate) {
+                const createdParty =
+                    response?.data?.data ??
+                    response?.data ??
+                    response;
+
+                dispatch(
+                    setCreatedExpenseReferenceSelection({
+                        targetField: modalData.targetField,
+                        entity: createdParty,
+                    })
+                );
+
+                dispatch(fetchAllParties());
+                dispatch(closeModal());
+
+                return;
+            }
+
             if (!isEditMode && saveMode === "new") {
                 dispatch(resetPartyForm());
                 setSaveMode("close");
                 return;
             }
 
+            dispatch(closeModal());
             dispatch(resetPartyForm());
-
-            navigate("/parties");
 
         } catch (error) {
             console.error(
@@ -1394,7 +1444,7 @@ const PartyCreateNew = () => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         disabled={loading}
                         className="
                             rounded-lg border border-gray-200
@@ -1512,6 +1562,16 @@ const PartyCreateNew = () => {
                     </div>
                 </div>
             </form>
+
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave Expense?"
+                message="Are you sure you want to leave this expense page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
         </div>
     );
 };

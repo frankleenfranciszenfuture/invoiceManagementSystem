@@ -35,6 +35,7 @@ import {
 } from "../../thunks/purchaseOrderThunks";
 
 import CustomSelect from "../../../../../common/custom/CustomSelect";
+import ToolTipText from "../../../../../common/toolTip/ToolTipText";
 
 export default function NavbarPurchaseOrder() {
 
@@ -335,6 +336,7 @@ export default function NavbarPurchaseOrder() {
                         type="button"
                         onClick={() => navigate("/")}
                         className="
+                            group relative
                             flex
                             items-center
                             justify-center
@@ -347,9 +349,10 @@ export default function NavbarPurchaseOrder() {
                             hover:bg-[#0095FD]/20
                             transition
                         "
-                        title="Home"
+
                     >
                         <Home size={18} />
+                        <ToolTipText text="Home" position="bottom" />
                     </button>
 
                     <div>
@@ -459,7 +462,7 @@ export default function NavbarPurchaseOrder() {
 
                 {/* RIGHT */}
 
-                <div className="flex items-center gap-2">
+                <div className="relative flex items-center gap-2">
 
                     {/* REFRESH */}
 
@@ -532,6 +535,7 @@ export default function NavbarPurchaseOrder() {
                         type="button"
                         onClick={handleCreatePurchaseOrder}
                         className="
+                            group relative
                             flex
                             items-center
                             gap-1
@@ -544,13 +548,13 @@ export default function NavbarPurchaseOrder() {
                             text-white
                             hover:bg-[#0095FD]/90
                         "
-                        title="New Purchase Order"
+
                     >
 
                         <Plus size={14} />
 
                         <span>New</span>
-
+                        <ToolTipText text="New Purchase order" position="bottom" />
                     </button>
 
                     {/* SETTINGS */}
@@ -559,6 +563,8 @@ export default function NavbarPurchaseOrder() {
                         type="button"
                         onClick={() => navigate("/settings")}
                         className="
+                        group
+                        relative
                             rounded-md
                             border
                             border-gray-300
@@ -569,6 +575,7 @@ export default function NavbarPurchaseOrder() {
                         title="Settings"
                     >
                         <Settings size={18} />
+                        <ToolTipText text="Settings" position="bottom" />
                     </button>
 
                 </div>

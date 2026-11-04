@@ -109,7 +109,7 @@ const initialState = {
   expense: { ...emptyExpense },
 
   createdExpenseCategorySelection: null,
-
+  createdExpenseReferenceSelection: null,
   loading: false,
   actionLoading: false,
   error: null,
@@ -189,6 +189,14 @@ const expenseSlice = createSlice({
 
     clearCreatedExpenseCategorySelection: (state) => {
       state.createdExpenseCategorySelection = null;
+    },
+
+    setCreatedExpenseReferenceSelection: (state, action) => {
+      state.createdExpenseReferenceSelection = action.payload;
+    },
+
+    clearCreatedExpenseReferenceSelection: (state) => {
+      state.createdExpenseReferenceSelection = null;
     },
   },
 
@@ -466,6 +474,9 @@ export const {
   resetExpenseState,
   setCreatedExpenseCategorySelection,
   clearCreatedExpenseCategorySelection,
+
+  setCreatedExpenseReferenceSelection,
+  clearCreatedExpenseReferenceSelection,
 } = expenseSlice.actions;
 
 export default expenseSlice.reducer;

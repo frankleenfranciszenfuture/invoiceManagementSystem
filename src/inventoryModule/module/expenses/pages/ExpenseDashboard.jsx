@@ -482,7 +482,7 @@ export default function ExpenseDashboard() {
 
                     {/* ERROR */}
 
-                    {error && (
+                    {/* {error && (
                         <div
                             className="
                                 mx-2 mt-4 rounded-md
@@ -493,7 +493,7 @@ export default function ExpenseDashboard() {
                         >
                             {error}
                         </div>
-                    )}
+                    )} */}
 
                     {/* EXPENSE TABLE / LOADING / EMPTY STATE */}
 

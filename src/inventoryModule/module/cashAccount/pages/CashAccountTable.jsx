@@ -28,6 +28,7 @@ import {
 } from "../../../../module/ui/uiSlice";
 
 import Pagination from "../../../../common/pagination/table/Pagination";
+import ToolTipText from "../../../../common/toolTip/ToolTipText";
 
 /* =========================================================
    CONSTANTS
@@ -695,7 +696,7 @@ export default function CashAccountTable({
 
                                 <td className="px-4 py-3">
 
-                                    <div className="
+                                    <div className=" relative
                                         flex items-center justify-end gap-2
                                     ">
 
@@ -708,8 +709,9 @@ export default function CashAccountTable({
                                                 onClick={() =>
                                                     handleView(account)
                                                 }
-                                                title="View"
+
                                                 className="
+                                                    group relative
                                                     flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-blue-50
@@ -718,6 +720,7 @@ export default function CashAccountTable({
                                                 "
                                             >
                                                 <Eye size={16} />
+                                                <ToolTipText text="view" position="bottom" />
                                             </button>
 
                                         )}
@@ -731,8 +734,9 @@ export default function CashAccountTable({
                                                 onClick={() =>
                                                     handleEdit(account)
                                                 }
-                                                title="Edit"
+
                                                 className="
+                                                    group relative
                                                     flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-amber-50
@@ -741,6 +745,7 @@ export default function CashAccountTable({
                                                 "
                                             >
                                                 <Pencil size={16} />
+                                                <ToolTipText text="Edit" position="bottom" />
                                             </button>
 
                                         )}
@@ -755,8 +760,9 @@ export default function CashAccountTable({
                                                 onClick={() =>
                                                     handleDelete(account)
                                                 }
-                                                title="Delete"
+
                                                 className="
+                                                    group relative
                                                     flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-red-50
@@ -767,6 +773,7 @@ export default function CashAccountTable({
                                                 "
                                             >
                                                 <Trash2 size={16} />
+                                                <ToolTipText text="Delete" position="bottom" />
                                             </button>
 
                                         )}

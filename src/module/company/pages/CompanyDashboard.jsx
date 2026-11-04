@@ -1,3 +1,4 @@
+
 import React, {
     useEffect,
     useMemo,
@@ -19,6 +20,7 @@ import toast from "react-hot-toast";
 
 import CompanyTable from "../pages/CompanyTable";
 import NavbarCompany from "../components/bars/nav/NavbarCompany";
+import CompanyOverview from "../pages/CompanyOverview";
 
 import {
     clearError,
@@ -34,17 +36,22 @@ import {
 
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
 
-import CompanyOverview from "../../company/pages/CompanyOverview";
-
-/* =========================================================
-   CONSTANTS
-========================================================= */
+// ============================================================
+// CONSTANTS
+// ============================================================
 
 const EMPTY_ARRAY = [];
 
-/* =========================================================
-   NORMALIZE HELPERS
-========================================================= */
+const VALID_STATUSES = [
+    "ALL",
+    "ACTIVE",
+    "INACTIVE",
+    "DRAFT",
+];
+
+// ============================================================
+// NORMALIZE HELPERS
+// ============================================================
 
 const normalizeModule = (value) =>
     String(value ?? "").trim().toLowerCase();
@@ -52,43 +59,108 @@ const normalizeModule = (value) =>
 const normalizeAction = (value) =>
     String(value ?? "").trim().toUpperCase();
 
-/* =========================================================
-   COMPONENT
-========================================================= */
+const normalizeSearch = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+// ============================================================
+// COMPANY STATUS
+// ============================================================
+
+const getCompanyStatus = (company) => {
+
+    const status = String(
+        company?.status || ""
+    )
+        .trim()
+        .toUpperCase();
+
+    if (
+        ["ACTIVE", "INACTIVE", "DRAFT"].includes(status)
+    ) {
+        return status;
+    }
+
+    if (typeof company?.audit?.active === "boolean") {
+        return company.audit.active
+            ? "ACTIVE"
+            : "INACTIVE";
+    }
+
+    return "UNKNOWN";
+};
+
+// ============================================================
+// COMPANY SEARCH
+// ============================================================
+
+const matchesCompanySearch = (company, search) => {
+
+    if (!search) {
+        return true;
+    }
+
+    const searchableValues = [
+        company?.companyName,
+        company?.name,
+        company?.companyCode,
+        company?.code,
+        company?.email,
+        company?.phone,
+        company?.mobile,
+        company?.website,
+        company?.gstNumber,
+        company?.gstin,
+        company?.panNumber,
+        company?.address,
+        company?.city,
+        company?.state,
+        company?.country,
+    ];
+
+    return searchableValues.some((value) =>
+        normalizeSearch(value).includes(search)
+    );
+};
+
+// ============================================================
+// COMPONENT
+// ============================================================
 
 export default function CompanyDashboard() {
 
     const dispatch = useDispatch();
 
-    /* =====================================================
-       AUTH STATE
-    ===================================================== */
+    // ========================================================
+    // AUTH STATE
+    // ========================================================
 
     const user = useSelector(
         (state) => state.auth?.user
     );
 
     const isAuthenticated = useSelector(
-        (state) => state.auth?.isAuthenticated === true
+        (state) =>
+            state.auth?.isAuthenticated === true
     );
 
     const authChecking = useSelector(
-        (state) => state.auth?.authChecking === true
+        (state) =>
+            state.auth?.authChecking === true
     );
 
-    /* =====================================================
-       PERMISSION STATE
-    ===================================================== */
+    // ========================================================
+    // PERMISSION STATE
+    // ========================================================
 
-    const permissions = useSelector(
-        (state) => {
-            const value = state.menuPermission?.userPermissions;
+    const permissions = useSelector((state) => {
 
-            return Array.isArray(value)
-                ? value
-                : EMPTY_ARRAY;
-        }
-    );
+        const value =
+            state.menuPermission?.userPermissions;
+
+        return Array.isArray(value)
+            ? value
+            : EMPTY_ARRAY;
+    });
 
     const permissionLoading = useSelector(
         (state) =>
@@ -100,9 +172,9 @@ export default function CompanyDashboard() {
             state.menuPermission?.userPermissionsLoaded === true
     );
 
-    /* =====================================================
-       ROLE
-    ===================================================== */
+    // ========================================================
+    // ROLE
+    // ========================================================
 
     const roleName =
         user?.roleName ||
@@ -118,9 +190,9 @@ export default function CompanyDashboard() {
         normalizedRole === "SUPER_ADMIN" ||
         normalizedRole === "ADMIN";
 
-    /* =====================================================
-       PERMISSION CHECK
-    ===================================================== */
+    // ========================================================
+    // PERMISSION CHECK
+    // ========================================================
 
     const hasPermission = useCallback(
         (moduleName, actionName) => {
@@ -129,12 +201,11 @@ export default function CompanyDashboard() {
                 return true;
             }
 
-            if (!Array.isArray(permissions)) {
-                return false;
-            }
+            const requestedModule =
+                normalizeModule(moduleName);
 
-            const requestedModule = normalizeModule(moduleName);
-            const requestedAction = normalizeAction(actionName);
+            const requestedAction =
+                normalizeAction(actionName);
 
             return permissions.some((permission) => {
 
@@ -154,12 +225,13 @@ export default function CompanyDashboard() {
                 }
 
                 if (
-                    normalizeAction(permission?.status) === "INACTIVE"
+                    normalizeAction(permission?.status) ===
+                    "INACTIVE"
                 ) {
                     return false;
                 }
 
-                /* ACTION ARRAY */
+                // ACTION ARRAY
 
                 if (Array.isArray(permission?.actions)) {
 
@@ -167,7 +239,8 @@ export default function CompanyDashboard() {
 
                         if (typeof action === "string") {
                             return (
-                                normalizeAction(action) === requestedAction
+                                normalizeAction(action) ===
+                                requestedAction
                             );
                         }
 
@@ -188,7 +261,8 @@ export default function CompanyDashboard() {
                         }
 
                         if (
-                            normalizeAction(action?.status) === "INACTIVE"
+                            normalizeAction(action?.status) ===
+                            "INACTIVE"
                         ) {
                             return false;
                         }
@@ -200,7 +274,7 @@ export default function CompanyDashboard() {
                     });
                 }
 
-                /* DIRECT / FLAT ACTION */
+                // DIRECT / FLAT ACTION
 
                 const permissionAction = normalizeAction(
                     permission?.actionName ||
@@ -218,7 +292,6 @@ export default function CompanyDashboard() {
                     allowed
                 );
             });
-
         },
         [
             hasFullAccess,
@@ -226,9 +299,9 @@ export default function CompanyDashboard() {
         ]
     );
 
-    /* =====================================================
-       COMPANY PERMISSIONS
-    ===================================================== */
+    // ========================================================
+    // COMPANY PERMISSIONS
+    // ========================================================
 
     const canViewCompany = hasPermission(
         "Companies",
@@ -240,29 +313,53 @@ export default function CompanyDashboard() {
         "CREATE"
     );
 
-    /* =====================================================
-       COMPANY STATE
-    ===================================================== */
+    // ========================================================
+    // COMPANY STATE
+    // ========================================================
 
-    const companiesFromRedux = useSelector(
-        (state) => state.company?.companies
-    );
+    const companies = useSelector((state) => {
 
-    const companies = Array.isArray(companiesFromRedux)
-        ? companiesFromRedux
-        : EMPTY_ARRAY;
+        const value = state.company?.companies;
+
+        return Array.isArray(value)
+            ? value
+            : EMPTY_ARRAY;
+    });
 
     const loading = useSelector(
-        (state) => state.company?.loading === true
+        (state) =>
+            state.company?.loading === true
     );
 
     const error = useSelector(
-        (state) => state.company?.error
+        (state) =>
+            state.company?.error
     );
 
-    /* =====================================================
-       LOAD USER PERMISSIONS
-    ===================================================== */
+    // ========================================================
+    // COMPANY VIEW STATE
+    // ========================================================
+
+    const searchValue = useSelector(
+        (state) =>
+            state.companyView?.search || ""
+    );
+
+    const selectedStatus = useSelector(
+        (state) => {
+
+            const status =
+                state.companyView?.companyStatus || "ALL";
+
+            return VALID_STATUSES.includes(status)
+                ? status
+                : "ALL";
+        }
+    );
+
+    // ========================================================
+    // LOAD USER PERMISSIONS
+    // ========================================================
 
     useEffect(() => {
 
@@ -270,12 +367,14 @@ export default function CompanyDashboard() {
             return;
         }
 
-        // Admin and Super Admin have full access.
         if (hasFullAccess) {
             return;
         }
 
-        if (permissionsLoaded || permissionLoading) {
+        if (
+            permissionsLoaded ||
+            permissionLoading
+        ) {
             return;
         }
 
@@ -290,21 +389,51 @@ export default function CompanyDashboard() {
         dispatch,
     ]);
 
-    /* =====================================================
-       FILTER COMPANIES
-    ===================================================== */
+    // ========================================================
+    // FILTER COMPANIES
+    // ========================================================
 
     const filteredCompanies = useMemo(() => {
 
-        return companies;
+        const search = normalizeSearch(searchValue);
+
+        return companies.filter((company) => {
+
+            // STATUS FILTER
+
+            if (selectedStatus !== "ALL") {
+
+                const companyStatus =
+                    getCompanyStatus(company);
+
+                if (companyStatus !== selectedStatus) {
+                    return false;
+                }
+            }
+
+            // SEARCH FILTER
+
+            if (
+                !matchesCompanySearch(
+                    company,
+                    search
+                )
+            ) {
+                return false;
+            }
+
+            return true;
+        });
 
     }, [
         companies,
+        searchValue,
+        selectedStatus,
     ]);
 
-    /* =====================================================
-       OPEN CREATE COMPANY MODAL
-    ===================================================== */
+    // ========================================================
+    // OPEN CREATE COMPANY MODAL
+    // ========================================================
 
     const handleCreateCompany = useCallback(() => {
 
@@ -323,9 +452,11 @@ export default function CompanyDashboard() {
         }
 
         if (!canCreateCompany) {
+
             toast.error(
                 "You do not have permission to create companies."
             );
+
             return;
         }
 
@@ -344,9 +475,9 @@ export default function CompanyDashboard() {
         dispatch,
     ]);
 
-    /* =====================================================
-       CLEAR ERROR
-    ===================================================== */
+    // ========================================================
+    // CLEAR ERROR
+    // ========================================================
 
     useEffect(() => {
 
@@ -365,25 +496,25 @@ export default function CompanyDashboard() {
         dispatch,
     ]);
 
-    /* =====================================================
-       AUTH CHECKING
-    ===================================================== */
+    // ========================================================
+    // AUTH CHECKING
+    // ========================================================
 
     if (authChecking) {
         return <InvoiceSkeleton />;
     }
 
-    /* =====================================================
-       NOT AUTHENTICATED
-    ===================================================== */
+    // ========================================================
+    // NOT AUTHENTICATED
+    // ========================================================
 
     if (!isAuthenticated) {
         return null;
     }
 
-    /* =====================================================
-       PERMISSION LOADING
-    ===================================================== */
+    // ========================================================
+    // PERMISSION LOADING
+    // ========================================================
 
     if (
         !hasFullAccess &&
@@ -395,37 +526,38 @@ export default function CompanyDashboard() {
         return <InvoiceSkeleton />;
     }
 
-    /* =====================================================
-       VIEW PERMISSION DENIED
-    ===================================================== */
+    // ========================================================
+    // VIEW PERMISSION DENIED
+    // ========================================================
 
     if (!canViewCompany) {
 
         return (
-            <div
-                className="
-                    flex h-screen items-center justify-center
-                    bg-gray-50 font-sans
-                "
-            >
+            <div className="
+                flex h-screen items-center justify-center
+                bg-gray-50 font-sans
+            ">
+
                 <div className="px-6 text-center">
 
-                    <div
-                        className="
-                            mx-auto mb-4 flex h-16 w-16
-                            items-center justify-center
-                            rounded-full bg-red-50
-                            text-2xl font-semibold text-red-500
-                        "
-                    >
+                    <div className="
+                        mx-auto mb-4 flex h-16 w-16
+                        items-center justify-center
+                        rounded-full bg-red-50
+                        text-2xl font-semibold text-red-500
+                    ">
                         !
                     </div>
 
-                    <h2 className="text-lg font-semibold text-gray-800">
+                    <h2 className="
+                        text-lg font-semibold text-gray-800
+                    ">
                         Access Denied
                     </h2>
 
-                    <p className="mt-1 max-w-sm text-sm text-gray-500">
+                    <p className="
+                        mt-1 max-w-sm text-sm text-gray-500
+                    ">
                         You do not have permission to view companies.
                     </p>
 
@@ -434,30 +566,24 @@ export default function CompanyDashboard() {
         );
     }
 
-    /* =====================================================
-       PAGE
-    ===================================================== */
+    // ========================================================
+    // PAGE
+    // ========================================================
 
     return (
 
-        <div
-            className="
-                flex h-screen overflow-hidden
-                bg-gray-50 font-sans text-[13px]
-            "
-        >
+        <div className="
+            flex h-screen overflow-hidden
+            bg-gray-50 font-sans text-[13px]
+        ">
 
-            <div
-                className="
-                    min-h-0 flex-1 overflow-y-auto bg-white
-                "
-            >
+            <div className="
+                min-h-0 flex-1 overflow-y-auto bg-white
+            ">
 
-                <div
-                    className="
-                        w-full max-w-30xl px-2 py-5
-                    "
-                >
+                <div className="
+                    w-full max-w-30xl px-2 py-5
+                ">
 
                     {/* COMPANY NAVBAR */}
 
@@ -474,15 +600,10 @@ export default function CompanyDashboard() {
                     {/* ERROR */}
 
                     {error && (
-
-                        <div
-                            className="
-                                mx-2 mt-4 rounded-md
-                                border border-red-200
-                                bg-red-50 px-4 py-3
-                                text-sm text-red-600
-                            "
-                        >
+                        <div className="
+                            my-3 rounded-lg border border-red-200
+                            bg-red-50 px-4 py-2 text-sm text-red-600
+                        ">
                             {error}
                         </div>
                     )}
@@ -491,12 +612,10 @@ export default function CompanyDashboard() {
 
                     {loading ? (
 
-                        <div
-                            className="
-                                flex min-h-[250px]
-                                items-center justify-center
-                            "
-                        >
+                        <div className="
+                            flex min-h-[250px]
+                            items-center justify-center
+                        ">
                             <p className="text-sm text-gray-500">
                                 Loading companies...
                             </p>
@@ -508,47 +627,70 @@ export default function CompanyDashboard() {
                             companies={filteredCompanies}
                         />
 
+                    ) : companies.length > 0 ? (
+
+                        // FILTERED EMPTY STATE
+
+                        <div className="
+                            flex min-h-[250px] flex-col
+                            items-center justify-center gap-2
+                            px-4 text-center
+                        ">
+
+                            <Building2
+                                size={38}
+                                className="text-gray-300"
+                            />
+
+                            <p className="
+                                text-sm font-medium text-gray-700
+                            ">
+                                No matching companies found
+                            </p>
+
+                            <p className="
+                                text-xs text-gray-400
+                            ">
+                                Try changing your search or status filter.
+                            </p>
+
+                        </div>
+
                     ) : (
 
-                        <div
-                            className="
-                                flex min-h-full flex-col
-                                items-center justify-center
-                                gap-3 px-4
-                            "
-                        >
+                        // NO COMPANIES
+
+                        <div className="
+                            flex min-h-full flex-col
+                            items-center justify-center
+                            gap-3 px-4
+                        ">
 
                             {/* EMPTY STATE ICON */}
 
-                            <div
-                                className="
-                                    relative mt-30 mb-1
-                                    flex h-24 w-24 shrink-0
-                                    items-center justify-center
-                                    rounded-full bg-gray-100
-                                "
-                            >
+                            <div className="
+                                relative mt-30 mb-1
+                                flex h-24 w-24 shrink-0
+                                items-center justify-center
+                                rounded-full bg-gray-100
+                            ">
 
-                                <div
-                                    className="
-                                        flex items-center justify-center
-                                        text-gray-400
-                                    "
-                                >
+                                <div className="
+                                    flex items-center justify-center
+                                    text-gray-400
+                                ">
                                     <Building2
                                         size={42}
                                         strokeWidth={1.7}
                                     />
                                 </div>
 
-                                <div
-                                    className="
-                                        absolute bottom-1 right-1
-                                        flex h-7 w-7 items-center
-                                        justify-center rounded-full
-                                        bg-blue-500 text-white
-                                    "
-                                >
+                                <div className="
+                                    absolute bottom-1 right-1
+                                    flex h-7 w-7 items-center
+                                    justify-center rounded-full
+                                    bg-blue-500 text-white
+                                ">
                                     <Plus className="h-4 w-4" />
                                 </div>
 
@@ -556,23 +698,19 @@ export default function CompanyDashboard() {
 
                             {/* EMPTY STATE TITLE */}
 
-                            <p
-                                className="
-                                    text-center text-base
-                                    font-medium text-gray-800
-                                "
-                            >
+                            <p className="
+                                text-center text-base
+                                font-medium text-gray-800
+                            ">
                                 Manage your companies
                             </p>
 
                             {/* EMPTY STATE DESCRIPTION */}
 
-                            <p
-                                className="
-                                    max-w-sm text-center
-                                    text-sm text-gray-500
-                                "
-                            >
+                            <p className="
+                                max-w-sm text-center
+                                text-sm text-gray-500
+                            ">
                                 Create and manage your companies,
                                 organize company information, maintain
                                 contact details, and manage business
@@ -581,12 +719,10 @@ export default function CompanyDashboard() {
 
                             {/* ACTION BUTTONS */}
 
-                            <div
-                                className="
-                                    mt-1 flex flex-wrap
-                                    items-center justify-center gap-2.5
-                                "
-                            >
+                            <div className="
+                                mt-1 flex flex-wrap
+                                items-center justify-center gap-2.5
+                            ">
 
                                 {/* CREATE COMPANY */}
 

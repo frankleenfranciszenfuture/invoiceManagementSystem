@@ -36,6 +36,8 @@ import {
 } from "../../menuPermission/thunks/menuPermissionThunks";
 
 import CustomSelect from "../../../common/custom/CustomSelect";
+import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
+import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
 
 /* =========================================================
    INITIAL FORM DATA
@@ -165,7 +167,7 @@ const SectionHeading = ({
    MAIN COMPONENT
 ========================================================= */
 
-const BankAccountCreateSimple = () => {
+const BankAccountCreateSimple = ({ onClose }) => {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -219,6 +221,14 @@ const BankAccountCreateSimple = () => {
         (state) =>
             state.menuPermission?.userPermissionsLoaded === true
     );
+
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
+
 
     /* =====================================================
        LOCAL STATE
@@ -533,6 +543,16 @@ const BankAccountCreateSimple = () => {
         setShowSaveOptions(false);
 
         dispatch(resetBankAccountForm());
+    };
+
+    const handleClose = () => {
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/settings/bankAccount")
+            }
+        });
     };
 
     /* =====================================================
@@ -1112,14 +1132,14 @@ const BankAccountCreateSimple = () => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         disabled={loading}
                         className="
-                            rounded-lg border border-gray-200
-                            px-4 py-2 text-sm font-medium
-                            text-gray-600 transition hover:bg-gray-50
-                            disabled:opacity-50
-                        "
+                    rounded-lg border border-gray-200
+                    px-4 py-2 text-sm font-medium
+                    text-gray-600 transition hover:bg-gray-50
+                    disabled:opacity-50
+                    "
                     >
                         Cancel
                     </button>
@@ -1244,8 +1264,18 @@ const BankAccountCreateSimple = () => {
                     </div>
                 </div>
 
-            </form>
-        </div>
+            </form >
+
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave Bank Account?"
+                message="Are you sure you want to leave this bank account page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
+        </div >
     );
 };
 

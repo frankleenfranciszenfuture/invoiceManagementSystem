@@ -29,6 +29,9 @@ import {
 
 import CustomSelect from "../../../../common/custom/CustomSelect";
 
+import LeaveConfirmationModal from "../../../../common/confirmation/LeaveConfirmationModal";
+import useLeaveConfirmation from "../.../../../../../common/confirmation/useLeaveConfirmation";
+
 export default function ExpenseCategoryCreate() {
 
     const dispatch = useDispatch();
@@ -139,6 +142,13 @@ export default function ExpenseCategoryCreate() {
 
     const hasFullAccess = isSuperAdmin || isAdmin;
 
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
+
     // =========================================================
     // PERMISSION CHECK
     // =========================================================
@@ -229,6 +239,8 @@ export default function ExpenseCategoryCreate() {
             );
         });
     };
+
+
 
     // =========================================================
     // CREATE / EDIT PERMISSION
@@ -370,14 +382,15 @@ export default function ExpenseCategoryCreate() {
     // =========================================================
 
     const handleClose = () => {
+        confirmLeave(() => {
+            dispatch(closeModal());
 
-        dispatch(closeModal());
+            dispatch(resetExpenseCategoryForm());
 
-        dispatch(resetExpenseCategoryForm());
-
-        setForm(emptyForm);
-        setErrors({});
-        setActiveTab("category");
+            setForm(emptyForm);
+            setErrors({});
+            setActiveTab("category");
+        })
     };
 
     // =========================================================
@@ -1220,7 +1233,15 @@ export default function ExpenseCategoryCreate() {
                 </div>
 
             </form>
-
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave Purchase Order?"
+                message="You have unsaved changes. Do you want to leave this page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
         </div>
     );
 }

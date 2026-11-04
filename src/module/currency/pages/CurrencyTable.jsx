@@ -33,6 +33,7 @@ import {
 import toast from "react-hot-toast";
 
 import Pagination from "../../../common/pagination/table/Pagination";
+import ToolTipText from "../../../common/toolTip/ToolTipText";
 
 
 export default function CurrencyTable({
@@ -49,11 +50,15 @@ export default function CurrencyTable({
     const {
         loading,
         error,
+        pagination,
+    } = useSelector((state) => state.currency || {});
+
+    const {
         pageNumber = 0,
-        pageSize = 10,
+        pageSize = 20,
         totalPages = 0,
         totalElements = 0,
-    } = useSelector((state) => state.currency || {});
+    } = pagination || {};
 
     const currentCurrencies = currencies || [];
 
@@ -729,7 +734,7 @@ export default function CurrencyTable({
                                                     }}
                                                     title="View"
                                                     className="
-                                                        flex h-8 w-8 items-center
+                                                        group relative flex h-8 w-8 items-center
                                                         justify-center rounded-lg
                                                         bg-blue-50 text-blue-600
                                                         transition hover:bg-blue-100
@@ -737,6 +742,7 @@ export default function CurrencyTable({
                                                     "
                                                 >
                                                     <Eye size={16} />
+                                                    <ToolTipText text="View" position="bottom" />
                                                 </button>
 
                                             )}
@@ -753,7 +759,7 @@ export default function CurrencyTable({
                                                     }}
                                                     title="Edit"
                                                     className="
-                                                        flex h-8 w-8 items-center
+                                                        group relative flex h-8 w-8 items-center
                                                         justify-center rounded-lg
                                                         bg-amber-50 text-amber-600
                                                         transition hover:bg-amber-100
@@ -761,6 +767,7 @@ export default function CurrencyTable({
                                                     "
                                                 >
                                                     <Edit size={16} />
+                                                    <ToolTipText text="Edit" position="bottom" />
                                                 </button>
 
                                             )}
@@ -777,7 +784,7 @@ export default function CurrencyTable({
                                                     }}
                                                     title="Delete"
                                                     className="
-                                                        flex h-8 w-8 items-center
+                                                        group relative flex h-8 w-8 items-center
                                                         justify-center rounded-lg
                                                         bg-red-50 text-red-600
                                                         transition hover:bg-red-100
@@ -785,6 +792,7 @@ export default function CurrencyTable({
                                                     "
                                                 >
                                                     <Trash2 size={16} />
+                                                    <ToolTipText text="Delete" position="bottom" />
                                                 </button>
 
                                             )}

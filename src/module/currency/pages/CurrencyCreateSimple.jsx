@@ -23,6 +23,7 @@ import toast from "react-hot-toast";
 
 import {
     createCurrency,
+    fetchAllCurrencies,
     fetchCurrencyById,
     updateCurrency,
 } from "../thunks/currencyThunks";
@@ -36,6 +37,17 @@ import {
 } from "../../menuPermission/thunks/menuPermissionThunks";
 
 import CustomSelect from "../../../common/custom/CustomSelect";
+
+
+
+import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
+import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
+
+import { closeModal } from "../../../module/ui/uiSlice";
+
+import {
+    setCreatedExpenseReferenceSelection,
+} from "../../../inventoryModule/module/expenses/slices/expenseSlice";
 
 /* =========================================================
    INITIAL FORM DATA
@@ -135,7 +147,7 @@ const SectionHeading = ({
    MAIN COMPONENT
 ========================================================= */
 
-const CurrencyCreateSimple = () => {
+const CurrencyCreateSimple = ({ onClose }) => {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -143,6 +155,10 @@ const CurrencyCreateSimple = () => {
     const { id } = useParams();
 
     const isEditMode = Boolean(id);
+
+    const modalData = useSelector(
+        (state) => state.ui.modal?.data
+    );
 
     /* =====================================================
        REDUX STATE
@@ -201,6 +217,15 @@ const CurrencyCreateSimple = () => {
     const [saveMode, setSaveMode] = useState("close");
 
     const [showSaveOptions, setShowSaveOptions] = useState(false);
+
+
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
+
 
     /* =====================================================
        NORMALIZATION
@@ -442,6 +467,17 @@ const CurrencyCreateSimple = () => {
         });
     };
 
+    const handleClose = () => {
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/settings/currencies")
+            }
+        });
+    };
+
+
     /* =====================================================
        RESET FORM
     ===================================================== */
@@ -587,22 +623,30 @@ const CurrencyCreateSimple = () => {
                 `Currency ${isEditMode ? "updated" : "created"} successfully`
             );
 
-            if (!isEditMode && saveMode === "new") {
+            // Automatically select newly created party in Expense Vendor
+            if (!isEdit && modalData?.selectAfterCreate) {
+                const CreatedCurrency =
+                    response?.data?.data ??
+                    response?.data ??
+                    response;
 
-                setFormData({
-                    ...initialFormData,
-                });
+                dispatch(
+                    setCreatedExpenseReferenceSelection({
+                        targetField: modalData.targetField,
+                        entity: CreatedCurrency,
+                    })
+                );
 
-                dispatch(resetCurrencyForm());
-
-                setSaveMode("close");
+                dispatch(fetchAllCurrencies());
+                dispatch(closeModal());
 
                 return;
             }
 
+
+            dispatch(closeModal());
             dispatch(resetCurrencyForm());
 
-            navigate("/settings/currencies");
 
         } catch (error) {
 
@@ -961,7 +1005,7 @@ const CurrencyCreateSimple = () => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         disabled={loading}
                         className="
                             rounded-lg border border-gray-200
@@ -1094,6 +1138,16 @@ const CurrencyCreateSimple = () => {
                 </div>
 
             </form>
+
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave Expense?"
+                message="Are you sure you want to leave this expense page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
         </div>
     );
 };

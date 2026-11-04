@@ -1,23 +1,24 @@
 
-import React, {
-    useEffect,
-    useMemo,
-    useState,
-} from "react";
+import React, { useEffect, useMemo } from "react";
 
 import {
+    useDispatch,
     useSelector,
 } from "react-redux";
 
-import {
-    useNavigate,
-} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import {
     Building2,
     CheckCircle,
     XCircle,
+    FileEdit,
 } from "lucide-react";
+
+import {
+    setCompanyStatus,
+    setSelectedCompanyView,
+} from "../slices/companyViewSlice";
 
 // ============================================================
 // CONSTANTS
@@ -48,6 +49,12 @@ const STATUS_CARDS = [
         icon: XCircle,
         color: "red",
     },
+    {
+        label: "Draft Companies",
+        value: "DRAFT",
+        icon: FileEdit,
+        color: "orange",
+    },
 ];
 
 // ============================================================
@@ -58,6 +65,7 @@ const STATUS_LABELS = {
     ALL: "All Companies",
     ACTIVE: "Active Companies",
     INACTIVE: "Inactive Companies",
+    DRAFT: "Draft Companies",
 };
 
 // ============================================================
@@ -80,6 +88,35 @@ const CARD_STYLES = {
         active: "border-red-500 ring-2 ring-red-100",
         hover: "hover:border-red-400",
     },
+    orange: {
+        icon: "bg-orange-50 text-orange-500",
+        active: "border-orange-500 ring-2 ring-orange-100",
+        hover: "hover:border-orange-400",
+    },
+};
+
+// ============================================================
+// COMPANY STATUS
+// ============================================================
+
+const getCompanyStatus = (company) => {
+
+    const status = String(
+        company?.status || ""
+    )
+        .trim()
+        .toUpperCase();
+
+    if (["ACTIVE", "INACTIVE", "DRAFT"].includes(status)) {
+        return status;
+    }
+
+    // Fallback if status is maintained in audit.active
+    if (typeof company?.audit?.active === "boolean") {
+        return company.audit.active ? "ACTIVE" : "INACTIVE";
+    }
+
+    return "UNKNOWN";
 };
 
 // ============================================================
@@ -88,9 +125,9 @@ const CARD_STYLES = {
 
 export default function CompanyOverview() {
 
-    const navigate = useNavigate();
+    const dispatch = useDispatch();
 
-    const [selectedStatus, setSelectedStatus] = useState("ALL");
+    const navigate = useNavigate();
 
     // ========================================================
     // REDUX STATE
@@ -101,6 +138,11 @@ export default function CompanyOverview() {
             Array.isArray(state.company?.companies)
                 ? state.company.companies
                 : EMPTY_ARRAY
+    );
+
+    const selectedStatus = useSelector(
+        (state) =>
+            state.companyView?.companyStatus || "ALL"
     );
 
     // ========================================================
@@ -121,9 +163,15 @@ export default function CompanyOverview() {
             ? urlStatus
             : "ALL";
 
-        setSelectedStatus(status);
+        dispatch(setCompanyStatus(status));
 
-    }, []);
+        dispatch(
+            setSelectedCompanyView(
+                STATUS_LABELS[status]
+            )
+        );
+
+    }, [dispatch]);
 
     // ========================================================
     // STATISTICS
@@ -135,15 +183,12 @@ export default function CompanyOverview() {
             ALL: companies.length,
             ACTIVE: 0,
             INACTIVE: 0,
+            DRAFT: 0,
         };
 
         companies.forEach((company) => {
 
-            const status = String(
-                company?.status || ""
-            )
-                .trim()
-                .toUpperCase();
+            const status = getCompanyStatus(company);
 
             if (
                 Object.prototype.hasOwnProperty.call(
@@ -153,7 +198,6 @@ export default function CompanyOverview() {
             ) {
                 result[status] += 1;
             }
-
         });
 
         return result;
@@ -173,15 +217,18 @@ export default function CompanyOverview() {
             return;
         }
 
-        setSelectedStatus(status);
+        dispatch(setCompanyStatus(status));
+
+        dispatch(
+            setSelectedCompanyView(
+                STATUS_LABELS[status]
+            )
+        );
 
         navigate(
             `/settings/companies?status=${status}`,
-            {
-                replace: false,
-            }
+            { replace: false }
         );
-
     };
 
     // ========================================================
@@ -194,12 +241,10 @@ export default function CompanyOverview() {
 
             {/* STATUS CARDS */}
 
-            <div
-                className="
-                    grid w-full grid-cols-1 gap-4
-                    sm:grid-cols-2 lg:grid-cols-3
-                "
-            >
+            <div className="
+                grid w-full grid-cols-1 gap-4
+                sm:grid-cols-2 lg:grid-cols-4
+            ">
 
                 {STATUS_CARDS.map((card) => {
 
@@ -232,27 +277,21 @@ export default function CompanyOverview() {
                             `}
                         >
 
-                            <div
-                                className="
-                                    flex items-center justify-between
-                                "
-                            >
+                            <div className="
+                                flex items-center justify-between
+                            ">
 
                                 <div>
 
-                                    <p
-                                        className="
-                                            text-sm font-medium text-gray-500
-                                        "
-                                    >
+                                    <p className="
+                                        text-sm font-medium text-gray-500
+                                    ">
                                         {card.label}
                                     </p>
 
-                                    <h3
-                                        className="
-                                            mt-3 text-2xl font-bold text-gray-800
-                                        "
-                                    >
+                                    <h3 className="
+                                        mt-3 text-2xl font-bold text-gray-800
+                                    ">
                                         {statistics[card.value] ?? 0}
                                     </h3>
 
@@ -272,30 +311,23 @@ export default function CompanyOverview() {
 
                             </div>
 
-                            <div
-                                className="
-                                    mt-4 flex items-center justify-between
-                                "
-                            >
+                            <div className="
+                                mt-4 flex items-center justify-between
+                            ">
 
-                                <span
-                                    className="
-                                        text-xs text-gray-400
-                                    "
-                                >
+                                <span className="
+                                    text-xs text-gray-400
+                                ">
                                     {active
                                         ? "Currently selected"
                                         : "View companies"
                                     }
                                 </span>
 
-                                <span
-                                    className="
-                                        text-xs font-semibold text-blue-500
-                                        transition-transform
-                                        group-hover:translate-x-1
-                                    "
-                                >
+                                <span className="
+                                    text-xs font-semibold text-blue-500
+                                    transition-transform group-hover:translate-x-1
+                                ">
                                     View →
                                 </span>
 
@@ -311,21 +343,17 @@ export default function CompanyOverview() {
 
             {/* SELECTED STATUS */}
 
-            <div
-                className="
-                    flex flex-wrap items-center justify-between gap-2
-                "
-            >
+            <div className="
+                flex flex-wrap items-center justify-between gap-2
+            ">
 
                 <p className="text-sm text-gray-500">
 
                     Showing:{" "}
 
-                    <span
-                        className="
-                            font-semibold text-gray-800
-                        "
-                    >
+                    <span className="
+                        font-semibold text-gray-800
+                    ">
                         {
                             STATUS_LABELS[selectedStatus] ||
                             STATUS_LABELS.ALL

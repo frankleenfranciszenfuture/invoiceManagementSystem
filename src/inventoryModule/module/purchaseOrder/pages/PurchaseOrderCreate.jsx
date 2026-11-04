@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import { toast } from "react-hot-toast";
+
 import {
     Box,
     ChevronDown,
@@ -39,7 +40,8 @@ import { fetchAllUnits } from "../../../../module/units/thunks/unitThunks";
 import { fetchAllSizes } from "../../../../module/sizes/thunks/sizeThunks";
 import { fetchAllTaxMasters } from "../../../../module/taxMaster/thunks/taxMasterThunks";
 import { fetchAllCurrencies, fetchExchangeRate } from "../../../../module/currency/thunks/currencyThunks";
-
+import LeaveConfirmationModal from "../../../../common/confirmation/LeaveConfirmationModal";
+import useLeaveConfirmation from "../.../../../../../common/confirmation/useLeaveConfirmation";
 
 const getArray = (value) => {
     if (Array.isArray(value)) return value;
@@ -243,9 +245,17 @@ export default function PurchaseOrderCreate({ onClose }) {
     const currencyDropdownRef = useRef(null);
     const itemDropdownRef = useRef(null);
 
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
+
     // ---------------------------------------------------------
     // FORM HELPERS
     // ---------------------------------------------------------
+
 
     const handleChange = useCallback((field, value) => {
         setFormData((prev) => ({
@@ -1005,11 +1015,13 @@ export default function PurchaseOrderCreate({ onClose }) {
     const handleSave = () => handleSubmit("SAVE");
 
     const handleClose = () => {
-        if (onClose) {
-            onClose();
-        } else {
-            navigate("/inventory/purchaseOrder");
-        }
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/inventory/purchaseOrder");
+            }
+        })
     };
 
     // ---------------------------------------------------------
@@ -2089,6 +2101,16 @@ export default function PurchaseOrderCreate({ onClose }) {
                     </div>
                 </div>
             )}
+
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave Purchase Order?"
+                message="You have unsaved changes. Do you want to leave this page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
         </div>
     );
 }

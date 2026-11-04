@@ -40,6 +40,11 @@ import {
 
 import CustomSelect from "../../../common/custom/CustomSelect";
 
+import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
+import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
+
+
+
 /* =========================================================
    INITIAL FORM DATA
 ========================================================= */
@@ -156,7 +161,7 @@ const SectionHeading = ({
    MAIN COMPONENT
 ========================================================= */
 
-const CompanyCreateSimple = () => {
+const CompanyCreateSimple = ({ onClose }) => {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -222,6 +227,15 @@ const CompanyCreateSimple = () => {
     const [saveMode, setSaveMode] = useState("close");
 
     const [showSaveOptions, setShowSaveOptions] = useState(false);
+
+
+
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
 
     /* =====================================================
        NORMALIZATION
@@ -473,6 +487,15 @@ const CompanyCreateSimple = () => {
         }));
     };
 
+    const handleClose = () => {
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/settings/companies")
+            }
+        });
+    };
     /* =====================================================
        RESET FORM
     ===================================================== */
@@ -1312,7 +1335,7 @@ const CompanyCreateSimple = () => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         disabled={loading}
                         className="
                             rounded-lg border border-gray-200
@@ -1445,6 +1468,16 @@ const CompanyCreateSimple = () => {
                 </div>
 
             </form>
+
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave Expense?"
+                message="Are you sure you want to leave this expense page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
         </div>
     );
 };

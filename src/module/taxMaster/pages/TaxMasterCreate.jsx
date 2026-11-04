@@ -20,7 +20,15 @@ import {
 import { getUserPermission } from "../../menuPermission/thunks/menuPermissionThunks";
 import CustomSelect from "../../../common/custom/CustomSelect";
 
-export default function TaxMasterCreate() {
+
+import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
+import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
+
+import {
+    setCreatedExpenseReferenceSelection,
+} from "../../../inventoryModule/module/expenses/slices/expenseSlice";
+
+export default function TaxMasterCreate({ onClose }) {
 
     const dispatch = useDispatch();
 
@@ -80,6 +88,13 @@ export default function TaxMasterCreate() {
             state.menuPermission
                 ?.userPermissionsLoaded === true
     );
+
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
 
     // =========================================================
     // NORMALIZE HELPERS
@@ -313,17 +328,19 @@ export default function TaxMasterCreate() {
     // CLOSE MODAL
     // =========================================================
 
+
     const handleClose = () => {
-
-        dispatch(
-            closeModal()
-        );
-
-        dispatch(
-            resetTaxMasterForm()
-        );
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                dispatch(closeModal());
+                dispatch(
+                    resetTaxMasterForm()
+                );
+            }
+        });
     };
-
     // =========================================================
     // LOAD PERMISSIONS
     // =========================================================
@@ -2355,6 +2372,15 @@ export default function TaxMasterCreate() {
 
             </form>
 
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave Expense?"
+                message="Are you sure you want to leave this expense page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
         </div>
     );
 }

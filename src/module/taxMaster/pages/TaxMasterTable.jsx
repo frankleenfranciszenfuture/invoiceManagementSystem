@@ -1,93 +1,206 @@
 
-import React, { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import React, {
+    useCallback,
+} from "react";
+
+import {
+    useDispatch,
+    useSelector,
+} from "react-redux";
+
 import { useNavigate } from "react-router-dom";
 
 import {
-    fetchAllTaxMasters,
     deleteTaxMaster,
+    fetchAllTaxMasters,
 } from "../thunks/taxMasterThunks";
 
 import {
     setExsistingTaxMaster,
-} from "../slices/taxMasterSlice"
-
-import { openModal } from "../../ui/uiSlice";
+} from "../slices/taxMasterSlice";
 
 import {
-    ChevronDown,
     Edit,
     Trash2,
     Receipt,
     Eye,
+    Percent,
+    Layers,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
+
 import Pagination from "../../../common/pagination/table/Pagination";
+import ToolTipText from "../../../common/toolTip/ToolTipText";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMPTY_ARRAY = [];
+
+const STATUS_COLORS = {
+    ACTIVE: "bg-green-100 text-green-700",
+    INACTIVE: "bg-gray-100 text-gray-700",
+    DRAFT: "bg-yellow-100 text-yellow-700",
+};
+
+const AVATAR_COLORS = [
+    "bg-pink-500 text-white",
+    "bg-green-500 text-white",
+    "bg-blue-500 text-white",
+    "bg-purple-500 text-white",
+    "bg-orange-500 text-white",
+    "bg-cyan-500 text-white",
+    "bg-indigo-500 text-white",
+];
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const normalizeAction = (value) =>
+    String(value ?? "").trim().toUpperCase();
+
+const normalizeModule = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+const getInitials = (taxName) => {
+    if (!taxName) {
+        return "TX";
+    }
+
+    return (
+        String(taxName)
+            .split(" ")
+            .filter(Boolean)
+            .map((word) => word[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase() || "TX"
+    );
+};
+
+const getAvatarColor = (name = "") => {
+    const index = String(name)
+        .split("")
+        .reduce(
+            (acc, char) => acc + char.charCodeAt(0),
+            0
+        ) % AVATAR_COLORS.length;
+
+    return AVATAR_COLORS[index];
+};
+
+const getTaxTypeLabel = (taxType) => {
+    switch (String(taxType || "").toUpperCase()) {
+        case "CGST_SGST":
+            return "CGST + SGST";
+
+        case "IGST":
+            return "IGST";
+
+        default:
+            return taxType || "—";
+    }
+};
+
+const formatRate = (rate) => {
+    if (
+        rate === null ||
+        rate === undefined ||
+        rate === ""
+    ) {
+        return "—";
+    }
+
+    return `${Number(rate).toLocaleString("en-IN", {
+        maximumFractionDigits: 2,
+    })}%`;
+};
+
+const getDisplayStatus = (taxMaster) => {
+    if (taxMaster?.status) {
+        return String(taxMaster.status).toUpperCase();
+    }
+
+    if (
+        taxMaster?.active === true ||
+        taxMaster?.audit?.active === true
+    ) {
+        return "ACTIVE";
+    }
+
+    if (
+        taxMaster?.active === false ||
+        taxMaster?.audit?.active === false
+    ) {
+        return "INACTIVE";
+    }
+
+    return "UNKNOWN";
+};
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function TaxMasterTable({
     taxMasters = [],
 }) {
-
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const [showEdit, setShowEdit] = useState(false);
-    const [showView, setShowView] = useState(false);
+
     /* =====================================================
        REDUX STATE
     ===================================================== */
 
-    const {
-        loading,
-        error,
-        pagination,
-    } = useSelector(
-        (state) => state.taxMaster || {}
+    const taxMasterState = useSelector(
+        (state) => state.taxMaster
     );
 
-    const {
-        pageNumber,
-        pageSize,
-        totalPages,
-        totalElements,
-    } = pagination || {};
+    const loading = taxMasterState?.loading === true;
+    const error = taxMasterState?.error;
 
-    const currentTaxMasters =
-        taxMasters || [];
+    const pagination = taxMasterState?.pagination || {};
+
+    const {
+        pageNumber = 0,
+        pageSize = 20,
+        totalPages = 0,
+        totalElements = 0,
+    } = pagination;
 
     /* =====================================================
-       AUTH
+       FILTERED DATA FROM DASHBOARD
+
+       Dashboard owns search and status filtering.
+       Do not select the complete taxMasters list again.
+    ===================================================== */
+
+    const currentTaxMasters = Array.isArray(taxMasters)
+        ? taxMasters
+        : EMPTY_ARRAY;
+
+    /* =====================================================
+       AUTH STATE
     ===================================================== */
 
     const user = useSelector(
-        (state) =>
-            state.auth?.user
+        (state) => state.auth?.user
     );
 
     /* =====================================================
-       USER PERMISSIONS
+       PERMISSIONS
     ===================================================== */
 
-    const permissions = useSelector(
-        (state) =>
-            Array.isArray(
-                state.menuPermission?.userPermissions
-            )
-                ? state.menuPermission.userPermissions
-                : []
+    const permissionsFromRedux = useSelector(
+        (state) => state.menuPermission?.userPermissions
     );
 
-    const permissionLoading = useSelector(
-        (state) =>
-            state.menuPermission
-                ?.userPermissionsLoading === true
-    );
-
-    const permissionsLoaded = useSelector(
-        (state) =>
-            state.menuPermission
-                ?.userPermissionsLoaded === true
-    );
+    const permissions = Array.isArray(permissionsFromRedux)
+        ? permissionsFromRedux
+        : EMPTY_ARRAY;
 
     /* =====================================================
        ROLE
@@ -101,270 +214,147 @@ export default function TaxMasterTable({
         user?.authority ||
         "";
 
-    const normalizedRole =
-        String(roleName)
-            .trim()
-            .toUpperCase();
-
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
-
-    const isAdmin =
-        normalizedRole === "ADMIN";
+    const normalizedRole = normalizeAction(roleName);
 
     const hasFullAccess =
-        isSuperAdmin ||
-        isAdmin;
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
     /* =====================================================
-       PERMISSION CHECKER
-
-       Supports:
-
-       FLAT
-
-       {
-           moduleName: "TaxMasters",
-           actionName: "EDIT",
-           allowed: true
-       }
-
-       GROUPED
-
-       {
-           moduleName: "TaxMasters",
-           actions: [
-               {
-                   actionName: "EDIT",
-                   allowed: true
-               }
-           ]
-       }
+       PERMISSION CHECK
     ===================================================== */
 
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
+            if (hasFullAccess) {
+                return true;
+            }
 
-        /* =================================================
-           ADMIN / SUPER_ADMIN
-        ================================================= */
+            const requestedModule = normalizeModule(moduleName);
+            const requestedAction = normalizeAction(actionName);
 
-        if (hasFullAccess) {
-            return true;
-        }
+            return permissions.some((permission) => {
+                const permissionModule = normalizeModule(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                );
 
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
-
-        const requestedModule =
-            String(moduleName)
-                .trim()
-                .toLowerCase();
-
-        const requestedAction =
-            String(actionName)
-                .trim()
-                .toUpperCase();
-
-        return permissions.some(
-            (permission) => {
-
-                const permissionModule =
-                    String(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toLowerCase();
-
-                if (
-                    permissionModule !==
-                    requestedModule
-                ) {
+                if (permissionModule !== requestedModule) {
                     return false;
                 }
 
-                /* =========================================
-                   IGNORE INACTIVE PERMISSION
-                ========================================= */
-
-                if (
-                    permission?.active === false
-                ) {
+                if (permission?.active === false) {
                     return false;
                 }
 
                 if (
-                    String(
-                        permission?.status || ""
-                    )
-                        .trim()
-                        .toUpperCase() ===
-                    "INACTIVE"
+                    normalizeAction(permission?.status) === "INACTIVE"
                 ) {
                     return false;
                 }
 
-                /* =========================================
-                   GROUPED PERMISSION
-                ========================================= */
+                /* GROUPED ACTIONS */
 
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
-
-                    return permission.actions.some(
-                        (action) => {
-
-                            const permissionAction =
-                                String(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.action?.name ||
-                                    ""
-                                )
-                                    .trim()
-                                    .toUpperCase();
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
-
+                if (Array.isArray(permission?.actions)) {
+                    return permission.actions.some((action) => {
+                        if (typeof action === "string") {
                             return (
-                                permissionAction ===
-                                requestedAction &&
-                                allowed
+                                normalizeAction(action) === requestedAction
                             );
                         }
-                    );
+
+                        const permissionAction = normalizeAction(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        );
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        if (action?.active === false) {
+                            return false;
+                        }
+
+                        if (
+                            normalizeAction(action?.status) === "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
                 }
 
-                /* =========================================
-                   FLAT PERMISSION
-                ========================================= */
+                /* FLAT ACTION */
 
-                const permissionAction =
-                    String(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toUpperCase();
+                const permissionAction = normalizeAction(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                );
 
                 const allowed =
                     permission?.allowed === true ||
                     permission?.allowed === "true";
 
                 return (
-                    permissionAction ===
-                    requestedAction &&
+                    permissionAction === requestedAction &&
                     allowed
                 );
-            }
-        );
-    };
+            });
+        },
+        [hasFullAccess, permissions]
+    );
 
     /* =====================================================
        TAX MASTER PERMISSIONS
     ===================================================== */
 
-    const canEditTaxMaster =
-        hasPermission(
-            "TaxMasters",
-            "EDIT"
-        );
-
-    const canDeleteTaxMaster =
-        hasPermission(
-            "TaxMasters",
-            "DELETE"
-        );
-
-    /* =====================================================
-       ANY ACTION AVAILABLE
-    ===================================================== */
-
-    const canPerformAction =
-        canEditTaxMaster ||
-        canDeleteTaxMaster;
+    const canViewTaxMaster = hasPermission("Taxes", "VIEW");
+    const canEditTaxMaster = hasPermission("Taxes", "EDIT");
+    const canDeleteTaxMaster = hasPermission("Taxes", "DELETE");
 
     /* =====================================================
        DELETE TAX MASTER
     ===================================================== */
 
-    const handleDelete = async (
-        id
-    ) => {
-
-        /* =================================================
-           PERMISSION CHECK
-        ================================================= */
-
-        if (
-            !hasFullAccess &&
-            !permissionsLoaded
-        ) {
-
-            toast.error(
-                "Permissions are still loading. Please try again."
-            );
-
-            return;
-        }
-
-        if (
-            !canDeleteTaxMaster
-        ) {
-
+    const handleDelete = async (id) => {
+        if (!canDeleteTaxMaster) {
             toast.error(
                 "You do not have permission to delete tax masters."
             );
-
             return;
         }
 
-        /* =================================================
-           CONFIRM
-        ================================================= */
-
-        if (
-            !window.confirm(
-                "Delete this tax master?"
-            )
-        ) {
+        if (!window.confirm("Delete this tax master?")) {
             return;
         }
 
         try {
-
-            await dispatch(
-                deleteTaxMaster(id)
-            ).unwrap();
+            await dispatch(deleteTaxMaster(id)).unwrap();
 
             toast.success(
-                "Tax master deleted successfully"
+                "Tax master deleted successfully."
             );
 
-            dispatch(
-                fetchAllTaxMasters()
-            );
+            await dispatch(fetchAllTaxMasters()).unwrap();
 
         } catch (error) {
-
             toast.error(
                 typeof error === "string"
                     ? error
                     : error?.message ||
-                    "Failed to delete tax master"
+                    "Failed to delete tax master."
             );
         }
     };
@@ -373,249 +363,64 @@ export default function TaxMasterTable({
        VIEW TAX MASTER
     ===================================================== */
 
-    const handleView = (
-        taxMaster
-    ) => {
-
-        try {
-
-            dispatch(
-                setExsistingTaxMaster(
-                    taxMaster
-                )
-            );
-
-            navigate(
-                `/tax-masters/view/${taxMaster.id}`
-            );
-
-        } catch (error) {
-
+    const handleView = (taxMaster) => {
+        if (!canViewTaxMaster) {
             toast.error(
-                "Failed to open tax master"
+                "You do not have permission to view tax masters."
             );
+            return;
         }
+
+        dispatch(setExsistingTaxMaster(taxMaster));
+
+        navigate(`/settings/taxes/view/${taxMaster.id}`);
     };
 
     /* =====================================================
        EDIT TAX MASTER
     ===================================================== */
 
-    const handleEdit = (
-        taxMaster
-    ) => {
-
-        /* =================================================
-           PERMISSION CHECK
-        ================================================= */
-
-        if (
-            !hasFullAccess &&
-            !permissionsLoaded
-        ) {
-
-            toast.error(
-                "Permissions are still loading. Please try again."
-            );
-
-            return;
-        }
-
-        if (
-            !canEditTaxMaster
-        ) {
-
+    const handleEdit = (taxMaster) => {
+        if (!canEditTaxMaster) {
             toast.error(
                 "You do not have permission to edit tax masters."
             );
-
             return;
         }
 
-        try {
+        dispatch(setExsistingTaxMaster(taxMaster));
 
-            dispatch(
-                openModal({
-                    type: "editTaxMaster",
-                    data: taxMaster,
-                })
-            );
-
-        } catch (error) {
-
-            toast.error(
-                "Failed to open tax master"
-            );
-        }
+        navigate(`/settings/taxes/edit/${taxMaster.id}`);
     };
 
     /* =====================================================
-       TAX MASTER INITIALS
+       PAGINATION HANDLERS
+
+       NOTE:
+       Current fetchAllTaxMasters thunk accepts no arguments.
+       These callbacks refresh the current endpoint only.
+       True server-side pagination requires updating the thunk
+       and reducer to accept page and size parameters.
     ===================================================== */
 
-    const initials = (
-        taxName
-    ) =>
-        taxName
-            ?.split(" ")
-            .map(
-                (word) =>
-                    word[0]
-            )
-            .join("")
-            .slice(0, 2)
-            .toUpperCase() ||
-        "TX";
+    const handlePageChange = useCallback(() => {
+        dispatch(fetchAllTaxMasters());
+    }, [dispatch]);
 
-    /* =====================================================
-       STATUS COLORS
-    ===================================================== */
-
-    const statusColor = {
-
-        ACTIVE:
-            "bg-green-100 text-green-700",
-
-        INACTIVE:
-            "bg-gray-100 text-gray-700",
-
-        DRAFT:
-            "bg-yellow-100 text-yellow-700",
-
-    };
-
-    /* =====================================================
-       TAX TYPE COLORS
-    ===================================================== */
-
-    const taxTypeColor = {
-
-        CGST_SGST:
-            "bg-blue-100 text-blue-700",
-
-        IGST:
-            "bg-purple-100 text-purple-700",
-
-    };
-
-    /* =====================================================
-       AVATAR COLORS
-    ===================================================== */
-
-    const avatarColors = [
-
-        "bg-pink-500 text-white",
-        "bg-green-500 text-white",
-        "bg-blue-500 text-white",
-        "bg-purple-500 text-white",
-        "bg-orange-500 text-white",
-        "bg-cyan-500 text-white",
-        "bg-indigo-500 text-white",
-
-    ];
-
-    const getAvatarColor = (
-        name = ""
-    ) => {
-
-        const index =
-            name
-                .split("")
-                .reduce(
-                    (
-                        acc,
-                        char
-                    ) =>
-                        acc +
-                        char.charCodeAt(0),
-                    0
-                ) %
-            avatarColors.length;
-
-        return avatarColors[index];
-    };
-
-    /* =====================================================
-       FORMAT RATE
-    ===================================================== */
-
-    const formatRate = (
-        value
-    ) => {
-
-        if (
-            value === null ||
-            value === undefined ||
-            value === ""
-        ) {
-            return "0.00";
-        }
-
-        return Number(value)
-            .toFixed(2);
-    };
-
-    /* =====================================================
-       PERMISSION LOADING
-    ===================================================== */
-
-    if (
-        !hasFullAccess &&
-        (
-            permissionLoading ||
-            !permissionsLoaded
-        )
-    ) {
-
-        return (
-
-            <div
-                className="
-                flex
-                items-center
-                justify-center
-                py-10
-                "
-            >
-
-                <p
-                    className="
-                    text-sm
-                    text-gray-500
-                    "
-                >
-                    Loading permissions...
-                </p>
-
-            </div>
-        );
-    }
+    const handlePageSizeChange = useCallback(() => {
+        dispatch(fetchAllTaxMasters());
+    }, [dispatch]);
 
     /* =====================================================
        LOADING
     ===================================================== */
 
     if (loading) {
-
         return (
-
-            <div
-                className="
-                flex
-                items-center
-                justify-center
-                py-10
-                "
-            >
-
-                <p
-                    className="
-                    text-gray-500
-                    "
-                >
+            <div className="flex items-center justify-center py-10">
+                <p className="text-gray-500">
                     Loading tax masters...
                 </p>
-
             </div>
         );
     }
@@ -625,28 +430,16 @@ export default function TaxMasterTable({
     ===================================================== */
 
     if (error) {
-
         return (
-
             <div
                 className="
-                bg-white
-                rounded-xl
-                border
-                border-red-200
-                p-8
-                text-center
+                    rounded-xl border border-red-200
+                    bg-white p-8 text-center
                 "
             >
-
-                <p
-                    className="
-                    text-red-500
-                    "
-                >
+                <p className="text-red-500">
                     {error}
                 </p>
-
             </div>
         );
     }
@@ -655,41 +448,24 @@ export default function TaxMasterTable({
        EMPTY STATE
     ===================================================== */
 
-    if (
-        !currentTaxMasters.length
-    ) {
-
+    if (!currentTaxMasters.length) {
         return (
-
             <div
                 className="
-                bg-white
-                rounded-2xl
-                border
-                border-gray-200
-                p-8
-                text-center
+                    rounded-2xl border border-gray-200
+                    bg-white p-8 text-center
                 "
             >
-
                 <Receipt
                     className="
-                    mx-auto
-                    mb-3
-                    h-10
-                    w-10
-                    text-gray-300
+                        mx-auto mb-3 h-10 w-10
+                        text-gray-300
                     "
                 />
 
-                <p
-                    className="
-                    text-gray-500
-                    "
-                >
+                <p className="text-gray-500">
                     No tax masters found.
                 </p>
-
             </div>
         );
     }
@@ -699,468 +475,292 @@ export default function TaxMasterTable({
     ===================================================== */
 
     return (
-
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
+        <div
+            className="
+                overflow-x-auto overflow-y-visible
+                rounded-xl border border-gray-200 bg-white
+            "
+        >
             <div className="overflow-x-auto overflow-y-visible">
                 <table className="w-full">
-                    <thead className="bg-[#FEFEFD]/20 border-b border-gray-300">
-                        <tr>
 
+                    {/* TABLE HEADER */}
+
+                    <thead
+                        className="
+                            border-b border-gray-300
+                            bg-[#FAF9F7]/20
+                        "
+                    >
+                        <tr>
                             {[
-                                "Tax Name",
+                                "Tax Master",
                                 "Tax Type",
                                 "Tax Rate",
-                                "CgstRate",
-                                "sgstRate",
-                                "igstRate",
-                                "description",
+                                "CGST",
+                                "SGST",
+                                "IGST",
                                 "Status",
                                 "Actions",
                             ].map((header) => (
-
                                 <th
                                     key={header}
                                     className={`
-                                    px-4
-                                    py-3
-                                    font-medium
-                                    text-md
-                                    text-gray-400
-                                    uppercase
-                                    ${header === "Actions"
-                                            ? "text-center"
+                                        px-5 py-3 text-md
+                                        font-medium uppercase
+                                        text-gray-400 whitespace-nowrap
+                                        ${header === "Actions"
+                                            ? "text-right"
                                             : "text-left"
                                         }
-                                `}
+                                    `}
                                 >
                                     {header}
                                 </th>
-
                             ))}
-
                         </tr>
-
                     </thead>
 
-
-
-                    {/* =================================================
-                        TABLE BODY
-                    ================================================= */}
+                    {/* TABLE BODY */}
 
                     <tbody>
+                        {currentTaxMasters.map((taxMaster, index) => {
+                            const status = getDisplayStatus(taxMaster);
 
-                        {[...currentTaxMasters]
-                            .sort(
-                                (a, b) =>
-                                    a.id - b.id
-                            )
-                            .map(
-                                (
-                                    taxMaster,
-                                    index
-                                ) => (
+                            return (
+                                <tr
+                                    key={taxMaster.id || index}
+                                    className="
+                                        cursor-pointer border-b
+                                        border-gray-100 text-xs
+                                        transition-colors hover:bg-gray-50
+                                    "
+                                >
 
-                                    <tr
-                                        key={
-                                            taxMaster.id ||
-                                            index
-                                        }
-                                        className="
-                                        border-b
-                                        border-gray-100
-                                        hover:bg-gray-50
-                                        text-xs
-                                        cursor-pointer
-                                        transition-colors
-                                        "
-                                    >
+                                    {/* TAX MASTER */}
 
-                                        {/* =================================
-                                            TAX NAME
-                                        ================================= */}
-
-                                        <td
+                                    <td className="overflow-hidden px-2 py-3">
+                                        <div
                                             className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
+                                                flex min-w-0 items-center gap-2
                                             "
                                         >
-
                                             <div
-                                                className="
-                                                flex
-                                                items-center
-                                                gap-2
-                                                min-w-0
-                                                "
-                                            >
-
-                                                <div
-                                                    className={`
-                                                    w-9
-                                                    h-9
-                                                    min-w-[36px]
-                                                    rounded-full
-                                                    flex
-                                                    items-center
-                                                    justify-center
-                                                    text-sm
-                                                    font-bold
+                                                className={`
+                                                    flex h-9 min-w-[36px]
+                                                    w-9 items-center justify-center
+                                                    rounded-full text-sm font-bold
                                                     ${getAvatarColor(
-                                                        taxMaster.taxName
-                                                    )}
-                                                    `}
-                                                >
-                                                    {
-                                                        initials(
-                                                            taxMaster.taxName
-                                                        )
-                                                    }
-                                                </div>
-
-                                                <div
-                                                    className="
-                                                    min-w-0
-                                                    "
-                                                >
-
-                                                    <p
-                                                        className="
-                                                        font-medium
-                                                        text-gray-800
-                                                        truncate
-                                                        "
-                                                        title={
-                                                            taxMaster.taxName ||
-                                                            ""
-                                                        }
-                                                    >
-                                                        {
-                                                            taxMaster.taxName ||
-                                                            "—"
-                                                        }
-                                                    </p>
-
-                                                    <p
-                                                        className="
-                                                        text-xs
-                                                        text-gray-500
-                                                        "
-                                                    >
-                                                        ID: #
-                                                        {
-                                                            taxMaster.id
-                                                        }
-                                                    </p>
-
-                                                </div>
-
+                                                    taxMaster.taxName
+                                                )}
+                                                `}
+                                            >
+                                                {getInitials(taxMaster.taxName)}
                                             </div>
 
-                                        </td>
+                                            <div className="min-w-0">
+                                                <p
+                                                    className="
+                                                        truncate font-medium
+                                                        text-gray-800
+                                                    "
+                                                    title={taxMaster.taxName || ""}
+                                                >
+                                                    {taxMaster.taxName || "—"}
+                                                </p>
 
-                                        {/* =================================
-                                            TAX TYPE
-                                        ================================= */}
+                                                <p className="text-xs text-gray-500">
+                                                    ID: #{taxMaster.id}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </td>
 
-                                        <td
-                                            className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                            "
-                                        >
+                                    {/* TAX TYPE */}
 
-                                            <span
-                                                className={`
-                                                inline-block
-                                                max-w-full
-                                                px-2
-                                                py-1
-                                                rounded-full
-                                                text-xs
-                                                font-medium
-                                                truncate
-                                                ${taxTypeColor[
-                                                    taxMaster.taxType
-                                                    ] ||
-                                                    "bg-gray-100 text-gray-700"
-                                                    }
-                                                `}
-                                                title={
-                                                    taxMaster.taxType ||
-                                                    ""
-                                                }
-                                            >
-                                                {
-                                                    taxMaster.taxType ||
-                                                    "—"
-                                                }
-                                            </span>
+                                    <td className="overflow-hidden px-2 py-3">
+                                        <div className="flex items-center gap-1.5">
+                                            <Layers
+                                                size={13}
+                                                className="text-gray-400"
+                                            />
 
-                                        </td>
-
-                                        {/* =================================
-                                            TAX RATE
-                                        ================================= */}
-
-                                        <td
-                                            className="
-                                            px-2
-                                            py-3
-                                            font-medium
-                                            whitespace-nowrap
-                                            "
-                                        >
-                                            {formatRate(
-                                                taxMaster.taxRate
-                                            )}
-                                            %
-                                        </td>
-
-                                        {/* =================================
-                                            CGST
-                                        ================================= */}
-
-                                        <td
-                                            className="
-                                            px-2
-                                            py-3
-                                            whitespace-nowrap
-                                            "
-                                        >
-                                            {formatRate(
-                                                taxMaster.cgstRate
-                                            )}
-                                            %
-                                        </td>
-
-                                        {/* =================================
-                                            SGST
-                                        ================================= */}
-
-                                        <td
-                                            className="
-                                            px-2
-                                            py-3
-                                            whitespace-nowrap
-                                            "
-                                        >
-                                            {formatRate(
-                                                taxMaster.sgstRate
-                                            )}
-                                            %
-                                        </td>
-
-                                        {/* =================================
-                                            IGST
-                                        ================================= */}
-
-                                        <td
-                                            className="
-                                            px-2
-                                            py-3
-                                            whitespace-nowrap
-                                            "
-                                        >
-                                            {formatRate(
-                                                taxMaster.igstRate
-                                            )}
-                                            %
-                                        </td>
-
-                                        {/* =================================
-                                            DESCRIPTION
-                                        ================================= */}
-
-                                        <td
-                                            className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                            "
-                                        >
-
-                                            <p
-                                                className="
-                                                truncate
-                                                text-gray-600
-                                                "
-                                                title={
-                                                    taxMaster.description ||
-                                                    ""
-                                                }
-                                            >
-                                                {
-                                                    taxMaster.description ||
-                                                    "—"
-                                                }
+                                            <p className="font-medium text-gray-700">
+                                                {getTaxTypeLabel(taxMaster.taxType)}
                                             </p>
+                                        </div>
+                                    </td>
 
-                                        </td>
+                                    {/* TAX RATE */}
 
-                                        {/* =================================
-                                            STATUS
-                                        ================================= */}
+                                    <td className="overflow-hidden px-2 py-3">
+                                        <div className="flex items-center gap-1.5">
+                                            <Percent
+                                                size={13}
+                                                className="text-gray-400"
+                                            />
 
-                                        <td
+                                            <p className="
+                                                font-semibold text-gray-800
+                                            ">
+                                                {formatRate(taxMaster.taxRate)}
+                                            </p>
+                                        </div>
+                                    </td>
+
+                                    {/* CGST */}
+
+                                    <td className="overflow-hidden px-2 py-3">
+                                        <p className="font-medium text-gray-700">
+                                            {formatRate(taxMaster.cgstRate)}
+                                        </p>
+                                    </td>
+
+                                    {/* SGST */}
+
+                                    <td className="overflow-hidden px-2 py-3">
+                                        <p className="font-medium text-gray-700">
+                                            {formatRate(taxMaster.sgstRate)}
+                                        </p>
+                                    </td>
+
+                                    {/* IGST */}
+
+                                    <td className="overflow-hidden px-2 py-3">
+                                        <p className="font-medium text-gray-700">
+                                            {formatRate(taxMaster.igstRate)}
+                                        </p>
+                                    </td>
+
+                                    {/* STATUS */}
+
+                                    <td className="overflow-hidden px-2 py-3">
+                                        <span
+                                            className={`
+                                                inline-block rounded-full
+                                                px-2 py-1 text-xs font-medium
+                                                ${STATUS_COLORS[status] ||
+                                                "bg-gray-100 text-gray-700"
+                                                }
+                                            `}
+                                        >
+                                            {status === "UNKNOWN" ? "—" : status}
+                                        </span>
+                                    </td>
+
+                                    {/* ACTIONS */}
+
+                                    <td className="px-4 py-3">
+                                        <div
                                             className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
+                                                flex items-center justify-end gap-2
                                             "
                                         >
 
-                                            <span
-                                                className={`
-                                                inline-block
-                                                px-2
-                                                py-1
-                                                rounded-full
-                                                text-xs
-                                                font-medium
-                                                ${statusColor[
-                                                    taxMaster.status
-                                                    ] ||
-                                                    "bg-gray-100 text-gray-700"
-                                                    }
-                                                `}
-                                            >
-                                                {
-                                                    taxMaster.status ||
-                                                    "—"
-                                                }
-                                            </span>
+                                            {/* VIEW */}
 
-                                        </td>
-
-                                        {/* =================================
-                                            ACTIONS
-                                        ================================= */}
-
-
-                                        {/* Actions */}
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center justify-center gap-2">
-
-                                                {/* View */}
+                                            {canViewTaxMaster && (
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setShowView(true);
-                                                        dispatch(setExsistingTaxMaster(taxMaster));
-                                                        navigate(`/settings/taxes/view/${taxMaster.id}`);
+                                                        handleView(taxMaster);
                                                     }}
                                                     title="View"
                                                     className="
-                                                flex h-8 w-8 items-center justify-center
-                                                rounded-lg
-                                                bg-blue-50
-                                                text-blue-600
-                                                transition
-                                                hover:bg-blue-100
-                                                hover:text-blue-700
-                                            "
+                                                        group relative flex h-8 w-8
+                                                        items-center justify-center
+                                                        rounded-lg bg-blue-50
+                                                        text-blue-600 transition
+                                                        hover:bg-blue-100
+                                                        hover:text-blue-700
+                                                    "
                                                 >
                                                     <Eye size={16} />
-                                                </button>
 
-                                                {/* Edit */}
+                                                    <ToolTipText
+                                                        text="View"
+                                                        position="bottom"
+                                                    />
+                                                </button>
+                                            )}
+
+                                            {/* EDIT */}
+
+                                            {canEditTaxMaster && (
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-
-                                                        dispatch(setExsistingTaxMaster(taxMaster));
-                                                        dispatch(
-                                                            openModal({
-                                                                type: "editTaxMaster",
-                                                                data: taxMaster,
-                                                            })
-                                                        );
+                                                        handleEdit(taxMaster);
                                                     }}
                                                     title="Edit"
                                                     className="
-                                                        flex h-8 w-8 items-center justify-center
-                                                        rounded-lg
-                                                        bg-amber-50
-                                                        text-amber-600
-                                                        transition
+                                                        group relative flex h-8 w-8
+                                                        items-center justify-center
+                                                        rounded-lg bg-amber-50
+                                                        text-amber-600 transition
                                                         hover:bg-amber-100
                                                         hover:text-amber-700
-                                                            "
+                                                    "
                                                 >
                                                     <Edit size={16} />
-                                                </button>
 
-                                                {/* Delete */}
+                                                    <ToolTipText
+                                                        text="Edit"
+                                                        position="bottom"
+                                                    />
+                                                </button>
+                                            )}
+
+                                            {/* DELETE */}
+
+                                            {canDeleteTaxMaster && (
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-
-                                                        // Your delete confirmation logic
                                                         handleDelete(taxMaster.id);
                                                     }}
                                                     title="Delete"
                                                     className="
-                                                    flex h-8 w-8 items-center justify-center
-                                                    rounded-lg
-                                                    bg-red-50
-                                                    text-red-600
-                                                    transition
-                                                    hover:bg-red-100
-                                                    hover:text-red-700
-                                                "
+                                                        group relative flex h-8 w-8
+                                                        items-center justify-center
+                                                        rounded-lg bg-red-50
+                                                        text-red-600 transition
+                                                        hover:bg-red-100
+                                                        hover:text-red-700
+                                                    "
                                                 >
                                                     <Trash2 size={16} />
+
+                                                    <ToolTipText
+                                                        text="Delete"
+                                                        position="bottom"
+                                                    />
                                                 </button>
-
-                                            </div>
-                                        </td>
-                                    </tr>
-
-                                )
-                            )}
-
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
-
                 </table>
 
-                {/* =====================================================
-                    PAGINATION
-                ===================================================== */}
+                {/* PAGINATION */}
+
                 <Pagination
                     page={Number(pageNumber) || 0}
-                    size={Number(pageSize) || 10}
+                    size={Number(pageSize) || 20}
                     totalElements={Number(totalElements) || 0}
                     totalPages={Number(totalPages) || 0}
                     loading={loading}
-                    label="taxes"
-                    onPageChange={(nextPage) => {
-                        dispatch(
-                            fetchAllTaxMasters({
-                                page: nextPage,
-                                size: Number(pageSize) || 10,
-                            })
-                        );
-                    }}
-                    onPageSizeChange={(nextSize) => {
-                        dispatch(
-                            fetchAllTaxMasters({
-                                page: 0,
-                                size: nextSize,
-                            })
-                        );
-                    }}
+                    label="tax masters"
+                    onPageChange={handlePageChange}
+                    onPageSizeChange={handlePageSizeChange}
                 />
-
-
             </div>
-
-        </div >
+        </div>
     );
 }

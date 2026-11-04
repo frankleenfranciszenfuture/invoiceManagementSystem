@@ -2,6 +2,7 @@
 import React, {
     useEffect,
     useMemo,
+    useCallback,
 } from "react";
 
 import {
@@ -12,25 +13,25 @@ import {
 import {
     Plus,
     Download,
+    ShieldCheck,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
-import RoleTable
-    from "./RoleTable";
-
-import NavbarRole
-    from "../components/bars/nav/NavbarRole";
+import NavbarRole from "../components/bars/nav/NavbarRole";
+import RoleTable from "../pages/RoleTable";
+import RoleOverview from "../pages/RoleOverview"
 
 import {
     fetchAllRoles,
 } from "../thunks/roleThunks";
 
 import {
-    getUserPermission,
-} from "../../menuPermission/thunks/menuPermissionThunks";
+    clearRoleState,
+} from "../slices/roleSlice";
 
 import {
+    setSearch,
     setRoleStatus,
     setSelectedRoleView,
 } from "../slices/roleViewSlice";
@@ -39,85 +40,79 @@ import {
     openModal,
 } from "../../ui/uiSlice";
 
-import InvoiceSkeleton
-    from "../../../common/loader/InvoiceSkeleton";
+import {
+    getUserPermission,
+} from "../../menuPermission/thunks/menuPermissionThunks";
 
+import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMPTY_ARRAY = [];
+
+/* =========================================================
+   NORMALIZE HELPERS
+========================================================= */
+
+const normalizeModule = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+const normalizeAction = (value) =>
+    String(value ?? "").trim().toUpperCase();
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function RoleDashboard() {
 
     const dispatch = useDispatch();
 
-
-    // ============================================================
-    // AUTH STATE
-    // ============================================================
+    /* =====================================================
+       AUTH STATE
+    ===================================================== */
 
     const user = useSelector(
-        (state) =>
-            state.auth?.user
+        (state) => state.auth?.user
     );
 
     const isAuthenticated = useSelector(
-        (state) =>
-            state.auth?.isAuthenticated === true
+        (state) => state.auth?.isAuthenticated === true
     );
 
     const authChecking = useSelector(
-        (state) =>
-            state.auth?.authChecking === true
+        (state) => state.auth?.authChecking === true
     );
 
-
-    // ============================================================
-    // PERMISSION STATE
-    // ============================================================
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
 
     const permissions = useSelector(
-        (state) =>
-            Array.isArray(
-                state.menuPermission
-                    ?.userPermissions
-            )
-                ? state.menuPermission.userPermissions
-                : []
+        (state) => {
+            const value = state.menuPermission?.userPermissions;
+
+            return Array.isArray(value)
+                ? value
+                : EMPTY_ARRAY;
+        }
     );
 
     const permissionLoading = useSelector(
         (state) =>
-            state.menuPermission
-                ?.userPermissionsLoading === true
+            state.menuPermission?.userPermissionsLoading === true
     );
 
     const permissionsLoaded = useSelector(
         (state) =>
-            state.menuPermission
-                ?.userPermissionsLoaded === true
+            state.menuPermission?.userPermissionsLoaded === true
     );
 
-
-    // ============================================================
-    // NORMALIZE HELPERS
-    // ============================================================
-
-    const normalizeModule = (
-        value
-    ) =>
-        String(value ?? "")
-            .trim()
-            .toLowerCase();
-
-
-    const normalizeAction = (
-        value
-    ) =>
-        String(value ?? "")
-            .trim()
-            .toUpperCase();
-
-
-    // ============================================================
-    // ROLE / USER ROLE
-    // ============================================================
+    /* =====================================================
+       ROLE
+    ===================================================== */
 
     const roleName =
         user?.roleName ||
@@ -127,346 +122,197 @@ export default function RoleDashboard() {
         user?.authority ||
         "";
 
-
-    const normalizedRole =
-        normalizeAction(
-            roleName
-        );
-
-
-    const isSuperAdmin =
-        normalizedRole ===
-        "SUPER_ADMIN";
-
-
-    const isAdmin =
-        normalizedRole ===
-        "ADMIN";
-
+    const normalizedRole = normalizeAction(roleName);
 
     const hasFullAccess =
-        isSuperAdmin ||
-        isAdmin;
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
-    // ============================================================
-    // HAS PERMISSION
-    // ============================================================
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
 
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
+            if (hasFullAccess) {
+                return true;
+            }
 
-        // --------------------------------------------------------
-        // SUPER ADMIN / ADMIN
-        // --------------------------------------------------------
+            if (!Array.isArray(permissions)) {
+                return false;
+            }
 
-        if (hasFullAccess) {
-            return true;
-        }
+            const requestedModule = normalizeModule(moduleName);
+            const requestedAction = normalizeAction(actionName);
 
+            return permissions.some((permission) => {
 
-        // --------------------------------------------------------
-        // PERMISSION ARRAY
-        // --------------------------------------------------------
+                const permissionModule = normalizeModule(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                );
 
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
+                if (permissionModule !== requestedModule) {
+                    return false;
+                }
 
-
-        const requestedModule =
-            normalizeModule(
-                moduleName
-            );
-
-
-        const requestedAction =
-            normalizeAction(
-                actionName
-            );
-
-
-        // --------------------------------------------------------
-        // FIND PERMISSION
-        // --------------------------------------------------------
-
-        return permissions.some(
-            (permission) => {
-
-                // ==================================================
-                // MODULE
-                // ==================================================
-
-                const permissionModule =
-                    normalizeModule(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name ||
-                        ""
-                    );
-
+                if (permission?.active === false) {
+                    return false;
+                }
 
                 if (
-                    permissionModule !==
-                    requestedModule
+                    normalizeAction(permission?.status) === "INACTIVE"
                 ) {
                     return false;
                 }
 
+                /* ACTION ARRAY */
 
-                // ==================================================
-                // MODULE ACTIVE STATUS
-                // ==================================================
+                if (Array.isArray(permission?.actions)) {
 
-                if (
-                    permission?.active === false
-                ) {
-                    return false;
-                }
+                    return permission.actions.some((action) => {
 
-
-                if (
-                    normalizeAction(
-                        permission?.status
-                    ) ===
-                    "INACTIVE"
-                ) {
-                    return false;
-                }
-
-
-                // ==================================================
-                // ACTION ARRAY
-                // ==================================================
-
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
-
-                    return permission.actions.some(
-                        (action) => {
-
-                            // --------------------------------------
-                            // STRING ACTION
-                            // --------------------------------------
-
-                            if (
-                                typeof action ===
-                                "string"
-                            ) {
-
-                                return (
-                                    normalizeAction(
-                                        action
-                                    ) ===
-                                    requestedAction
-                                );
-
-                            }
-
-
-                            // --------------------------------------
-                            // OBJECT ACTION
-                            // --------------------------------------
-
-                            const permissionAction =
-                                normalizeAction(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.action?.name ||
-                                    action?.name ||
-                                    ""
-                                );
-
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
-
-
-                            // --------------------------------------
-                            // ACTION ACTIVE STATUS
-                            // --------------------------------------
-
-                            if (
-                                action?.active === false
-                            ) {
-                                return false;
-                            }
-
-
-                            if (
-                                normalizeAction(
-                                    action?.status
-                                ) ===
-                                "INACTIVE"
-                            ) {
-                                return false;
-                            }
-
-
+                        if (typeof action === "string") {
                             return (
-                                permissionAction ===
-                                requestedAction &&
-                                allowed
+                                normalizeAction(action) === requestedAction
                             );
-
                         }
-                    );
 
+                        const permissionAction = normalizeAction(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        );
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        if (action?.active === false) {
+                            return false;
+                        }
+
+                        if (
+                            normalizeAction(action?.status) === "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
                 }
 
+                /* DIRECT / FLAT ACTION */
 
-                // ==================================================
-                // DIRECT / FLAT ACTION
-                // ==================================================
-
-                const permissionAction =
-                    normalizeAction(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
-                        ""
-                    );
-
+                const permissionAction = normalizeAction(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                );
 
                 const allowed =
                     permission?.allowed === true ||
                     permission?.allowed === "true";
 
-
                 return (
-                    permissionAction ===
-                    requestedAction &&
+                    permissionAction === requestedAction &&
                     allowed
                 );
+            });
 
-            }
-        );
+        },
+        [
+            hasFullAccess,
+            permissions,
+        ]
+    );
 
-    };
+    /* =====================================================
+       ROLE PERMISSIONS
+    ===================================================== */
 
+    const canViewRole = hasPermission(
+        "Roles",
+        "VIEW"
+    );
 
-    // ============================================================
-    // ROLE PERMISSIONS
-    // ============================================================
+    const canCreateRole = hasPermission(
+        "Roles",
+        "CREATE"
+    );
 
-    const canViewRole =
-        hasPermission(
-            "Roles",
-            "VIEW"
-        );
+    const canEditRole = hasPermission(
+        "Roles",
+        "EDIT"
+    );
 
+    const canDeleteRole = hasPermission(
+        "Roles",
+        "DELETE"
+    );
 
-    const canCreateRole =
-        hasPermission(
-            "Roles",
-            "CREATE"
-        );
-
-
-    // ============================================================
-    // ROLE STATE
-    // ============================================================
+    /* =====================================================
+       ROLE STATE
+    ===================================================== */
 
     const rolesFromRedux = useSelector(
-        (state) =>
-            state.role?.roles
+        (state) => state.role?.roles
     );
 
-
-    const roles =
-        rolesFromRedux ?? [];
-
+    const roles = Array.isArray(rolesFromRedux)
+        ? rolesFromRedux
+        : EMPTY_ARRAY;
 
     const loading = useSelector(
-        (state) =>
-            state.role?.loading ||
-            false
+        (state) => state.role?.loading === true
     );
-
 
     const error = useSelector(
-        (state) =>
-            state.role?.error
+        (state) => state.role?.error
     );
 
-
-    // ============================================================
-    // ROLE FILTER STATE
-    // ============================================================
+    /* =====================================================
+       ROLE VIEW STATE
+    ===================================================== */
 
     const roleStatus = useSelector(
         (state) =>
-            state.roleView?.roleStatus ||
-            "ALL"
+            state.roleView?.roleStatus || "ALL"
     );
 
+    const search = useSelector(
+        (state) =>
+            state.roleView?.search || ""
+    );
 
-    // ============================================================
-    // LOAD CURRENT USER PERMISSIONS
-    // ============================================================
+    /* =====================================================
+       LOAD USER PERMISSIONS
+    ===================================================== */
 
     useEffect(() => {
 
-        // --------------------------------------------------------
-        // AUTH CHECKING
-        // --------------------------------------------------------
-
-        if (authChecking) {
+        if (authChecking || !isAuthenticated) {
             return;
         }
-
-
-        // --------------------------------------------------------
-        // NOT AUTHENTICATED
-        // --------------------------------------------------------
-
-        if (!isAuthenticated) {
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // ADMIN / SUPER ADMIN
-        //
-        // No permission request required.
-        // --------------------------------------------------------
 
         if (hasFullAccess) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // ALREADY LOADED
-        // --------------------------------------------------------
-
-        if (permissionsLoaded) {
+        if (permissionsLoaded || permissionLoading) {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // CURRENTLY LOADING
-        // --------------------------------------------------------
-
-        if (permissionLoading) {
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // LOAD CURRENT USER EFFECTIVE PERMISSIONS
-        // --------------------------------------------------------
-
-        dispatch(
-            getUserPermission()
-        );
+        dispatch(getUserPermission());
 
     }, [
         authChecking,
@@ -477,323 +323,98 @@ export default function RoleDashboard() {
         dispatch,
     ]);
 
-
-    // ============================================================
-    // FETCH ROLES
-    // ============================================================
-
-    useEffect(() => {
-
-        // --------------------------------------------------------
-        // AUTH CHECKING
-        // --------------------------------------------------------
-
-        if (authChecking) {
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // NOT AUTHENTICATED
-        // --------------------------------------------------------
-
-        if (!isAuthenticated) {
-            return;
-        }
-
-
-        // --------------------------------------------------------
-        // STAFF / OTHER ROLE
-        //
-        // Wait until permissions are loaded.
-        // --------------------------------------------------------
-
-        if (!hasFullAccess) {
-
-            if (!permissionsLoaded) {
-                return;
-            }
-
-
-            if (permissionLoading) {
-                return;
-            }
-
-
-            // ----------------------------------------------------
-            // NO VIEW PERMISSION
-            // ----------------------------------------------------
-
-            if (!canViewRole) {
-                return;
-            }
-
-        }
-
-
-        // --------------------------------------------------------
-        // FETCH ROLES
-        // --------------------------------------------------------
-
-        dispatch(
-            fetchAllRoles()
-        );
-
-    }, [
-        authChecking,
-        isAuthenticated,
-        hasFullAccess,
-        permissionsLoaded,
-        permissionLoading,
-        canViewRole,
-        dispatch,
-    ]);
-
-
-    // ============================================================
-    // SYNC URL STATUS → REDUX
-    // ============================================================
+    /* =====================================================
+       FETCH ALL ROLES
+    ===================================================== */
 
     useEffect(() => {
-
-        const params =
-            new URLSearchParams(
-                window.location.search
-            );
-
-
-        const urlStatus =
-            params.get(
-                "roleStatus"
-            );
-
-
-        if (!urlStatus) {
-            return;
-        }
-
-
-        const normalizedStatus =
-            String(
-                urlStatus
-            ).toUpperCase();
-
-
-        const validStatuses = [
-            "ALL",
-            "ACTIVE",
-            "INACTIVE",
-            "DRAFT",
-        ];
-
 
         if (
-            !validStatuses.includes(
-                normalizedStatus
-            )
+            authChecking ||
+            !isAuthenticated ||
+            !canViewRole
         ) {
             return;
         }
 
-
-        dispatch(
-            setRoleStatus(
-                normalizedStatus
-            )
-        );
-
-
-        const statusLabels = {
-
-            ALL:
-                "All Roles",
-
-            ACTIVE:
-                "Active Roles",
-
-            INACTIVE:
-                "Inactive Roles",
-
-            DRAFT:
-                "Draft Roles",
-
-        };
-
-
-        dispatch(
-            setSelectedRoleView(
-                statusLabels[
-                normalizedStatus
-                ]
-            )
-        );
+        dispatch(fetchAllRoles());
 
     }, [
+        authChecking,
+        isAuthenticated,
+        canViewRole,
         dispatch,
     ]);
 
-
-    // ============================================================
-    // DEBUG
-    // ============================================================
-
-    useEffect(() => {
-
-        console.log(
-            "================================"
-        );
-
-        console.log(
-            "ROLE USER:",
-            user
-        );
-
-        console.log(
-            "ROLE NAME:",
-            normalizedRole
-        );
-
-        console.log(
-            "ROLE FULL ACCESS:",
-            hasFullAccess
-        );
-
-        console.log(
-            "ROLE PERMISSIONS LOADING:",
-            permissionLoading
-        );
-
-        console.log(
-            "ROLE PERMISSIONS LOADED:",
-            permissionsLoaded
-        );
-
-        console.log(
-            "ROLE PERMISSIONS:",
-            permissions
-        );
-
-        console.log(
-            "ROLE VIEW PERMISSION:",
-            canViewRole
-        );
-
-        console.log(
-            "ROLE CREATE PERMISSION:",
-            canCreateRole
-        );
-
-        console.log(
-            "ROLES FROM REDUX:",
-            roles
-        );
-
-        console.log(
-            "ROLE LOADING:",
-            loading
-        );
-
-        console.log(
-            "ROLE ERROR:",
-            error
-        );
-
-        console.log(
-            "ROLE STATUS:",
-            roleStatus
-        );
-
-        console.log(
-            "================================"
-        );
-
-    }, [
-        user,
-        normalizedRole,
-        hasFullAccess,
-        permissionLoading,
-        permissionsLoaded,
-        permissions,
-        canViewRole,
-        canCreateRole,
-        roles,
-        loading,
-        error,
-        roleStatus,
-    ]);
-
-
-    // ============================================================
-    // FILTER ROLES BY STATUS
-    // ============================================================
+    /* =====================================================
+       FILTER ROLES BY STATUS AND SEARCH
+    ===================================================== */
 
     const filteredRoles = useMemo(() => {
 
-        const selectedStatus =
-            String(
-                roleStatus || "ALL"
-            )
-                .toUpperCase();
+        const selectedStatus = String(
+            roleStatus || "ALL"
+        )
+            .trim()
+            .toUpperCase();
 
+        const searchValue = String(search ?? "")
+            .trim()
+            .toLowerCase();
 
-        // ========================================================
-        // ALL
-        // ========================================================
+        return roles.filter((role) => {
 
-        if (
-            selectedStatus ===
-            "ALL"
-        ) {
-            return roles;
-        }
+            /* STATUS FILTER */
 
+            if (
+                selectedStatus !== "ALL" &&
+                String(role?.status ?? "")
+                    .trim()
+                    .toUpperCase() !== selectedStatus
+            ) {
+                return false;
+            }
 
-        // ========================================================
-        // FILTER
-        // ========================================================
+            /* SEARCH FILTER */
 
-        return roles.filter(
-            (role) => {
+            if (searchValue) {
 
-                const backendStatus =
-                    String(
-                        role?.status || ""
-                    )
-                        .toUpperCase();
+                const searchableValues = [
+                    role?.roleName,
+                    role?.description,
+                    role?.status,
+                    role?.id,
+                ];
 
-
-                return (
-                    backendStatus ===
-                    selectedStatus
+                const matchesSearch = searchableValues.some((value) =>
+                    String(value ?? "")
+                        .toLowerCase()
+                        .includes(searchValue)
                 );
 
+                if (!matchesSearch) {
+                    return false;
+                }
             }
-        );
+
+            return true;
+        });
 
     }, [
         roles,
         roleStatus,
+        search,
     ]);
 
+    /* =====================================================
+       OPEN CREATE ROLE MODAL
+    ===================================================== */
 
-    // ============================================================
-    // OPEN CREATE ROLE MODAL
-    // ============================================================
-
-    const handleCreateRole = () => {
-
-        // --------------------------------------------------------
-        // AUTH CHECK
-        // --------------------------------------------------------
+    const handleCreateRole = useCallback(() => {
 
         if (!isAuthenticated) {
             return;
         }
-
-
-        // --------------------------------------------------------
-        // PERMISSION LOADING
-        // --------------------------------------------------------
 
         if (
             !hasFullAccess &&
@@ -805,24 +426,12 @@ export default function RoleDashboard() {
             return;
         }
 
-
-        // --------------------------------------------------------
-        // CREATE PERMISSION
-        // --------------------------------------------------------
-
         if (!canCreateRole) {
-
             toast.error(
                 "You do not have permission to create roles."
             );
-
             return;
         }
-
-
-        // --------------------------------------------------------
-        // OPEN MODAL
-        // --------------------------------------------------------
 
         dispatch(
             openModal({
@@ -830,34 +439,55 @@ export default function RoleDashboard() {
             })
         );
 
-    };
+    }, [
+        isAuthenticated,
+        hasFullAccess,
+        permissionLoading,
+        permissionsLoaded,
+        canCreateRole,
+        dispatch,
+    ]);
 
+    /* =====================================================
+       CLEAR ERROR
+    ===================================================== */
 
-    // ============================================================
-    // AUTH CHECKING
-    // ============================================================
+    useEffect(() => {
+
+        if (!error) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            dispatch(clearRoleState());
+        }, 2000);
+
+        return () => clearTimeout(timer);
+
+    }, [
+        error,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       AUTH CHECKING
+    ===================================================== */
 
     if (authChecking) {
-
-        return (
-            <InvoiceSkeleton />
-        );
-
+        return <InvoiceSkeleton />;
     }
 
-
-    // ============================================================
-    // NOT AUTHENTICATED
-    // ============================================================
+    /* =====================================================
+       NOT AUTHENTICATED
+    ===================================================== */
 
     if (!isAuthenticated) {
         return null;
     }
 
-
-    // ============================================================
-    // PERMISSION LOADING
-    // ============================================================
+    /* =====================================================
+       PERMISSION LOADING
+    ===================================================== */
 
     if (
         !hasFullAccess &&
@@ -866,378 +496,244 @@ export default function RoleDashboard() {
             !permissionsLoaded
         )
     ) {
-
-        return (
-            <InvoiceSkeleton />
-        );
-
+        return <InvoiceSkeleton />;
     }
 
-
-    // ============================================================
-    // VIEW PERMISSION DENIED
-    // ============================================================
+    /* =====================================================
+       VIEW PERMISSION DENIED
+    ===================================================== */
 
     if (!canViewRole) {
 
         return (
             <div
                 className="
-                    flex
-                    h-screen
-                    items-center
-                    justify-center
-                    bg-gray-50
-                    font-sans
+                    flex h-screen items-center justify-center
+                    bg-gray-50 font-sans
                 "
             >
-
-                <div
-                    className="
-                        text-center
-                        px-6
-                    "
-                >
+                <div className="px-6 text-center">
 
                     <div
                         className="
-                            mx-auto
-                            mb-4
-                            w-16
-                            h-16
-                            rounded-full
-                            bg-red-50
-                            flex
-                            items-center
-                            justify-center
-                            text-red-500
-                            text-2xl
-                            font-semibold
+                            mx-auto mb-4 flex h-16 w-16
+                            items-center justify-center
+                            rounded-full bg-red-50
+                            text-2xl font-semibold text-red-500
                         "
                     >
                         !
                     </div>
 
-
-                    <h2
-                        className="
-                            text-lg
-                            font-semibold
-                            text-gray-800
-                        "
-                    >
+                    <h2 className="text-lg font-semibold text-gray-800">
                         Access Denied
                     </h2>
 
-
-                    <p
-                        className="
-                            mt-1
-                            text-sm
-                            text-gray-500
-                            max-w-sm
-                        "
-                    >
-                        You do not have permission
-                        to view roles.
+                    <p className="mt-1 max-w-sm text-sm text-gray-500">
+                        You do not have permission to view roles.
                     </p>
 
                 </div>
-
             </div>
         );
-
     }
 
-
-    // ============================================================
-    // ROLE LOADING
-    // ============================================================
-
-    if (loading) {
-
-        return (
-            <InvoiceSkeleton />
-        );
-
-    }
-
-
-    // ============================================================
-    // PAGE
-    // ============================================================
+    /* =====================================================
+       PAGE
+    ===================================================== */
 
     return (
 
         <div
             className="
-                flex
-                h-screen
-                bg-gray-50
-                font-sans
-                text-[13px]
-                overflow-hidden
+                flex h-screen overflow-hidden
+                bg-gray-50 font-sans text-[13px]
             "
         >
 
             <div
                 className="
-                    flex-1
-                    min-h-0
-                    bg-white
-                    overflow-y-auto
+                    min-h-0 flex-1 overflow-y-auto bg-white
                 "
             >
 
                 <div
                     className="
-                        px-2
-                        py-5
-                        max-w-30xl
-                        w-full
+                        w-full max-w-30xl px-2 py-5
                     "
                 >
 
-                    {/* =================================================
-                        ROLE NAVBAR
-                    ================================================= */}
+                    {/* ROLE NAVBAR */}
 
                     <NavbarRole />
 
+                    {/* ROLE OVERVIEW */}
 
-                    {/* =================================================
-                        ERROR
-                    ================================================= */}
+                    <RoleOverview
+                        canViewRole={canViewRole}
+                        isAuthenticated={isAuthenticated}
+                        authChecking={authChecking}
+                    />
+
+                    {/* ERROR */}
 
                     {error && (
 
                         <div
                             className="
-                                mx-2
-                                mt-4
-                                px-4
-                                py-3
-                                rounded-md
-                                border
-                                border-red-200
-                                bg-red-50
-                                text-sm
-                                text-red-600
+                                mx-2 mt-4 rounded-md
+                                border border-red-200
+                                bg-red-50 px-4 py-3
+                                text-sm text-red-600
                             "
                         >
                             {error}
                         </div>
-
                     )}
 
+                    {/* ROLE TABLE / LOADING / EMPTY STATE */}
 
-                    {/* =================================================
-                        ROLE TABLE / EMPTY STATE
-                    ================================================= */}
+                    {loading ? (
 
-                    {filteredRoles.length > 0 ? (
+                        <div
+                            className="
+                                flex min-h-[250px]
+                                items-center justify-center
+                            "
+                        >
+                            <p className="text-sm text-gray-500">
+                                Loading roles...
+                            </p>
+                        </div>
+
+                    ) : filteredRoles.length > 0 ? (
 
                         <RoleTable
-                            roles={
-                                filteredRoles
-                            }
+                            roles={filteredRoles}
+                            canEditRole={canEditRole}
+                            canDeleteRole={canDeleteRole}
                         />
 
                     ) : (
 
                         <div
                             className="
-                                min-h-full
-                                flex
-                                flex-col
-                                items-center
-                                justify-center
-                                gap-3
-                                px-4
+                                flex min-h-full flex-col
+                                items-center justify-center
+                                gap-3 px-4
                             "
                         >
 
-                            {/* =================================================
-                                EMPTY STATE ICON
-                            ================================================= */}
+                            {/* EMPTY STATE ICON */}
 
                             <div
                                 className="
-                                    relative
-                                    w-24
-                                    h-24
-                                    rounded-full
-                                    bg-gray-100
-                                    flex
-                                    items-center
-                                    justify-center
-                                    mb-1
-                                    flex-shrink-0
-                                    mt-30
+                                    relative mt-30 mb-1
+                                    flex h-24 w-24 shrink-0
+                                    items-center justify-center
+                                    rounded-full bg-gray-100
                                 "
                             >
 
                                 <div
                                     className="
+                                        flex items-center justify-center
                                         text-gray-400
-                                        text-4xl
                                     "
                                 >
-                                    R
+                                    <ShieldCheck
+                                        size={42}
+                                        strokeWidth={1.7}
+                                    />
                                 </div>
-
 
                                 <div
                                     className="
-                                        absolute
-                                        bottom-1
-                                        right-1
-                                        w-7
-                                        h-7
-                                        rounded-full
-                                        bg-blue-500
-                                        flex
-                                        items-center
-                                        justify-center
-                                        text-white
+                                        absolute bottom-1 right-1
+                                        flex h-7 w-7 items-center
+                                        justify-center rounded-full
+                                        bg-blue-500 text-white
                                     "
                                 >
-
-                                    <Plus
-                                        className="
-                                            w-4
-                                            h-4
-                                        "
-                                    />
-
+                                    <Plus className="h-4 w-4" />
                                 </div>
 
                             </div>
 
-
-                            {/* =================================================
-                                EMPTY STATE TITLE
-                            ================================================= */}
+                            {/* EMPTY STATE TITLE */}
 
                             <p
                                 className="
-                                    text-base
-                                    font-medium
-                                    text-gray-800
-                                    text-center
+                                    text-center text-base
+                                    font-medium text-gray-800
                                 "
                             >
-                                Every setup starts with a role
+                                Manage your business roles
                             </p>
 
-
-                            {/* =================================================
-                                EMPTY STATE DESCRIPTION
-                            ================================================= */}
+                            {/* EMPTY STATE DESCRIPTION */}
 
                             <p
                                 className="
-                                    text-sm
-                                    text-gray-500
-                                    text-center
-                                    max-w-sm
+                                    max-w-sm text-center
+                                    text-sm text-gray-500
                                 "
                             >
-                                Create and manage your roles
-                                in one place.
+                                Create and manage roles for your
+                                organization. Assign permissions
+                                to control access to different
+                                modules and features.
                             </p>
 
-
-                            {/* =================================================
-                                ACTION BUTTONS
-                            ================================================= */}
+                            {/* ACTION BUTTONS */}
 
                             <div
                                 className="
-                                    flex
-                                    items-center
-                                    gap-2.5
-                                    mt-1
-                                    flex-wrap
-                                    justify-center
+                                    mt-1 flex flex-wrap
+                                    items-center justify-center gap-2.5
                                 "
                             >
 
-                                {/* =================================================
-                                    CREATE ROLE
-                                ================================================= */}
+                                {/* CREATE ROLE */}
 
                                 {canCreateRole && (
 
                                     <button
                                         type="button"
-                                        onClick={
-                                            handleCreateRole
-                                        }
+                                        onClick={handleCreateRole}
                                         className="
-                                            flex
-                                            items-center
-                                            gap-2
-                                            bg-blue-500
-                                            text-white
-                                            text-sm
-                                            font-medium
-                                            px-4
-                                            py-2
-                                            rounded-md
-                                            hover:bg-blue-600
-                                            transition-colors
-                                            whitespace-nowrap
+                                            flex items-center gap-2
+                                            whitespace-nowrap rounded-md
+                                            bg-blue-500 px-4 py-2
+                                            text-sm font-medium text-white
+                                            transition-colors hover:bg-blue-600
                                         "
                                     >
-
-                                        <Plus
-                                            className="
-                                                w-4
-                                                h-4
-                                            "
-                                        />
-
+                                        <Plus className="h-4 w-4" />
                                         Create New Role
-
                                     </button>
 
                                 )}
 
-
-                                {/* =================================================
-                                    IMPORT
-                                ================================================= */}
+                                {/* IMPORT */}
 
                                 <button
                                     type="button"
+                                    onClick={() => {
+                                        toast(
+                                            "Role import is not configured yet."
+                                        );
+                                    }}
                                     className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        bg-white
-                                        text-gray-700
-                                        text-sm
-                                        border
-                                        border-gray-300
-                                        px-4
-                                        py-2
-                                        rounded-md
-                                        hover:bg-gray-50
-                                        transition-colors
-                                        whitespace-nowrap
+                                        flex items-center gap-2
+                                        whitespace-nowrap rounded-md
+                                        border border-gray-300 bg-white
+                                        px-4 py-2 text-sm text-gray-700
+                                        transition-colors hover:bg-gray-50
                                     "
                                 >
-
-                                    <Download
-                                        className="
-                                            w-4
-                                            h-4
-                                        "
-                                    />
-
+                                    <Download className="h-4 w-4" />
                                     Import File
-
                                 </button>
 
                             </div>
@@ -1250,14 +746,6 @@ export default function RoleDashboard() {
 
             </div>
 
-
-            {/* =========================================================
-                ROLE CREATE / EDIT MODAL
-            ========================================================= */}
-
-            {/* Global Modal handles RoleCreate */}
-
         </div>
     );
-
 }

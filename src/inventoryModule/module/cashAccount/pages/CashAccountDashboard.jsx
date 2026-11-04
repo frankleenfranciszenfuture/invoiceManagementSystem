@@ -559,10 +559,11 @@ export default function CashAccountDashboard() {
                             <p
                                 className="
                                     text-center text-base
-                                    font-medium text-gray-800
+                                    font-medium text-gray-500
                                 "
                             >
-                                Manage your business cash accounts
+                                No Cash accounts found
+                                <span className="flex text-gray-600"> Manage your business cash accounts</span>
                             </p>
 
                             {/* EMPTY STATE DESCRIPTION */}

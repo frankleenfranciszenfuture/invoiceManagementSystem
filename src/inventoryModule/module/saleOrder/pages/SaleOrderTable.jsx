@@ -6,6 +6,8 @@ import { useDispatch, useSelector } from "react-redux";
 import {
     fetchAllSalesOrders,
     deleteSalesOrder,
+    confirmSalesOrder,
+    dispatchSalesOrder
 } from "../thunks/salesOrderThunks";
 
 import {
@@ -20,10 +22,13 @@ import {
     CalendarDays,
     Warehouse,
     UserRound,
+    CheckCircle,
+    PackageCheck,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 import Pagination from "../../../../common/pagination/table/Pagination";
+import ToolTipText from "../../../../common/toolTip/ToolTipText";
 
 export default function SaleOrderTable({ salesOrders = [] }) {
     const dispatch = useDispatch();
@@ -410,6 +415,42 @@ export default function SaleOrderTable({ salesOrders = [] }) {
         navigate(`/inventory/saleOrder/edit/${order.id}`);
     };
 
+    const handleConfirmSalesOrder = async (order) => {
+        try {
+            await dispatch(confirmSalesOrder(order.id)).unwrap();
+
+            toast.success("Sales order confirmed successfully");
+
+            // Refresh the current purchase order list
+            dispatch(fetchAllSalesOrders({
+                page: pagination?.page ?? 0,
+                size: pagination?.size ?? 10,
+            }));
+        } catch (error) {
+            toast.error(
+                error?.message || "Failed to confirm sales order"
+            );
+        }
+    };
+
+
+    const handleDispatchSalesOrder = async (order) => {
+        try {
+            await dispatch(dispatchSalesOrder(order.id)).unwrap();
+
+            toast.success("Sales order dispatched successfully");
+
+            // Refresh the current purchase order list
+            dispatch(fetchAllSalesOrders({
+                page: pagination?.page ?? 0,
+                size: pagination?.size ?? 10,
+            }));
+        } catch (error) {
+            toast.error(
+                error?.message || "Failed to confirm sales order"
+            );
+        }
+    };
     /* =====================================================
        DATE FORMAT
     ===================================================== */
@@ -652,15 +693,62 @@ export default function SaleOrderTable({ salesOrders = [] }) {
                                 {/* ACTIONS */}
 
                                 <td className="px-4 py-3">
-                                    <div className="flex items-center justify-end gap-2">
+                                    <div className="relative flex items-center justify-end gap-2">
+
+                                        {/* CONFIRM */}
+                                        {canEditSalesOrder && isDraft && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleConfirmSalesOrder(order)}
+
+                                                className="
+                                                    group relative
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg
+                                                    bg-green-50 text-green-600
+                                                    transition
+                                                    hover:bg-green-100
+                                                    hover:text-green-700
+                                                "
+                                            >
+                                                <CheckCircle size={16} />
+                                                <ToolTipText text="Confirm Sales Order" position="bottom" />
+                                            </button>
+                                        )}
+
+                                        {/* CONFIRM */}
+                                        {["CONFIRMED", "PARTIALLY_RECEIVED"].includes(status) && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDispatchSalesOrder(order)}
+
+                                                className="
+                                                    group relative
+                                                    flex h-8 w-8
+                                                    items-center justify-center
+                                                    rounded-lg
+                                                    bg-green-50 text-green-600
+                                                    transition
+                                                    hover:bg-green-100
+                                                    hover:text-green-700
+                                                "
+                                            >
+                                                <PackageCheck size={16} />
+                                                <ToolTipText text="Dispatch Sales Order" position="bottom" />
+                                            </button>
+                                        )}
+
+
                                         {/* VIEW */}
 
                                         {canViewSalesOrder && (
                                             <button
                                                 type="button"
                                                 onClick={() => handleView(order)}
-                                                title="View"
                                                 className="
+                                                    group
+                                                    relative
                                                     flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg
@@ -671,8 +759,11 @@ export default function SaleOrderTable({ salesOrders = [] }) {
                                                 "
                                             >
                                                 <Eye size={16} />
+                                                <ToolTipText text="view" position="bottom" />
                                             </button>
                                         )}
+
+
 
                                         {/* EDIT */}
 
@@ -680,8 +771,10 @@ export default function SaleOrderTable({ salesOrders = [] }) {
                                             <button
                                                 type="button"
                                                 onClick={() => handleEdit(order)}
-                                                title="Edit"
+
                                                 className="
+                                                group
+                                                relative
                                                     flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg
@@ -692,6 +785,7 @@ export default function SaleOrderTable({ salesOrders = [] }) {
                                                 "
                                             >
                                                 <Edit size={16} />
+                                                <ToolTipText text="Edit" position="bottom" />
                                             </button>
                                         )}
 
@@ -701,8 +795,10 @@ export default function SaleOrderTable({ salesOrders = [] }) {
                                             <button
                                                 type="button"
                                                 onClick={() => handleDelete(order)}
-                                                title="Delete"
+
                                                 className="
+                                                 group
+                                                relative
                                                     flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg
@@ -713,6 +809,7 @@ export default function SaleOrderTable({ salesOrders = [] }) {
                                                 "
                                             >
                                                 <Trash2 size={16} />
+                                                <ToolTipText text="Delete" position="bottom" />
                                             </button>
                                         )}
                                     </div>

@@ -40,6 +40,7 @@ import CustomSelect from "../../../../../common/custom/CustomSelect";
 import {
     openModal,
 } from "../../../../../module/ui/uiSlice";
+import ToolTipText from "../../../../../common/toolTip/ToolTipText";
 
 /* =========================================================
    CONSTANTS
@@ -380,7 +381,7 @@ export default function NavbarWarehouse() {
 
                 {/* LEFT */}
 
-                <div className="flex items-center gap-2">
+                <div className="relative flex items-center gap-2">
 
                     {/* HOME */}
 
@@ -388,6 +389,8 @@ export default function NavbarWarehouse() {
                         type="button"
                         onClick={() => navigate("/")}
                         className="
+                        group
+                        relative
                             flex
                             items-center
                             justify-center
@@ -403,6 +406,7 @@ export default function NavbarWarehouse() {
                         title="Home"
                     >
                         <Home size={18} />
+                        <ToolTipText text="Home" position="bottom" />
                     </button>
 
                     {/* TITLE */}
@@ -520,6 +524,8 @@ export default function NavbarWarehouse() {
                         type="button"
                         onClick={handleCreateWarehouse}
                         className="
+                            group
+                            relative
                             flex
                             items-center
                             gap-1
@@ -532,11 +538,12 @@ export default function NavbarWarehouse() {
                             text-white
                             hover:bg-[#0095FD]/90
                         "
-                        title="New Warehouse"
+
                     >
                         <Plus size={14} />
 
                         <span>New</span>
+                        <ToolTipText text="New Warehouse" position="bottom" />
                     </button>
 
                     {/* SETTINGS */}
@@ -545,6 +552,8 @@ export default function NavbarWarehouse() {
                         type="button"
                         onClick={() => navigate("/settings")}
                         className="
+                            group
+                            relative
                             rounded-md
                             border
                             border-gray-300
@@ -552,9 +561,10 @@ export default function NavbarWarehouse() {
                             text-[#0095FD]
                             hover:bg-[#0095FD]/20
                         "
-                        title="Settings"
+
                     >
                         <Settings size={18} />
+                        <ToolTipText text="Settings" position="bottom" />
                     </button>
 
                 </div>

@@ -292,7 +292,7 @@ export default function PurchaseOrderOverview({
 
         // Update URL.
         navigate(
-            `/inventory/purchaseOrders?purchaseOrderStatus=${status}`,
+            `/inventory/purchaseOrder?purchaseOrderStatus=${status}`,
             { replace: false }
         );
 

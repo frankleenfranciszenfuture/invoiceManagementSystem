@@ -2,15 +2,16 @@
 import React, {
     useEffect,
     useMemo,
-    useState,
 } from "react";
 
 import {
+    useDispatch,
     useSelector,
 } from "react-redux";
 
 import {
     useNavigate,
+    useSearchParams,
 } from "react-router-dom";
 
 import {
@@ -19,15 +20,16 @@ import {
     XCircle,
 } from "lucide-react";
 
+import {
+    setCurrencyStatus,
+    setSelectedCurrencyView,
+} from "../slices/currencyViewSlice";
+
 // ============================================================
 // CONSTANTS
 // ============================================================
 
 const EMPTY_ARRAY = [];
-
-// ============================================================
-// STATUS CARDS
-// ============================================================
 
 const STATUS_CARDS = [
     {
@@ -50,19 +52,11 @@ const STATUS_CARDS = [
     },
 ];
 
-// ============================================================
-// STATUS LABELS
-// ============================================================
-
 const STATUS_LABELS = {
     ALL: "All Currencies",
     ACTIVE: "Active Currencies",
     INACTIVE: "Inactive Currencies",
 };
-
-// ============================================================
-// CARD STYLES
-// ============================================================
 
 const CARD_STYLES = {
     blue: {
@@ -83,14 +77,38 @@ const CARD_STYLES = {
 };
 
 // ============================================================
+// HELPERS
+// ============================================================
+
+const getCurrencyStatus = (currency) => {
+    const status = String(currency?.status || "")
+        .trim()
+        .toUpperCase();
+
+    if (status === "ACTIVE" || status === "INACTIVE") {
+        return status;
+    }
+
+    if (typeof currency?.active === "boolean") {
+        return currency.active ? "ACTIVE" : "INACTIVE";
+    }
+
+    if (typeof currency?.audit?.active === "boolean") {
+        return currency.audit.active ? "ACTIVE" : "INACTIVE";
+    }
+
+    return "UNKNOWN";
+};
+
+// ============================================================
 // COMPONENT
 // ============================================================
 
 export default function CurrencyOverview() {
-
+    const dispatch = useDispatch();
     const navigate = useNavigate();
 
-    const [selectedStatus, setSelectedStatus] = useState("ALL");
+    const [searchParams] = useSearchParams();
 
     // ========================================================
     // REDUX STATE
@@ -103,34 +121,40 @@ export default function CurrencyOverview() {
                 : EMPTY_ARRAY
     );
 
+    const selectedStatus = useSelector(
+        (state) =>
+            state.currencyView?.currencyStatus || "ALL"
+    );
+
     // ========================================================
-    // STATUS SYNCHRONIZATION
+    // URL STATUS SYNCHRONIZATION
     // ========================================================
 
     useEffect(() => {
-
-        const params = new URLSearchParams(
-            window.location.search
-        );
-
-        const urlStatus = (
-            params.get("status") || "ALL"
-        ).trim().toUpperCase();
+        const urlStatus = String(
+            searchParams.get("status") || "ALL"
+        )
+            .trim()
+            .toUpperCase();
 
         const status = STATUS_LABELS[urlStatus]
             ? urlStatus
             : "ALL";
 
-        setSelectedStatus(status);
+        dispatch(setCurrencyStatus(status));
 
-    }, []);
+        dispatch(
+            setSelectedCurrencyView(
+                STATUS_LABELS[status]
+            )
+        );
+    }, [searchParams, dispatch]);
 
     // ========================================================
     // STATISTICS
     // ========================================================
 
     const statistics = useMemo(() => {
-
         const result = {
             ALL: currencies.length,
             ACTIVE: 0,
@@ -138,26 +162,18 @@ export default function CurrencyOverview() {
         };
 
         currencies.forEach((currency) => {
+            const status = getCurrencyStatus(currency);
 
-            const status = String(
-                currency?.status || ""
-            )
-                .trim()
-                .toUpperCase();
-
-            if (
-                Object.prototype.hasOwnProperty.call(
-                    result,
-                    status
-                )
-            ) {
-                result[status] += 1;
+            if (status === "ACTIVE") {
+                result.ACTIVE += 1;
             }
 
+            if (status === "INACTIVE") {
+                result.INACTIVE += 1;
+            }
         });
 
         return result;
-
     }, [currencies]);
 
     // ========================================================
@@ -165,7 +181,6 @@ export default function CurrencyOverview() {
     // ========================================================
 
     const handleStatusChange = (status) => {
-
         if (
             !STATUS_LABELS[status] ||
             status === selectedStatus
@@ -173,15 +188,17 @@ export default function CurrencyOverview() {
             return;
         }
 
-        setSelectedStatus(status);
+        dispatch(setCurrencyStatus(status));
 
-        navigate(
-            `/settings/currencies?status=${status}`,
-            {
-                replace: false,
-            }
+        dispatch(
+            setSelectedCurrencyView(
+                STATUS_LABELS[status]
+            )
         );
 
+        navigate(
+            `/settings/currencies?status=${status}`
+        );
     };
 
     // ========================================================
@@ -189,20 +206,15 @@ export default function CurrencyOverview() {
     // ========================================================
 
     return (
-
         <div className="w-full space-y-5">
 
             {/* STATUS CARDS */}
 
-            <div
-                className="
-                    grid w-full grid-cols-1 gap-4
-                    sm:grid-cols-2 lg:grid-cols-3
-                "
-            >
-
+            <div className="
+                grid w-full grid-cols-1 gap-4
+                sm:grid-cols-2 lg:grid-cols-3
+            ">
                 {STATUS_CARDS.map((card) => {
-
                     const Icon = card.icon;
 
                     const active =
@@ -212,7 +224,6 @@ export default function CurrencyOverview() {
                         CARD_STYLES[card.color];
 
                     return (
-
                         <button
                             type="button"
                             key={card.value}
@@ -231,31 +242,21 @@ export default function CurrencyOverview() {
                                 ${style.hover}
                             `}
                         >
-
-                            <div
-                                className="
-                                    flex items-center justify-between
-                                "
-                            >
-
+                            <div className="
+                                flex items-center justify-between
+                            ">
                                 <div>
-
-                                    <p
-                                        className="
-                                            text-sm font-medium text-gray-500
-                                        "
-                                    >
+                                    <p className="
+                                        text-sm font-medium text-gray-500
+                                    ">
                                         {card.label}
                                     </p>
 
-                                    <h3
-                                        className="
-                                            mt-3 text-2xl font-bold text-gray-800
-                                        "
-                                    >
+                                    <h3 className="
+                                        mt-3 text-2xl font-bold text-gray-800
+                                    ">
                                         {statistics[card.value] ?? 0}
                                     </h3>
-
                                 </div>
 
                                 <div
@@ -269,77 +270,54 @@ export default function CurrencyOverview() {
                                 >
                                     <Icon size={23} />
                                 </div>
-
                             </div>
 
-                            <div
-                                className="
-                                    mt-4 flex items-center justify-between
-                                "
-                            >
-
-                                <span
-                                    className="
-                                        text-xs text-gray-400
-                                    "
-                                >
+                            <div className="
+                                mt-4 flex items-center justify-between
+                            ">
+                                <span className="
+                                    text-xs text-gray-400
+                                ">
                                     {active
                                         ? "Currently selected"
                                         : "View currencies"
                                     }
                                 </span>
 
-                                <span
-                                    className="
-                                        text-xs font-semibold text-blue-500
-                                        transition-transform
-                                        group-hover:translate-x-1
-                                    "
-                                >
+                                <span className="
+                                    text-xs font-semibold text-blue-500
+                                    transition-transform
+                                    group-hover:translate-x-1
+                                ">
                                     View →
                                 </span>
-
                             </div>
-
                         </button>
-
                     );
-
                 })}
-
             </div>
 
             {/* SELECTED STATUS */}
 
-            <div
-                className="
-                    flex flex-wrap items-center justify-between gap-2
-                "
-            >
-
+            <div className="
+                flex flex-wrap items-center justify-between gap-2
+            ">
                 <p className="text-sm text-gray-500">
-
                     Showing:{" "}
-
-                    <span
-                        className="
-                            font-semibold text-gray-800
-                        "
-                    >
+                    <span className="
+                        font-semibold text-gray-800
+                    ">
                         {
                             STATUS_LABELS[selectedStatus] ||
                             STATUS_LABELS.ALL
                         }
                     </span>
-
                 </p>
 
                 <p className="text-xs text-gray-400">
                     {currencies.length} total records
                 </p>
-
             </div>
-
         </div>
     );
 }

@@ -24,6 +24,7 @@ import {
 } from "../slices/warehouseSlice";
 
 import Pagination from "../../../../common/pagination/table/Pagination";
+import ToolTipText from "../../../../common/toolTip/ToolTipText";
 
 const EMPTY_ARRAY = [];
 
@@ -520,7 +521,7 @@ export default function WarehouseTable({
                             {/* ACTIONS */}
 
                             <td className="px-4 py-3">
-                                <div className="flex items-center justify-end gap-2">
+                                <div className="relative flex items-center justify-end gap-2">
                                     {canViewWarehouse && (
                                         <button
                                             type="button"
@@ -528,14 +529,15 @@ export default function WarehouseTable({
                                                 e.stopPropagation();
                                                 handleView(warehouse);
                                             }}
-                                            title="View"
+
                                             className="
-                                                flex h-8 w-8 items-center justify-center
+                                                group relative flex h-8 w-8 items-center justify-center
                                                 rounded-lg bg-blue-50 text-blue-600
                                                 transition hover:bg-blue-100 hover:text-blue-700
                                             "
                                         >
                                             <Eye size={16} />
+                                            <ToolTipText text="View" position="bottom" />
                                         </button>
                                     )}
 
@@ -546,14 +548,15 @@ export default function WarehouseTable({
                                                 e.stopPropagation();
                                                 handleEdit(warehouse);
                                             }}
-                                            title="Edit"
+
                                             className="
-                                                flex h-8 w-8 items-center justify-center
+                                                group relative flex h-8 w-8 items-center justify-center
                                                 rounded-lg bg-amber-50 text-amber-600
                                                 transition hover:bg-amber-100 hover:text-amber-700
                                             "
                                         >
                                             <Edit size={16} />
+                                            <ToolTipText text="Edit" position="bottom" />
                                         </button>
                                     )}
 
@@ -566,12 +569,13 @@ export default function WarehouseTable({
                                             }}
                                             title="Delete"
                                             className="
-                                                flex h-8 w-8 items-center justify-center
+                                                group relative flex h-8 w-8 items-center justify-center
                                                 rounded-lg bg-red-50 text-red-600
                                                 transition hover:bg-red-100 hover:text-red-700
                                             "
                                         >
                                             <Trash2 size={16} />
+                                            <ToolTipText text="Delete" position="bottom" />
                                         </button>
                                     )}
                                 </div>

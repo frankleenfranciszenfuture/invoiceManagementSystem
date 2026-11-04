@@ -1,5 +1,22 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const STATUS_LABELS = {
+  ALL: "All Tax Masters",
+  ACTIVE: "Active Tax Masters",
+  INACTIVE: "Inactive Tax Masters",
+  DRAFT: "Draft Tax Masters",
+};
+
+const VALID_STATUSES = Object.keys(STATUS_LABELS);
+
+/* =========================================================
+   INITIAL STATE
+========================================================= */
+
 const initialState = {
   selectedTaxMasterView: "All Tax Masters",
 
@@ -27,47 +44,71 @@ const initialState = {
   ],
 };
 
+/* =========================================================
+   SLICE
+========================================================= */
+
 const taxMasterViewSlice = createSlice({
   name: "taxMasterView",
 
   initialState,
 
   reducers: {
-    /* =====================================================
-       SEARCH
-    ===================================================== */
+    /* =================================================
+           SEARCH
+        ================================================= */
 
     setSearch(state, action) {
-      state.search = action.payload;
+      state.search = String(action.payload ?? "");
     },
 
-    /* =====================================================
-       SELECTED VIEW
-    ===================================================== */
+    /* =================================================
+           SELECTED VIEW
+        ================================================= */
 
     setSelectedTaxMasterView(state, action) {
-      state.selectedTaxMasterView = action.payload;
+      const selectedView = action.payload;
+
+      const matchingView = Object.values(STATUS_LABELS).includes(selectedView);
+
+      if (matchingView) {
+        state.selectedTaxMasterView = selectedView;
+      }
     },
 
-    /* =====================================================
-       TAX MASTER STATUS
-    ===================================================== */
+    /* =================================================
+           TAX MASTER STATUS
+        ================================================= */
 
     setTaxMasterStatus(state, action) {
-      state.taxMasterStatus = action.payload;
+      const status = String(action.payload ?? "")
+        .trim()
+        .toUpperCase();
+
+      const normalizedStatus = VALID_STATUSES.includes(status) ? status : "ALL";
+
+      state.taxMasterStatus = normalizedStatus;
+
+      state.selectedTaxMasterView = STATUS_LABELS[normalizedStatus];
     },
 
-    /* =====================================================
-       RESET VIEW
-    ===================================================== */
+    /* =================================================
+           RESET VIEW
+        ================================================= */
 
     resetTaxMasterView(state) {
-      state.selectedTaxMasterView = "All Tax Masters";
+      state.selectedTaxMasterView = STATUS_LABELS.ALL;
+
       state.taxMasterStatus = "ALL";
+
       state.search = "";
     },
   },
 });
+
+/* =========================================================
+   ACTIONS
+========================================================= */
 
 export const {
   setSearch,
@@ -75,5 +116,9 @@ export const {
   setTaxMasterStatus,
   resetTaxMasterView,
 } = taxMasterViewSlice.actions;
+
+/* =========================================================
+   REDUCER
+========================================================= */
 
 export default taxMasterViewSlice.reducer;

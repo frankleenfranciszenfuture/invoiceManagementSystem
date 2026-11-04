@@ -1,3 +1,4 @@
+
 import React, {
     useState,
     useEffect,
@@ -27,10 +28,16 @@ import {
 
 import {
     fetchAllCompanies,
-    fetchCompaniesByStatus,
 } from "../../../thunks/companyThunks";
 
+import {
+    setSearch,
+    setCompanyStatus,
+    setSelectedCompanyView,
+} from "../../../slices/companyViewSlice";
+
 import CustomSelect from "../../../../../common/custom/CustomSelect";
+import ToolTipText from "../../../../../common/toolTip/ToolTipText";
 
 /* =========================================================
    CONSTANTS
@@ -45,12 +52,14 @@ const VALID_STATUSES = [
     "ALL",
     "ACTIVE",
     "INACTIVE",
+    "DRAFT",
 ];
 
 const STATUS_LABELS = {
     ALL: "All Companies",
     ACTIVE: "Active Companies",
     INACTIVE: "Inactive Companies",
+    DRAFT: "Draft Companies",
 };
 
 /* =========================================================
@@ -70,11 +79,13 @@ export default function NavbarCompany() {
 
     const [filterOpen, setFilterOpen] = useState(false);
 
-    const [filters, setFilters] = useState(INITIAL_FILTERS);
+    const [filters, setFilters] = useState({
+        ...INITIAL_FILTERS,
+    });
 
-    const [appliedFilters, setAppliedFilters] = useState(
-        INITIAL_FILTERS
-    );
+    const [appliedFilters, setAppliedFilters] = useState({
+        ...INITIAL_FILTERS,
+    });
 
     const [selectedCompanyStatus, setSelectedCompanyStatus] =
         useState("ALL");
@@ -102,7 +113,19 @@ export default function NavbarCompany() {
     const effectiveCompanyStatus =
         VALID_STATUSES.includes(normalizedUrlStatus)
             ? normalizedUrlStatus
-            : selectedCompanyStatus;
+            : "ALL";
+
+    /* =====================================================
+       FETCH COMPANIES
+
+       Fetch only once when this navbar mounts.
+       Status and search filtering are handled locally
+       through companyViewSlice.
+    ===================================================== */
+
+    useEffect(() => {
+        dispatch(fetchAllCompanies());
+    }, [dispatch]);
 
     /* =====================================================
        URL STATUS SYNCHRONIZATION
@@ -118,59 +141,24 @@ export default function NavbarCompany() {
 
         setSelectedCompanyStatus(status);
 
-    }, [normalizedUrlStatus]);
+        dispatch(setCompanyStatus(status));
 
-    /* =====================================================
-       FETCH COMPANIES
-    ===================================================== */
-
-    const loadCompanies = useCallback(
-        (filterValues, selectedViewStatus) => {
-
-            const status =
-                filterValues.status ||
-                (
-                    selectedViewStatus === "ALL"
-                        ? ""
-                        : selectedViewStatus
-                );
-
-            const search = filterValues.search?.trim() || "";
-
-            if (status && status !== "ALL") {
-
-                dispatch(
-                    fetchCompaniesByStatus(status)
-                );
-
-            } else {
-
-                dispatch(
-                    fetchAllCompanies()
-                );
-
-            }
-
-        },
-        [dispatch]
-    );
-
-    /* =====================================================
-       FETCH WHEN FILTERS OR STATUS CHANGE
-    ===================================================== */
-
-    useEffect(() => {
-
-        loadCompanies(
-            appliedFilters,
-            effectiveCompanyStatus
+        dispatch(
+            setSelectedCompanyView(STATUS_LABELS[status])
         );
 
-    }, [
-        loadCompanies,
-        appliedFilters,
-        effectiveCompanyStatus,
-    ]);
+        // Keep the filter panel selection synchronized.
+        setFilters((previous) => ({
+            ...previous,
+            status: status === "ALL" ? "" : status,
+        }));
+
+        setAppliedFilters((previous) => ({
+            ...previous,
+            status: status === "ALL" ? "" : status,
+        }));
+
+    }, [normalizedUrlStatus, dispatch]);
 
     /* =====================================================
        FILTER INPUT CHANGE
@@ -200,68 +188,114 @@ export default function NavbarCompany() {
 
     /* =====================================================
        APPLY FILTERS
+
+       No API request here.
     ===================================================== */
 
     const handleApplyFilters = () => {
 
+        const search = filters.search?.trim() || "";
+
+        const status = filters.status || "ALL";
+
         setAppliedFilters({
-            ...filters,
+            search,
+            status: status === "ALL" ? "" : status,
         });
 
-        if (filters.status) {
-            setSelectedCompanyStatus(filters.status);
-        }
+        setSelectedCompanyStatus(status);
+
+        dispatch(setSearch(search));
+
+        dispatch(setCompanyStatus(status));
+
+        dispatch(
+            setSelectedCompanyView(STATUS_LABELS[status])
+        );
+
+        navigate(
+            `/settings/companies?status=${status}`
+        );
 
         setFilterOpen(false);
     };
 
     /* =====================================================
        RESET FILTERS
+
+       No API request here.
     ===================================================== */
 
     const handleResetFilters = () => {
 
-        setFilters({
+        const resetFilters = {
             ...INITIAL_FILTERS,
-        });
+        };
 
-        setAppliedFilters({
-            ...INITIAL_FILTERS,
-        });
+        setFilters(resetFilters);
+
+        setAppliedFilters(resetFilters);
 
         setSelectedCompanyStatus("ALL");
 
+        dispatch(setSearch(""));
+
+        dispatch(setCompanyStatus("ALL"));
+
+        dispatch(
+            setSelectedCompanyView(STATUS_LABELS.ALL)
+        );
+
         navigate("/settings/companies?status=ALL");
 
+        setFilterOpen(false);
     };
 
     /* =====================================================
        REFRESH
+
+       Only this action reloads the company API.
     ===================================================== */
 
     const handleRefresh = () => {
-
-        loadCompanies(
-            appliedFilters,
-            effectiveCompanyStatus
-        );
-
+        dispatch(fetchAllCompanies());
     };
 
     /* =====================================================
        STATUS VIEW CHANGE
+
+       No API request here.
     ===================================================== */
 
     const handleViewChange = (view) => {
 
-        if (!view) return;
+        if (!view?.value) return;
 
-        setSelectedCompanyStatus(view.value);
+        const status = VALID_STATUSES.includes(view.value)
+            ? view.value
+            : "ALL";
 
-        navigate(
-            `/settings/companies?status=${view.value}`
+        setSelectedCompanyStatus(status);
+
+        dispatch(setCompanyStatus(status));
+
+        dispatch(
+            setSelectedCompanyView(STATUS_LABELS[status])
         );
 
+        setFilters((previous) => ({
+            ...previous,
+            status: status === "ALL" ? "" : status,
+        }));
+
+        setAppliedFilters((previous) => ({
+            ...previous,
+            status: status === "ALL" ? "" : status,
+        }));
+
+        navigate(
+            `/settings/companies?status=${status}`
+        );
     };
 
     /* =====================================================
@@ -306,9 +340,22 @@ export default function NavbarCompany() {
     ===================================================== */
 
     const companyStatusOptions = [
-        { label: "All Statuses", value: "" },
-        { label: "Active", value: "ACTIVE" },
-        { label: "Inactive", value: "INACTIVE" },
+        {
+            label: "All Statuses",
+            value: "",
+        },
+        {
+            label: "Active",
+            value: "ACTIVE",
+        },
+        {
+            label: "Inactive",
+            value: "INACTIVE",
+        },
+        {
+            label: "Draft",
+            value: "DRAFT",
+        },
     ];
 
     /* =====================================================
@@ -316,9 +363,22 @@ export default function NavbarCompany() {
     ===================================================== */
 
     const companyViewOptions = [
-        { label: STATUS_LABELS.ALL, value: "ALL" },
-        { label: STATUS_LABELS.ACTIVE, value: "ACTIVE" },
-        { label: STATUS_LABELS.INACTIVE, value: "INACTIVE" },
+        {
+            label: STATUS_LABELS.ALL,
+            value: "ALL",
+        },
+        {
+            label: STATUS_LABELS.ACTIVE,
+            value: "ACTIVE",
+        },
+        {
+            label: STATUS_LABELS.INACTIVE,
+            value: "INACTIVE",
+        },
+        {
+            label: STATUS_LABELS.DRAFT,
+            value: "DRAFT",
+        },
     ];
 
     /* =====================================================
@@ -344,7 +404,7 @@ export default function NavbarCompany() {
 
                 {/* LEFT */}
 
-                <div className="flex items-center gap-2">
+                <div className="relative flex items-center gap-2">
 
                     {/* HOME */}
 
@@ -352,7 +412,7 @@ export default function NavbarCompany() {
                         type="button"
                         onClick={() => navigate("/")}
                         className="
-                            flex items-center justify-center
+                            group relative flex items-center justify-center
                             rounded-md border border-blue-300
                             bg-white p-2 text-[#0095FD]
                             transition hover:bg-[#0095FD]/20
@@ -360,6 +420,11 @@ export default function NavbarCompany() {
                         title="Home"
                     >
                         <Home size={18} />
+
+                        <ToolTipText
+                            text="Home"
+                            position="bottom"
+                        />
                     </button>
 
                     {/* TITLE */}
@@ -445,7 +510,7 @@ export default function NavbarCompany() {
                         type="button"
                         onClick={handleCreateCompany}
                         className="
-                            flex items-center gap-1 rounded-md
+                            group relative flex items-center gap-1 rounded-md
                             bg-[#0095FD] px-3 py-2
                             text-sm font-medium text-white
                             hover:bg-[#0095FD]/90
@@ -455,6 +520,11 @@ export default function NavbarCompany() {
                         <Plus size={14} />
 
                         <span>New</span>
+
+                        <ToolTipText
+                            text="New Company"
+                            position="bottom"
+                        />
                     </button>
 
                     {/* SETTINGS */}
@@ -463,13 +533,18 @@ export default function NavbarCompany() {
                         type="button"
                         onClick={() => navigate("/settings")}
                         className="
-                            rounded-md border border-gray-300
+                            group relative rounded-md border border-gray-300
                             p-2 text-[#0095FD]
                             hover:bg-[#0095FD]/20
                         "
                         title="Settings"
                     >
                         <Settings size={18} />
+
+                        <ToolTipText
+                            text="Settings"
+                            position="bottom"
+                        />
                     </button>
 
                 </div>
@@ -567,7 +642,7 @@ export default function NavbarCompany() {
                                     handleFilterChange(
                                         "status",
                                         typeof value === "object"
-                                            ? value.value
+                                            ? value?.value
                                             : value
                                     );
 
@@ -600,6 +675,7 @@ export default function NavbarCompany() {
                             "
                         >
                             <RotateCcw size={14} />
+
                             Reset
                         </button>
 
@@ -632,6 +708,7 @@ export default function NavbarCompany() {
                                 "
                             >
                                 <Search size={14} />
+
                                 Apply Filters
                             </button>
 

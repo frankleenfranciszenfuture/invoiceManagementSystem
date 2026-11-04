@@ -18,11 +18,22 @@ import {
     createWarehouse,
     fetchWarehouseById,
     updateWarehouse,
+    fetchAllWarehouse,
 } from "../thunks/warehouseThunks";
 
 import { resetWarehouseForm } from "../slices/warehouseSlice";
 
 import CustomSelect from "../../../../common/custom/CustomISelect";
+
+
+import LeaveConfirmationModal from "../../../../common/confirmation/LeaveConfirmationModal";
+import useLeaveConfirmation from "../../../../common/confirmation/useLeaveConfirmation";
+
+import { closeModal } from "../../../../module/ui/uiSlice";
+
+import {
+    setCreatedExpenseReferenceSelection,
+} from "../../expenses/slices/expenseSlice";
 
 /* =========================================================
    INITIAL FORM DATA
@@ -136,7 +147,7 @@ const SectionHeading = ({
    MAIN COMPONENT
 ========================================================= */
 
-const WarehouseCreate = () => {
+const WarehouseCreate = ({ onClose }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
@@ -144,6 +155,12 @@ const WarehouseCreate = () => {
 
     // ID exists = Edit mode
     const isEdit = Boolean(id);
+
+
+
+    const modalData = useSelector(
+        (state) => state.ui.modal?.data
+    );
 
     const {
         loading = false,
@@ -155,6 +172,14 @@ const WarehouseCreate = () => {
     const [saveMode, setSaveMode] = useState("close");
 
     const [showSaveOptions, setShowSaveOptions] = useState(false);
+
+
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
 
     /* =====================================================
        FETCH WAREHOUSE FOR EDIT
@@ -223,6 +248,18 @@ const WarehouseCreate = () => {
             ...prev,
             [field]: value,
         }));
+    };
+
+
+
+    const handleClose = () => {
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/inventory/warehouses")
+            }
+        });
     };
 
     /* =====================================================
@@ -368,22 +405,52 @@ const WarehouseCreate = () => {
                 response?.message || "Warehouse created successfully"
             );
 
-            if (saveMode === "new") {
-                setFormData(initialFormData);
-                dispatch(resetWarehouseForm());
-            } else {
-                navigate(-1);
+            // Automatically select newly created party in Expense Vendor
+            if (!isEdit && modalData?.selectAfterCreate) {
+                const CreatedWareHouse =
+                    response?.data?.data ??
+                    response?.data ??
+                    response;
+
+                dispatch(
+                    setCreatedExpenseReferenceSelection({
+                        targetField: modalData.targetField,
+                        entity: CreatedWareHouse,
+                    })
+                );
+
+                dispatch(fetchAllWarehouse());
+                dispatch(closeModal());
+
+                return;
             }
 
+            // if (!isEditMode && saveMode === "new") {
+            //     dispatch(resetPartyForm());
+            //     setSaveMode("close");
+            //     return;
+            // }
+
+            dispatch(closeModal());
+            dispatch(resetWarehouseForm());
+
         } catch (error) {
+            console.error(
+                isEditMode ? "Warehouse update error:" : "Warehouse creation error:",
+                error
+            );
+
             toast.error(
                 typeof error === "string"
                     ? error
-                    : isEdit
+                    : error?.message ||
+                    (isEditMode
                         ? "Failed to update warehouse"
-                        : "Failed to create warehouse"
+                        : "Failed to create warehouse")
             );
         }
+
+
     };
 
     /* =====================================================
@@ -663,7 +730,7 @@ const WarehouseCreate = () => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         disabled={actionLoading}
                         className="
                             rounded-lg border border-gray-200
@@ -789,6 +856,15 @@ const WarehouseCreate = () => {
 
             </form>
 
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave Expense?"
+                message="Are you sure you want to leave this expense page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
         </div>
     );
 };

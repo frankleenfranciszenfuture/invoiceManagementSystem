@@ -35,6 +35,7 @@ import {
     fetchAllSalesOrders,
 } from "../../thunks/salesOrderThunks";
 import CustomSelect from "../../../../../common/custom/CustomSelect";
+import ToolTipText from "../../../../../common/toolTip/ToolTipText";
 
 export default function NavbarSaleOrder() {
 
@@ -337,7 +338,7 @@ export default function NavbarSaleOrder() {
 
                 {/* LEFT */}
 
-                <div className="flex items-center gap-2">
+                <div className="relative flex items-center gap-2">
 
 
                     {/* HOME */}
@@ -346,6 +347,8 @@ export default function NavbarSaleOrder() {
                         type="button"
                         onClick={() => navigate("/")}
                         className="
+                            group 
+                            relative
                             flex
                             items-center
                             justify-center
@@ -358,9 +361,10 @@ export default function NavbarSaleOrder() {
                             hover:bg-[#0095FD]/20
                             transition
                         "
-                        title="Home"
+
                     >
                         <Home size={18} />
+                        <ToolTipText text="Home" position="bottom" />
                     </button>
 
                     <div>
@@ -524,6 +528,8 @@ export default function NavbarSaleOrder() {
                         type="button"
                         onClick={handleCreateSalesOrder}
                         className="
+                            group 
+                            relative
                             flex
                             items-center
                             gap-1
@@ -536,12 +542,14 @@ export default function NavbarSaleOrder() {
                             text-white
                             hover:bg-[#0095FD]/90
                         "
-                        title="New Sales Order"
+
                     >
 
                         <Plus size={14} />
 
                         <span>New</span>
+
+                        <ToolTipText text="New SaleOrder" position="bottom" />
 
                     </button>
 
@@ -551,6 +559,8 @@ export default function NavbarSaleOrder() {
                         type="button"
                         onClick={() => navigate("/settings")}
                         className="
+                            group 
+                            relative
                             rounded-md
                             border
                             border-gray-300
@@ -561,6 +571,7 @@ export default function NavbarSaleOrder() {
                         title="Settings"
                     >
                         <Settings size={18} />
+                        <ToolTipText text="Settings" position="bottom" />
                     </button>
 
                 </div>

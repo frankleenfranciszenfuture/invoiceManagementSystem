@@ -40,6 +40,8 @@ import {
 import { fetchAllRoles } from "../../role/thunks/roleThunks";
 
 import { fetchAllUsers } from "../../users/thunks/userThunks";
+import CustomISelect from "../../../common/custom/CustomISelect";
+import CustomSelect from "../../../common/custom/CustomSelect";
 
 
 export default function MenuPermissions() {
@@ -1371,7 +1373,7 @@ export default function MenuPermissions() {
                         setTab("role")
                     }
                     className={`rounded-lg px-4 py-2 text-sm font-medium transition ${isRole
-                        ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+                        ? "bg-blue-500 text-white shadow-sm hover:bg-blue-500"
                         : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                         }`}
                 >
@@ -1385,7 +1387,7 @@ export default function MenuPermissions() {
                         setTab("user")
                     }
                     className={`rounded-lg px-4 py-2 text-sm font-medium transition ${!isRole
-                        ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+                        ? "bg-blue-500 text-white shadow-sm hover:bg-blue-600"
                         : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                         }`}
                 >
@@ -1436,49 +1438,25 @@ export default function MenuPermissions() {
 
                 <div className="relative w-full sm:w-64">
 
-                    <select
+                    <CustomSelect
                         value={selectedEntity}
-                        onChange={(e) =>
-                            setSelectedEntity(
-                                e.target.value,
-                            )
-                        }
-                        className="h-10 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    >
-
-                        <option value="">
-                            Select{" "}
-                            {isRole
-                                ? "Role"
-                                : "User"}
-                        </option>
-
-
-                        {entityList.map(
-                            (item) => (
-
-                                <option
-                                    key={item.id}
-                                    value={item.id}
-                                >
-
-                                    {isRole
-                                        ? item.roleName
-                                        : item.name ||
-                                        item.userName}
-
-                                </option>
-
-                            ),
-                        )}
-
-                    </select>
-
-
-                    <ChevronDown
-                        size={16}
-                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        onChange={(value) => setSelectedEntity(value)}
+                        options={[
+                            {
+                                value: "",
+                                label: `Select ${isRole ? "Role" : "User"}`,
+                            },
+                            ...entityList.map((item) => ({
+                                value: String(item.id),
+                                label: isRole
+                                    ? item.roleName
+                                    : item.name || item.userName,
+                            })),
+                        ]}
+                        placeholder={`Select ${isRole ? "Role" : "User"}`}
                     />
+
+
 
                 </div>
 
@@ -1519,7 +1497,9 @@ export default function MenuPermissions() {
                             disabled={
                                 !selectedEntity
                             }
-                            className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex h-10 items-center gap-2 rounded-lg
+                             bg-blue-500 px-4 text-sm font-medium text-white 
+                             shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
                         >
 
                             <Check

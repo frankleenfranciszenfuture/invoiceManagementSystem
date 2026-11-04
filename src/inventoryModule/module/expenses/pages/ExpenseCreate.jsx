@@ -27,6 +27,8 @@ import {
 import {
     resetExpenseForm,
     clearCreatedExpenseCategorySelection,
+    setCreatedExpenseReferenceSelection,
+    clearCreatedExpenseReferenceSelection,
 } from "../slices/expenseSlice";
 
 
@@ -54,6 +56,9 @@ import {
 import CustomSelect from "../../../../common/custom/CustomSelect";
 import { openModal } from "../../../../module/ui/uiSlice";
 import Tooltip from "../../../../common/toolTip/Tooltip";
+
+import LeaveConfirmationModal from "../../../../common/confirmation/LeaveConfirmationModal";
+import useLeaveConfirmation from "../../../../common/confirmation/useLeaveConfirmation";
 
 /* =========================================================
    INITIAL FORM DATA
@@ -232,7 +237,7 @@ const formatOptions = (items = [], labelFields = []) => {
    MAIN COMPONENT
 ========================================================= */
 
-const ExpenseCreate = () => {
+const ExpenseCreate = ({ onClose }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
@@ -271,6 +276,10 @@ const ExpenseCreate = () => {
         (state) => state.taxMaster?.taxMasters ?? []
     );
 
+    const createdExpenseReferenceSelection = useSelector(
+        (state) =>
+            state.expense?.createdExpenseReferenceSelection ?? null
+    );
     /* =====================================================
        LOCAL STATE
     ===================================================== */
@@ -282,6 +291,13 @@ const ExpenseCreate = () => {
     const [saveMode, setSaveMode] = useState("close");
     const [showSaveOptions, setShowSaveOptions] = useState(false);
     const [newlyCreatedCategory, setNewlyCreatedCategory] = useState(null);
+
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
 
     /* =====================================================
        FETCH DROPDOWN DATA
@@ -449,6 +465,43 @@ const ExpenseCreate = () => {
         };
     }, [dispatch, id, isEdit, mapExpenseToForm]);
 
+
+
+    /* =====================================================
+   HANDLE NEWLY CREATED REFERENCE MASTER
+===================================================== */
+
+    useEffect(() => {
+        if (!createdExpenseReferenceSelection) return;
+
+        const { targetField, entity } =
+            createdExpenseReferenceSelection;
+
+        const allowedFields = [
+            "vendorId",
+            "warehouseId",
+            "currencyId",
+            "taxMasterId",
+        ];
+
+        if (
+            !allowedFields.includes(targetField) ||
+            !entity?.id
+        ) {
+            dispatch(clearCreatedExpenseReferenceSelection());
+            return;
+        }
+
+        setFormData((prev) => ({
+            ...prev,
+            [targetField]: String(entity.id),
+        }));
+
+        dispatch(clearCreatedExpenseReferenceSelection());
+
+    }, [createdExpenseReferenceSelection, dispatch]);
+
+
     /* =====================================================
        HANDLE FIELD CHANGE
     ===================================================== */
@@ -458,6 +511,59 @@ const ExpenseCreate = () => {
             ...prev,
             [field]: value,
         }));
+    };
+
+
+    /* =====================================================
+   CREATE REFERENCE MASTER
+===================================================== */
+
+    const handleCreateVendor = () => {
+        dispatch(
+            openModal({
+                type: "addParty",
+                data: {
+                    selectAfterCreate: true,
+                    targetField: "vendorId",
+                },
+            })
+        );
+    };
+
+    const handleCreateWarehouse = () => {
+        dispatch(
+            openModal({
+                type: "addWarehouse",
+                data: {
+                    selectAfterCreate: true,
+                    targetField: "warehouseId",
+                },
+            })
+        );
+    };
+
+    const handleCreateCurrency = () => {
+        dispatch(
+            openModal({
+                type: "addCurrency",
+                data: {
+                    selectAfterCreate: true,
+                    targetField: "currencyId",
+                },
+            })
+        );
+    };
+
+    const handleCreateTaxMaster = () => {
+        dispatch(
+            openModal({
+                type: "addTaxMaster",
+                data: {
+                    selectAfterCreate: true,
+                    targetField: "taxMasterId",
+                },
+            })
+        );
     };
 
     /* =====================================================
@@ -526,6 +632,16 @@ const ExpenseCreate = () => {
         setNewlyCreatedCategory(null);
 
         dispatch(resetExpenseForm());
+    };
+
+    const handleClose = () => {
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/inventory/expenses");
+            }
+        })
     };
 
     /* =====================================================
@@ -713,7 +829,7 @@ const ExpenseCreate = () => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         className="
                             flex h-9 w-9 items-center justify-center
                             rounded-lg border border-gray-200
@@ -916,25 +1032,51 @@ const ExpenseCreate = () => {
                         ">
 
                             <FormField label="Vendor">
-                                <CustomSelect
-                                    value={formData.vendorId}
-                                    onChange={(value) =>
-                                        handleChange("vendorId", value)
-                                    }
-                                    options={vendorOptions}
-                                    placeholder="Select vendor"
-                                />
+                                <div className="flex items-center gap-2">
+                                    <div className="min-w-0 flex-1">
+                                        <CustomSelect
+                                            value={formData.vendorId}
+                                            onChange={(value) =>
+                                                handleChange("vendorId", value)
+                                            }
+                                            options={vendorOptions}
+                                            placeholder="Select vendor"
+                                        />
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleCreateVendor}
+                                        title="Create Vendor"
+                                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-[#408DFB] hover:bg-blue-100"
+                                    >
+                                        <Plus size={17} />
+                                    </button>
+                                </div>
                             </FormField>
 
                             <FormField label="Warehouse">
-                                <CustomSelect
-                                    value={formData.warehouseId}
-                                    onChange={(value) =>
-                                        handleChange("warehouseId", value)
-                                    }
-                                    options={warehouseOptions}
-                                    placeholder="Select warehouse"
-                                />
+                                <div className="flex items-center gap-2">
+                                    <div className="min-w-0 flex-1">
+                                        <CustomSelect
+                                            value={formData.warehouseId}
+                                            onChange={(value) =>
+                                                handleChange("warehouseId", value)
+                                            }
+                                            options={warehouseOptions}
+                                            placeholder="Select warehouse"
+                                        />
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleCreateWarehouse}
+                                        title="Create Warehouse"
+                                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-[#408DFB] hover:bg-blue-100"
+                                    >
+                                        <Plus size={17} />
+                                    </button>
+                                </div>
                             </FormField>
 
                         </div>
@@ -958,25 +1100,51 @@ const ExpenseCreate = () => {
                         ">
 
                             <FormField label="Currency" required>
-                                <CustomSelect
-                                    value={formData.currencyId}
-                                    onChange={(value) =>
-                                        handleChange("currencyId", value)
-                                    }
-                                    options={currencyOptions}
-                                    placeholder="Select currency"
-                                />
+                                <div className="flex items-center gap-2">
+                                    <div className="min-w-0 flex-1">
+                                        <CustomSelect
+                                            value={formData.currencyId}
+                                            onChange={(value) =>
+                                                handleChange("currencyId", value)
+                                            }
+                                            options={currencyOptions}
+                                            placeholder="Select currency"
+                                        />
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleCreateCurrency}
+                                        title="Create Currency"
+                                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-[#408DFB] hover:bg-blue-100"
+                                    >
+                                        <Plus size={17} />
+                                    </button>
+                                </div>
                             </FormField>
 
                             <FormField label="Tax Master">
-                                <CustomSelect
-                                    value={formData.taxMasterId}
-                                    onChange={(value) =>
-                                        handleChange("taxMasterId", value)
-                                    }
-                                    options={taxMasterOptions}
-                                    placeholder="Select tax (optional)"
-                                />
+                                <div className="flex items-center gap-2">
+                                    <div className="min-w-0 flex-1">
+                                        <CustomSelect
+                                            value={formData.taxMasterId}
+                                            onChange={(value) =>
+                                                handleChange("taxMasterId", value)
+                                            }
+                                            options={taxMasterOptions}
+                                            placeholder="Select tax (optional)"
+                                        />
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleCreateTaxMaster}
+                                        title="Create Tax Master"
+                                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-[#408DFB] hover:bg-blue-100"
+                                    >
+                                        <Plus size={17} />
+                                    </button>
+                                </div>
                             </FormField>
 
                             <FormField label="Amount" required>
@@ -1055,7 +1223,7 @@ const ExpenseCreate = () => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         disabled={actionLoading}
                         className="
                             rounded-lg border border-gray-200
@@ -1182,6 +1350,16 @@ const ExpenseCreate = () => {
                 </div>
 
             </form>
+
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave Expense?"
+                message="Are you sure you want to leave this expense page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
         </div>
     );
 };

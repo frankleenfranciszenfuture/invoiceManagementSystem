@@ -1,34 +1,153 @@
-import React, { useEffect, useMemo } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { Plus, Download } from "lucide-react";
-import toast from "react-hot-toast";
 
-import TaxMasterTable from "./TaxMasterTable";
-import NavbarTaxMaster from "../components/bars/nav/NavbarTaxMaster";
-
-import { fetchAllTaxMasters } from "../thunks/taxMasterThunks";
+import React, {
+    useEffect,
+    useMemo,
+    useCallback,
+} from "react";
 
 import {
+    useSelector,
+    useDispatch,
+} from "react-redux";
+
+import {
+    Plus,
+    Download,
+    Receipt,
+} from "lucide-react";
+
+import toast from "react-hot-toast";
+
+import TaxMasterTable from "../pages/TaxMasterTable";
+import NavbarTaxMaster from "../components/bars/nav/NavbarTaxMaster";
+
+import {
+    setSearch,
     setTaxMasterStatus,
-    setSelectedTaxMasterView,
 } from "../slices/taxMasterViewSlice";
 
-import { openModal } from "../../../module/ui/uiSlice";
-
-import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
+import {
+    openModal,
+} from "../../ui/uiSlice";
 
 import {
     getUserPermission,
 } from "../../menuPermission/thunks/menuPermissionThunks";
 
+import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
+
+import TaxMasterOverview from "../../taxMaster/pages/TaxMasterOverview";
+import { useNavigate } from "react-router-dom";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMPTY_ARRAY = [];
+
+const VALID_STATUSES = [
+    "ALL",
+    "ACTIVE",
+    "INACTIVE",
+    "DRAFT",
+];
+
+/* =========================================================
+   NORMALIZE HELPERS
+========================================================= */
+
+const normalizeModule = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+const normalizeAction = (value) =>
+    String(value ?? "").trim().toUpperCase();
+
+const normalizeSearch = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+const normalizeTaxMasterStatus = (value) => {
+
+    const status = String(value ?? "")
+        .trim()
+        .toUpperCase();
+
+    return VALID_STATUSES.includes(status)
+        ? status
+        : "ALL";
+};
+
+/* =========================================================
+   TAX MASTER STATUS
+========================================================= */
+
+
+const getTaxMasterStatus = (taxMaster) => {
+    const status = String(taxMaster?.status ?? "")
+        .trim()
+        .toUpperCase();
+
+    // DRAFT is an explicit business status.
+    if (status === "DRAFT") {
+        return "DRAFT";
+    }
+
+    // Prefer the actual active flag over a potentially stale status.
+    if (typeof taxMaster?.active === "boolean") {
+        return taxMaster.active ? "ACTIVE" : "INACTIVE";
+    }
+
+    if (typeof taxMaster?.audit?.active === "boolean") {
+        return taxMaster.audit.active ? "ACTIVE" : "INACTIVE";
+    }
+
+    // Fallback to the status field.
+    if (status === "ACTIVE" || status === "INACTIVE") {
+        return status;
+    }
+
+    return "UNKNOWN";
+};
+
+
+/* =========================================================
+   TAX MASTER SEARCH
+========================================================= */
+
+const matchesTaxMasterSearch = (taxMaster, search) => {
+
+    if (!search) {
+        return true;
+    }
+
+    const searchableValues = [
+        taxMaster?.id,
+        taxMaster?.taxName,
+        taxMaster?.taxType,
+        taxMaster?.taxRate,
+        taxMaster?.cgstRate,
+        taxMaster?.sgstRate,
+        taxMaster?.igstRate,
+        taxMaster?.description,
+        taxMaster?.status,
+        taxMaster?.active,
+    ];
+
+    return searchableValues.some((value) =>
+        normalizeSearch(value).includes(search)
+    );
+};
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function TaxMasterDashboard() {
 
     const dispatch = useDispatch();
-
-    // ============================================================
-    // AUTH STATE
-    // ============================================================
+    const navigate = useNavigate();
+    /* =====================================================
+       AUTH STATE
+    ===================================================== */
 
     const user = useSelector(
         (state) => state.auth?.user
@@ -42,16 +161,19 @@ export default function TaxMasterDashboard() {
         (state) => state.auth?.authChecking === true
     );
 
-    // ============================================================
-    // USER PERMISSIONS
-    // ============================================================
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
 
-    const permissions = useSelector(
-        (state) =>
-            Array.isArray(state.menuPermission?.userPermissions)
-                ? state.menuPermission.userPermissions
-                : []
-    );
+    const permissions = useSelector((state) => {
+
+        const value = state.menuPermission?.userPermissions;
+
+        return Array.isArray(value)
+            ? value
+            : EMPTY_ARRAY;
+
+    });
 
     const permissionLoading = useSelector(
         (state) =>
@@ -63,9 +185,9 @@ export default function TaxMasterDashboard() {
             state.menuPermission?.userPermissionsLoaded === true
     );
 
-    // ============================================================
-    // ROLE
-    // ============================================================
+    /* =====================================================
+       ROLE
+    ===================================================== */
 
     const roleName =
         user?.roleName ||
@@ -75,206 +197,171 @@ export default function TaxMasterDashboard() {
         user?.authority ||
         "";
 
-    const normalizedRole =
-        String(roleName)
-            .trim()
-            .toUpperCase();
-
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
-
-    const isAdmin =
-        normalizedRole === "ADMIN";
+    const normalizedRole = normalizeAction(roleName);
 
     const hasFullAccess =
-        isSuperAdmin || isAdmin;
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
-    // ============================================================
-    // PERMISSION CHECKER
-    //
-    // Supports both:
-    //
-    // Flat:
-    // {
-    //     moduleName: "TaxMasters",
-    //     actionName: "VIEW",
-    //     allowed: true
-    // }
-    //
-    // Grouped:
-    // {
-    //     moduleName: "TaxMasters",
-    //     actions: [
-    //         {
-    //             actionName: "VIEW",
-    //             allowed: true
-    //         }
-    //     ]
-    // }
-    // ============================================================
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
 
-        // ADMIN / SUPER_ADMIN
-        if (hasFullAccess) {
-            return true;
-        }
-
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
-
-        const normalizedModule =
-            String(moduleName)
-                .trim()
-                .toLowerCase();
-
-        const normalizedAction =
-            String(actionName)
-                .trim()
-                .toUpperCase();
-
-        return permissions.some((permission) => {
-
-            const permissionModule =
-                permission?.moduleName ||
-                permission?.module?.moduleName ||
-                permission?.module?.name ||
-                permission?.module;
-
-            if (
-                String(permissionModule || "")
-                    .trim()
-                    .toLowerCase() !== normalizedModule
-            ) {
-                return false;
+            if (hasFullAccess) {
+                return true;
             }
 
-            // ====================================================
-            // GROUPED PERMISSION
-            // ====================================================
+            const requestedModule = normalizeModule(moduleName);
+            const requestedAction = normalizeAction(actionName);
 
-            if (Array.isArray(permission?.actions)) {
+            return permissions.some((permission) => {
 
-                return permission.actions.some((action) => {
+                const permissionModule = normalizeModule(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                );
 
-                    const actionNameFromPermission =
-                        action?.actionName ||
-                        action?.action?.actionName ||
-                        action?.action?.name ||
-                        action?.name;
+                if (permissionModule !== requestedModule) {
+                    return false;
+                }
 
-                    const isActive =
-                        action?.active !== false &&
-                        String(action?.status || "")
-                            .toUpperCase() !== "INACTIVE";
+                if (permission?.active === false) {
+                    return false;
+                }
 
-                    const isAllowed =
-                        action?.allowed === true ||
-                        String(action?.allowed)
-                            .toLowerCase() === "true";
+                if (
+                    normalizeAction(permission?.status) === "INACTIVE"
+                ) {
+                    return false;
+                }
 
-                    return (
-                        isActive &&
-                        String(actionNameFromPermission || "")
-                            .trim()
-                            .toUpperCase() === normalizedAction &&
-                        isAllowed
-                    );
-                });
-            }
+                /* GROUPED ACTIONS */
 
-            // ====================================================
-            // FLAT PERMISSION
-            // ====================================================
+                if (Array.isArray(permission?.actions)) {
 
-            const actionNameFromPermission =
-                permission?.actionName ||
-                permission?.action?.actionName ||
-                permission?.action?.name ||
-                permission?.name;
+                    return permission.actions.some((action) => {
 
-            const isActive =
-                permission?.active !== false &&
-                String(permission?.status || "")
-                    .toUpperCase() !== "INACTIVE";
+                        if (typeof action === "string") {
+                            return (
+                                normalizeAction(action) === requestedAction
+                            );
+                        }
 
-            const isAllowed =
-                permission?.allowed === true ||
-                String(permission?.allowed)
-                    .toLowerCase() === "true";
+                        const permissionAction = normalizeAction(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        );
 
-            return (
-                isActive &&
-                String(actionNameFromPermission || "")
-                    .trim()
-                    .toUpperCase() === normalizedAction &&
-                isAllowed
-            );
-        });
-    };
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
 
-    // ============================================================
-    // TAX MASTER PERMISSIONS
-    // ============================================================
+                        if (action?.active === false) {
+                            return false;
+                        }
 
-    const canViewTaxMaster =
-        hasPermission(
-            "TaxMasters",
-            "VIEW"
-        );
+                        if (
+                            normalizeAction(action?.status) === "INACTIVE"
+                        ) {
+                            return false;
+                        }
 
-    const canCreateTaxMaster =
-        hasPermission(
-            "TaxMasters",
-            "CREATE"
-        );
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
 
-    // ============================================================
-    // TAX MASTER STATE
-    // ============================================================
+                    });
+                }
+
+                /* FLAT ACTION */
+
+                const permissionAction = normalizeAction(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                );
+
+                const allowed =
+                    permission?.allowed === true ||
+                    permission?.allowed === "true";
+
+                return (
+                    permissionAction === requestedAction &&
+                    allowed
+                );
+
+            });
+
+        },
+        [
+            hasFullAccess,
+            permissions,
+        ]
+    );
+
+    /* =====================================================
+       TAX MASTER PERMISSIONS
+    ===================================================== */
+
+    const canViewTaxMaster = hasPermission(
+        "Taxes",
+        "VIEW"
+    );
+
+    const canCreateTaxMaster = hasPermission(
+        "Taxes",
+        "CREATE"
+    );
+
+    /* =====================================================
+       TAX MASTER DATA
+    ===================================================== */
 
     const taxMastersFromRedux = useSelector(
         (state) => state.taxMaster?.taxMasters
     );
 
-    const taxMasters =
-        taxMastersFromRedux ?? [];
+    const taxMasters = Array.isArray(taxMastersFromRedux)
+        ? taxMastersFromRedux
+        : EMPTY_ARRAY;
 
     const loading = useSelector(
-        (state) => state.taxMaster?.loading || false
+        (state) => state.taxMaster?.loading === true
     );
 
     const error = useSelector(
         (state) => state.taxMaster?.error
     );
 
-    // ============================================================
-    // TAX MASTER FILTER STATE
-    // ============================================================
+    /* =====================================================
+       TAX MASTER VIEW STATE
+    ===================================================== */
 
-    const taxMasterStatus = useSelector(
-        (state) =>
-            state.taxMasterView?.taxMasterStatus || "ALL"
+    const search = useSelector(
+        (state) => state.taxMasterView?.search || ""
     );
 
-    // ============================================================
-    // LOAD CURRENT USER PERMISSIONS
-    //
-    // This is a fallback in case permissions were not already
-    // loaded during auth bootstrap.
-    // ============================================================
+    const taxMasterStatus = useSelector(
+        (state) => state.taxMasterView?.taxMasterStatus || "ALL"
+    );
+
+    /* =====================================================
+       LOAD USER PERMISSIONS
+    ===================================================== */
 
     useEffect(() => {
 
-        if (authChecking) {
-            return;
-        }
-
-        if (!isAuthenticated) {
+        if (authChecking || !isAuthenticated) {
             return;
         }
 
@@ -282,11 +369,7 @@ export default function TaxMasterDashboard() {
             return;
         }
 
-        if (permissionsLoaded) {
-            return;
-        }
-
-        if (permissionLoading) {
+        if (permissionsLoaded || permissionLoading) {
             return;
         }
 
@@ -301,179 +384,87 @@ export default function TaxMasterDashboard() {
         dispatch,
     ]);
 
-    // ============================================================
-    // FETCH TAX MASTERS
-    //
-    // STAFF users can fetch only when:
-    // 1. Authentication is ready
-    // 2. Permissions are loaded
-    // 3. VIEW permission exists
-    //
-    // ADMIN / SUPER_ADMIN can fetch immediately.
-    // ============================================================
+    /* =====================================================
+       FILTER TAX MASTERS
 
-    useEffect(() => {
-
-        if (authChecking) {
-            return;
-        }
-
-        if (!isAuthenticated) {
-            return;
-        }
-
-        if (hasFullAccess) {
-
-            dispatch(
-                fetchAllTaxMasters()
-            );
-
-            return;
-        }
-
-        if (!permissionsLoaded) {
-            return;
-        }
-
-        if (permissionLoading) {
-            return;
-        }
-
-        if (!canViewTaxMaster) {
-            return;
-        }
-
-        dispatch(
-            fetchAllTaxMasters()
-        );
-
-    }, [
-        authChecking,
-        isAuthenticated,
-        hasFullAccess,
-        permissionsLoaded,
-        permissionLoading,
-        canViewTaxMaster,
-        dispatch,
-    ]);
-
-    // ============================================================
-    // SYNC URL STATUS → REDUX
-    // ============================================================
-
-    useEffect(() => {
-
-        const params =
-            new URLSearchParams(
-                window.location.search
-            );
-
-        const urlStatus =
-            params.get("taxMasterStatus");
-
-        if (!urlStatus) {
-            return;
-        }
-
-        const normalizedStatus =
-            String(urlStatus)
-                .toUpperCase();
-
-        const validStatuses = [
-            "ALL",
-            "ACTIVE",
-            "INACTIVE",
-            "DRAFT",
-        ];
-
-        if (!validStatuses.includes(normalizedStatus)) {
-            return;
-        }
-
-        dispatch(
-            setTaxMasterStatus(
-                normalizedStatus
-            )
-        );
-
-        const statusLabels = {
-            ALL: "All Tax Masters",
-            ACTIVE: "Active Tax Masters",
-            INACTIVE: "Inactive Tax Masters",
-            DRAFT: "Draft Tax Masters",
-        };
-
-        dispatch(
-            setSelectedTaxMasterView(
-                statusLabels[normalizedStatus]
-            )
-        );
-
-    }, [dispatch]);
-
-    // ============================================================
-    // FILTER TAX MASTERS BY STATUS
-    // ============================================================
+       Status and search filtering happen locally.
+       No API request is triggered when clicking cards.
+    ===================================================== */
 
     const filteredTaxMasters = useMemo(() => {
 
-        const selectedStatus =
-            String(taxMasterStatus || "ALL")
-                .toUpperCase();
+        const normalizedSearch = normalizeSearch(search);
+        const normalizedStatus = normalizeTaxMasterStatus(taxMasterStatus);
 
-        if (selectedStatus === "ALL") {
-            return taxMasters;
-        }
+        return taxMasters.filter((taxMaster) => {
 
-        return taxMasters.filter(
-            (taxMaster) => {
+            const matchesSearch = matchesTaxMasterSearch(
+                taxMaster,
+                normalizedSearch
+            );
 
-                const backendStatus =
-                    String(taxMaster?.status || "")
-                        .toUpperCase();
+            const recordStatus = getTaxMasterStatus(taxMaster);
 
-                return (
-                    backendStatus ===
-                    selectedStatus
-                );
-            }
-        );
+            const matchesStatus =
+                normalizedStatus === "ALL" ||
+                recordStatus === normalizedStatus;
+
+            return matchesSearch && matchesStatus;
+        });
 
     }, [
         taxMasters,
+        search,
         taxMasterStatus,
     ]);
 
-    // ============================================================
-    // OPEN CREATE TAX MASTER MODAL
-    // ============================================================
 
-    const handleCreateTaxMaster = () => {
+    /* =====================================================
+       ACTIVE FILTER CHECK
+    ===================================================== */
 
-        if (authChecking) {
+    const normalizedSelectedStatus = normalizeTaxMasterStatus(
+        taxMasterStatus
+    );
 
-            toast.error(
-                "Authentication is still loading. Please try again."
-            );
+    const hasActiveFilters =
+        Boolean(String(search ?? "").trim()) ||
+        normalizedSelectedStatus !== "ALL";
 
-            return;
-        }
+    /* =====================================================
+       CLEAR FILTERS
+    ===================================================== */
+
+    const handleClearFilters = useCallback(() => {
+
+        dispatch(setSearch(""));
+
+        dispatch(setTaxMasterStatus("ALL"));
+
+        navigate("/settings/taxes?status=ALL");
+
+    }, [
+        dispatch,
+        navigate,
+    ]);
+
+    /* =====================================================
+       CREATE TAX MASTER
+    ===================================================== */
+
+    const handleCreateTaxMaster = useCallback(() => {
 
         if (!isAuthenticated) {
-
-            toast.error(
-                "Please login to create a tax master."
-            );
-
             return;
         }
 
-        if (!hasFullAccess && !permissionsLoaded) {
-
-            toast.error(
-                "Permissions are still loading. Please try again."
-            );
-
+        if (
+            !hasFullAccess &&
+            (
+                permissionLoading ||
+                !permissionsLoaded
+            )
+        ) {
             return;
         }
 
@@ -491,292 +482,334 @@ export default function TaxMasterDashboard() {
                 type: "addTaxMaster",
             })
         );
-    };
 
-    // ============================================================
-    // AUTH CHECKING
-    // ============================================================
+    }, [
+        isAuthenticated,
+        hasFullAccess,
+        permissionLoading,
+        permissionsLoaded,
+        canCreateTaxMaster,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       AUTH CHECKING
+    ===================================================== */
 
     if (authChecking) {
         return <InvoiceSkeleton />;
     }
 
-    // ============================================================
-    // NOT AUTHENTICATED
-    // ============================================================
+    /* =====================================================
+       NOT AUTHENTICATED
+    ===================================================== */
 
     if (!isAuthenticated) {
         return null;
     }
 
-    // ============================================================
-    // STAFF PERMISSION LOADING
-    // ============================================================
-
-    if (!hasFullAccess && !permissionsLoaded) {
-        return <InvoiceSkeleton />;
-    }
+    /* =====================================================
+       PERMISSION LOADING
+    ===================================================== */
 
     if (
         !hasFullAccess &&
-        permissionLoading
+        (
+            permissionLoading ||
+            !permissionsLoaded
+        )
     ) {
         return <InvoiceSkeleton />;
     }
 
-    // ============================================================
-    // VIEW PERMISSION DENIED
-    // ============================================================
+    /* =====================================================
+       VIEW PERMISSION DENIED
+    ===================================================== */
 
     if (!canViewTaxMaster) {
 
         return (
-            <div className="flex h-screen bg-gray-50 font-sans text-[13px] overflow-hidden">
 
-                <div className="flex-1 min-h-0 bg-white overflow-y-auto">
+            <div
+                className="
+                    flex h-screen items-center justify-center
+                    bg-gray-50 font-sans
+                "
+            >
 
-                    <div className="h-full flex items-center justify-center px-6">
+                <div className="px-6 text-center">
 
-                        <div className="text-center max-w-md">
-
-                            <div
-                                className="
-                                    mx-auto
-                                    w-20
-                                    h-20
-                                    rounded-full
-                                    bg-red-50
-                                    flex
-                                    items-center
-                                    justify-center
-                                    mb-5
-                                "
-                            >
-                                <span className="text-3xl text-red-500">
-                                    !
-                                </span>
-                            </div>
-
-                            <h2 className="text-lg font-semibold text-gray-800">
-                                Access Denied
-                            </h2>
-
-                            <p className="mt-2 text-sm text-gray-500">
-                                You do not have permission to view tax masters.
-                            </p>
-
-                        </div>
-
+                    <div
+                        className="
+                            mx-auto mb-4 flex h-16 w-16
+                            items-center justify-center
+                            rounded-full bg-red-50
+                            text-2xl font-semibold text-red-500
+                        "
+                    >
+                        !
                     </div>
+
+                    <h2 className="text-lg font-semibold text-gray-800">
+                        Access Denied
+                    </h2>
+
+                    <p className="mt-1 max-w-sm text-sm text-gray-500">
+                        You do not have permission to view tax masters.
+                    </p>
 
                 </div>
 
             </div>
+
         );
     }
 
-    // ============================================================
-    // TAX MASTER LOADING
-    // ============================================================
-
-    if (loading) {
-        return <InvoiceSkeleton />;
-    }
-
-    // ============================================================
-    // PAGE
-    // ============================================================
+    /* =====================================================
+       PAGE
+    ===================================================== */
 
     return (
-        <div className="flex h-screen bg-gray-50 font-sans text-[13px] overflow-hidden">
 
-            <div className="flex-1 min-h-0 bg-white overflow-y-auto">
+        <div
+            className="
+                flex h-screen overflow-hidden
+                bg-gray-50 font-sans text-[13px]
+            "
+        >
 
-                <div className="px-2 py-5 max-w-30xl w-full">
+            <div
+                className="
+                    min-h-0 flex-1 overflow-y-auto bg-white
+                "
+            >
 
-                    {/* =================================================
-                        TAX MASTER NAVBAR
-                    ================================================= */}
+                <div
+                    className="
+                        w-full max-w-30xl px-2 py-5
+                    "
+                >
+
+                    {/* NAVBAR */}
 
                     <NavbarTaxMaster />
 
-                    {/* =================================================
-                        ERROR
-                    ================================================= */}
+                    {/* OVERVIEW */}
+
+                    <TaxMasterOverview />
+
+                    {/* ERROR */}
 
                     {error && (
+
                         <div
                             className="
-                                mx-2
-                                mt-4
-                                px-4
-                                py-3
-                                rounded-md
-                                border
-                                border-red-200
-                                bg-red-50
-                                text-sm
-                                text-red-600
+                                mx-2 mt-4 rounded-md
+                                border border-red-200
+                                bg-red-50 px-4 py-3
+                                text-sm text-red-600
                             "
                         >
                             {error}
                         </div>
+
                     )}
 
-                    {/* =================================================
-                        TAX MASTER TABLE / EMPTY STATE
-                    ================================================= */}
+                    {/* LOADING */}
 
-                    {filteredTaxMasters.length > 0 ? (
+                    {loading ? (
+
+                        <div
+                            className="
+                                flex min-h-[250px]
+                                items-center justify-center
+                            "
+                        >
+
+                            <p className="text-sm text-gray-500">
+                                Loading tax masters...
+                            </p>
+
+                        </div>
+
+                    ) : filteredTaxMasters.length > 0 ? (
+
+                        /* FILTERED TABLE */
 
                         <TaxMasterTable
                             taxMasters={filteredTaxMasters}
                         />
 
-                    ) : (
+                    ) : hasActiveFilters ? (
+
+                        /* FILTERED EMPTY STATE */
 
                         <div
                             className="
-                                min-h-full
-                                flex
-                                flex-col
-                                items-center
-                                justify-center
-                                gap-3
-                                px-4
+                                flex min-h-[300px] flex-col
+                                items-center justify-center
+                                gap-3 px-4
                             "
                         >
 
                             <div
                                 className="
-                                    relative
-                                    w-24
-                                    h-24
-                                    rounded-full
-                                    bg-gray-100
-                                    flex
-                                    items-center
-                                    justify-center
-                                    mb-1
-                                    flex-shrink-0
-                                    mt-30
+                                    flex h-20 w-20 items-center
+                                    justify-center rounded-full
+                                    bg-gray-100 text-gray-400
+                                "
+                            >
+                                <Receipt
+                                    size={38}
+                                    strokeWidth={1.7}
+                                />
+                            </div>
+
+                            <h3 className="
+                                text-base font-semibold text-gray-800
+                            ">
+                                No matching tax masters found
+                            </h3>
+
+                            <p className="
+                                max-w-sm text-center text-sm text-gray-500
+                            ">
+                                No tax masters match your current search
+                                or status filter. Try changing your filters.
+                            </p>
+
+                            <button
+                                type="button"
+                                onClick={handleClearFilters}
+                                className="
+                                    mt-2 rounded-md bg-blue-500
+                                    px-4 py-2 text-sm font-medium
+                                    text-white transition
+                                    hover:bg-blue-600
+                                "
+                            >
+                                Clear Filters
+                            </button>
+
+                        </div>
+
+                    ) : (
+
+                        /* INITIAL EMPTY STATE */
+
+                        <div
+                            className="
+                                flex min-h-full flex-col
+                                items-center justify-center
+                                gap-3 px-4
+                            "
+                        >
+
+                            <div
+                                className="
+                                    relative mt-30 mb-1
+                                    flex h-24 w-24 shrink-0
+                                    items-center justify-center
+                                    rounded-full bg-gray-100
                                 "
                             >
 
-                                <div className="text-gray-400 text-4xl">
-                                    %
+                                <div
+                                    className="
+                                        flex items-center justify-center
+                                        text-gray-400
+                                    "
+                                >
+                                    <Receipt
+                                        size={42}
+                                        strokeWidth={1.7}
+                                    />
                                 </div>
 
                                 <div
                                     className="
-                                        absolute
-                                        bottom-1
-                                        right-1
-                                        w-7
-                                        h-7
-                                        rounded-full
-                                        bg-blue-500
-                                        flex
-                                        items-center
-                                        justify-center
-                                        text-white
+                                        absolute bottom-1 right-1
+                                        flex h-7 w-7 items-center
+                                        justify-center rounded-full
+                                        bg-blue-500 text-white
                                     "
                                 >
-                                    <Plus className="w-4 h-4" />
+                                    <Plus className="h-4 w-4" />
                                 </div>
 
                             </div>
 
-                            <p className="text-base font-medium text-gray-800 text-center">
-                                Every setup starts with a taxss
+                            <p
+                                className="
+                                    text-center text-base
+                                    font-medium text-gray-800
+                                "
+                            >
+                                Manage your tax masters
                             </p>
 
-                            <p className="text-sm text-gray-500 text-center max-w-sm">
-                                Create and manage your tax masters and GST tax
-                                configurations, all in one place.
+                            <p
+                                className="
+                                    max-w-sm text-center
+                                    text-sm text-gray-500
+                                "
+                            >
+                                Create and manage tax configurations,
+                                define CGST, SGST and IGST rates,
+                                maintain tax descriptions, and configure
+                                tax availability for your invoices
+                                and transactions.
                             </p>
-
-                            {/* =================================================
-                                ACTION BUTTONS
-                            ================================================= */}
 
                             <div
                                 className="
-                                    flex
-                                    items-center
-                                    gap-2.5
-                                    mt-1
-                                    flex-wrap
-                                    justify-center
+                                    mt-1 flex flex-wrap
+                                    items-center justify-center gap-2.5
                                 "
                             >
-
-                                {/* =================================================
-                                    CREATE TAX MASTER
-                                    CREATE permission
-                                ================================================= */}
 
                                 {canCreateTaxMaster && (
 
                                     <button
                                         type="button"
-                                        onClick={
-                                            handleCreateTaxMaster
-                                        }
+                                        onClick={handleCreateTaxMaster}
                                         className="
-                                            flex
-                                            items-center
-                                            gap-2
-                                            bg-blue-500
-                                            text-white
-                                            text-sm
-                                            font-medium
-                                            px-4
-                                            py-2
-                                            rounded-md
-                                            hover:bg-blue-600
-                                            transition-colors
-                                            whitespace-nowrap
+                                            flex items-center gap-2
+                                            whitespace-nowrap rounded-md
+                                            bg-blue-500 px-4 py-2
+                                            text-sm font-medium text-white
+                                            transition-colors hover:bg-blue-600
                                         "
                                     >
-                                        <Plus className="w-4 h-4" />
-
-                                        Create New Tax
+                                        <Plus className="h-4 w-4" />
+                                        Create Tax Master
                                     </button>
 
                                 )}
 
-                                {/* =================================================
-                                    IMPORT
-                                ================================================= */}
-
                                 <button
                                     type="button"
+                                    onClick={() => {
+                                        toast(
+                                            "Tax master import is not configured yet."
+                                        );
+                                    }}
                                     className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        bg-white
-                                        text-gray-700
-                                        text-sm
-                                        border
-                                        border-gray-300
-                                        px-4
-                                        py-2
-                                        rounded-md
-                                        hover:bg-gray-50
-                                        transition-colors
-                                        whitespace-nowrap
+                                        flex items-center gap-2
+                                        whitespace-nowrap rounded-md
+                                        border border-gray-300 bg-white
+                                        px-4 py-2 text-sm text-gray-700
+                                        transition-colors hover:bg-gray-50
                                     "
                                 >
-                                    <Download className="w-4 h-4" />
-
+                                    <Download className="h-4 w-4" />
                                     Import File
                                 </button>
 
                             </div>
 
                         </div>
+
                     )}
 
                 </div>
@@ -784,5 +817,6 @@ export default function TaxMasterDashboard() {
             </div>
 
         </div>
+
     );
 }

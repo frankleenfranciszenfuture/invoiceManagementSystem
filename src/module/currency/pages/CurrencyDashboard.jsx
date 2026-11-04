@@ -26,6 +26,11 @@ import {
 } from "../slices/currencySlice";
 
 import {
+    setSearch,
+    setCurrencyStatus,
+} from "../slices/currencyViewSlice";
+
+import {
     openModal,
 } from "../../ui/uiSlice";
 
@@ -43,6 +48,12 @@ import CurrencyOverview from "../../currency/pages/CurrencyOverview";
 
 const EMPTY_ARRAY = [];
 
+const VALID_STATUSES = [
+    "ALL",
+    "ACTIVE",
+    "INACTIVE",
+];
+
 /* =========================================================
    NORMALIZE HELPERS
 ========================================================= */
@@ -53,12 +64,61 @@ const normalizeModule = (value) =>
 const normalizeAction = (value) =>
     String(value ?? "").trim().toUpperCase();
 
+const normalizeSearch = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+/* =========================================================
+   CURRENCY STATUS
+========================================================= */
+
+const getCurrencyStatus = (currency) => {
+    const status = String(currency?.status || "")
+        .trim()
+        .toUpperCase();
+
+    if (status === "ACTIVE" || status === "INACTIVE") {
+        return status;
+    }
+
+    if (typeof currency?.active === "boolean") {
+        return currency.active ? "ACTIVE" : "INACTIVE";
+    }
+
+    if (typeof currency?.audit?.active === "boolean") {
+        return currency.audit.active ? "ACTIVE" : "INACTIVE";
+    }
+
+    return "UNKNOWN";
+};
+
+/* =========================================================
+   CURRENCY SEARCH
+========================================================= */
+
+const matchesCurrencySearch = (currency, search) => {
+    if (!search) return true;
+
+    const searchableValues = [
+        currency?.currencyName,
+        currency?.currencyCode,
+        currency?.symbol,
+        currency?.status,
+        currency?.decimalPlaces,
+        currency?.description,
+        currency?.countryName,
+        currency?.country,
+    ];
+
+    return searchableValues.some((value) =>
+        normalizeSearch(value).includes(search)
+    );
+};
+
 /* =========================================================
    COMPONENT
 ========================================================= */
 
 export default function CurrencyDashboard() {
-
     const dispatch = useDispatch();
 
     /* =====================================================
@@ -81,15 +141,13 @@ export default function CurrencyDashboard() {
        PERMISSION STATE
     ===================================================== */
 
-    const permissions = useSelector(
-        (state) => {
-            const value = state.menuPermission?.userPermissions;
+    const permissions = useSelector((state) => {
+        const value = state.menuPermission?.userPermissions;
 
-            return Array.isArray(value)
-                ? value
-                : EMPTY_ARRAY;
-        }
-    );
+        return Array.isArray(value)
+            ? value
+            : EMPTY_ARRAY;
+    });
 
     const permissionLoading = useSelector(
         (state) =>
@@ -125,7 +183,6 @@ export default function CurrencyDashboard() {
 
     const hasPermission = useCallback(
         (moduleName, actionName) => {
-
             if (hasFullAccess) {
                 return true;
             }
@@ -138,7 +195,6 @@ export default function CurrencyDashboard() {
             const requestedAction = normalizeAction(actionName);
 
             return permissions.some((permission) => {
-
                 const permissionModule = normalizeModule(
                     permission?.moduleName ||
                     permission?.module?.moduleName ||
@@ -163,9 +219,7 @@ export default function CurrencyDashboard() {
                 /* ACTION ARRAY */
 
                 if (Array.isArray(permission?.actions)) {
-
                     return permission.actions.some((action) => {
-
                         if (typeof action === "string") {
                             return (
                                 normalizeAction(action) === requestedAction
@@ -219,7 +273,6 @@ export default function CurrencyDashboard() {
                     allowed
                 );
             });
-
         },
         [
             hasFullAccess,
@@ -242,7 +295,7 @@ export default function CurrencyDashboard() {
     );
 
     /* =====================================================
-       CURRENCY STATE
+       CURRENCY DATA
     ===================================================== */
 
     const currenciesFromRedux = useSelector(
@@ -262,16 +315,26 @@ export default function CurrencyDashboard() {
     );
 
     /* =====================================================
+       CURRENCY VIEW STATE
+    ===================================================== */
+
+    const search = useSelector(
+        (state) => state.currencyView?.search || ""
+    );
+
+    const currencyStatus = useSelector(
+        (state) => state.currencyView?.currencyStatus || "ALL"
+    );
+
+    /* =====================================================
        LOAD USER PERMISSIONS
     ===================================================== */
 
     useEffect(() => {
-
         if (authChecking || !isAuthenticated) {
             return;
         }
 
-        // Admin and Super Admin have full access.
         if (hasFullAccess) {
             return;
         }
@@ -293,22 +356,66 @@ export default function CurrencyDashboard() {
 
     /* =====================================================
        FILTER CURRENCIES
+
+       Search and status are handled locally.
+       No additional API request is required.
     ===================================================== */
 
     const filteredCurrencies = useMemo(() => {
+        const normalizedSearch = normalizeSearch(search);
 
-        return currencies;
+        const selectedStatus = VALID_STATUSES.includes(
+            String(currencyStatus).toUpperCase()
+        )
+            ? String(currencyStatus).toUpperCase()
+            : "ALL";
+
+        return currencies.filter((currency) => {
+            const matchesSearch = matchesCurrencySearch(
+                currency,
+                normalizedSearch
+            );
+
+            const currentStatus = getCurrencyStatus(currency);
+
+            const matchesStatus =
+                selectedStatus === "ALL" ||
+                currentStatus === selectedStatus;
+
+            return matchesSearch && matchesStatus;
+        });
 
     }, [
         currencies,
+        search,
+        currencyStatus,
     ]);
+
+    /* =====================================================
+       ACTIVE FILTER CHECK
+    ===================================================== */
+
+    const hasActiveFilters =
+        Boolean(search.trim()) ||
+        (
+            VALID_STATUSES.includes(currencyStatus) &&
+            currencyStatus !== "ALL"
+        );
+
+    /* =====================================================
+       CLEAR FILTERS
+    ===================================================== */
+
+    const handleClearFilters = useCallback(() => {
+        dispatch(setSearch(""));
+        dispatch(setCurrencyStatus("ALL"));
+    }, [dispatch]);
 
     /* =====================================================
        OPEN CREATE CURRENCY MODAL
     ===================================================== */
 
     const handleCreateCurrency = useCallback(() => {
-
         if (!isAuthenticated) {
             return;
         }
@@ -350,7 +457,6 @@ export default function CurrencyDashboard() {
     ===================================================== */
 
     useEffect(() => {
-
         if (!error) {
             return;
         }
@@ -401,7 +507,6 @@ export default function CurrencyDashboard() {
     ===================================================== */
 
     if (!canViewCurrency) {
-
         return (
             <div
                 className="
@@ -410,7 +515,6 @@ export default function CurrencyDashboard() {
                 "
             >
                 <div className="px-6 text-center">
-
                     <div
                         className="
                             mx-auto mb-4 flex h-16 w-16
@@ -429,7 +533,6 @@ export default function CurrencyDashboard() {
                     <p className="mt-1 max-w-sm text-sm text-gray-500">
                         You do not have permission to view currencies.
                     </p>
-
                 </div>
             </div>
         );
@@ -440,42 +543,33 @@ export default function CurrencyDashboard() {
     ===================================================== */
 
     return (
-
         <div
             className="
                 flex h-screen overflow-hidden
                 bg-gray-50 font-sans text-[13px]
             "
         >
-
             <div
                 className="
                     min-h-0 flex-1 overflow-y-auto bg-white
                 "
             >
-
                 <div
                     className="
                         w-full max-w-30xl px-2 py-5
                     "
                 >
-
                     {/* CURRENCY NAVBAR */}
 
                     <NavbarCurrency />
 
                     {/* CURRENCY OVERVIEW */}
 
-                    <CurrencyOverview
-                        canViewCurrency={canViewCurrency}
-                        isAuthenticated={isAuthenticated}
-                        authChecking={authChecking}
-                    />
+                    <CurrencyOverview />
 
                     {/* ERROR */}
 
                     {error && (
-
                         <div
                             className="
                                 mx-2 mt-4 rounded-md
@@ -486,13 +580,11 @@ export default function CurrencyDashboard() {
                         >
                             {error}
                         </div>
-
                     )}
 
-                    {/* CURRENCY TABLE / LOADING / EMPTY STATE */}
+                    {/* LOADING */}
 
                     {loading ? (
-
                         <div
                             className="
                                 flex min-h-[250px]
@@ -506,11 +598,66 @@ export default function CurrencyDashboard() {
 
                     ) : filteredCurrencies.length > 0 ? (
 
+                        /* CURRENCY TABLE */
+
                         <CurrencyTable
                             currencies={filteredCurrencies}
                         />
 
+                    ) : hasActiveFilters ? (
+
+                        /* FILTERED EMPTY STATE */
+
+                        <div
+                            className="
+                                flex min-h-[300px] flex-col
+                                items-center justify-center
+                                gap-3 px-4
+                            "
+                        >
+                            <div
+                                className="
+                                    flex h-20 w-20 items-center
+                                    justify-center rounded-full
+                                    bg-gray-100 text-gray-400
+                                "
+                            >
+                                <Coins
+                                    size={38}
+                                    strokeWidth={1.7}
+                                />
+                            </div>
+
+                            <h3 className="
+                                text-base font-semibold text-gray-800
+                            ">
+                                No matching currencies found
+                            </h3>
+
+                            <p className="
+                                max-w-sm text-center text-sm text-gray-500
+                            ">
+                                No currencies match your current search
+                                or status filter. Try changing your filters.
+                            </p>
+
+                            <button
+                                type="button"
+                                onClick={handleClearFilters}
+                                className="
+                                    mt-2 rounded-md bg-blue-500
+                                    px-4 py-2 text-sm font-medium
+                                    text-white transition
+                                    hover:bg-blue-600
+                                "
+                            >
+                                Clear Filters
+                            </button>
+                        </div>
+
                     ) : (
+
+                        /* INITIAL EMPTY STATE */
 
                         <div
                             className="
@@ -519,7 +666,6 @@ export default function CurrencyDashboard() {
                                 gap-3 px-4
                             "
                         >
-
                             {/* EMPTY STATE ICON */}
 
                             <div
@@ -530,7 +676,6 @@ export default function CurrencyDashboard() {
                                     rounded-full bg-gray-100
                                 "
                             >
-
                                 <div
                                     className="
                                         flex items-center justify-center
@@ -553,7 +698,6 @@ export default function CurrencyDashboard() {
                                 >
                                     <Plus className="h-4 w-4" />
                                 </div>
-
                             </div>
 
                             {/* EMPTY STATE TITLE */}
@@ -590,11 +734,9 @@ export default function CurrencyDashboard() {
                                     items-center justify-center gap-2.5
                                 "
                             >
-
                                 {/* CREATE CURRENCY */}
 
                                 {canCreateCurrency && (
-
                                     <button
                                         type="button"
                                         onClick={handleCreateCurrency}
@@ -609,7 +751,6 @@ export default function CurrencyDashboard() {
                                         <Plus className="h-4 w-4" />
                                         Create Currency
                                     </button>
-
                                 )}
 
                                 {/* IMPORT */}
@@ -632,17 +773,11 @@ export default function CurrencyDashboard() {
                                     <Download className="h-4 w-4" />
                                     Import File
                                 </button>
-
                             </div>
-
                         </div>
-
                     )}
-
                 </div>
-
             </div>
-
         </div>
     );
 }
