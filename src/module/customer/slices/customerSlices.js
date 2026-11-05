@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
-  loadCustomers,
+  fetchAllCustomers,
   addCustomer,
   getCustomerById,
   saveCustomerAddress,
@@ -126,7 +126,7 @@ const initialState = {
 };
 
 const customerSlice = createSlice({
-  name: "customers",
+  name: "customer",
   initialState,
   // initialState: { list: [], loading: false, error: null },
   reducers: {
@@ -357,17 +357,21 @@ const customerSlice = createSlice({
     setOpenPaymentTerms: (state, action) => {
       state.openPaymentTerms = action.payload;
     },
+
+    clearError: (state) => {
+      state.error = null;
+    },
   },
 
   extraReducers: (builder) => {
     builder
 
-      .addCase(loadCustomers.pending, (state) => {
+      .addCase(fetchAllCustomers.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
 
-      .addCase(loadCustomers.fulfilled, (state, action) => {
+      .addCase(fetchAllCustomers.fulfilled, (state, action) => {
         state.loading = false;
         state.error = null;
 
@@ -395,7 +399,7 @@ const customerSlice = createSlice({
         state.hasCustomers = customers.length > 0;
       })
 
-      .addCase(loadCustomers.rejected, (state, action) => {
+      .addCase(fetchAllCustomers.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || "Failed to load customers";
       })
@@ -512,6 +516,8 @@ export const {
   resetSelectedCustomer,
 
   resetDirty,
+
+  clearError,
 } = customerSlice.actions;
 
 // Remove validateCustomer from the `reducers: {}` block entirely, then add:

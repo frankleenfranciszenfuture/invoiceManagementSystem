@@ -12,6 +12,7 @@ import customerViewReducer from "../module/customer/slices/customerViewSlice";
 
 // Size
 import sizeReducer from "../module/sizes/slices/sizeSlice";
+import sizeViewReducer from "../module/sizes/slices/sizeViewSlice";
 
 // Tax Master
 import taxMasterReducer from "../module/taxMaster/slices/taxMasterSlice";
@@ -23,6 +24,7 @@ import unitReducer from "../module/units/slices/unitSlice";
 import productReducer from "../module/items/slices/productSlice";
 import productViewReducer from "../module/items/slices/productViewSlice";
 import subCategoryReducer from "../module/subCategory/slices/subCategorySlice";
+import subCategoryViewReducer from "../module/subCategory/slices/subCategoryViewSlice";
 import categoryReducer from "../module/category/slices/categorySlice";
 import invoiceReducer from "../module/invoices/slices/invoiceSlice";
 import invoiceViewReducer from "../module/invoices/slices/invoiceViewSlice";
@@ -89,11 +91,12 @@ export const store = configureStore({
     ui: uiReducer,
 
     // Customer
-    customers: customerReducer,
+    customer: customerReducer,
     customerView: customerViewReducer,
 
     // Size
     size: sizeReducer,
+    sizeView: sizeViewReducer,
 
     // Tax Master
     taxMaster: taxMasterReducer,
@@ -106,6 +109,7 @@ export const store = configureStore({
     //subCategory
 
     subCategory: subCategoryReducer,
+    subCategoryView: subCategoryViewReducer,
 
     //category
 

@@ -1,839 +1,394 @@
-import React, {
-    useEffect,
-    useState,
-} from "react";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
-    useDispatch,
-    useSelector,
-} from "react-redux";
-
-import {
+    ArrowLeft,
     Ruler,
+    Tag,
+    Save,
+    ChevronDown,
+    Loader2,
+    RotateCcw,
+    AlignLeft,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
 import {
-    closeModal,
-} from "../../ui/uiSlice";
-
-import {
-    resetSizeForm,
-    setSizeField,
-    setCreatedSizeSelection,
-} from "../slices/sizeSlice";
-
-
-
-import {
     createSize,
+    fetchSizeById,
     updateSize,
+    fetchAllSizes,
 } from "../thunks/sizeThunks";
 
-import {
-    getUserPermission,
-} from "../../menuPermission/thunks/menuPermissionThunks";
+import { resetSizeForm } from "../slices/sizeSlice";
+
 import CustomSelect from "../../../common/custom/CustomSelect";
 
-export default function SizeCreate() {
 
+
+import { closeModal } from "../../../module/ui/uiSlice";
+import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
+import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
+
+/* =========================================================
+   INITIAL FORM DATA
+========================================================= */
+
+const initialFormData = {
+    sizeName: "",
+    sizeShortName: "",
+    description: "",
+    status: "ACTIVE",
+};
+
+/* =========================================================
+   REUSABLE FORM COMPONENTS
+========================================================= */
+
+const FormField = ({
+    label,
+    required = false,
+    children,
+    className = "",
+}) => (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+        <label className="text-sm font-medium text-gray-700">
+            {label}
+            {required && <span className="ml-1 text-red-500">*</span>}
+        </label>
+
+        {children}
+    </div>
+);
+
+const TextInput = ({
+    value,
+    onChange,
+    placeholder,
+    type = "text",
+    disabled = false,
+    maxLength,
+}) => (
+    <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        maxLength={maxLength}
+        className="
+            h-10 w-full rounded-lg border border-gray-200
+            bg-white px-3 text-sm text-gray-700
+            outline-none transition
+            placeholder:text-gray-400
+            focus:border-[#408DFB] focus:ring-2
+            focus:ring-[#408DFB]/10
+            disabled:cursor-not-allowed disabled:bg-gray-100
+        "
+    />
+);
+
+const TextAreaField = ({
+    value,
+    onChange,
+    placeholder,
+    rows = 3,
+}) => (
+    <textarea
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        rows={rows}
+        className="
+            w-full resize-none rounded-lg border border-gray-200
+            bg-white px-3 py-2.5 text-sm text-gray-700
+            outline-none transition
+            placeholder:text-gray-400
+            focus:border-[#408DFB] focus:ring-2
+            focus:ring-[#408DFB]/10
+        "
+    />
+);
+
+const SectionHeading = ({
+    icon: Icon,
+    title,
+    description,
+}) => (
+    <div className="mb-5 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#408DFB]">
+            <Icon size={19} />
+        </div>
+
+        <div>
+            <h3 className="text-sm font-semibold text-gray-800">
+                {title}
+            </h3>
+
+            {description && (
+                <p className="mt-0.5 text-xs text-gray-400">
+                    {description}
+                </p>
+            )}
+        </div>
+    </div>
+);
+
+/* =========================================================
+   MAIN COMPONENT
+========================================================= */
+
+const SizeCreate = ({ onClose }) => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
 
-    // =========================================================
-    // REDUX
-    // =========================================================
+    const { id } = useParams();
 
-    const {
-        modal,
-    } = useSelector(
-        (state) => state.ui
+    // ID exists = Edit mode
+    const isEdit = Boolean(id);
+
+    const modalData = useSelector(
+        (state) => state.ui.modal?.data
+    );
+
+    const modalOpen = useSelector(
+        (state) => state.ui.modal?.open
     );
 
     const {
-        size,
-        loading,
-    } = useSelector(
-        (state) => state.size
-    );
+        loading = false,
+        actionLoading = false,
+    } = useSelector((state) => state.size ?? {});
 
-    // =========================================================
-    // AUTH
-    // =========================================================
+    const [formData, setFormData] = useState(initialFormData);
 
-    const user = useSelector(
-        (state) => state.auth?.user
-    );
+    const [saveMode, setSaveMode] = useState("close");
+    const [showSaveOptions, setShowSaveOptions] = useState(false);
 
-    const isAuthenticated = useSelector(
-        (state) =>
-            state.auth?.isAuthenticated === true
-    );
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
 
-    const authChecking = useSelector(
-        (state) =>
-            state.auth?.authChecking === true
-    );
+    /* =====================================================
+       FETCH SIZE FOR EDIT
+    ===================================================== */
 
-    // =========================================================
-    // USER PERMISSIONS
-    // =========================================================
+    useEffect(() => {
+        let isMounted = true;
 
-    const permissions = useSelector(
-        (state) =>
-            state.menuPermission?.userPermissions || []
-    );
+        const loadSize = async () => {
+            if (!isEdit) {
+                setFormData(initialFormData);
+                return;
+            }
 
-    const permissionLoading = useSelector(
-        (state) =>
-            state.menuPermission?.loading === true
-    );
+            try {
+                const response = await dispatch(
+                    fetchSizeById(id)
+                ).unwrap();
 
-    const permissionsLoaded = useSelector(
-        (state) =>
-            state.menuPermission
-                ?.userPermissionsLoaded === true
-    );
+                if (!isMounted) return;
 
-    // =========================================================
-    // ADD / EDIT MODE
-    // =========================================================
+                // Supports wrapped and unwrapped API responses
+                const size = response?.data ?? response;
 
-    const isEdit =
-        modal.type === "editSize";
+                if (!size) {
+                    toast.error("Size not found");
+                    return;
+                }
 
-    const isOpen =
-        modal.open &&
-        (
-            modal.type === "addSize" ||
-            modal.type === "editSize"
-        );
-
-    // =========================================================
-    // LOCAL STATE
-    // =========================================================
-
-    const [errors, setErrors] =
-        useState({});
-
-    const [activeTab, setActiveTab] =
-        useState("size");
-
-    // =========================================================
-    // FORM
-    // =========================================================
-
-    const form =
-        size || {
-            id: null,
-            sizeName: "",
-            sizeShortName: "",
-            sizeCode: "",
-            description: "",
-            status: "ACTIVE",
+                setFormData({
+                    sizeName: size.sizeName ?? "",
+                    sizeShortName: size.sizeShortName ?? "",
+                    description: size.description ?? "",
+                    status: size.status ?? "ACTIVE",
+                });
+            } catch (error) {
+                if (isMounted) {
+                    toast.error(
+                        typeof error === "string"
+                            ? error
+                            : "Failed to fetch size details"
+                    );
+                }
+            }
         };
 
-    // =========================================================
-    // NORMALIZE
-    // =========================================================
+        loadSize();
 
-    const normalizeModule = (
-        value
-    ) =>
-        String(value ?? "")
-            .trim()
-            .toLowerCase();
+        return () => {
+            isMounted = false;
+        };
+    }, [dispatch, id, isEdit]);
 
-    const normalizeAction = (
-        value
-    ) =>
-        String(value ?? "")
-            .trim()
-            .toUpperCase();
+    /* =====================================================
+       HANDLE FIELD CHANGE
+    ===================================================== */
 
-    // =========================================================
-    // ROLE
-    // =========================================================
+    const handleChange = (field, value) => {
+        setFormData((prev) => ({
+            ...prev,
+            [field]: value,
+        }));
+    };
 
-    const roleName =
-        user?.roleName ||
-        user?.role?.roleName ||
-        user?.role?.name ||
-        user?.role ||
-        user?.authority ||
-        "";
+    /* =====================================================
+       HANDLE CLOSE
+    ===================================================== */
 
-    const normalizedRole =
-        normalizeAction(roleName);
+    const handleClose = () => {
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+                return;
+            }
 
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
+            if (modalOpen) {
+                dispatch(closeModal());
+                return;
+            }
 
-    const isAdmin =
-        normalizedRole === "ADMIN";
+            navigate("/settings/sizes");
+        });
+    };
 
-    /*
-     * SUPER_ADMIN and ADMIN have full access.
-     */
-    const hasFullAccess =
-        isSuperAdmin || isAdmin;
+    /* =====================================================
+       VALIDATION
+    ===================================================== */
 
-    // =========================================================
-    // PERMISSION CHECK
-    // =========================================================
-
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
-
-        // -----------------------------------------------------
-        // FULL ACCESS
-        // -----------------------------------------------------
-
-        if (hasFullAccess) {
-            return true;
-        }
-
-        const requestedModule =
-            normalizeModule(
-                moduleName
-            );
-
-        const requestedAction =
-            normalizeAction(
-                actionName
-            );
-
-        if (
-            !Array.isArray(
-                permissions
-            )
-        ) {
+    const validateForm = () => {
+        if (!formData.sizeName.trim()) {
+            toast.error("Size name is required");
             return false;
         }
 
-        // -----------------------------------------------------
-        // FIND PERMISSION
-        // -----------------------------------------------------
-
-        return permissions.some(
-            (permission) => {
-
-                const permissionModule =
-                    normalizeModule(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name
-                    );
-
-                // -------------------------------------------------
-                // MODULE MUST MATCH
-                // -------------------------------------------------
-
-                if (
-                    permissionModule !==
-                    requestedModule
-                ) {
-                    return false;
-                }
-
-                // -------------------------------------------------
-                // INACTIVE PERMISSION
-                // -------------------------------------------------
-
-                if (
-                    permission?.active === false ||
-                    normalizeAction(
-                        permission?.status
-                    ) === "INACTIVE"
-                ) {
-                    return false;
-                }
-
-                // -------------------------------------------------
-                // GROUPED ACTIONS
-                // -------------------------------------------------
-
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
-
-                    const groupedPermission =
-                        permission.actions.some(
-                            (action) => {
-
-                                // String action
-                                if (
-                                    typeof action ===
-                                    "string"
-                                ) {
-
-                                    return (
-                                        normalizeAction(
-                                            action
-                                        ) ===
-                                        requestedAction
-                                    );
-                                }
-
-                                // Object action
-                                const actionName =
-                                    normalizeAction(
-                                        action?.actionName ||
-                                        action?.action?.actionName ||
-                                        action?.name
-                                    );
-
-                                const allowed =
-                                    action?.allowed === true ||
-                                    action?.allowed === "true";
-
-                                return (
-                                    actionName ===
-                                    requestedAction &&
-                                    allowed &&
-                                    action?.active !== false &&
-                                    normalizeAction(
-                                        action?.status
-                                    ) !== "INACTIVE"
-                                );
-                            }
-                        );
-
-                    if (
-                        groupedPermission
-                    ) {
-                        return true;
-                    }
-                }
-
-                // -------------------------------------------------
-                // DIRECT ACTION
-                // -------------------------------------------------
-
-                const permissionAction =
-                    normalizeAction(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name
-                    );
-
-                const allowed =
-                    permission?.allowed === true ||
-                    permission?.allowed === "true";
-
-                return (
-                    permissionAction ===
-                    requestedAction &&
-                    allowed
-                );
-            }
-        );
-    };
-
-    // =========================================================
-    // CREATE / EDIT PERMISSION
-    // =========================================================
-
-    const requiredAction =
-        isEdit
-            ? "EDIT"
-            : "CREATE";
-
-    const hasRequiredPermission =
-        hasPermission(
-            "Sizes",
-            requiredAction
-        );
-
-    // =========================================================
-    // LOAD PERMISSIONS IF NECESSARY
-    // =========================================================
-
-    useEffect(() => {
-
-        if (!isOpen) {
-            return;
+        if (!formData.sizeShortName.trim()) {
+            toast.error("Size short name is required");
+            return false;
         }
 
-        if (authChecking) {
-            return;
+        if (formData.sizeName.trim().length > 100) {
+            toast.error("Size name cannot exceed 100 characters");
+            return false;
         }
 
-        if (!isAuthenticated) {
-            return;
-        }
-
-        if (hasFullAccess) {
-            return;
-        }
-
-        if (
-            !permissionsLoaded &&
-            !permissionLoading
-        ) {
-
-            dispatch(
-                getUserPermission()
-            );
-        }
-
-    }, [
-        isOpen,
-        authChecking,
-        isAuthenticated,
-        hasFullAccess,
-        permissionsLoaded,
-        permissionLoading,
-        dispatch,
-    ]);
-
-    useEffect(() => {
-        if (
-            modal.open &&
-            modal.type === "addSize"
-        ) {
-            dispatch(
-                resetSizeForm()
-            );
-
-            dispatch(
-                setSizeField({
-                    field: "sizeName",
-                    value:
-                        modal.data?.initialValue ??
-                        modal.data?.sizeName ??
-                        "",
-                })
-            );
-
-            setErrors({});
-            setActiveTab("size");
-        }
-    }, [
-        modal.open,
-        modal.type,
-        modal.data,
-        dispatch,
-    ]);
-    // =========================================================
-    // LOAD EXISTING DATA FOR EDIT
-    // =========================================================
-
-    useEffect(() => {
-
-        if (
-            modal.open &&
-            modal.type === "editSize" &&
-            modal.data
-        ) {
-
-            const existingSize =
-                modal.data;
-
-            dispatch(
-                setSizeField({
-                    field: "id",
-                    value:
-                        existingSize.id ??
-                        null,
-                })
-            );
-
-            dispatch(
-                setSizeField({
-                    field: "sizeName",
-                    value:
-                        existingSize.sizeName ??
-                        "",
-                })
-            );
-
-            dispatch(
-                setSizeField({
-                    field: "sizeCode",
-                    value:
-                        existingSize.sizeCode ??
-                        "",
-                })
-            );
-
-            dispatch(
-                setSizeField({
-                    field: "description",
-                    value:
-                        existingSize.description ??
-                        "",
-                })
-            );
-
-            dispatch(
-                setSizeField({
-                    field: "status",
-                    value:
-                        existingSize.status ??
-                        "ACTIVE",
-                })
-            );
-        }
-
-    }, [
-        modal.open,
-        modal.type,
-        modal.data,
-        dispatch,
-    ]);
-
-    // =========================================================
-    // CHANGE FIELD
-    // =========================================================
-
-    const handleChange = (
-        field,
-        value
-    ) => {
-
-        dispatch(
-            setSizeField({
-                field,
-                value,
-            })
-        );
-
-        setErrors(
-            (previous) => {
-
-                if (!previous[field]) {
-                    return previous;
-                }
-
-                const updated = {
-                    ...previous,
-                };
-
-                delete updated[field];
-
-                return updated;
-            }
-        );
-    };
-
-    // =========================================================
-    // CLOSE MODAL
-    // =========================================================
-
-    const handleClose = () => {
-
-        dispatch(
-            closeModal()
-        );
-
-        dispatch(
-            resetSizeForm()
-        );
-
-        setErrors({});
-        setActiveTab("size");
-    };
-
-    // =========================================================
-    // ESCAPE KEY
-    // =========================================================
-
-    useEffect(() => {
-
-        if (!isOpen) {
-            return;
-        }
-
-        const handleEscape = (event) => {
-
-            if (
-                event.key === "Escape" &&
-                !loading
-            ) {
-                handleClose();
-            }
-        };
-
-        document.addEventListener(
-            "keydown",
-            handleEscape
-        );
-
-        return () => {
-
-            document.removeEventListener(
-                "keydown",
-                handleEscape
-            );
-        };
-
-    }, [
-        isOpen,
-        loading,
-    ]);
-
-    // =========================================================
-    // VALIDATION
-    // =========================================================
-
-    const validateSize = () => {
-
-        const newErrors = {};
-
-        if (
-            !String(
-                form.sizeName ?? ""
-            ).trim()
-        ) {
-
-            newErrors.sizeName =
-                "Size name is required";
-        }
-
-        if (
-            !String(
-                form.sizeShortName ?? ""
-            ).trim()
-        ) {
-
-            newErrors.sizeShortName =
-                "Size Short name is required";
-        }
-
-        setErrors(newErrors);
-
-        if (
-            newErrors.sizeName ||
-            newErrors.sizeCode
-        ) {
-
-            setActiveTab("size");
-
-            toast.error(
-                "Please complete Size Information"
-            );
-
+        if (formData.sizeShortName.trim().length > 20) {
+            toast.error("Size short name cannot exceed 20 characters");
             return false;
         }
 
         return true;
     };
 
-    // =========================================================
-    // SAVE
-    // CREATE / UPDATE
-    // =========================================================
+    /* =====================================================
+       RESET FORM
+    ===================================================== */
 
-    const handleSave = async (e) => {
+    const handleReset = () => {
+        if (isEdit) {
+            dispatch(fetchSizeById(id))
+                .unwrap()
+                .then((response) => {
+                    const size = response?.data ?? response;
 
+                    setFormData({
+                        sizeName: size?.sizeName ?? "",
+                        sizeShortName: size?.sizeShortName ?? "",
+                        description: size?.description ?? "",
+                        status: size?.status ?? "ACTIVE",
+                    });
+                })
+                .catch(() => {
+                    toast.error("Failed to reset size form");
+                });
+
+            return;
+        }
+
+        setFormData(initialFormData);
+        setSaveMode("close");
+        dispatch(resetSizeForm());
+    };
+
+    /* =====================================================
+       SAVE SIZE
+    ===================================================== */
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // -----------------------------------------------------
-        // AUTH CHECK
-        // -----------------------------------------------------
+        if (actionLoading || loading) return;
 
-        if (!isAuthenticated) {
+        if (!validateForm()) return;
 
-            toast.error(
-                "You are not authenticated."
-            );
-
-            return;
-        }
-
-        // -----------------------------------------------------
-        // PERMISSION LOADING CHECK
-        // -----------------------------------------------------
-
-        if (
-            !hasFullAccess &&
-            !permissionsLoaded
-        ) {
-
-            toast.error(
-                "Permissions are still loading. Please try again."
-            );
-
-            return;
-        }
-
-        // -----------------------------------------------------
-        // PERMISSION CHECK
-        // -----------------------------------------------------
-
-        if (!hasRequiredPermission) {
-
-            toast.error(
-                isEdit
-                    ? "You do not have permission to edit sizes."
-                    : "You do not have permission to create sizes."
-            );
-
-            return;
-        }
-
-        // -----------------------------------------------------
-        // VALIDATION
-        // -----------------------------------------------------
-
-        if (!validateSize()) {
-            return;
-        }
-
-        // -----------------------------------------------------
-        // PAYLOAD
-        // -----------------------------------------------------
-
+        // Matches the supplied backend request fields.
         const payload = {
-
-            sizeName:
-                String(
-                    form.sizeName ?? ""
-                ).trim(),
-
-            sizeShortName:
-                String(
-                    form.sizeShortName ?? ""
-                ).trim(),
-
-            // sizeCode:
-            //     String(
-            //         form.sizeCode ?? ""
-            //     ).trim(),
-
-            description:
-                String(
-                    form.description ?? ""
-                ).trim(),
-
-            status:
-                form.status ||
-                "ACTIVE",
+            sizeName: formData.sizeName.trim(),
+            sizeShortName: formData.sizeShortName.trim(),
+            description: formData.description.trim(),
         };
 
-        try {
+        // Status is included when updating an existing size.
+        if (isEdit) {
+            payload.status = formData.status;
+        }
 
-            // =================================================
-            // EDIT
-            // =================================================
+        try {
+            let response;
 
             if (isEdit) {
-
-                const sizeId =
-                    form.id ??
-                    modal.data?.id;
-
-                if (!sizeId) {
-
-                    toast.error(
-                        "Size ID is missing"
-                    );
-
-                    return;
-                }
-
-                await dispatch(
+                response = await dispatch(
                     updateSize({
-                        id: sizeId,
+                        id,
                         data: payload,
                     })
                 ).unwrap();
 
                 toast.success(
-                    "Size updated successfully"
+                    response?.message || "Size updated successfully"
                 );
 
+                navigate(-1);
+                return;
             }
 
-            // =================================================
-            // CREATE
-            // =================================================
+            response = await dispatch(
+                createSize(payload)
+            ).unwrap();
 
-            // else {
+            toast.success(
+                response?.message || "Size created successfully"
+            );
 
-            //     await dispatch(
-            //         createSize(
-            //             payload
-            //         )
-            //     ).unwrap();
+            // Refresh size data after creation.
+            dispatch(fetchAllSizes());
 
-            //     toast.success(
-            //         "Size created successfully"
-            //     );
-            // }
-
-            // =================================================
-            // CREATE
-            // =================================================
-
-            else {
-                const response = await dispatch(createSize(payload)).unwrap();
-
-                console.log("Complete Size API Response:", response);
-
-                const createdSize =
-                    response?.data?.data ??
-                    response?.data ??
-                    response?.result?.data ??
-                    response?.result ??
-                    response;
-
-                console.log("Extracted Created Size:", createdSize);
-
-                const createdSizeId =
-                    createdSize?.id ??
-                    createdSize?.sizeId;
-
-                console.log("Created Size ID:", createdSizeId);
-                console.log("Modal Data:", modal.data);
-
-                if (
-                    modal.data?.selectAfterCreate &&
-                    createdSizeId != null
-                ) {
-                    dispatch(
-                        setCreatedSizeSelection({
-                            item: {
-                                ...createdSize,
-                                id: createdSizeId,
-                            },
-                            targetField: modal.data.targetField,
-                            rowIndex: modal.data.rowIndex,
-                        })
-                    );
-
-                    console.log("Size selection dispatched successfully");
-                }
-
-                toast.success("Size created successfully");
-
-
+            // Save & New keeps the form open and clears its values.
+            if (saveMode === "new") {
+                setFormData(initialFormData);
+                setSaveMode("close");
+                dispatch(resetSizeForm());
+                return;
             }
 
-            // =================================================
-            // CLOSE + RESET
-            // =================================================
+            // Close modal when this component is rendered as a modal.
+            if (onClose) {
+                onClose();
+            } else if (modalOpen) {
+                dispatch(closeModal());
+            } else {
+                navigate("/settings/sizes");
+            }
 
-            dispatch(
-                closeModal()
-            );
-
-            dispatch(
-                resetSizeForm()
-            );
-
-            setErrors({});
-            setActiveTab("size");
-
+            dispatch(resetSizeForm());
         } catch (error) {
-
             console.error(
-                "Size save error:",
+                isEdit ? "Size update error:" : "Size creation error:",
                 error
             );
 
@@ -841,1068 +396,326 @@ export default function SizeCreate() {
                 typeof error === "string"
                     ? error
                     : error?.message ||
-                    error?.response?.data?.message ||
-                    (
-                        isEdit
-                            ? "Failed to update size"
-                            : "Failed to create size"
-                    )
+                    (isEdit
+                        ? "Failed to update size"
+                        : "Failed to create size")
             );
         }
     };
 
-    // =========================================================
-    // DO NOT RENDER
-    // =========================================================
+    /* =====================================================
+       ESCAPE KEY
+    ===================================================== */
 
-    if (!isOpen) {
-        return null;
-    }
+    useEffect(() => {
+        const handleEscape = (e) => {
+            if (e.key === "Escape") {
+                setShowSaveOptions(false);
+            }
+        };
 
-    // =========================================================
-    // AUTH CHECKING
-    // =========================================================
+        window.addEventListener("keydown", handleEscape);
 
-    if (authChecking) {
+        return () => {
+            window.removeEventListener("keydown", handleEscape);
+        };
+    }, []);
 
+    /* =====================================================
+       STATUS OPTIONS
+    ===================================================== */
+
+    const statusOptions = [
+        { label: "Active", value: "ACTIVE" },
+        { label: "Inactive", value: "INACTIVE" },
+    ];
+
+    /* =====================================================
+       RENDER
+    ===================================================== */
+
+    if (isEdit && loading) {
         return (
-            <div
-                className="
-                    w-[950px]
-                    max-w-[95vw]
-                    min-h-[300px]
-
-                    bg-white
-                    rounded-xl
-                    shadow-2xl
-
-                    flex
-                    items-center
-                    justify-center
-
-                    p-8
-                "
-            >
-
-                <div className="text-center">
-
-                    <div
-                        className="
-                            w-10
-                            h-10
-                            mx-auto
-                            mb-3
-
-                            border-2
-                            border-blue-200
-                            border-t-blue-600
-
-                            rounded-full
-                            animate-spin
-                        "
-                    />
-
-                    <p
-                        className="
-                            text-sm
-                            text-gray-500
-                        "
-                    >
-                        Checking authentication...
-                    </p>
-
+            <div className="flex h-full items-center justify-center bg-gray-50">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 size={20} className="animate-spin" />
+                    Loading size details...
                 </div>
-
             </div>
         );
     }
 
-    // =========================================================
-    // NOT AUTHENTICATED
-    // =========================================================
+    return (
+        <div className="flex h-full min-h-0 flex-col bg-gray-50 px-3.5 py-3">
 
-    if (!isAuthenticated) {
-        return null;
-    }
+            {/* HEADER */}
 
-    // =========================================================
-    // PERMISSION LOADING
-    // Same structure as Category / SubCategory
-    // =========================================================
+            <div className="mb-3 flex shrink-0 items-center justify-between rounded-xl border-b-[3px] border-[#B7E34A] bg-white px-5 py-4 shadow-sm">
 
-    if (
-        !hasFullAccess &&
-        (
-            permissionLoading ||
-            !permissionsLoaded
-        )
-    ) {
-
-        return (
-            <div
-                className="
-                    w-[950px]
-                    max-w-[95vw]
-                    min-h-[300px]
-
-                    bg-white
-                    rounded-xl
-                    shadow-2xl
-
-                    flex
-                    items-center
-                    justify-center
-
-                    p-8
-                "
-            >
-
-                <div className="text-center">
-
-                    <div
-                        className="
-                            w-10
-                            h-10
-                            mx-auto
-                            mb-3
-
-                            border-2
-                            border-blue-200
-                            border-t-blue-600
-
-                            rounded-full
-                            animate-spin
-                        "
-                    />
-
-                    <p
-                        className="
-                            text-sm
-                            font-medium
-                            text-gray-600
-                        "
-                    >
-                        Loading permissions...
-                    </p>
-
-                </div>
-
-            </div>
-        );
-    }
-
-    // =========================================================
-    // ACCESS DENIED
-    // Same open modal structure as Category / SubCategory
-    // =========================================================
-
-    if (!hasRequiredPermission) {
-
-        return (
-            <div
-                className="
-                    w-[950px]
-                    max-w-[95vw]
-                    min-h-[300px]
-
-                    bg-white
-                    rounded-xl
-                    shadow-2xl
-
-                    overflow-hidden
-
-                    flex
-                    flex-col
-                "
-            >
-
-                {/* =================================================
-                    HEADER
-                ================================================= */}
-
-                <div
-                    className="
-                        shrink-0
-                        h-[68px]
-
-                        flex
-                        items-center
-                        justify-between
-
-                        px-6
-
-                        border-b
-                        border-gray-200
-
-                        bg-white
-                    "
-                >
-
-                    <div className="flex items-center gap-3">
-
-                        <div
-                            className="
-                                w-9
-                                h-9
-                                rounded-lg
-
-                                bg-red-50
-
-                                flex
-                                items-center
-                                justify-center
-                            "
-                        >
-
-                            <Ruler
-                                size={20}
-                                className="text-red-500"
-                            />
-
-                        </div>
-
-                        <div>
-
-                            <h2
-                                className="
-                                    text-[17px]
-                                    font-semibold
-                                    text-gray-800
-                                "
-                            >
-                                Access Denied
-                            </h2>
-
-                            <p
-                                className="
-                                    text-xs
-                                    text-gray-500
-                                    mt-0.5
-                                "
-                            >
-                                Size access restricted
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                {/* =================================================
-                    ACCESS DENIED BODY
-                ================================================= */}
-
-                <div
-                    className="
-                        flex-1
-
-                        flex
-                        items-center
-                        justify-center
-
-                        px-6
-                        py-10
-                    "
-                >
-
-                    <div className="text-center">
-
-                        <div
-                            className="
-                                w-12
-                                h-12
-                                mx-auto
-                                mb-3
-
-                                rounded-full
-
-                                bg-red-50
-
-                                flex
-                                items-center
-                                justify-center
-                            "
-                        >
-
-                            <span
-                                className="
-                                    text-red-500
-                                    text-lg
-                                    font-semibold
-                                "
-                            >
-                                !
-                            </span>
-
-                        </div>
-
-                        <h2
-                            className="
-                                text-lg
-                                font-semibold
-                                text-gray-800
-                            "
-                        >
-                            Access Denied
-                        </h2>
-
-                        <p
-                            className="
-                                mt-1
-                                text-sm
-                                text-gray-500
-                            "
-                        >
-                            {isEdit
-                                ? "You do not have permission to edit sizes."
-                                : "You do not have permission to create sizes."
-                            }
-                        </p>
-
-                    </div>
-
-                </div>
-
-                {/* =================================================
-                    FOOTER
-                ================================================= */}
-
-                <div
-                    className="
-                        shrink-0
-                        h-[68px]
-
-                        flex
-                        items-center
-                        justify-end
-
-                        px-6
-
-                        border-t
-                        border-gray-200
-
-                        bg-white
-                    "
-                >
+                <div className="flex items-center gap-3">
 
                     <button
                         type="button"
                         onClick={handleClose}
                         className="
-                            h-10
-                            px-5
-
-                            rounded-md
-
-                            border
-                            border-gray-300
-
-                            text-sm
-                            font-medium
-                            text-gray-700
-
-                            bg-white
-
-                            hover:bg-gray-50
-
-                            transition
+                            flex h-9 w-9 items-center justify-center
+                            rounded-lg border border-gray-200
+                            text-gray-500 transition hover:bg-gray-100
                         "
+                        title="Go Back"
                     >
-                        Close
+                        <ArrowLeft size={18} />
                     </button>
 
-                </div>
-
-            </div>
-        );
-    }
-
-    // =========================================================
-    // TABS
-    // =========================================================
-
-    const tabs = [
-        {
-            id: "size",
-            label: "Size Information",
-        },
-        {
-            id: "settings",
-            label: "Settings",
-        },
-    ];
-
-    // =========================================================
-    // CLASSES
-    // =========================================================
-
-    const inputClass = `
-        w-full
-        h-11
-        px-3
-
-        border
-        border-gray-300
-        rounded-md
-
-        text-sm
-        text-gray-700
-
-        bg-white
-
-        outline-none
-        transition
-
-        focus:border-blue-500
-        focus:ring-1
-        focus:ring-blue-500
-
-        disabled:bg-gray-100
-        disabled:text-gray-500
-        disabled:cursor-not-allowed
-    `;
-
-    const labelClass = `
-        block
-        text-xs
-        font-medium
-        text-gray-500
-        mb-1.5
-    `;
-
-    const getLabelClass = (required = false) => `
-    block
-    text-xs
-    font-medium
-    ${required ? "text-red-500" : "text-gray-500"}
-    mb-1.5
-`;
-
-    // =========================================================
-    // UI
-    // =========================================================
-
-    return (
-        <div
-            className="
-                   w-full
-        min-w-0
-        max-h-[80vh]
-        bg-white
-        rounded-lg
-        overflow-hidden
-        flex
-        flex-col
-            "
-        >
-
-            {/* =================================================
-                HEADER
-            ================================================= */}
-
-            <div
-                className="
-                    shrink-0
-                    h-[68px]
-
-                    flex
-                    items-center
-                    justify-between
-
-                    px-6
-
-                    border-b
-                    border-lime-500
-
-                    bg-white
-                "
-            >
-
-                <div className="flex items-center gap-3">
-
-                    <div
-                        className="
-                            w-9
-                            h-9
-                            rounded-lg
-
-                            bg-blue-50
-
-                            flex
-                            items-center
-                            justify-center
-                        "
-                    >
-
-                        <Ruler
-                            size={20}
-                            className="text-blue-600"
-                        />
-
-                    </div>
-
                     <div>
-
-                        <h2
-                            className="
-                                text-[16px]
-                                font-semibold
-                                text-gray-500
-                            "
-                        >
-                            {isEdit
-                                ? "Edit Size"
-                                : "New Size"}
+                        <h2 className="text-base font-semibold text-gray-800">
+                            {isEdit ? "Edit Size" : "Create Size"}
                         </h2>
 
-                        <p
-                            className="
-                                text-xs
-                                text-gray-400
-                                mt-0.5
-                            "
-                        >
+                        <p className="mt-0.5 text-xs text-gray-400">
                             {isEdit
-                                ? "Update size information"
-                                : "Create a new size"}
+                                ? "Update your size information"
+                                : "Add a new size to your organization"}
                         </p>
-
                     </div>
 
                 </div>
 
-            </div>
+                <div className="hidden items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 sm:flex">
+                    <Ruler size={16} className="text-[#408DFB]" />
 
-            {/* =================================================
-                TABS
-            ================================================= */}
-
-            <div
-                className="
-                    shrink-0
-                    px-6
-
-                    border-b
-                    border-gray-200
-
-                    bg-white
-                "
-            >
-
-                <div
-                    className="
-                        flex
-                        items-center
-                        gap-8
-                        h-[52px]
-                    "
-                >
-
-                    {tabs.map((tab) => {
-
-                        const active =
-                            activeTab === tab.id;
-
-                        const hasError =
-                            tab.id === "size" &&
-                            (
-                                errors.sizeName ||
-                                errors.sizeCode
-                            );
-
-                        return (
-                            <button
-                                key={tab.id}
-                                type="button"
-                                onClick={() =>
-                                    setActiveTab(tab.id)
-                                }
-                                className={`
-                                    relative
-                                    h-full
-
-                                    text-sm
-                                    font-medium
-
-                                    transition
-
-                                    ${active
-                                        ? "text-gray-500"
-                                        : hasError
-                                            ? "text-red-500"
-                                            : "text-gray-400 hover:text-gray-600"
-                                    }
-                                `}
-                            >
-
-                                <span
-                                    className="
-                                        flex
-                                        items-center
-                                        gap-1.5
-                                    "
-                                >
-
-                                    {tab.label}
-
-                                    {hasError && (
-                                        <span
-                                            className="
-                                                w-1.5
-                                                h-1.5
-                                                rounded-full
-                                                bg-red-500
-                                            "
-                                        />
-                                    )}
-
-                                </span>
-
-                                {active && (
-                                    <span
-                                        className="
-                                            absolute
-                                            left-0
-                                            right-0
-                                            bottom-0
-
-                                            h-[2px]
-
-                                            bg-lime-500
-
-                                            rounded-t
-                                        "
-                                    />
-                                )}
-
-                            </button>
-                        );
-                    })}
-
+                    <span className="text-xs font-medium text-[#408DFB]">
+                        Size
+                    </span>
                 </div>
 
             </div>
 
-            {/* =================================================
-                FORM
-            ================================================= */}
+            {/* FORM */}
 
             <form
-                onSubmit={handleSave}
-                className="
-                    flex
-                    flex-col
-                    flex-1
-                    min-h-0
-                    overflow-hidden
-                "
+                onSubmit={handleSubmit}
+                className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-white shadow-sm"
             >
 
-                {/* =================================================
-                    SCROLL BODY
-                ================================================= */}
+                <div className="flex-1 overflow-y-auto p-5">
 
-                <div
-                    className="
-                        flex-1
-                        min-h-0
+                    {/* SIZE DETAILS */}
 
-                        overflow-y-auto
-                        overflow-x-hidden
+                    <section className="mb-7">
 
-                        px-7
-                        py-6
+                        <SectionHeading
+                            icon={Ruler}
+                            title="Size Details"
+                            description="Enter the basic size information"
+                        />
 
-                        bg-gray-50/50
-                    "
-                >
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-2">
 
-                    {/* =================================================
-                        SIZE INFORMATION
-                    ================================================= */}
-
-                    {activeTab === "size" && (
-
-                        <div>
-
-                            <div className="mb-6">
-
-                                <h3
-                                    className="
-                                        text-base
-                                        font-semibold
-                                        text-gray-500
-                                    "
-                                >
-                                    Size Information
-                                </h3>
-
-                                <p
-                                    className="
-                                        text-xs
-                                        text-gray-400
-                                        mt-1
-                                    "
-                                >
-                                    Configure the basic size information.
-                                </p>
-
-                            </div>
-
-                            <div
-                                className="
-                                    grid
-                                    grid-cols-2
-                                    gap-x-6
-                                    gap-y-5
-                                "
-                            >
-
-                                {/* SIZE NAME */}
-
-                                <div>
-
-                                    <label
-                                        className={getLabelClass(true)}
-                                    >
-                                        Size Name
-
-                                        <span
-                                            className="
-                                                text-red-500
-                                                ml-1
-                                            "
-                                        >
-                                            *
-                                        </span>
-
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        value={
-                                            form.sizeName ??
-                                            ""
-                                        }
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "sizeName",
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="Enter size name"
-                                        className={inputClass}
-                                        disabled={loading}
-                                    />
-
-                                    {errors.sizeName && (
-                                        <p
-                                            className="
-                                                text-xs
-                                                text-red-500
-                                                mt-1
-                                            "
-                                        >
-                                            {
-                                                errors.sizeName
-                                            }
-                                        </p>
-                                    )}
-
-                                </div>
-
-                                <div>
-
-                                    <label
-                                        className={getLabelClass(true)}
-                                    >
-                                        Size ShortName
-
-                                        <span
-                                            className="
-                                                text-red-500
-                                                ml-1
-                                            "
-                                        >
-                                            *
-                                        </span>
-
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        value={
-                                            form.sizeShortName ??
-                                            ""
-                                        }
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "sizeShortName",
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="Enter size short name"
-                                        className={inputClass}
-                                        disabled={loading}
-                                    />
-
-                                    {errors.sizeShortName && (
-                                        <p
-                                            className="
-                                                text-xs
-                                                text-red-500
-                                                mt-1
-                                            "
-                                        >
-                                            {
-                                                errors.sizeShortName
-                                            }
-                                        </p>
-                                    )}
-
-                                </div>
-
-                                {/* SIZE CODE */}
-
-
-
-                                {/* DESCRIPTION */}
-
-                                <div className="col-span-2">
-
-                                    <label
-                                        className={labelClass}
-                                    >
-                                        Description
-                                    </label>
-
-                                    <textarea
-                                        rows={5}
-                                        value={
-                                            form.description ??
-                                            ""
-                                        }
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "description",
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="Enter size description"
-                                        className="
-                                            w-full
-                                            h-[50px]
-                                            px-3
-                                            py-3
-
-                                            border
-                                            border-gray-300
-                                            rounded-md
-
-                                            text-sm
-                                            text-gray-700
-
-                                            bg-white
-
-                                            outline-none
-                                            resize-none
-                                            transition
-
-                                            focus:border-blue-500
-                                            focus:ring-1
-                                            focus:ring-blue-500
-
-                                            disabled:bg-gray-100
-                                            disabled:text-gray-500
-                                        "
-                                        disabled={loading}
-                                    />
-
-                                </div>
-
-                            </div>
-
-                        </div>
-                    )}
-
-                    {/* =================================================
-                        SETTINGS
-                    ================================================= */}
-
-                    {activeTab === "settings" && (
-
-                        <div>
-
-                            <div className="mb-6">
-
-                                <h3
-                                    className="
-                                        text-base
-                                        font-semibold
-                                        text-gray-500
-                                    "
-                                >
-                                    Size Settings
-                                </h3>
-
-                                <p
-                                    className="
-                                        text-xs
-                                        text-gray-400
-                                        mt-1
-                                    "
-                                >
-                                    Configure the size availability
-                                    and status.
-                                </p>
-
-                            </div>
-
-                            <div className="max-w-[460px]">
-
-                                <label
-                                    className={labelClass}
-                                >
-                                    Status
-                                </label>
-
-                                <CustomSelect
-                                    value={form.status || "ACTIVE"}
-                                    onChange={(value) =>
-                                        handleChange("status", value)
+                            <FormField label="Size Name" required>
+                                <TextInput
+                                    value={formData.sizeName}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "sizeName",
+                                            e.target.value
+                                        )
                                     }
-                                    options={[
-                                        { value: "ACTIVE", label: "ACTIVE" },
-                                        { value: "INACTIVE", label: "INACTIVE" },
-                                        { value: "DRAFT", label: "DRAFT" },
-                                    ]}
+                                    placeholder="Enter size name"
+                                    maxLength={100}
                                 />
+                            </FormField>
 
+                            <FormField label="Short Name" required>
+                                <TextInput
+                                    value={formData.sizeShortName}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "sizeShortName",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Enter short name (e.g. M, L, XL)"
+                                    maxLength={20}
+                                />
+                            </FormField>
 
-                            </div>
+                            {isEdit && (
+                                <FormField label="Status" required>
+                                    <CustomSelect
+                                        value={formData.status}
+                                        onChange={(value) =>
+                                            handleChange("status", value)
+                                        }
+                                        options={statusOptions}
+                                        placeholder="Select status"
+                                    />
+                                </FormField>
+                            )}
 
                         </div>
-                    )}
+
+                    </section>
+
+                    <div className="my-6 border-t border-gray-100" />
+
+                    {/* DESCRIPTION */}
+
+                    <section>
+
+                        <SectionHeading
+                            icon={AlignLeft}
+                            title="Description"
+                            description="Add additional information about this size"
+                        />
+
+                        <div className="grid grid-cols-1 gap-5">
+
+                            <FormField label="Description">
+                                <TextAreaField
+                                    value={formData.description}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "description",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Enter size description"
+                                    rows={4}
+                                />
+                            </FormField>
+
+                        </div>
+
+                    </section>
 
                 </div>
 
-                {/* =================================================
-                    FOOTER
-                ================================================= */}
+                {/* FOOTER */}
 
-                <div
-                    className="
-                        shrink-0
-                        h-[68px]
+                <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-100 bg-white px-5 py-3">
 
-                        flex
-                        items-center
-                        justify-between
-
-                        px-6
-
-                        border-t
-                        border-gray-200
-
-                        bg-white
-                    "
-                >
-
-                    <div
+                    <button
+                        type="button"
+                        onClick={handleClose}
+                        disabled={actionLoading}
                         className="
-                            text-xs
-                            text-gray-500
+                            rounded-lg border border-gray-200
+                            px-4 py-2 text-sm font-medium
+                            text-gray-600 transition hover:bg-gray-50
+                            disabled:opacity-50
                         "
                     >
+                        Cancel
+                    </button>
 
-                        <span className="text-red-500">
-                            *
-                        </span>
-
-                        {" "}Required fields
-
-                    </div>
-
-                    <div
-                        className="
-                            flex
-                            items-center
-                            gap-3
-                        "
-                    >
-
-                        {/* CANCEL */}
+                    <div className="flex items-center gap-2">
 
                         <button
                             type="button"
-                            onClick={handleClose}
-                            disabled={loading}
+                            onClick={handleReset}
+                            disabled={actionLoading || loading}
                             className="
-                                h-10
-                                px-5
-
-                                rounded-md
-
-                                border
-                                border-gray-300
-
-                                text-sm
-                                font-medium
-                                text-gray-700
-
-                                bg-white
-
-                                hover:bg-gray-50
-
-                                transition
-
+                                flex items-center gap-2 rounded-lg
+                                border border-gray-200 px-4 py-2
+                                text-sm font-medium text-gray-600
+                                transition hover:bg-gray-50
                                 disabled:opacity-50
-                                disabled:cursor-not-allowed
                             "
                         >
-                            Cancel
+                            <RotateCcw size={15} />
+                            Reset
                         </button>
-
-                        {/* SAVE */}
 
                         <button
                             type="submit"
-                            disabled={
-                                loading ||
-                                !hasRequiredPermission
-                            }
+                            disabled={actionLoading || loading}
+                            onClick={() => setSaveMode("close")}
                             className="
-                                h-10
-                                px-6
-
-                                rounded-md
-
-                                bg-blue-600
-
-                                text-white
-
-                                text-sm
-                                font-medium
-
-                                hover:bg-blue-700
-
-                                transition
-
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
+                                flex items-center gap-2 rounded-lg
+                                bg-[#408DFB] px-5 py-2 text-sm
+                                font-medium text-white transition
+                                hover:bg-blue-600 disabled:cursor-not-allowed
+                                disabled:opacity-60
                             "
                         >
+                            {actionLoading ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <Save size={16} />
+                            )}
 
-                            {loading
-                                ? isEdit
-                                    ? "Updating..."
-                                    : "Saving..."
+                            {actionLoading
+                                ? "Saving..."
                                 : isEdit
-                                    ? "Update Size"
-                                    : "Save Size"}
-
+                                    ? "Update"
+                                    : "Save"}
                         </button>
+
+                        {!isEdit && (
+                            <div className="relative">
+
+                                <button
+                                    type="button"
+                                    disabled={actionLoading}
+                                    onClick={() =>
+                                        setShowSaveOptions((prev) => !prev)
+                                    }
+                                    className="
+                                        flex h-9 items-center justify-center
+                                        rounded-lg border border-gray-200
+                                        px-2 text-gray-600 transition
+                                        hover:bg-gray-50 disabled:opacity-50
+                                    "
+                                >
+                                    <ChevronDown size={17} />
+                                </button>
+
+                                {showSaveOptions && (
+                                    <div className="
+                                        absolute bottom-11 right-0 z-20
+                                        w-44 overflow-hidden rounded-lg
+                                        border border-gray-100 bg-white
+                                        py-1 shadow-lg
+                                    ">
+
+                                        <button
+                                            type="submit"
+                                            onClick={() => {
+                                                setSaveMode("new");
+                                                setShowSaveOptions(false);
+                                            }}
+                                            className="
+                                                w-full px-4 py-2.5
+                                                text-left text-sm text-gray-600
+                                                transition hover:bg-blue-50
+                                                hover:text-[#408DFB]
+                                            "
+                                        >
+                                            Save & New
+                                        </button>
+
+                                        <button
+                                            type="submit"
+                                            onClick={() => {
+                                                setSaveMode("close");
+                                                setShowSaveOptions(false);
+                                            }}
+                                            className="
+                                                w-full px-4 py-2.5
+                                                text-left text-sm text-gray-600
+                                                transition hover:bg-blue-50
+                                                hover:text-[#408DFB]
+                                            "
+                                        >
+                                            Save & Close
+                                        </button>
+
+                                    </div>
+                                )}
+
+                            </div>
+                        )}
 
                     </div>
 
@@ -1910,6 +723,18 @@ export default function SizeCreate() {
 
             </form>
 
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave Size?"
+                message="Are you sure you want to leave this size page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
+
         </div>
     );
-}
+};
+
+export default SizeCreate;

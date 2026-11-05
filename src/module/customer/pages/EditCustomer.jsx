@@ -10,7 +10,7 @@ import store from "../../../redux/store";
 
 
 import {
-    loadCustomers,
+    fetchAllCustomers,
     addCustomer,
     editCustomer,
     removeCustomer,
@@ -404,7 +404,7 @@ export default function EditCustomer({ mode = "page",
             );
 
             await dispatch(
-                loadCustomers({
+                fetchAllCustomers({
                     page: 0,
                     size: 5,
                     search: "",

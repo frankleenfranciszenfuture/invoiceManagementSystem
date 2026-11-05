@@ -5,7 +5,7 @@ import { closeModal } from "../../ui/uiSlice";
 import toast from "react-hot-toast";
 
 import {
-    loadCustomers,
+    fetchAllCustomers,
     addCustomer,
     editCustomer,
 } from "../thunks/customerThunks"
@@ -644,7 +644,7 @@ export default function CreateCustomerModel() {
                 );
             }
 
-            await dispatch(loadCustomers({
+            await dispatch(fetchAllCustomers({
                 page: 0,
                 size: 10,
                 search: "",

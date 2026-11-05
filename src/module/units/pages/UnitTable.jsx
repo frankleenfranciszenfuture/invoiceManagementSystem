@@ -1,31 +1,88 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+
+import React, {
+    useCallback,
+    useMemo,
+} from "react";
+
+import {
+    useDispatch,
+    useSelector,
+} from "react-redux";
+
+import {
+    useNavigate,
+} from "react-router-dom";
+
+import {
+    Edit,
+    Trash2,
+    Scale,
+    Eye,
+    Hash,
+    Tag,
+} from "lucide-react";
+
+import toast from "react-hot-toast";
 
 import {
     fetchAllUnits,
     deleteUnit,
 } from "../thunks/unitThunks";
 
-import { setExsistingUnit } from "../../units/slices/unitSlice";
-import { openModal } from "../../ui/uiSlice";
-
 import {
-    ChevronDown,
-    Edit,
-    Trash2,
-    Scale,
-    Eye,
-} from "lucide-react";
+    setExsistingUnit,
+} from "../slices/unitSlice";
 
-import toast from "react-hot-toast";
 import Pagination from "../../../common/pagination/table/Pagination";
+import ToolTipText from "../../../common/toolTip/ToolTipText";
+
+const EMPTY_ARRAY = [];
+
+const AVATAR_COLORS = [
+    "bg-pink-500 text-white",
+    "bg-green-500 text-white",
+    "bg-blue-500 text-white",
+    "bg-purple-500 text-white",
+    "bg-orange-500 text-white",
+    "bg-cyan-500 text-white",
+    "bg-indigo-500 text-white",
+];
+
+const STATUS_COLORS = {
+    ACTIVE: "bg-green-100 text-green-700",
+    INACTIVE: "bg-gray-100 text-gray-700",
+    DRAFT: "bg-yellow-100 text-yellow-700",
+};
 
 export default function UnitTable({
-    units = [],
+    units,
+    fetchParams = {},
 }) {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+
+    /* =====================================================
+       REDUX STATE
+    ===================================================== */
+
+    const {
+        units: reduxUnits = EMPTY_ARRAY,
+        loading,
+        error,
+        pagination = {},
+    } = useSelector((state) => state.unit || {});
+
+    const {
+        pageNumber = 0,
+        pageSize = 20,
+        totalPages = 0,
+        totalElements = 0,
+    } = pagination;
+
+    const currentUnits = Array.isArray(units)
+        ? units
+        : reduxUnits;
+
     /* =====================================================
        AUTH STATE
     ===================================================== */
@@ -34,31 +91,8 @@ export default function UnitTable({
         (state) => state.auth?.user
     );
 
-    const [showEdit, setShowEdit] = useState(false);
-    const [showView, setShowView] = useState(false);
-
-
-    /* =====================================================
-       PERMISSION STATE
-    ===================================================== */
-
     const permissions = useSelector(
-        (state) =>
-            Array.isArray(
-                state.menuPermission?.userPermissions
-            )
-                ? state.menuPermission.userPermissions
-                : []
-    );
-
-    const permissionLoading = useSelector(
-        (state) =>
-            state.menuPermission?.userPermissionsLoading === true
-    );
-
-    const permissionsLoaded = useSelector(
-        (state) =>
-            state.menuPermission?.userPermissionsLoaded === true
+        (state) => state.menuPermission?.userPermissions || EMPTY_ARRAY
     );
 
     /* =====================================================
@@ -73,215 +107,156 @@ export default function UnitTable({
         user?.authority ||
         "";
 
-    const normalizedRole =
-        String(roleName)
-            .trim()
-            .toUpperCase();
-
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
-
-    const isAdmin =
-        normalizedRole === "ADMIN";
+    const normalizedRole = String(roleName).trim().toUpperCase();
 
     const hasFullAccess =
-        isSuperAdmin || isAdmin;
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
     /* =====================================================
        PERMISSION CHECK
     ===================================================== */
 
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
+            if (hasFullAccess) return true;
 
-        // SUPER_ADMIN / ADMIN
-        if (hasFullAccess) {
-            return true;
-        }
+            if (!Array.isArray(permissions)) return false;
 
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
-
-        const requestedModule =
-            String(moduleName)
+            const requestedModule = String(moduleName)
                 .trim()
                 .toLowerCase();
 
-        const requestedAction =
-            String(actionName)
+            const requestedAction = String(actionName)
                 .trim()
                 .toUpperCase();
 
-        return permissions.some(
-            (permission) => {
+            return permissions.some((permission) => {
+                const permissionModule = String(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                )
+                    .trim()
+                    .toLowerCase();
 
-                const permissionModule =
-                    String(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toLowerCase();
-
-                if (
-                    permissionModule !==
-                    requestedModule
-                ) {
+                if (permissionModule !== requestedModule) {
                     return false;
                 }
 
-                // Ignore inactive permission
-                if (
-                    permission?.active === false
-                ) {
+                if (permission?.active === false) {
                     return false;
                 }
 
                 if (
-                    String(
-                        permission?.status || ""
-                    )
-                        .trim()
-                        .toUpperCase() ===
+                    String(permission?.status || "").toUpperCase() ===
                     "INACTIVE"
                 ) {
                     return false;
                 }
 
-                /* =========================================
-                   GROUPED PERMISSION FORMAT
-                ========================================= */
-
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
-
-                    return permission.actions.some(
-                        (action) => {
-
-                            const permissionAction =
-                                String(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.action?.name ||
-                                    ""
-                                )
-                                    .trim()
-                                    .toUpperCase();
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
-
+                if (Array.isArray(permission?.actions)) {
+                    return permission.actions.some((action) => {
+                        if (typeof action === "string") {
                             return (
-                                permissionAction ===
-                                requestedAction &&
-                                allowed
+                                action.trim().toUpperCase() ===
+                                requestedAction
                             );
                         }
-                    );
+
+                        const permissionAction = String(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        )
+                            .trim()
+                            .toUpperCase();
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        if (action?.active === false) {
+                            return false;
+                        }
+
+                        if (
+                            String(action?.status || "").toUpperCase() ===
+                            "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
                 }
 
-                /* =========================================
-                   FLAT PERMISSION FORMAT
-                ========================================= */
-
-                const permissionAction =
-                    String(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toUpperCase();
+                const permissionAction = String(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
 
                 const allowed =
                     permission?.allowed === true ||
                     permission?.allowed === "true";
 
                 return (
-                    permissionAction ===
-                    requestedAction &&
+                    permissionAction === requestedAction &&
                     allowed
                 );
-            }
-        );
-    };
-
-    /* =====================================================
-       UNIT PERMISSIONS
-    ===================================================== */
-
-    const canEditUnit =
-        hasPermission(
-            "Units",
-            "EDIT"
-        );
-
-    const canDeleteUnit =
-        hasPermission(
-            "Units",
-            "DELETE"
-        );
-
-    const canPerformAction =
-        canEditUnit ||
-        canDeleteUnit;
-
-    /* =====================================================
-       REDUX STATE
-    ===================================================== */
-
-    const {
-        loading,
-        error,
-        pagination,
-    } = useSelector(
-        (state) => state.unit || {}
+            });
+        },
+        [hasFullAccess, permissions]
     );
 
-    const {
-        pageNumber = 0,
-        pageSize = 20,
-        totalPages = 0,
-        totalElements = 0,
-    } = pagination || {};
+    const canViewUnit = hasPermission("Units", "VIEW");
+    const canEditUnit = hasPermission("Units", "EDIT");
+    const canDeleteUnit = hasPermission("Units", "DELETE");
 
-    const currentUnits =
-        units || [];
+    /* =====================================================
+       FETCH PARAMS
+    ===================================================== */
+
+    const getFetchParams = useCallback(
+        (page, size) => ({
+            ...fetchParams,
+            page,
+            size,
+        }),
+        [fetchParams]
+    );
+
+    const refreshUnits = useCallback(
+        (page = pageNumber, size = pageSize) => {
+            dispatch(
+                fetchAllUnits(
+                    getFetchParams(page, size)
+                )
+            );
+        },
+        [
+            dispatch,
+            getFetchParams,
+            pageNumber,
+            pageSize,
+        ]
+    );
 
     /* =====================================================
        DELETE UNIT
     ===================================================== */
 
     const handleDelete = async (id) => {
-
-        // =================================================
-        // PERMISSION LOADING
-        // =================================================
-
-        if (
-            !hasFullAccess &&
-            !permissionsLoaded
-        ) {
-            toast.error(
-                "Permissions are still loading. Please try again."
-            );
-            return;
-        }
-
-        // =================================================
-        // DELETE PERMISSION
-        // =================================================
-
         if (!canDeleteUnit) {
             toast.error(
                 "You do not have permission to delete units."
@@ -289,37 +264,48 @@ export default function UnitTable({
             return;
         }
 
-        if (
-            !window.confirm(
-                "Delete this unit?"
-            )
-        ) {
+        if (!window.confirm("Delete this unit?")) {
             return;
         }
 
         try {
+            await dispatch(deleteUnit(id)).unwrap();
 
-            await dispatch(
-                deleteUnit(id)
-            ).unwrap();
+            toast.success("Unit deleted successfully");
 
-            toast.success(
-                "Unit deleted successfully"
-            );
+            const remainingItems = currentUnits.length - 1;
 
-            dispatch(
-                fetchAllUnits()
-            );
+            const nextPage =
+                remainingItems === 0 && pageNumber > 0
+                    ? pageNumber - 1
+                    : pageNumber;
+
+            refreshUnits(nextPage, pageSize);
 
         } catch (error) {
-
             toast.error(
                 typeof error === "string"
                     ? error
-                    : error?.message ||
-                    "Failed to delete unit"
+                    : error?.message || "Failed to delete unit"
             );
         }
+    };
+
+    /* =====================================================
+       VIEW UNIT
+    ===================================================== */
+
+    const handleView = (unit) => {
+        if (!canViewUnit) {
+            toast.error(
+                "You do not have permission to view units."
+            );
+            return;
+        }
+
+        dispatch(setExsistingUnit(unit));
+
+        navigate(`/settings/units/view/${unit.id}`);
     };
 
     /* =====================================================
@@ -327,25 +313,6 @@ export default function UnitTable({
     ===================================================== */
 
     const handleEdit = (unit) => {
-
-        // =================================================
-        // PERMISSION LOADING
-        // =================================================
-
-        if (
-            !hasFullAccess &&
-            !permissionsLoaded
-        ) {
-            toast.error(
-                "Permissions are still loading. Please try again."
-            );
-            return;
-        }
-
-        // =================================================
-        // EDIT PERMISSION
-        // =================================================
-
         if (!canEditUnit) {
             toast.error(
                 "You do not have permission to edit units."
@@ -353,190 +320,81 @@ export default function UnitTable({
             return;
         }
 
-        try {
+        dispatch(setExsistingUnit(unit));
 
-            dispatch(
-                openModal({
-                    type: "editUnit",
-                    data: unit,
-                })
-            );
-
-        } catch (error) {
-
-            toast.error(
-                "Failed to open unit"
-            );
-        }
+        navigate(`/settings/units/edit/${unit.id}`);
     };
 
     /* =====================================================
-       UNIT INITIALS
+       INITIALS
     ===================================================== */
 
-    const initials = (unitName = "") =>
-        unitName
-            .split(" ")
-            .filter(Boolean)
-            .map(
-                (word) => word[0]
-            )
-            .join("")
-            .slice(0, 2)
-            .toUpperCase() || "UN";
-
-    /* =====================================================
-       STATUS COLORS
-    ===================================================== */
-
-    const statusColor = {
-        ACTIVE:
-            "bg-green-100 text-green-700",
-
-        INACTIVE:
-            "bg-gray-100 text-gray-700",
-
-        DRAFT:
-            "bg-yellow-100 text-yellow-700",
-    };
-
-    /* =====================================================
-       SHORT NAME COLORS
-    ===================================================== */
-
-    const getShortNameColor = (
-        unitShortName
-    ) => {
-
-        if (!unitShortName) {
-            return "bg-gray-100 text-gray-700";
-        }
-
-        const value =
-            unitShortName
-                .trim()
-                .toUpperCase();
-
-        if (/\d/.test(value)) {
-            return "bg-blue-100 text-blue-700";
-        }
-
-        return "bg-purple-100 text-purple-700";
-    };
-
-    /* =====================================================
-       UNIT CODE COLORS
-    ===================================================== */
-
-    const getUniCode = (
-        unitCode
-    ) => {
-
-        if (!unitCode) {
-            return "bg-gray-100 text-gray-700";
-        }
-
-        const value =
-            unitCode
-                .trim()
-                .toUpperCase();
-
-        // Get the last part after "-"
-        const lastPart =
-            value
-                .split("-")
-                .pop();
-
-        // Last part is only numbers
-        if (/^\d+$/.test(lastPart)) {
-            return "bg-gray-100 text-orange-400";
-        }
-
-        // Last part contains letters
-        if (/^[A-Z]+$/.test(lastPart)) {
-            return "bg-gray-100 text-pink-400";
-        }
-
-        return "bg-gray-100 text-gray-700";
+    const initials = (name = "") => {
+        return (
+            String(name)
+                .split(" ")
+                .filter(Boolean)
+                .map((word) => word[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase() || "UN"
+        );
     };
 
     /* =====================================================
        AVATAR COLORS
     ===================================================== */
 
-    const avatarColors = [
-        "bg-pink-500 text-white",
-        "bg-green-500 text-white",
-        "bg-blue-500 text-white",
-        "bg-purple-500 text-white",
-        "bg-orange-500 text-white",
-        "bg-cyan-500 text-white",
-        "bg-indigo-500 text-white",
-    ];
+    const getAvatarColor = (name = "") => {
+        const index = String(name)
+            .split("")
+            .reduce(
+                (acc, char) => acc + char.charCodeAt(0),
+                0
+            ) % AVATAR_COLORS.length;
 
-    const getAvatarColor = (
-        name = ""
-    ) => {
-
-        const index =
-            name
-                .split("")
-                .reduce(
-                    (
-                        acc,
-                        char
-                    ) =>
-                        acc +
-                        char.charCodeAt(0),
-                    0
-                ) %
-            avatarColors.length;
-
-        return avatarColors[index];
+        return AVATAR_COLORS[index];
     };
 
     /* =====================================================
-       PERMISSION LOADING
+       SORTING
     ===================================================== */
 
-    if (
-        !hasFullAccess &&
-        (permissionLoading ||
-            !permissionsLoaded)
-    ) {
+    const sortedUnits = useMemo(
+        () => [...currentUnits],
+        [currentUnits]
+    );
+
+    /* =====================================================
+       LOADING
+    ===================================================== */
+
+    if (loading && !currentUnits.length) {
         return (
-            <div
-                className="
-                    flex
-                    items-center
-                    justify-center
-                    py-10
-                "
-            >
-                <p className="text-sm text-gray-500">
-                    Loading permissions...
+            <div className="flex items-center justify-center py-10">
+                <p className="text-gray-500">
+                    Loading units...
                 </p>
             </div>
         );
     }
 
     /* =====================================================
-       LOADING
+       ERROR
     ===================================================== */
 
-    if (loading) {
+    if (error && !currentUnits.length) {
         return (
-            <div
-                className="
-                    flex
-                    items-center
-                    justify-center
-                    py-10
-                "
-            >
-                <p className="text-gray-500">
-                    Loading units...
-                </p>
+            <div className="rounded-xl border border-red-200 bg-white p-8 text-center">
+                <p className="text-red-500">{error}</p>
+
+                <button
+                    type="button"
+                    onClick={() => refreshUnits()}
+                    className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+                >
+                    Retry
+                </button>
             </div>
         );
     }
@@ -547,25 +405,8 @@ export default function UnitTable({
 
     if (!currentUnits.length) {
         return (
-            <div
-                className="
-                    bg-white
-                    rounded-2xl
-                    border
-                    border-gray-200
-                    p-8
-                    text-center
-                "
-            >
-                <Scale
-                    className="
-                        mx-auto
-                        mb-3
-                        h-10
-                        w-10
-                        text-gray-300
-                    "
-                />
+            <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
+                <Scale className="mx-auto mb-3 h-10 w-10 text-gray-300" />
 
                 <p className="text-gray-500">
                     No units found.
@@ -579,405 +420,228 @@ export default function UnitTable({
     ===================================================== */
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
-            <div className="overflow-x-auto overflow-y-visible">
-                <table className="w-full">
-                    <thead className="bg-[#FAF9F7]/20 border-b border-gray-300">
-                        <tr>
-
-                            {[
-                                "UnitName",
-                                "UnitShortName",
-                                "UnitCode",
-                                "Description",
-                                "Status",
-                                "Actions",
-                            ].map((header) => (
-
-                                <th
-                                    key={header}
-                                    className={`
-                                    px-4
-                                    py-3
-                                    font-medium
-                                    text-md
-                                    text-gray-400
-                                    uppercase
+        <div className="overflow-x-auto overflow-y-visible rounded-xl border border-gray-200 bg-white">
+            <table className="w-full">
+                <thead className="border-b border-gray-300 bg-[#FAF9F7]/20">
+                    <tr>
+                        {[
+                            "Unit",
+                            "Short Name",
+                            "Unit Code",
+                            "Description",
+                            "Status",
+                            "Actions",
+                        ].map((header) => (
+                            <th
+                                key={header}
+                                className={`
+                                    px-5 py-3 text-md font-medium
+                                    uppercase text-gray-400
                                     ${header === "Actions"
-                                            ? "text-center"
-                                            : "text-left"
-                                        }
+                                        ? "text-right"
+                                        : "text-left"
+                                    }
                                 `}
-                                >
-                                    {header}
-                                </th>
+                            >
+                                {header}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
 
-                            ))}
+                <tbody>
+                    {sortedUnits.map((unit) => (
+                        <tr
+                            key={unit.id}
+                            className="
+                                cursor-pointer border-b border-gray-100
+                                text-xs transition-colors hover:bg-gray-50
+                            "
+                        >
+                            {/* UNIT */}
 
-                        </tr>
-
-                    </thead>
-
-                    {/* =================================================
-                        TABLE BODY
-                    ================================================= */}
-
-                    <tbody>
-
-                        {[...currentUnits]
-                            .sort(
-                                (a, b) =>
-                                    (a.id || 0) -
-                                    (b.id || 0)
-                            )
-                            .map(
-                                (
-                                    unit,
-                                    index
-                                ) => (
-
-                                    <tr
-                                        key={
-                                            unit.id ||
-                                            index
-                                        }
-                                        className="
-                                            border-b
-                                            border-gray-100
-                                            hover:bg-gray-50
-                                            text-sm
-                                            cursor-pointer
-                                            transition-colors
-                                        "
+                            <td className="overflow-hidden px-3 py-3">
+                                <div className="flex min-w-0 items-center gap-2">
+                                    <div
+                                        className={`
+                                            flex h-9 w-9 min-w-[36px]
+                                            items-center justify-center
+                                            rounded-full text-sm font-bold
+                                            ${getAvatarColor(unit.unitName)}
+                                        `}
                                     >
+                                        {initials(unit.unitName)}
+                                    </div>
 
-                                        {/* =================================
-                                            UNIT NAME
-                                        ================================= */}
+                                    <div className="min-w-0">
+                                        <p
+                                            className="truncate font-medium text-gray-800"
+                                            title={unit.unitName || ""}
+                                        >
+                                            {unit.unitName || "—"}
+                                        </p>
 
-                                        <td
+                                        <p className="text-xs text-gray-500">
+                                            ID: {unit.id ?? "—"}
+                                        </p>
+                                    </div>
+                                </div>
+                            </td>
+
+                            {/* SHORT NAME */}
+
+                            <td className="px-3 py-3">
+                                <div className="flex items-center gap-2 text-gray-700">
+                                    <Tag
+                                        size={14}
+                                        className="text-gray-400"
+                                    />
+
+                                    <span className="font-medium">
+                                        {unit.unitShortName || "—"}
+                                    </span>
+                                </div>
+                            </td>
+
+                            {/* UNIT CODE */}
+
+                            <td className="px-3 py-3">
+                                <div className="flex items-center gap-2 text-gray-700">
+                                    <Hash
+                                        size={14}
+                                        className="text-gray-400"
+                                    />
+
+                                    <span>
+                                        {unit.unitCode || "—"}
+                                    </span>
+                                </div>
+                            </td>
+
+                            {/* DESCRIPTION */}
+
+                            <td className="max-w-[250px] px-3 py-3">
+                                <p
+                                    className="truncate text-gray-700"
+                                    title={unit.description || ""}
+                                >
+                                    {unit.description || "—"}
+                                </p>
+                            </td>
+
+                            {/* STATUS */}
+
+                            <td className="px-3 py-3">
+                                <span
+                                    className={`
+                                        inline-block rounded-full px-2 py-1
+                                        text-xs font-medium
+                                        ${STATUS_COLORS[
+                                        String(unit.status || "").toUpperCase()
+                                        ] || "bg-gray-100 text-gray-700"}
+                                    `}
+                                >
+                                    {unit.status || "—"}
+                                </span>
+                            </td>
+
+                            {/* ACTIONS */}
+
+                            <td className="px-4 py-3">
+                                <div className="relative flex items-center justify-end gap-2">
+
+                                    {canViewUnit && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleView(unit);
+                                            }}
                                             className="
-                                                px-2
-                                                py-3
-                                                overflow-hidden
+                                                group relative flex h-8 w-8 items-center justify-center
+                                                rounded-lg bg-blue-50 text-blue-600
+                                                transition hover:bg-blue-100 hover:text-blue-700
                                             "
                                         >
-                                            <div
-                                                className="
-                                                    flex
-                                                    items-center
-                                                    gap-2
-                                                    min-w-0
-                                                "
-                                            >
+                                            <Eye size={16} />
 
-                                                {/* AVATAR */}
+                                            <ToolTipText
+                                                text="View"
+                                                position="bottom"
+                                            />
+                                        </button>
+                                    )}
 
-                                                <div
-                                                    className={`
-                                                        w-9
-                                                        h-9
-                                                        min-w-[36px]
-                                                        rounded-full
-                                                        flex
-                                                        items-center
-                                                        justify-center
-                                                        text-sm
-                                                        font-bold
-                                                        ${getAvatarColor(
-                                                        unit.unitName
-                                                    )}
-                                                    `}
-                                                >
-                                                    {initials(
-                                                        unit.unitName
-                                                    )}
-                                                </div>
-
-                                                {/* NAME */}
-
-                                                <div
-                                                    className="
-                                                        min-w-0
-                                                    "
-                                                >
-                                                    <p
-                                                        className="
-                                                            font-medium
-                                                            text-gray-800
-                                                            truncate
-                                                        "
-                                                        title={
-                                                            unit.unitName ||
-                                                            ""
-                                                        }
-                                                    >
-                                                        {unit.unitName ||
-                                                            "—"}
-                                                    </p>
-
-                                                    <p
-                                                        className="
-                                                            text-xs
-                                                            text-gray-500
-                                                        "
-                                                    >
-                                                        ID: #{unit.id}
-                                                    </p>
-                                                </div>
-
-                                            </div>
-                                        </td>
-
-                                        {/* =================================
-                                            UNIT SHORT NAME
-                                        ================================= */}
-
-                                        <td
+                                    {canEditUnit && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleEdit(unit);
+                                            }}
                                             className="
-                                                px-2
-                                                py-3
-                                                overflow-hidden
+                                                group relative flex h-8 w-8 items-center justify-center
+                                                rounded-lg bg-amber-50 text-amber-600
+                                                transition hover:bg-amber-100 hover:text-amber-700
                                             "
                                         >
-                                            <p
-                                                className={`
-                                                    truncate
-                                                    inline-block
-                                                    max-w-full
-                                                    px-2
-                                                    py-1
-                                                    rounded-md
-                                                    text-xs
-                                                    font-medium
-                                                    ${getShortNameColor(
-                                                    unit.unitShortName
-                                                )}
-                                                `}
-                                                title={
-                                                    unit.unitShortName ||
-                                                    ""
-                                                }
-                                            >
-                                                {unit.unitShortName ||
-                                                    "—"}
-                                            </p>
-                                        </td>
+                                            <Edit size={16} />
 
-                                        {/* =================================
-                                            UNIT CODE
-                                        ================================= */}
+                                            <ToolTipText
+                                                text="Edit"
+                                                position="bottom"
+                                            />
+                                        </button>
+                                    )}
 
-                                        <td
+                                    {canDeleteUnit && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDelete(unit.id);
+                                            }}
                                             className="
-                                                px-2
-                                                py-3
-                                                overflow-hidden
+                                                group relative flex h-8 w-8 items-center justify-center
+                                                rounded-lg bg-red-50 text-red-600
+                                                transition hover:bg-red-100 hover:text-red-700
                                             "
                                         >
-                                            <p
-                                                className={`
-                                                    truncate
-                                                    inline-block
-                                                    max-w-full
-                                                    px-2
-                                                    py-1
-                                                    rounded-md
-                                                    text-xs
-                                                    font-medium
-                                                    ${getUniCode(
-                                                    unit.unitCode
-                                                )}
-                                                `}
-                                                title={
-                                                    unit.unitCode ||
-                                                    ""
-                                                }
-                                            >
-                                                {unit.unitCode ||
-                                                    "—"}
-                                            </p>
-                                        </td>
+                                            <Trash2 size={16} />
 
-                                        {/* =================================
-                                            DESCRIPTION
-                                        ================================= */}
+                                            <ToolTipText
+                                                text="Delete"
+                                                position="bottom"
+                                            />
+                                        </button>
+                                    )}
 
-                                        <td
-                                            className="
-                                                px-2
-                                                py-3
-                                                overflow-hidden
-                                            "
-                                        >
-                                            <p
-                                                className="
-                                                    truncate
-                                                "
-                                                title={
-                                                    unit.description ||
-                                                    ""
-                                                }
-                                            >
-                                                {unit.description ||
-                                                    "—"}
-                                            </p>
-                                        </td>
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
 
-                                        {/* =================================
-                                            STATUS
-                                        ================================= */}
+            {/* PAGINATION */}
 
-                                        <td
-                                            className="
-                                                px-2
-                                                py-3
-                                                overflow-hidden
-                                            "
-                                        >
-                                            <span
-                                                className={`
-                                                    inline-block
-                                                    px-2
-                                                    py-1
-                                                    rounded-full
-                                                    text-xs
-                                                    font-medium
-                                                    ${statusColor[
-                                                    unit.status
-                                                    ] ||
-                                                    "bg-gray-100 text-gray-700"
-                                                    }
-                                                `}
-                                            >
-                                                {unit.status ||
-                                                    "—"}
-                                            </span>
-                                        </td>
-
-                                        {/* =================================
-                                            ACTIONS
-                                        ================================= */}
-
-                                        {/* Actions */}
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center justify-center gap-2">
-
-                                                {/* View */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setShowView(true);
-                                                        dispatch(setExsistingUnit(unit));
-                                                        navigate(`/settings/units/view/${unit.id}`);
-                                                    }}
-                                                    title="View"
-                                                    className="
-                                            flex h-8 w-8 items-center justify-center
-                                            rounded-lg
-                                            bg-blue-50
-                                            text-blue-600
-                                            transition
-                                            hover:bg-blue-100
-                                            hover:text-blue-700
-                                        "
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
-
-                                                {/* Edit */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-
-                                                        dispatch(setExsistingUnit(unit));
-                                                        dispatch(
-                                                            openModal({
-                                                                type: "editUnit",
-                                                                data: unit,
-                                                            })
-                                                        );
-                                                    }}
-                                                    title="Edit"
-                                                    className="
-                                                            flex h-8 w-8 items-center justify-center
-                                                            rounded-lg
-                                                            bg-amber-50
-                                                            text-amber-600
-                                                            transition
-                                                            hover:bg-amber-100
-                                                            hover:text-amber-700
-                                                        "
-                                                >
-                                                    <Edit size={16} />
-                                                </button>
-
-                                                {/* Delete */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-
-                                                        // Your delete confirmation logic
-                                                        handleDelete(product.id);
-                                                    }}
-                                                    title="Delete"
-                                                    className="
-                                                    flex h-8 w-8 items-center justify-center
-                                                    rounded-lg
-                                                    bg-red-50
-                                                    text-red-600
-                                                    transition
-                                                    hover:bg-red-100
-                                                    hover:text-red-700
-                                                "
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-
-                                            </div>
-                                        </td>
-                                    </tr>
-
-                                )
-                            )}
-
-                    </tbody>
-
-                </table>
-
-                {/* =====================================================
-                    PAGINATION
-                ===================================================== */}
-
-                <Pagination
-                    page={Number(pageNumber) || 0}
-                    size={Number(pageSize) || 10}
-                    totalElements={Number(totalElements) || 0}
-                    totalPages={Number(totalPages) || 0}
-                    loading={loading}
-                    label="units"
-                    onPageChange={(nextPage) => {
-                        dispatch(
-                            fetchAllUnits({
-                                page: nextPage,
-                                size: Number(pageSize) || 10,
-                            })
-                        );
-                    }}
-                    onPageSizeChange={(nextSize) => {
-                        dispatch(
-                            fetchAllUnits({
-                                page: 0,
-                                size: nextSize,
-                            })
-                        );
-                    }}
-                />
-
-            </div>
+            <Pagination
+                page={Number(pageNumber) || 0}
+                size={Number(pageSize) || 20}
+                totalElements={Number(totalElements) || 0}
+                totalPages={Number(totalPages) || 0}
+                loading={loading}
+                label="units"
+                onPageChange={(nextPage) => {
+                    refreshUnits(
+                        nextPage,
+                        Number(pageSize) || 20
+                    );
+                }}
+                onPageSizeChange={(nextSize) => {
+                    refreshUnits(0, nextSize);
+                }}
+            />
         </div>
     );
 }

@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import store from "../../../redux/store";
 
 import {
-    loadCustomers,
+    fetchAllCustomers,
     addCustomer,
     editCustomer,
     removeCustomer
@@ -515,7 +515,7 @@ export default function CreateCustomer({
             dispatch(resetSelectedCustomer());
 
             await dispatch(
-                loadCustomers({
+                fetchAllCustomers({
                     page: 0,
                     size: 5,
                     search: "",

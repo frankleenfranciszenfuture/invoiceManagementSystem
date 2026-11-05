@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
 
 import {
     useDispatch,
@@ -25,6 +25,13 @@ import {
 // ============================================================
 
 const EMPTY_ARRAY = [];
+
+const STATUS_LABELS = {
+    ALL: "All Products",
+    ACTIVE: "Active Products",
+    INACTIVE: "Inactive Products",
+    DRAFT: "Draft Products",
+};
 
 // ============================================================
 // STATUS CARDS
@@ -56,17 +63,6 @@ const STATUS_CARDS = [
         color: "gray",
     },
 ];
-
-// ============================================================
-// STATUS LABELS
-// ============================================================
-
-const STATUS_LABELS = {
-    ALL: "All Products",
-    ACTIVE: "Active Products",
-    INACTIVE: "Inactive Products",
-    DRAFT: "Draft Products",
-};
 
 // ============================================================
 // CARD STYLES
@@ -102,7 +98,6 @@ const CARD_STYLES = {
 export default function ProductOverview() {
 
     const dispatch = useDispatch();
-
     const navigate = useNavigate();
 
     // ========================================================
@@ -121,33 +116,9 @@ export default function ProductOverview() {
             state.productsView?.productsStatus || "ALL"
     );
 
-    // ========================================================
-    // STATUS SYNCHRONIZATION
-    // ========================================================
-
-    useEffect(() => {
-
-        const params = new URLSearchParams(
-            window.location.search
-        );
-
-        const urlStatus = (
-            params.get("productStatus") || "ALL"
-        ).trim().toUpperCase();
-
-        const status = STATUS_LABELS[urlStatus]
-            ? urlStatus
-            : "ALL";
-
-        dispatch(setProductsStatus(status));
-
-        dispatch(
-            setSelectedProductsView(
-                STATUS_LABELS[status]
-            )
-        );
-
-    }, [dispatch]);
+    const pagination = useSelector(
+        (state) => state.product?.pagination
+    );
 
     // ========================================================
     // STATISTICS
@@ -156,7 +127,7 @@ export default function ProductOverview() {
     const statistics = useMemo(() => {
 
         const result = {
-            ALL: products.length,
+            ALL: 0,
             ACTIVE: 0,
             INACTIVE: 0,
             DRAFT: 0,
@@ -166,9 +137,7 @@ export default function ProductOverview() {
 
             const status = String(
                 product?.status || ""
-            )
-                .trim()
-                .toUpperCase();
+            ).trim().toUpperCase();
 
             if (
                 Object.prototype.hasOwnProperty.call(
@@ -178,6 +147,8 @@ export default function ProductOverview() {
             ) {
                 result[status] += 1;
             }
+
+            result.ALL += 1;
         });
 
         return result;
@@ -190,10 +161,11 @@ export default function ProductOverview() {
 
     const handleStatusChange = (status) => {
 
-        if (
-            !STATUS_LABELS[status] ||
-            status === selectedStatus
-        ) {
+        if (!STATUS_LABELS[status]) {
+            return;
+        }
+
+        if (status === selectedStatus) {
             return;
         }
 
@@ -206,8 +178,7 @@ export default function ProductOverview() {
         );
 
         navigate(
-            `/products?productStatus=${status}`,
-            { replace: false }
+            `/items?productStatus=${status}`
         );
     };
 
@@ -344,7 +315,7 @@ export default function ProductOverview() {
                 </p>
 
                 <p className="text-xs text-gray-400">
-                    {products.length} total records
+                    {pagination?.totalElements ?? products.length} total records
                 </p>
 
             </div>

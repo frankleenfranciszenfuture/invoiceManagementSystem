@@ -64,10 +64,18 @@ export const settings = [
     group: "organization",
     items: [
       { label: "Products", path: "/items", component: ComingSoon },
-      { label: "Categories", path: "/categories", component: ComingSoon },
-      { label: "SubCategories", path: "/subCategoires", component: ComingSoon },
-      { label: "Sizes", path: "/sizes", component: ComingSoon },
-      { label: "Units", path: "/units", component: ComingSoon },
+      {
+        label: "Categories",
+        path: "/settings/categories",
+        component: ComingSoon,
+      },
+      {
+        label: "SubCategories",
+        path: "/settings/subCategoires",
+        component: ComingSoon,
+      },
+      { label: "Sizes", path: "/settings/sizes", component: ComingSoon },
+      { label: "Units", path: "/settings/units", component: ComingSoon },
     ],
   },
   {

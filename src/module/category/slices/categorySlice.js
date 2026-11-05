@@ -12,7 +12,7 @@ import {
 
 /* =========================================================
    EMPTY CATEGORY FORM
-   ========================================================= */
+========================================================= */
 
 const emptyCategory = {
   id: null,
@@ -24,13 +24,24 @@ const emptyCategory = {
 };
 
 /* =========================================================
+   EMPTY PAGINATION
+========================================================= */
+
+const emptyPagination = {
+  pageNumber: 0,
+  pageSize: 20,
+  totalElements: 0,
+  totalPages: 0,
+  last: true,
+};
+
+/* =========================================================
    INITIAL STATE
-   ========================================================= */
+========================================================= */
 
 const initialState = {
   categories: [],
 
-  // Keep form initialized instead of null
   category: {
     ...emptyCategory,
   },
@@ -39,29 +50,73 @@ const initialState = {
   createdCategorySelection: null,
 
   pagination: {
-    pageNumber: 0,
-    pageSize: 20,
-    totalElements: 0,
-    totalPages: 0,
-    last: true,
+    ...emptyPagination,
   },
 
   loading: false,
-
   success: false,
-
   error: null,
-
   message: "",
 
   selectedCategoryView: null,
-
   categoryStatus: "ACTIVE",
 };
 
 /* =========================================================
+   HELPERS
+========================================================= */
+
+const getErrorStatus = (action) => {
+  return (
+    action.payload?.status ||
+    action.payload?.response?.status ||
+    action.error?.status
+  );
+};
+
+const setEmptyCategoryResults = (state) => {
+  state.categories = [];
+
+  state.pagination = {
+    ...emptyPagination,
+  };
+};
+
+const setCategoryPage = (state, data) => {
+  if (data && Array.isArray(data.content)) {
+    state.categories = data.content;
+
+    state.pagination = {
+      pageNumber: data.pageNumber ?? 0,
+      pageSize: data.pageSize ?? 20,
+      totalElements: data.totalElements ?? 0,
+      totalPages: data.totalPages ?? 0,
+      last: data.last ?? true,
+    };
+
+    return;
+  }
+
+  if (Array.isArray(data)) {
+    state.categories = data;
+
+    state.pagination = {
+      pageNumber: 0,
+      pageSize: data.length || 20,
+      totalElements: data.length,
+      totalPages: data.length > 0 ? 1 : 0,
+      last: true,
+    };
+
+    return;
+  }
+
+  setEmptyCategoryResults(state);
+};
+
+/* =========================================================
    SLICE
-   ========================================================= */
+========================================================= */
 
 const categorySlice = createSlice({
   name: "category",
@@ -69,9 +124,9 @@ const categorySlice = createSlice({
   initialState,
 
   reducers: {
-    /* =====================================================
-       SET EXISTING CATEGORY
-       ===================================================== */
+    /* =================================================
+           SET EXISTING CATEGORY
+        ================================================= */
 
     setExsistingCategory: (state, action) => {
       state.exsistingCategory = action.payload;
@@ -81,9 +136,9 @@ const categorySlice = createSlice({
       state.error = null;
     },
 
-    /* =====================================================
-       CLEAR CATEGORY STATE
-       ===================================================== */
+    /* =================================================
+           CLEAR CATEGORY STATE
+        ================================================= */
 
     clearCategoryState: (state) => {
       state.categories = [];
@@ -95,11 +150,7 @@ const categorySlice = createSlice({
       state.exsistingCategory = null;
 
       state.pagination = {
-        pageNumber: 0,
-        pageSize: 20,
-        totalElements: 0,
-        totalPages: 0,
-        last: true,
+        ...emptyPagination,
       };
 
       state.loading = false;
@@ -119,9 +170,9 @@ const categorySlice = createSlice({
       state.createdCategorySelection = null;
     },
 
-    /* =====================================================
-       CLEAR SELECTED CATEGORY
-       ===================================================== */
+    /* =================================================
+           CLEAR SELECTED CATEGORY
+        ================================================= */
 
     clearSelectedCategory: (state) => {
       state.category = {
@@ -131,9 +182,9 @@ const categorySlice = createSlice({
       state.exsistingCategory = null;
     },
 
-    /* =====================================================
-       RESET CATEGORY FORM
-       ===================================================== */
+    /* =================================================
+           RESET CATEGORY FORM
+        ================================================= */
 
     resetCategoryForm: (state) => {
       state.category = {
@@ -143,9 +194,9 @@ const categorySlice = createSlice({
       state.exsistingCategory = null;
     },
 
-    /* =====================================================
-       SET CATEGORY FORM FIELD
-       ===================================================== */
+    /* =================================================
+           SET CATEGORY FORM FIELD
+        ================================================= */
 
     setCategoryField: (state, action) => {
       const { field, value } = action.payload;
@@ -156,38 +207,40 @@ const categorySlice = createSlice({
       };
     },
 
-    /* =====================================================
-       SET SELECTED CATEGORY VIEW
-       ===================================================== */
+    /* =================================================
+           SET SELECTED CATEGORY VIEW
+        ================================================= */
 
     setSelectedCategoryView: (state, action) => {
       state.selectedCategoryView = action.payload;
     },
 
-    /* =====================================================
-       SET CATEGORY STATUS
-       ===================================================== */
+    /* =================================================
+           SET CATEGORY STATUS
+        ================================================= */
 
     setCategoryStatus: (state, action) => {
       state.categoryStatus = action.payload;
     },
   },
 
-  /* =======================================================
-     EXTRA REDUCERS
-     ======================================================= */
+  /* =====================================================
+       EXTRA REDUCERS
+    ===================================================== */
 
   extraReducers: (builder) => {
-    /* =====================================================
-       FETCH ALL CATEGORIES
-       ===================================================== */
+    /* =================================================
+           FETCH ALL CATEGORIES
+        ================================================= */
 
     builder
-
       .addCase(fetchAllCategories.pending, (state) => {
         state.loading = true;
         state.error = null;
         state.success = false;
+
+        // Remove records belonging to the previous status.
+        setEmptyCategoryResults(state);
       })
 
       .addCase(fetchAllCategories.fulfilled, (state, action) => {
@@ -198,15 +251,7 @@ const categorySlice = createSlice({
         const response = action.payload;
         const data = response?.data;
 
-        state.categories = data?.content || [];
-
-        state.pagination = {
-          pageNumber: data?.pageNumber ?? 0,
-          pageSize: data?.pageSize ?? 20,
-          totalElements: data?.totalElements ?? 0,
-          totalPages: data?.totalPages ?? 0,
-          last: data?.last ?? true,
-        };
+        setCategoryPage(state, data);
 
         state.message = response?.message || "";
       })
@@ -215,17 +260,29 @@ const categorySlice = createSlice({
         state.loading = false;
         state.success = false;
 
-        state.error = action.payload || "Failed to fetch categories.";
+        if (getErrorStatus(action) === 404) {
+          setEmptyCategoryResults(state);
+          state.error = null;
+          state.message = "";
+          return;
+        }
+
+        setEmptyCategoryResults(state);
+
+        state.error =
+          action.payload?.message ||
+          action.payload ||
+          action.error?.message ||
+          "Failed to fetch categories.";
 
         state.message = "";
       });
 
-    /* =====================================================
-       FETCH CATEGORY BY ID
-       ===================================================== */
+    /* =================================================
+           FETCH CATEGORY BY ID
+        ================================================= */
 
     builder
-
       .addCase(fetchCategoryById.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -249,17 +306,19 @@ const categorySlice = createSlice({
         state.loading = false;
         state.success = false;
 
-        state.error = action.payload || "Failed to fetch category.";
+        state.error =
+          action.payload?.message ||
+          action.payload ||
+          "Failed to fetch category.";
 
         state.message = "";
       });
 
-    /* =====================================================
-       CREATE CATEGORY
-       ===================================================== */
+    /* =================================================
+           CREATE CATEGORY
+        ================================================= */
 
     builder
-
       .addCase(createCategory.pending, (state) => {
         state.loading = true;
         state.success = false;
@@ -279,7 +338,6 @@ const categorySlice = createSlice({
 
         if (newCategory) {
           state.category = newCategory;
-
           state.exsistingCategory = newCategory;
 
           state.categories.push(newCategory);
@@ -293,17 +351,18 @@ const categorySlice = createSlice({
         state.success = false;
 
         state.error =
-          action.payload || "Something went wrong while creating category.";
+          action.payload?.message ||
+          action.payload ||
+          "Something went wrong while creating category.";
 
         state.message = "";
       });
 
-    /* =====================================================
-       UPDATE CATEGORY
-       ===================================================== */
+    /* =================================================
+           UPDATE CATEGORY
+        ================================================= */
 
     builder
-
       .addCase(updateCategory.pending, (state) => {
         state.loading = true;
         state.success = false;
@@ -322,7 +381,6 @@ const categorySlice = createSlice({
 
         if (updatedCategory) {
           state.category = updatedCategory;
-
           state.exsistingCategory = updatedCategory;
 
           const index = state.categories.findIndex(
@@ -340,17 +398,18 @@ const categorySlice = createSlice({
         state.success = false;
 
         state.error =
-          action.payload || "Something went wrong while updating category.";
+          action.payload?.message ||
+          action.payload ||
+          "Something went wrong while updating category.";
 
         state.message = "";
       });
 
-    /* =====================================================
-       DELETE CATEGORY
-       ===================================================== */
+    /* =================================================
+           DELETE CATEGORY
+        ================================================= */
 
     builder
-
       .addCase(deleteCategory.pending, (state) => {
         state.loading = true;
         state.success = false;
@@ -364,11 +423,6 @@ const categorySlice = createSlice({
 
         state.message =
           action.payload?.message || "Category deleted successfully.";
-
-        /*
-         * Thunk receives ID directly.
-         * action.meta.arg contains deleted ID.
-         */
 
         const deletedId = action.meta.arg;
 
@@ -396,17 +450,18 @@ const categorySlice = createSlice({
         state.success = false;
 
         state.error =
-          action.payload || "Something went wrong while deleting category.";
+          action.payload?.message ||
+          action.payload ||
+          "Something went wrong while deleting category.";
 
         state.message = "";
       });
 
-    /* =====================================================
-       REACTIVATE CATEGORY
-       ===================================================== */
+    /* =================================================
+           REACTIVATE CATEGORY
+        ================================================= */
 
     builder
-
       .addCase(reactivateCategory.pending, (state) => {
         state.loading = true;
         state.success = false;
@@ -425,7 +480,6 @@ const categorySlice = createSlice({
 
         if (reactivatedCategory) {
           state.category = reactivatedCategory;
-
           state.exsistingCategory = reactivatedCategory;
 
           const index = state.categories.findIndex(
@@ -447,21 +501,24 @@ const categorySlice = createSlice({
         state.success = false;
 
         state.error =
-          action.payload || "Something went wrong while reactivating category.";
+          action.payload?.message ||
+          action.payload ||
+          "Something went wrong while reactivating category.";
 
         state.message = "";
       });
 
-    /* =====================================================
-       FETCH CATEGORIES BY STATUS
-       ===================================================== */
+    /* =================================================
+           FETCH CATEGORIES BY STATUS
+        ================================================= */
 
     builder
-
       .addCase(fetchCategoriesByStatus.pending, (state) => {
         state.loading = true;
         state.error = null;
         state.success = false;
+
+        setEmptyCategoryResults(state);
       })
 
       .addCase(fetchCategoriesByStatus.fulfilled, (state, action) => {
@@ -472,49 +529,7 @@ const categorySlice = createSlice({
         const response = action.payload;
         const data = response?.data;
 
-        /*
-         * PAGINATED RESPONSE
-         */
-
-        if (data && Array.isArray(data.content)) {
-          state.categories = data.content;
-
-          state.pagination = {
-            pageNumber: data?.pageNumber ?? 0,
-            pageSize: data?.pageSize ?? 20,
-            totalElements: data?.totalElements ?? 0,
-            totalPages: data?.totalPages ?? 0,
-            last: data?.last ?? true,
-          };
-        } else if (Array.isArray(data)) {
-          /*
-           * DIRECT ARRAY RESPONSE
-           */
-
-          state.categories = data;
-
-          state.pagination = {
-            pageNumber: 0,
-            pageSize: data.length || 20,
-            totalElements: data.length,
-            totalPages: data.length > 0 ? 1 : 0,
-            last: true,
-          };
-        } else {
-          /*
-           * EMPTY / UNKNOWN RESPONSE
-           */
-
-          state.categories = [];
-
-          state.pagination = {
-            pageNumber: 0,
-            pageSize: 20,
-            totalElements: 0,
-            totalPages: 0,
-            last: true,
-          };
-        }
+        setCategoryPage(state, data);
 
         state.message = response?.message || "";
       })
@@ -523,7 +538,20 @@ const categorySlice = createSlice({
         state.loading = false;
         state.success = false;
 
-        state.error = action.payload || "Failed to fetch categories by status.";
+        if (getErrorStatus(action) === 404) {
+          setEmptyCategoryResults(state);
+          state.error = null;
+          state.message = "";
+          return;
+        }
+
+        setEmptyCategoryResults(state);
+
+        state.error =
+          action.payload?.message ||
+          action.payload ||
+          action.error?.message ||
+          "Failed to fetch categories by status.";
 
         state.message = "";
       });
@@ -532,7 +560,7 @@ const categorySlice = createSlice({
 
 /* =========================================================
    ACTIONS
-   ========================================================= */
+========================================================= */
 
 export const {
   setExsistingCategory,
@@ -549,6 +577,6 @@ export const {
 
 /* =========================================================
    REDUCER
-   ========================================================= */
+========================================================= */
 
 export default categorySlice.reducer;

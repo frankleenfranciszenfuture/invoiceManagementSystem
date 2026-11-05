@@ -1,33 +1,56 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../../api/api";
 
-/**
- * Fetch all sub categories
- */
+/* =========================================================
+   ERROR HELPER
+========================================================= */
+
+const getErrorPayload = (error) => ({
+  status: error?.response?.status ?? null,
+  message:
+    error?.response?.data?.message || error?.message || "Something went wrong.",
+});
+
+/* =========================================================
+   FETCH ALL / FILTERED SUB CATEGORIES
+========================================================= */
+
 export const fetchAllSubCategories = createAsyncThunk(
   "subCategory/fetchSubCategories",
-  async (_, { rejectWithValue }) => {
+  async ({ status = "ALL", page = 0, size = 20 } = {}, { rejectWithValue }) => {
     try {
-      const res = await api.get("/sub-categories");
+      const params = {
+        page,
+        size,
+      };
 
-      console.log("Sub Categories:", res.data);
+      const normalizedStatus = String(status || "ALL")
+        .trim()
+        .toUpperCase();
+
+      const url =
+        normalizedStatus === "ALL"
+          ? "/sub-categories"
+          : `/sub-categories/status/${normalizedStatus}`;
+
+      const res = await api.get(url, { params });
 
       return res.data;
     } catch (error) {
-      return rejectWithValue(error?.response?.data?.message || error.message);
+      return rejectWithValue(getErrorPayload(error));
     }
   },
 );
 
-/**
- * Fetch sub category by ID
- */
+/* =========================================================
+   FETCH SUB CATEGORY BY ID
+========================================================= */
+
 export const fetchSubCategoryById = createAsyncThunk(
   "subCategory/fetchSubCategory",
   async (id, { rejectWithValue }) => {
     try {
       const res = await api.get(`/sub-categories/${id}`);
-
       return res.data;
     } catch (error) {
       return rejectWithValue(error?.response?.data?.message || error.message);
@@ -35,15 +58,15 @@ export const fetchSubCategoryById = createAsyncThunk(
   },
 );
 
-/**
- * Create sub category
- */
+/* =========================================================
+   CREATE SUB CATEGORY
+========================================================= */
+
 export const createSubCategory = createAsyncThunk(
   "subCategory/createSubCategory",
   async (data, { rejectWithValue }) => {
     try {
       const res = await api.post("/sub-categories", data);
-
       return res.data;
     } catch (error) {
       return rejectWithValue(error?.response?.data?.message || error.message);
@@ -51,15 +74,15 @@ export const createSubCategory = createAsyncThunk(
   },
 );
 
-/**
- * Update sub category
- */
+/* =========================================================
+   UPDATE SUB CATEGORY
+========================================================= */
+
 export const updateSubCategory = createAsyncThunk(
   "subCategory/updateSubCategory",
   async ({ id, data }, { rejectWithValue }) => {
     try {
       const res = await api.put(`/sub-categories/${id}`, data);
-
       return res.data;
     } catch (error) {
       return rejectWithValue(error?.response?.data?.message || error.message);
@@ -67,15 +90,15 @@ export const updateSubCategory = createAsyncThunk(
   },
 );
 
-/**
- * Delete sub category
- */
+/* =========================================================
+   DELETE SUB CATEGORY
+========================================================= */
+
 export const deleteSubCategory = createAsyncThunk(
   "subCategory/deleteSubCategory",
   async (id, { rejectWithValue }) => {
     try {
       const res = await api.delete(`/sub-categories/${id}`);
-
       return res.data;
     } catch (error) {
       return rejectWithValue(error?.response?.data?.message || error.message);
@@ -83,9 +106,10 @@ export const deleteSubCategory = createAsyncThunk(
   },
 );
 
-/**
- * Reactivate sub category
- */
+/* =========================================================
+   REACTIVATE SUB CATEGORY
+========================================================= */
+
 export const reactivateSubCategory = createAsyncThunk(
   "subCategory/reactivateSubCategory",
   async (id, { rejectWithValue }) => {
@@ -99,18 +123,33 @@ export const reactivateSubCategory = createAsyncThunk(
   },
 );
 
-/**
- * Fetch sub categories by status
- */
+/* =========================================================
+   FETCH SUB CATEGORIES BY STATUS
+========================================================= */
+
 export const fetchSubCategoriesByStatus = createAsyncThunk(
   "subCategory/fetchByStatus",
-  async (status, { rejectWithValue }) => {
+  async ({ status, page = 0, size = 20 }, { rejectWithValue }) => {
     try {
-      const res = await api.get(`/sub-categories/status/${status}`);
+      const normalizedStatus = String(status || "ALL")
+        .trim()
+        .toUpperCase();
+
+      if (normalizedStatus === "ALL") {
+        const res = await api.get("/sub-categories", {
+          params: { page, size },
+        });
+
+        return res.data;
+      }
+
+      const res = await api.get(`/sub-categories/status/${normalizedStatus}`, {
+        params: { page, size },
+      });
 
       return res.data;
     } catch (error) {
-      return rejectWithValue(error?.response?.data?.message || error.message);
+      return rejectWithValue(getErrorPayload(error));
     }
   },
 );

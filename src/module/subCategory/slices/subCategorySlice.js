@@ -12,7 +12,7 @@ import {
 
 /* =========================================================
    EMPTY SUB CATEGORY FORM
-   ========================================================= */
+========================================================= */
 
 const emptySubCategory = {
   id: null,
@@ -27,13 +27,24 @@ const emptySubCategory = {
 };
 
 /* =========================================================
+   EMPTY PAGINATION
+========================================================= */
+
+const emptyPagination = {
+  pageNumber: 0,
+  pageSize: 20,
+  totalElements: 0,
+  totalPages: 0,
+  last: true,
+};
+
+/* =========================================================
    INITIAL STATE
-   ========================================================= */
+========================================================= */
 
 const initialState = {
   subCategories: [],
 
-  // Keep form initialized instead of null
   subCategory: {
     ...emptySubCategory,
   },
@@ -42,25 +53,64 @@ const initialState = {
   createdSubCategorySelection: null,
 
   pagination: {
-    pageNumber: 0,
-    pageSize: 20,
-    totalElements: 0,
-    totalPages: 0,
-    last: true,
+    ...emptyPagination,
   },
 
   loading: false,
-
   success: false,
-
   error: null,
-
   message: "",
+
+  selectedSubCategoryView: null,
+  subCategoryStatus: "ACTIVE",
+};
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const setEmptyResults = (state) => {
+  state.subCategories = [];
+  state.pagination = {
+    ...emptyPagination,
+  };
+};
+
+const setSubCategoryPage = (state, data) => {
+  if (data && Array.isArray(data.content)) {
+    state.subCategories = data.content;
+
+    state.pagination = {
+      pageNumber: data.pageNumber ?? 0,
+      pageSize: data.pageSize ?? 20,
+      totalElements: data.totalElements ?? 0,
+      totalPages: data.totalPages ?? 0,
+      last: data.last ?? true,
+    };
+
+    return;
+  }
+
+  if (Array.isArray(data)) {
+    state.subCategories = data;
+
+    state.pagination = {
+      pageNumber: 0,
+      pageSize: data.length || 20,
+      totalElements: data.length,
+      totalPages: data.length > 0 ? 1 : 0,
+      last: true,
+    };
+
+    return;
+  }
+
+  setEmptyResults(state);
 };
 
 /* =========================================================
    SLICE
-   ========================================================= */
+========================================================= */
 
 const subCategorySlice = createSlice({
   name: "subCategory",
@@ -68,17 +118,25 @@ const subCategorySlice = createSlice({
   initialState,
 
   reducers: {
-    /* =====================================================
-       SET EXISTING SUB CATEGORY
-       ===================================================== */
+    /* =============================================
+           SET EXISTING SUB CATEGORY
+        ============================================= */
 
     setExsistingSubCategory: (state, action) => {
       state.exsistingSubCategory = action.payload;
     },
 
-    /* =====================================================
-       CLEAR SUB CATEGORY STATE
-       ===================================================== */
+    /* =============================================
+           CLEAR ERROR
+        ============================================= */
+
+    clearSubCategoryError: (state) => {
+      state.error = null;
+    },
+
+    /* =============================================
+           CLEAR SUB CATEGORY STATE
+        ============================================= */
 
     clearSubCategoryState: (state) => {
       state.subCategories = [];
@@ -88,24 +146,24 @@ const subCategorySlice = createSlice({
       };
 
       state.exsistingSubCategory = null;
+      state.createdSubCategorySelection = null;
 
       state.pagination = {
-        pageNumber: 0,
-        pageSize: 20,
-        totalElements: 0,
-        totalPages: 0,
-        last: true,
+        ...emptyPagination,
       };
 
       state.loading = false;
       state.success = false;
       state.error = null;
       state.message = "";
+
+      state.selectedSubCategoryView = null;
+      state.subCategoryStatus = "ACTIVE";
     },
 
-    /* =====================================================
-       CLEAR SELECTED SUB CATEGORY
-       ===================================================== */
+    /* =============================================
+           CLEAR SELECTED SUB CATEGORY
+        ============================================= */
 
     clearSelectedSubCategory: (state) => {
       state.subCategory = {
@@ -115,9 +173,9 @@ const subCategorySlice = createSlice({
       state.exsistingSubCategory = null;
     },
 
-    /* =====================================================
-       RESET SUB CATEGORY FORM
-       ===================================================== */
+    /* =============================================
+           RESET SUB CATEGORY FORM
+        ============================================= */
 
     resetSubCategoryForm: (state) => {
       state.subCategory = {
@@ -127,9 +185,9 @@ const subCategorySlice = createSlice({
       state.exsistingSubCategory = null;
     },
 
-    /* =====================================================
-       SET SUB CATEGORY FORM FIELD
-       ===================================================== */
+    /* =============================================
+           SET SUB CATEGORY FORM FIELD
+        ============================================= */
 
     setSubCategoryField: (state, action) => {
       const { field, value } = action.payload;
@@ -140,21 +198,25 @@ const subCategorySlice = createSlice({
       };
     },
 
-    /* =====================================================
-       SET SELECTED SUB CATEGORY VIEW
-       ===================================================== */
+    /* =============================================
+           SET SELECTED SUB CATEGORY VIEW
+        ============================================= */
 
     setSelectedSubCategoryView: (state, action) => {
       state.selectedSubCategoryView = action.payload;
     },
 
-    /* =====================================================
-       SET SUB CATEGORY STATUS
-       ===================================================== */
+    /* =============================================
+           SET SUB CATEGORY STATUS
+        ============================================= */
 
     setSubCategoryStatus: (state, action) => {
-      state.setSubCategoryStatus = action.payload;
+      state.subCategoryStatus = action.payload;
     },
+
+    /* =============================================
+           CREATED SUB CATEGORY SELECTION
+        ============================================= */
 
     setCreatedSubCategorySelection: (state, action) => {
       state.createdSubCategorySelection = action.payload;
@@ -165,21 +227,22 @@ const subCategorySlice = createSlice({
     },
   },
 
-  /* =======================================================
-     EXTRA REDUCERS
-     ======================================================= */
+  /* =====================================================
+       EXTRA REDUCERS
+    ===================================================== */
 
   extraReducers: (builder) => {
-    /* =====================================================
-       FETCH ALL SUB CATEGORIES
-       ===================================================== */
+    /* =============================================
+           FETCH ALL SUB CATEGORIES
+        ============================================= */
 
     builder
-
       .addCase(fetchAllSubCategories.pending, (state) => {
         state.loading = true;
-        state.error = null;
         state.success = false;
+        state.error = null;
+
+        setEmptyResults(state);
       })
 
       .addCase(fetchAllSubCategories.fulfilled, (state, action) => {
@@ -187,42 +250,38 @@ const subCategorySlice = createSlice({
         state.success = true;
         state.error = null;
 
-        const response = action.payload;
+        setSubCategoryPage(state, action.payload?.data);
 
-        const data = response?.data;
-
-        state.subCategories = data?.content || [];
-
-        state.pagination = {
-          pageNumber: data?.pageNumber ?? 0,
-
-          pageSize: data?.pageSize ?? 20,
-
-          totalElements: data?.totalElements ?? 0,
-
-          totalPages: data?.totalPages ?? 0,
-
-          last: data?.last ?? true,
-        };
-
-        state.message = response?.message || "";
+        state.message = action.payload?.message || "";
       })
 
       .addCase(fetchAllSubCategories.rejected, (state, action) => {
         state.loading = false;
         state.success = false;
 
-        state.error = action.payload || "Failed to fetch sub categories.";
+        if (action.payload?.status === 404) {
+          setEmptyResults(state);
+          state.error = null;
+          state.message = "";
+          return;
+        }
+
+        setEmptyResults(state);
+
+        state.error =
+          action.payload?.message ||
+          action.payload ||
+          action.error?.message ||
+          "Failed to fetch sub categories.";
 
         state.message = "";
       });
 
-    /* =====================================================
-       FETCH SUB CATEGORY BY ID
-       ===================================================== */
+    /* =============================================
+           FETCH SUB CATEGORY BY ID
+        ============================================= */
 
     builder
-
       .addCase(fetchSubCategoryById.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -251,12 +310,11 @@ const subCategorySlice = createSlice({
         state.message = "";
       });
 
-    /* =====================================================
-       CREATE SUB CATEGORY
-       ===================================================== */
+    /* =============================================
+           CREATE SUB CATEGORY
+        ============================================= */
 
     builder
-
       .addCase(createSubCategory.pending, (state) => {
         state.loading = true;
         state.success = false;
@@ -276,11 +334,9 @@ const subCategorySlice = createSlice({
 
         if (newSubCategory) {
           state.subCategory = newSubCategory;
-
           state.exsistingSubCategory = newSubCategory;
 
           state.subCategories.push(newSubCategory);
-
           state.pagination.totalElements += 1;
         }
       })
@@ -295,12 +351,11 @@ const subCategorySlice = createSlice({
         state.message = "";
       });
 
-    /* =====================================================
-       UPDATE SUB CATEGORY
-       ===================================================== */
+    /* =============================================
+           UPDATE SUB CATEGORY
+        ============================================= */
 
     builder
-
       .addCase(updateSubCategory.pending, (state) => {
         state.loading = true;
         state.success = false;
@@ -319,7 +374,6 @@ const subCategorySlice = createSlice({
 
         if (updatedSubCategory) {
           state.subCategory = updatedSubCategory;
-
           state.exsistingSubCategory = updatedSubCategory;
 
           const index = state.subCategories.findIndex(
@@ -342,12 +396,11 @@ const subCategorySlice = createSlice({
         state.message = "";
       });
 
-    /* =====================================================
-       DELETE SUB CATEGORY
-       ===================================================== */
+    /* =============================================
+           DELETE SUB CATEGORY
+        ============================================= */
 
     builder
-
       .addCase(deleteSubCategory.pending, (state) => {
         state.loading = true;
         state.success = false;
@@ -361,11 +414,6 @@ const subCategorySlice = createSlice({
 
         state.message =
           action.payload?.message || "Sub category deleted successfully.";
-
-        /*
-         * Thunk receives ID directly.
-         * action.meta.arg contains the deleted ID.
-         */
 
         const deletedId = action.meta.arg;
 
@@ -398,12 +446,11 @@ const subCategorySlice = createSlice({
         state.message = "";
       });
 
-    /* =====================================================
-       REACTIVATE SUB CATEGORY
-       ===================================================== */
+    /* =============================================
+           REACTIVATE SUB CATEGORY
+        ============================================= */
 
     builder
-
       .addCase(reactivateSubCategory.pending, (state) => {
         state.loading = true;
         state.success = false;
@@ -422,7 +469,6 @@ const subCategorySlice = createSlice({
 
         if (reactivatedSubCategory) {
           state.subCategory = reactivatedSubCategory;
-
           state.exsistingSubCategory = reactivatedSubCategory;
 
           const index = state.subCategories.findIndex(
@@ -433,7 +479,6 @@ const subCategorySlice = createSlice({
             state.subCategories[index] = reactivatedSubCategory;
           } else {
             state.subCategories.push(reactivatedSubCategory);
-
             state.pagination.totalElements += 1;
           }
         }
@@ -450,16 +495,17 @@ const subCategorySlice = createSlice({
         state.message = "";
       });
 
-    /* =====================================================
-       FETCH SUB CATEGORIES BY STATUS
-       ===================================================== */
+    /* =============================================
+           FETCH SUB CATEGORIES BY STATUS
+        ============================================= */
 
     builder
-
       .addCase(fetchSubCategoriesByStatus.pending, (state) => {
         state.loading = true;
-        state.error = null;
         state.success = false;
+        state.error = null;
+
+        setEmptyResults(state);
       })
 
       .addCase(fetchSubCategoriesByStatus.fulfilled, (state, action) => {
@@ -467,73 +513,29 @@ const subCategorySlice = createSlice({
         state.success = true;
         state.error = null;
 
-        const response = action.payload;
+        setSubCategoryPage(state, action.payload?.data);
 
-        const data = response?.data;
-
-        /*
-         * PAGINATED RESPONSE
-         */
-
-        if (data && Array.isArray(data.content)) {
-          state.subCategories = data.content;
-
-          state.pagination = {
-            pageNumber: data?.pageNumber ?? 0,
-
-            pageSize: data?.pageSize ?? 20,
-
-            totalElements: data?.totalElements ?? 0,
-
-            totalPages: data?.totalPages ?? 0,
-
-            last: data?.last ?? true,
-          };
-        } else if (Array.isArray(data)) {
-          /*
-           * DIRECT ARRAY RESPONSE
-           */
-          state.subCategories = data;
-
-          state.pagination = {
-            pageNumber: 0,
-
-            pageSize: data.length || 20,
-
-            totalElements: data.length,
-
-            totalPages: data.length > 0 ? 1 : 0,
-
-            last: true,
-          };
-        } else {
-          /*
-           * EMPTY / UNKNOWN RESPONSE
-           */
-          state.subCategories = [];
-
-          state.pagination = {
-            pageNumber: 0,
-
-            pageSize: 20,
-
-            totalElements: 0,
-
-            totalPages: 0,
-
-            last: true,
-          };
-        }
-
-        state.message = response?.message || "";
+        state.message = action.payload?.message || "";
       })
 
       .addCase(fetchSubCategoriesByStatus.rejected, (state, action) => {
         state.loading = false;
         state.success = false;
 
+        if (action.payload?.status === 404) {
+          setEmptyResults(state);
+          state.error = null;
+          state.message = "";
+          return;
+        }
+
+        setEmptyResults(state);
+
         state.error =
-          action.payload || "Failed to fetch sub categories by status.";
+          action.payload?.message ||
+          action.payload ||
+          action.error?.message ||
+          "Failed to fetch sub categories by status.";
 
         state.message = "";
       });
@@ -542,10 +544,11 @@ const subCategorySlice = createSlice({
 
 /* =========================================================
    ACTIONS
-   ========================================================= */
+========================================================= */
 
 export const {
   setExsistingSubCategory,
+  clearSubCategoryError,
   clearSubCategoryState,
   clearSelectedSubCategory,
   resetSubCategoryForm,
@@ -558,6 +561,6 @@ export const {
 
 /* =========================================================
    REDUCER
-   ========================================================= */
+========================================================= */
 
 export default subCategorySlice.reducer;

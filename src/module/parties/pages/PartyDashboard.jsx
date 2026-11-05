@@ -266,15 +266,12 @@ export default function PartyDashboard() {
     ===================================================== */
 
     const partyStatus = useSelector(
-        (state) =>
-            state.partiesView?.partiesStatus || "ALL"
+        (state) => state.partyView?.partyStatus || "ALL"
     );
 
     const search = useSelector(
-        (state) =>
-            state.partiesView?.search || ""
+        (state) => state.partyView?.search || ""
     );
-
     /* =====================================================
        LOAD USER PERMISSIONS
     ===================================================== */

@@ -1,6 +1,8 @@
+
 import React, {
     useEffect,
     useMemo,
+    useCallback,
 } from "react";
 
 import {
@@ -11,21 +13,13 @@ import {
 import {
     Plus,
     Download,
+    Scale,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
 import UnitTable from "../pages/UnitTable";
 import NavbarUnit from "../components/bars/nav/NavbarUnits";
-
-import {
-    fetchAllUnits,
-} from "../thunks/unitThunks";
-
-import {
-    setUnitStatus,
-    setSelectedUnitView,
-} from "../slices/unitViewSlice";
 
 import {
     clearError,
@@ -35,58 +29,80 @@ import {
     openModal,
 } from "../../ui/uiSlice";
 
+import {
+    getUserPermission,
+} from "../../menuPermission/thunks/menuPermissionThunks";
+
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
 
-export default function UnitDashboard() {
+import UnitOverview from "./UnitOverview";
 
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMPTY_ARRAY = [];
+
+/* =========================================================
+   NORMALIZE HELPERS
+========================================================= */
+
+const normalizeModule = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+const normalizeAction = (value) =>
+    String(value ?? "").trim().toUpperCase();
+
+/* =========================================================
+   COMPONENT
+========================================================= */
+
+export default function UnitDashboard() {
     const dispatch = useDispatch();
 
-    // ============================================================
-    // AUTH STATE
-    // ============================================================
+    /* =====================================================
+       AUTH STATE
+    ===================================================== */
 
     const user = useSelector(
         (state) => state.auth?.user
     );
 
     const isAuthenticated = useSelector(
-        (state) =>
-            state.auth?.isAuthenticated
+        (state) => state.auth?.isAuthenticated === true
     );
 
     const authChecking = useSelector(
-        (state) =>
-            state.auth?.authChecking
+        (state) => state.auth?.authChecking === true
     );
 
-    // ============================================================
-    // PERMISSION STATE
-    // ============================================================
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
 
     const permissions = useSelector(
-        (state) =>
-            Array.isArray(
-                state.menuPermission?.userPermissions
-            )
-                ? state.menuPermission.userPermissions
-                : []
+        (state) => {
+            const value = state.menuPermission?.userPermissions;
+
+            return Array.isArray(value)
+                ? value
+                : EMPTY_ARRAY;
+        }
     );
 
     const permissionLoading = useSelector(
         (state) =>
-            state.menuPermission
-                ?.userPermissionsLoading === true
+            state.menuPermission?.userPermissionsLoading === true
     );
 
     const permissionsLoaded = useSelector(
         (state) =>
-            state.menuPermission
-                ?.userPermissionsLoaded === true
+            state.menuPermission?.userPermissionsLoaded === true
     );
 
-    // ============================================================
-    // ROLE
-    // ============================================================
+    /* =====================================================
+       ROLE
+    ===================================================== */
 
     const roleName =
         user?.roleName ||
@@ -96,429 +112,238 @@ export default function UnitDashboard() {
         user?.authority ||
         "";
 
-    const normalizedRole =
-        String(roleName)
-            .trim()
-            .toUpperCase();
-
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
-
-    const isAdmin =
-        normalizedRole === "ADMIN";
+    const normalizedRole = normalizeAction(roleName);
 
     const hasFullAccess =
-        isSuperAdmin || isAdmin;
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
-    // ============================================================
-    // PERMISSION CHECK
-    // ============================================================
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
+            if (hasFullAccess) {
+                return true;
+            }
 
-        // SUPER_ADMIN / ADMIN
-        if (hasFullAccess) {
-            return true;
-        }
+            if (!Array.isArray(permissions)) {
+                return false;
+            }
 
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
+            const requestedModule =
+                normalizeModule(moduleName);
 
-        const requestedModule =
-            String(moduleName)
-                .trim()
-                .toLowerCase();
+            const requestedAction =
+                normalizeAction(actionName);
 
-        const requestedAction =
-            String(actionName)
-                .trim()
-                .toUpperCase();
+            return permissions.some((permission) => {
+                const permissionModule = normalizeModule(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                );
 
-        return permissions.some(
-            (permission) => {
-
-                const permissionModule =
-                    String(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toLowerCase();
-
-                if (
-                    permissionModule !==
-                    requestedModule
-                ) {
+                if (permissionModule !== requestedModule) {
                     return false;
                 }
 
-                // =================================================
-                // IGNORE INACTIVE PERMISSION
-                // =================================================
-
-                if (
-                    permission?.active === false
-                ) {
+                if (permission?.active === false) {
                     return false;
                 }
 
                 if (
-                    String(
-                        permission?.status || ""
-                    )
-                        .trim()
-                        .toUpperCase() ===
-                    "INACTIVE"
+                    normalizeAction(permission?.status) === "INACTIVE"
                 ) {
                     return false;
                 }
 
-                // =================================================
-                // GROUPED PERMISSION FORMAT
-                // =================================================
+                /* ACTION ARRAY */
 
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
-
-                    return permission.actions.some(
-                        (action) => {
-
-                            const permissionAction =
-                                String(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.action?.name ||
-                                    ""
-                                )
-                                    .trim()
-                                    .toUpperCase();
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
-
+                if (Array.isArray(permission?.actions)) {
+                    return permission.actions.some((action) => {
+                        if (typeof action === "string") {
                             return (
-                                permissionAction ===
-                                requestedAction &&
-                                allowed
+                                normalizeAction(action) === requestedAction
                             );
                         }
-                    );
+
+                        const permissionAction = normalizeAction(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        );
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        if (action?.active === false) {
+                            return false;
+                        }
+
+                        if (
+                            normalizeAction(action?.status) === "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
                 }
 
-                // =================================================
-                // FLAT PERMISSION FORMAT
-                // =================================================
+                /* DIRECT / FLAT ACTION */
 
-                const permissionAction =
-                    String(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toUpperCase();
+                const permissionAction = normalizeAction(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                );
 
                 const allowed =
                     permission?.allowed === true ||
                     permission?.allowed === "true";
 
                 return (
-                    permissionAction ===
-                    requestedAction &&
+                    permissionAction === requestedAction &&
                     allowed
                 );
-            }
-        );
-    };
+            });
+        },
+        [
+            hasFullAccess,
+            permissions,
+        ]
+    );
 
-    // ============================================================
-    // UNIT PERMISSIONS
-    // ============================================================
+    /* =====================================================
+       UNIT PERMISSIONS
+    ===================================================== */
 
-    const canViewUnit =
-        hasPermission(
-            "Units",
-            "VIEW"
-        );
+    const canViewUnit = hasPermission(
+        "Units",
+        "VIEW"
+    );
 
-    const canCreateUnit =
-        hasPermission(
-            "Units",
-            "CREATE"
-        );
+    const canCreateUnit = hasPermission(
+        "Units",
+        "CREATE"
+    );
 
-    // ============================================================
-    // UNIT STATE
-    // ============================================================
+    /* =====================================================
+       UNIT STATE
+    ===================================================== */
 
-    const unitsFromRedux =
-        useSelector(
-            (state) =>
-                state.unit?.units
-        );
+    const unitsFromRedux = useSelector(
+        (state) => state.unit?.units
+    );
 
-    const units =
-        unitsFromRedux ?? [];
+    const units = Array.isArray(unitsFromRedux)
+        ? unitsFromRedux
+        : EMPTY_ARRAY;
 
-    const loading =
-        useSelector(
-            (state) =>
-                state.unit?.loading || false
-        );
+    const loading = useSelector(
+        (state) => state.unit?.loading === true
+    );
 
-    const error =
-        useSelector(
-            (state) =>
-                state.unit?.error
-        );
+    const error = useSelector(
+        (state) => state.unit?.error
+    );
 
-    // ============================================================
-    // UNIT FILTER STATE
-    // ============================================================
+    /* =====================================================
+       UNIT VIEW STATE
+    ===================================================== */
 
-    const unitStatus =
-        useSelector(
-            (state) =>
-                state.unitView?.unitStatus ||
-                "ALL"
-        );
+    const unitStatus = useSelector(
+        (state) =>
+            state.unitView?.unitStatus || "ALL"
+    );
 
-    // ============================================================
-    // FETCH UNITS
-    //
-    // IMPORTANT:
-    // STAFF must have VIEW permission before API call.
-    // ============================================================
+    /* =====================================================
+       LOAD USER PERMISSIONS
+    ===================================================== */
 
     useEffect(() => {
-
-        if (authChecking) {
+        if (authChecking || !isAuthenticated) {
             return;
         }
 
+        // Admin and Super Admin have full access.
+        if (hasFullAccess) {
+            return;
+        }
+
+        if (permissionsLoaded || permissionLoading) {
+            return;
+        }
+
+        dispatch(getUserPermission());
+
+    }, [
+        authChecking,
+        isAuthenticated,
+        hasFullAccess,
+        permissionsLoaded,
+        permissionLoading,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       FILTER UNITS BY STATUS
+    ===================================================== */
+
+    const filteredUnits = useMemo(() => {
+        const selectedStatus = String(
+            unitStatus || "ALL"
+        )
+            .trim()
+            .toUpperCase();
+
+        if (selectedStatus === "ALL") {
+            return units;
+        }
+
+        return units.filter((unit) => {
+            return (
+                String(unit?.status ?? "")
+                    .trim()
+                    .toUpperCase() === selectedStatus
+            );
+        });
+
+    }, [
+        units,
+        unitStatus,
+    ]);
+
+    /* =====================================================
+       OPEN CREATE UNIT MODAL
+    ===================================================== */
+
+    const handleCreateUnit = useCallback(() => {
         if (!isAuthenticated) {
             return;
         }
 
-        // ADMIN / SUPER_ADMIN
-        // can directly fetch.
-        if (!hasFullAccess) {
-
-            // Wait for permission request.
-            if (permissionLoading) {
-                return;
-            }
-
-            // Wait until permission state is initialized.
-            if (!permissionsLoaded) {
-                return;
-            }
-
-            // No VIEW permission.
-            if (!canViewUnit) {
-                return;
-            }
-        }
-
-        dispatch(
-            fetchAllUnits()
-        );
-
-    }, [
-        dispatch,
-        authChecking,
-        isAuthenticated,
-        hasFullAccess,
-        permissionLoading,
-        permissionsLoaded,
-        canViewUnit,
-    ]);
-
-    // ============================================================
-    // SYNC URL STATUS → REDUX
-    // ============================================================
-
-    useEffect(() => {
-
-        const params =
-            new URLSearchParams(
-                window.location.search
-            );
-
-        const urlStatus =
-            params.get(
-                "unitStatus"
-            );
-
-        if (!urlStatus) {
-            return;
-        }
-
-        const normalizedStatus =
-            String(urlStatus)
-                .toUpperCase();
-
-        const validStatuses = [
-            "ALL",
-            "ACTIVE",
-            "INACTIVE",
-            "DRAFT",
-        ];
-
-        if (
-            !validStatuses.includes(
-                normalizedStatus
-            )
-        ) {
-            return;
-        }
-
-        dispatch(
-            setUnitStatus(
-                normalizedStatus
-            )
-        );
-
-        const statusLabels = {
-            ALL:
-                "All Units",
-
-            ACTIVE:
-                "Active Units",
-
-            INACTIVE:
-                "Inactive Units",
-
-            DRAFT:
-                "Draft Units",
-        };
-
-        dispatch(
-            setSelectedUnitView(
-                statusLabels[
-                normalizedStatus
-                ]
-            )
-        );
-
-    }, [dispatch]);
-
-    // ============================================================
-    // CLEAR ERROR
-    // ============================================================
-
-    useEffect(() => {
-
-        if (!error) {
-            return;
-        }
-
-        const timer =
-            setTimeout(() => {
-
-                dispatch(
-                    clearError()
-                );
-
-            }, 2000);
-
-        return () =>
-            clearTimeout(timer);
-
-    }, [
-        error,
-        dispatch,
-    ]);
-
-    // ============================================================
-    // FILTER UNITS BY STATUS
-    // ============================================================
-
-    const filteredUnits =
-        useMemo(() => {
-
-            const selectedStatus =
-                String(
-                    unitStatus ||
-                    "ALL"
-                )
-                    .toUpperCase();
-
-            // ====================================================
-            // ALL
-            // ====================================================
-
-            if (
-                selectedStatus === "ALL"
-            ) {
-                return units;
-            }
-
-            // ====================================================
-            // FILTER
-            // ====================================================
-
-            return units.filter(
-                (unit) => {
-
-                    const backendStatus =
-                        String(
-                            unit?.status ||
-                            ""
-                        )
-                            .toUpperCase();
-
-                    return (
-                        backendStatus ===
-                        selectedStatus
-                    );
-                }
-            );
-
-        }, [
-            units,
-            unitStatus,
-        ]);
-
-    // ============================================================
-    // OPEN CREATE UNIT MODAL
-    // ============================================================
-
-    const handleCreateUnit = () => {
-
-        // ========================================================
-        // PERMISSION LOADING
-        // ========================================================
-
         if (
             !hasFullAccess &&
-            !permissionsLoaded
+            (
+                permissionLoading ||
+                !permissionsLoaded
+            )
         ) {
-
-            toast.error(
-                "Permissions are still loading. Please try again."
-            );
-
             return;
         }
 
-        // ========================================================
-        // CREATE PERMISSION
-        // ========================================================
-
         if (!canCreateUnit) {
-
             toast.error(
                 "You do not have permission to create units."
             );
@@ -526,36 +351,60 @@ export default function UnitDashboard() {
             return;
         }
 
-        // ========================================================
-        // OPEN MODAL
-        // ========================================================
-
         dispatch(
             openModal({
                 type: "addUnit",
             })
         );
-    };
 
-    // ============================================================
-    // AUTH CHECKING
-    // ============================================================
+    }, [
+        isAuthenticated,
+        hasFullAccess,
+        permissionLoading,
+        permissionsLoaded,
+        canCreateUnit,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       CLEAR ERROR
+    ===================================================== */
+
+    useEffect(() => {
+        if (!error) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            dispatch(clearError());
+        }, 2000);
+
+        return () => clearTimeout(timer);
+
+    }, [
+        error,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       AUTH CHECKING
+    ===================================================== */
 
     if (authChecking) {
         return <InvoiceSkeleton />;
     }
 
-    // ============================================================
-    // NOT AUTHENTICATED
-    // ============================================================
+    /* =====================================================
+       NOT AUTHENTICATED
+    ===================================================== */
 
     if (!isAuthenticated) {
         return null;
     }
 
-    // ============================================================
-    // PERMISSION LOADING
-    // ============================================================
+    /* =====================================================
+       PERMISSION LOADING
+    ===================================================== */
 
     if (
         !hasFullAccess &&
@@ -564,196 +413,119 @@ export default function UnitDashboard() {
             !permissionsLoaded
         )
     ) {
-
         return <InvoiceSkeleton />;
     }
 
-    // ============================================================
-    // VIEW PERMISSION DENIED
-    // ============================================================
+    /* =====================================================
+       VIEW PERMISSION DENIED
+    ===================================================== */
 
-    if (
-        !hasFullAccess &&
-        !canViewUnit
-    ) {
-
+    if (!canViewUnit) {
         return (
             <div
                 className="
-                    flex
-                    h-screen
-                    bg-gray-50
-                    font-sans
-                    text-[13px]
-                    overflow-hidden
+                    flex h-screen items-center justify-center
+                    bg-gray-50 font-sans
                 "
             >
-
-                <div
-                    className="
-                        flex-1
-                        flex
-                        items-center
-                        justify-center
-                    "
-                >
+                <div className="px-6 text-center">
 
                     <div
                         className="
-                            text-center
-                            px-6
+                            mx-auto mb-4 flex h-16 w-16
+                            items-center justify-center
+                            rounded-full bg-red-50
+                            text-2xl font-semibold text-red-500
                         "
                     >
-
-                        <div
-                            className="
-                                w-14
-                                h-14
-                                rounded-full
-                                bg-red-50
-                                flex
-                                items-center
-                                justify-center
-                                mx-auto
-                                mb-4
-                            "
-                        >
-
-                            <span
-                                className="
-                                    text-red-500
-                                    text-xl
-                                    font-semibold
-                                "
-                            >
-                                !
-                            </span>
-
-                        </div>
-
-                        <h2
-                            className="
-                                text-lg
-                                font-semibold
-                                text-gray-800
-                            "
-                        >
-                            Access Denied
-                        </h2>
-
-                        <p
-                            className="
-                                mt-1
-                                text-sm
-                                text-gray-500
-                            "
-                        >
-                            You do not have permission
-                            to view units.
-                        </p>
-
+                        !
                     </div>
 
-                </div>
+                    <h2 className="text-lg font-semibold text-gray-800">
+                        Access Denied
+                    </h2>
 
+                    <p className="mt-1 max-w-sm text-sm text-gray-500">
+                        You do not have permission to view units.
+                    </p>
+
+                </div>
             </div>
         );
     }
 
-    // ============================================================
-    // UNIT API LOADING
-    // ============================================================
-
-    if (loading) {
-        return <InvoiceSkeleton />;
-    }
-
-    // ============================================================
-    // PAGE
-    // ============================================================
+    /* =====================================================
+       PAGE
+    ===================================================== */
 
     return (
         <div
             className="
-                flex
-                h-screen
-                bg-gray-50
-                font-sans
-                text-[13px]
-                overflow-hidden
+                flex h-screen overflow-hidden
+                bg-gray-50 font-sans text-[13px]
             "
         >
-
             <div
                 className="
-                    flex-1
-                    min-h-0
-                    bg-white
-                    overflow-y-auto
+                    min-h-0 flex-1 overflow-y-auto bg-white
                 "
             >
-
                 <div
                     className="
-                        px-2
-                        py-5
-                        max-w-30xl
-                        w-full
+                        w-full max-w-30xl px-2 py-5
                     "
                 >
 
-                    {/* =================================================
-                        UNIT NAVBAR
-                    ================================================= */}
+                    {/* UNIT NAVBAR */}
 
                     <NavbarUnit />
 
-                    {/* =================================================
-                        ERROR
-                    ================================================= */}
+                    {/* UNIT OVERVIEW */}
+
+                    <UnitOverview
+                        canViewUnit={canViewUnit}
+                        isAuthenticated={isAuthenticated}
+                        authChecking={authChecking}
+                    />
+
+                    {/* ERROR */}
 
                     {error && (
                         <div
                             className="
-                                mx-2
-                                mt-4
-                                px-4
-                                py-3
-                                rounded-md
-                                border
-                                border-red-200
-                                bg-red-50
-                                text-sm
-                                text-red-600
+                                mx-2 mt-4 rounded-md
+                                border border-red-200
+                                bg-red-50 px-4 py-3
+                                text-sm text-red-600
                             "
                         >
                             {error}
                         </div>
                     )}
 
-                    {/* =================================================
-                        UNIT TABLE / EMPTY STATE
-                    ================================================= */}
+                    {/* UNIT TABLE / LOADING / EMPTY STATE */}
 
-                    {filteredUnits.length > 0 ? (
-
-                        <UnitTable
-                            units={
-                                filteredUnits
-                            }
-                        />
-
-                    ) : (
-
+                    {loading ? (
                         <div
                             className="
-                                min-h-full
-                                flex
-                                flex-col
-                                items-center
-                                justify-center
-                                gap-3
-                                px-4
+                                flex min-h-[250px]
+                                items-center justify-center
+                            "
+                        >
+                            <p className="text-sm text-gray-500">
+                                Loading units...
+                            </p>
+                        </div>
+                    ) : filteredUnits.length > 0 ? (
+                        <UnitTable
+                            units={filteredUnits}
+                        />
+                    ) : (
+                        <div
+                            className="
+                                flex min-h-full flex-col
+                                items-center justify-center
+                                gap-3 px-4
                             "
                         >
 
@@ -761,177 +533,116 @@ export default function UnitDashboard() {
 
                             <div
                                 className="
-                                    relative
-                                    w-24
-                                    h-24
-                                    rounded-full
-                                    bg-gray-100
-                                    flex
-                                    items-center
-                                    justify-center
-                                    mb-1
-                                    flex-shrink-0
-                                    mt-30
+                                    relative mt-30 mb-1
+                                    flex h-24 w-24 shrink-0
+                                    items-center justify-center
+                                    rounded-full bg-gray-100
                                 "
                             >
-
                                 <div
                                     className="
+                                        flex items-center justify-center
                                         text-gray-400
-                                        text-4xl
                                     "
                                 >
-                                    U
+                                    <Scale
+                                        size={42}
+                                        strokeWidth={1.7}
+                                    />
                                 </div>
 
                                 <div
                                     className="
-                                        absolute
-                                        bottom-1
-                                        right-1
-                                        w-7
-                                        h-7
-                                        rounded-full
-                                        bg-blue-500
-                                        flex
-                                        items-center
-                                        justify-center
-                                        text-white
+                                        absolute bottom-1 right-1
+                                        flex h-7 w-7 items-center
+                                        justify-center rounded-full
+                                        bg-blue-500 text-white
                                     "
                                 >
-
-                                    <Plus
-                                        className="
-                                            w-4
-                                            h-4
-                                        "
-                                    />
-
+                                    <Plus className="h-4 w-4" />
                                 </div>
-
                             </div>
 
                             {/* EMPTY STATE TITLE */}
 
                             <p
                                 className="
-                                    text-base
-                                    font-medium
-                                    text-gray-800
-                                    text-center
+                                    text-center text-base
+                                    font-medium text-gray-800
                                 "
                             >
-                                Every setup starts with a unit
+                                Every product needs a unit
                             </p>
 
                             {/* EMPTY STATE DESCRIPTION */}
 
                             <p
                                 className="
-                                    text-sm
-                                    text-gray-500
-                                    text-center
-                                    max-w-sm
+                                    max-w-sm text-center
+                                    text-sm text-gray-500
                                 "
                             >
-                                Create and manage your units
-                                in one place.
+                                Create and manage your product
+                                measurement units in one place.
                             </p>
 
                             {/* ACTION BUTTONS */}
 
                             <div
                                 className="
-                                    flex
-                                    items-center
-                                    gap-2.5
-                                    mt-1
-                                    flex-wrap
-                                    justify-center
+                                    mt-1 flex flex-wrap
+                                    items-center justify-center gap-2.5
                                 "
                             >
 
                                 {/* CREATE UNIT */}
 
                                 {canCreateUnit && (
-
                                     <button
                                         type="button"
-                                        onClick={
-                                            handleCreateUnit
-                                        }
+                                        onClick={handleCreateUnit}
                                         className="
-                                            flex
-                                            items-center
-                                            gap-2
-                                            bg-blue-500
-                                            text-white
-                                            text-sm
-                                            font-medium
-                                            px-4
-                                            py-2
-                                            rounded-md
-                                            hover:bg-blue-600
-                                            transition-colors
-                                            whitespace-nowrap
+                                            flex items-center gap-2
+                                            whitespace-nowrap rounded-md
+                                            bg-blue-500 px-4 py-2
+                                            text-sm font-medium text-white
+                                            transition-colors hover:bg-blue-600
                                         "
                                     >
-
-                                        <Plus
-                                            className="
-                                                w-4
-                                                h-4
-                                            "
-                                        />
+                                        <Plus className="h-4 w-4" />
 
                                         Create New Unit
-
                                     </button>
-
                                 )}
 
                                 {/* IMPORT */}
 
                                 <button
                                     type="button"
+                                    onClick={() => {
+                                        toast(
+                                            "Unit import is not configured yet."
+                                        );
+                                    }}
                                     className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        bg-white
-                                        text-gray-700
-                                        text-sm
-                                        border
-                                        border-gray-300
-                                        px-4
-                                        py-2
-                                        rounded-md
-                                        hover:bg-gray-50
-                                        transition-colors
-                                        whitespace-nowrap
+                                        flex items-center gap-2
+                                        whitespace-nowrap rounded-md
+                                        border border-gray-300 bg-white
+                                        px-4 py-2 text-sm text-gray-700
+                                        transition-colors hover:bg-gray-50
                                     "
                                 >
-
-                                    <Download
-                                        className="
-                                            w-4
-                                            h-4
-                                        "
-                                    />
+                                    <Download className="h-4 w-4" />
 
                                     Import File
-
                                 </button>
 
                             </div>
-
                         </div>
                     )}
 
                 </div>
-
             </div>
-
         </div>
     );
 }

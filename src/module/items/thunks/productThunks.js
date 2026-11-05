@@ -2,20 +2,56 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../../api/api";
 
 /* =========================================================
-   FETCH ALL PRODUCTS
-   ========================================================= */
+   FETCH ALL PRODUCTS WITH FILTERS AND PAGINATION
+========================================================= */
 
 export const fetchAllProducts = createAsyncThunk(
   "product/fetchProducts",
 
-  async (_, { rejectWithValue }) => {
+  async (filters = {}, { rejectWithValue }) => {
     try {
-      const res = await api.get("/products");
+      const params = {
+        page: filters?.page ?? 0,
+        size: filters?.size ?? 10,
+      };
 
-      console.log("Products:", res.data);
+      const filterFields = [
+        "productName",
+        "productCode",
+        "brand",
+        "categoryId",
+        "subCategoryId",
+        "hsnCode",
+        "taxId",
+        "status",
+        "fromDate",
+        "toDate",
+      ];
+
+      filterFields.forEach((field) => {
+        const value = filters?.[field];
+
+        if (
+          value !== undefined &&
+          value !== null &&
+          String(value).trim() !== ""
+        ) {
+          params[field] = value;
+        }
+      });
+
+      console.log("PRODUCT REQUEST PARAMS:", params);
+
+      const res = await api.get("/products", {
+        params,
+      });
+
+      console.log("PRODUCT API RESPONSE:", res.data);
 
       return res.data;
     } catch (error) {
+      console.error("Fetch products error:", error);
+
       return rejectWithValue(
         error?.response?.data?.message ||
           error?.message ||

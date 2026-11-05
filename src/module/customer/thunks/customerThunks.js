@@ -8,8 +8,8 @@ import {
   updateCustomerAddress,
 } from "../../../api/customer/CustomerApi";
 
-export const loadCustomers = createAsyncThunk(
-  "customer/loadCustomers",
+export const fetchAllCustomers = createAsyncThunk(
+  "customer/fetchCustomers",
   async (params = {}, { rejectWithValue }) => {
     try {
       const response = await fetchCustomers(params);

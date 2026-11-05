@@ -24,6 +24,7 @@ import {
 } from "../slices/salesPersonSlice";
 
 import Pagination from "../../../common/pagination/table/Pagination";
+import ToolTipText from "../../../common/toolTip/ToolTipText";
 
 /* =========================================================
    CONSTANTS
@@ -606,7 +607,7 @@ export default function SalesPersonTable({
 
                                 <td className="px-4 py-3">
                                     <div className="
-                                        flex items-center justify-end gap-2
+                                        relative flex items-center justify-end gap-2
                                     ">
 
                                         {canViewSalesPerson && (
@@ -615,9 +616,9 @@ export default function SalesPersonTable({
                                                 onClick={() =>
                                                     handleView(salesPerson)
                                                 }
-                                                title="View"
+
                                                 className="
-                                                    flex h-8 w-8
+                                                    group relative flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-blue-50
                                                     text-blue-600 transition
@@ -626,6 +627,7 @@ export default function SalesPersonTable({
                                                 "
                                             >
                                                 <Eye size={16} />
+                                                <ToolTipText text="View" position="bottom" />
                                             </button>
                                         )}
 
@@ -635,9 +637,9 @@ export default function SalesPersonTable({
                                                 onClick={() =>
                                                     handleEdit(salesPerson)
                                                 }
-                                                title="Edit"
+
                                                 className="
-                                                    flex h-8 w-8
+                                                    group relative flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-green-50
                                                     text-green-600 transition
@@ -646,6 +648,7 @@ export default function SalesPersonTable({
                                                 "
                                             >
                                                 <Edit size={16} />
+                                                <ToolTipText text="Edit" position="bottom" />
                                             </button>
                                         )}
 
@@ -656,9 +659,9 @@ export default function SalesPersonTable({
                                                 onClick={() =>
                                                     handleDelete(salesPerson)
                                                 }
-                                                title="Delete"
+
                                                 className="
-                                                    flex h-8 w-8
+                                                    group relative flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-red-50
                                                     text-red-600 transition
@@ -669,6 +672,7 @@ export default function SalesPersonTable({
                                                 "
                                             >
                                                 <Trash2 size={16} />
+                                                <ToolTipText text="Delete" position="bottom" />
                                             </button>
                                         )}
 

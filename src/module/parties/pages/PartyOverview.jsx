@@ -184,10 +184,10 @@ export default function PartyOverview() {
             return;
         }
 
-        dispatch(setPartiesStatus(status));
+        dispatch(setPartyStatus(status));
 
         dispatch(
-            setSelectedPartiesView(
+            setSelectedPartyView(
                 STATUS_LABELS[status]
             )
         );

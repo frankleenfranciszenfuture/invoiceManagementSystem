@@ -26,6 +26,7 @@ import {
 } from "../slices/partySlice";
 
 import Pagination from "../../../common/pagination/table/Pagination";
+import ToolTipText from "../../../common/toolTip/ToolTipText";
 
 /* =========================================================
    CONSTANTS
@@ -702,7 +703,7 @@ export default function PartyTable({
 
                                 <td className="px-4 py-3">
                                     <div className="
-                                        flex items-center justify-end gap-2
+                                        relative flex items-center justify-end gap-2
                                     ">
 
                                         {canViewParty && (
@@ -711,8 +712,9 @@ export default function PartyTable({
                                                 onClick={() =>
                                                     handleView(party)
                                                 }
-                                                title="View"
+
                                                 className="
+                                                    group relative
                                                     flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-blue-50
@@ -722,6 +724,7 @@ export default function PartyTable({
                                                 "
                                             >
                                                 <Eye size={16} />
+                                                <ToolTipText text="View" position="bottom" />
                                             </button>
                                         )}
 
@@ -733,7 +736,7 @@ export default function PartyTable({
                                                 }
                                                 title="Edit"
                                                 className="
-                                                    flex h-8 w-8
+                                                    group relative flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-green-50
                                                     text-green-600 transition
@@ -742,6 +745,7 @@ export default function PartyTable({
                                                 "
                                             >
                                                 <Edit size={16} />
+                                                <ToolTipText text="Edit" position="bottom" />
                                             </button>
                                         )}
 
@@ -754,6 +758,7 @@ export default function PartyTable({
                                                 }
                                                 title="Delete"
                                                 className="
+                                                    group relative 
                                                     flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-red-50
@@ -765,6 +770,7 @@ export default function PartyTable({
                                                 "
                                             >
                                                 <Trash2 size={16} />
+                                                <ToolTipText text="Delete" position="bottom" />
                                             </button>
                                         )}
 

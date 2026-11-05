@@ -1,7 +1,7 @@
 
 import React, {
     useEffect,
-    useMemo,
+    useCallback,
 } from "react";
 
 import {
@@ -12,76 +12,95 @@ import {
 import {
     Plus,
     Download,
+    Tags,
 } from "lucide-react";
 
-import SubCategoryTable from "./SubCategoryTable";
+import toast from "react-hot-toast";
+
+import SubCategoryTable from "../pages/SubCategoryTable";
 import NavbarSubCategory from "../components/bars/nav/NavbarSubCategory";
+import SubCategoryOverview from "../pages/SubCategoryOverview";
 
 import {
-    fetchAllSubCategories,
-} from "../thunks/subCategoryThunks";
-
-import {
-    setSubCategoryStatus,
-    setSelectedSubCategoryView,
+    clearSubCategoryError,
 } from "../slices/subCategorySlice";
 
 import {
     openModal,
 } from "../../ui/uiSlice";
 
+import {
+    getUserPermission,
+} from "../../../module/menuPermission/thunks/menuPermissionThunks";
+
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
 
-export default function SubCategoryDashboard() {
+/* =========================================================
+   CONSTANTS
+========================================================= */
 
+const EMPTY_ARRAY = [];
+
+/* =========================================================
+   NORMALIZE HELPERS
+========================================================= */
+
+const normalizeModule = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+const normalizeAction = (value) =>
+    String(value ?? "").trim().toUpperCase();
+
+/* =========================================================
+   COMPONENT
+========================================================= */
+
+export default function SubCategoryDashboard() {
     const dispatch = useDispatch();
 
-    // ============================================================
-    // AUTH
-    // ============================================================
+    /* =====================================================
+       AUTH STATE
+    ===================================================== */
 
     const user = useSelector(
         (state) => state.auth?.user
     );
 
     const isAuthenticated = useSelector(
-        (state) =>
-            state.auth?.isAuthenticated
+        (state) => state.auth?.isAuthenticated === true
     );
 
     const authChecking = useSelector(
-        (state) =>
-            state.auth?.authChecking
+        (state) => state.auth?.authChecking === true
     );
 
-    // ============================================================
-    // USER PERMISSIONS
-    // ============================================================
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
 
     const permissions = useSelector(
-        (state) =>
-            Array.isArray(
-                state.menuPermission?.userPermissions
-            )
-                ? state.menuPermission.userPermissions
-                : []
+        (state) => {
+            const value = state.menuPermission?.userPermissions;
+
+            return Array.isArray(value)
+                ? value
+                : EMPTY_ARRAY;
+        }
     );
 
     const permissionLoading = useSelector(
         (state) =>
-            state.menuPermission
-                ?.userPermissionsLoading === true
+            state.menuPermission?.userPermissionsLoading === true
     );
 
     const permissionsLoaded = useSelector(
         (state) =>
-            state.menuPermission
-                ?.userPermissionsLoaded === true
+            state.menuPermission?.userPermissionsLoaded === true
     );
 
-    // ============================================================
-    // ROLE
-    // ============================================================
+    /* =====================================================
+       ROLE
+    ===================================================== */
 
     const roleName =
         user?.roleName ||
@@ -91,480 +110,261 @@ export default function SubCategoryDashboard() {
         user?.authority ||
         "";
 
-    const normalizedRole =
-        String(roleName)
-            .trim()
-            .toUpperCase();
-
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
-
-    const isAdmin =
-        normalizedRole === "ADMIN";
+    const normalizedRole = normalizeAction(roleName);
 
     const hasFullAccess =
-        isSuperAdmin || isAdmin;
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
-    // ============================================================
-    // PERMISSION CHECKER
-    //
-    // Supports:
-    //
-    // FLAT:
-    // {
-    //     moduleName: "Sub Categories",
-    //     actionName: "VIEW",
-    //     allowed: true
-    // }
-    //
-    // GROUPED:
-    // {
-    //     moduleName: "Sub Categories",
-    //     actions: [
-    //         {
-    //             actionName: "VIEW",
-    //             allowed: true
-    //         }
-    //     ]
-    // }
-    // ============================================================
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
+            if (hasFullAccess) {
+                return true;
+            }
 
-        // ADMIN / SUPER_ADMIN
-        if (hasFullAccess) {
-            return true;
-        }
+            if (!Array.isArray(permissions)) {
+                return false;
+            }
 
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
+            const requestedModule =
+                normalizeModule(moduleName);
 
-        const requestedModule =
-            String(moduleName)
-                .trim()
-                .toLowerCase();
+            const requestedAction =
+                normalizeAction(actionName);
 
-        const requestedAction =
-            String(actionName)
-                .trim()
-                .toUpperCase();
+            return permissions.some((permission) => {
+                const permissionModule = normalizeModule(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                );
 
-        return permissions.some(
-            (permission) => {
-
-                const permissionModule =
-                    String(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toLowerCase();
-
-                if (
-                    permissionModule !==
-                    requestedModule
-                ) {
+                if (permissionModule !== requestedModule) {
                     return false;
                 }
 
-                // Ignore inactive module permission
-                if (
-                    permission?.active === false
-                ) {
+                if (permission?.active === false) {
                     return false;
                 }
 
                 if (
-                    String(
-                        permission?.status || ""
-                    )
-                        .trim()
-                        .toUpperCase() ===
-                    "INACTIVE"
+                    normalizeAction(permission?.status) === "INACTIVE"
                 ) {
                     return false;
                 }
 
-                // =================================================
-                // GROUPED PERMISSIONS
-                // =================================================
+                /* ACTION ARRAY */
 
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
-
-                    return permission.actions.some(
-                        (action) => {
-
-                            const permissionAction =
-                                String(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.action?.name ||
-                                    ""
-                                )
-                                    .trim()
-                                    .toUpperCase();
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
-
+                if (Array.isArray(permission?.actions)) {
+                    return permission.actions.some((action) => {
+                        if (typeof action === "string") {
                             return (
-                                permissionAction ===
-                                requestedAction &&
-                                allowed
+                                normalizeAction(action) === requestedAction
                             );
                         }
-                    );
+
+                        const permissionAction = normalizeAction(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        );
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        if (action?.active === false) {
+                            return false;
+                        }
+
+                        if (
+                            normalizeAction(action?.status) === "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
                 }
 
-                // =================================================
-                // FLAT PERMISSIONS
-                // =================================================
+                /* DIRECT / FLAT ACTION */
 
-                const permissionAction =
-                    String(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toUpperCase();
+                const permissionAction = normalizeAction(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                );
 
                 const allowed =
                     permission?.allowed === true ||
                     permission?.allowed === "true";
 
                 return (
-                    permissionAction ===
-                    requestedAction &&
+                    permissionAction === requestedAction &&
                     allowed
                 );
-            }
-        );
-    };
+            });
+        },
+        [
+            hasFullAccess,
+            permissions,
+        ]
+    );
 
-    // ============================================================
-    // SUB CATEGORY PERMISSIONS
-    // ============================================================
+    /* =====================================================
+       SUBCATEGORY PERMISSIONS
+    ===================================================== */
 
-    const canViewSubCategory =
-        hasPermission(
-            "SubCategories",
-            "VIEW"
-        );
+    const canViewSubCategory = hasPermission(
+        "Sub Categories",
+        "VIEW"
+    );
 
-    const canCreateSubCategory =
-        hasPermission(
-            "SubCategories",
-            "CREATE"
-        );
+    const canCreateSubCategory = hasPermission(
+        "Sub Categories",
+        "CREATE"
+    );
 
-    // ============================================================
-    // SUB CATEGORY STATE
-    // ============================================================
+    /* =====================================================
+       SUBCATEGORY STATE
+    ===================================================== */
 
-    const subCategoriesFromRedux =
-        useSelector(
-            (state) =>
-                state.subCategory
-                    ?.subCategories
-        );
+    const subCategoriesFromRedux = useSelector(
+        (state) => state.subCategory?.subCategories
+    );
 
-    const subCategories =
-        subCategoriesFromRedux ?? [];
+    const subCategories = Array.isArray(subCategoriesFromRedux)
+        ? subCategoriesFromRedux
+        : EMPTY_ARRAY;
 
-    const loading =
-        useSelector(
-            (state) =>
-                state.subCategory
-                    ?.loading || false
-        );
+    const loading = useSelector(
+        (state) => state.subCategory?.loading === true
+    );
 
-    const error =
-        useSelector(
-            (state) =>
-                state.subCategory
-                    ?.error
-        );
+    const error = useSelector(
+        (state) => state.subCategory?.error
+    );
 
-    // ============================================================
-    // SUB CATEGORY FILTER STATE
-    // ============================================================
-
-    const subCategoryStatus =
-        useSelector(
-            (state) =>
-                state.subCategoryView
-                    ?.subCategoryStatus ||
-                "ALL"
-        );
-
-    // ============================================================
-    // FETCH SUB CATEGORIES
-    //
-    // IMPORTANT:
-    // STAFF must have VIEW permission before API call.
-    // ============================================================
+    /* =====================================================
+       LOAD USER PERMISSIONS
+    ===================================================== */
 
     useEffect(() => {
-
-        if (authChecking) {
+        if (authChecking || !isAuthenticated) {
             return;
         }
 
+        if (hasFullAccess) {
+            return;
+        }
+
+        if (permissionsLoaded || permissionLoading) {
+            return;
+        }
+
+        dispatch(getUserPermission());
+
+    }, [
+        authChecking,
+        isAuthenticated,
+        hasFullAccess,
+        permissionsLoaded,
+        permissionLoading,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       OPEN CREATE SUBCATEGORY MODAL
+    ===================================================== */
+
+    const handleCreateSubCategory = useCallback(() => {
         if (!isAuthenticated) {
             return;
         }
 
-        // ADMIN / SUPER_ADMIN
-        // can directly fetch.
-        if (!hasFullAccess) {
-
-            // Wait for permission request.
-            if (permissionLoading) {
-                return;
-            }
-
-            // Wait until permission state is initialized.
-            if (!permissionsLoaded) {
-                return;
-            }
-
-            // No VIEW permission.
-            if (!canViewSubCategory) {
-                return;
-            }
-        }
-
-        dispatch(
-            fetchAllSubCategories()
-        );
-
-    }, [
-        dispatch,
-        authChecking,
-        isAuthenticated,
-        hasFullAccess,
-        permissionLoading,
-        permissionsLoaded,
-        canViewSubCategory,
-    ]);
-
-    // ============================================================
-    // SYNC URL STATUS → REDUX
-    // ============================================================
-
-    useEffect(() => {
-
-        const params =
-            new URLSearchParams(
-                window.location.search
-            );
-
-        const urlStatus =
-            params.get(
-                "subCategoryStatus"
-            );
-
-        if (!urlStatus) {
-            return;
-        }
-
-        const normalizedStatus =
-            String(urlStatus)
-                .toUpperCase();
-
-        const validStatuses = [
-            "ALL",
-            "ACTIVE",
-            "INACTIVE",
-            "DRAFT",
-        ];
-
         if (
-            !validStatuses.includes(
-                normalizedStatus
+            !hasFullAccess &&
+            (
+                permissionLoading ||
+                !permissionsLoaded
             )
         ) {
             return;
         }
 
-        dispatch(
-            setSubCategoryStatus(
-                normalizedStatus
-            )
-        );
-
-        const statusLabels = {
-            ALL:
-                "All Sub Categories",
-
-            ACTIVE:
-                "Active Sub Categories",
-
-            INACTIVE:
-                "Inactive Sub Categories",
-
-            DRAFT:
-                "Draft Sub Categories",
-        };
-
-        dispatch(
-            setSelectedSubCategoryView(
-                statusLabels[
-                normalizedStatus
-                ]
-            )
-        );
-
-    }, [dispatch]);
-
-    // ============================================================
-    // FILTER SUB CATEGORIES BY STATUS
-    // ============================================================
-
-    const filteredSubCategories =
-        useMemo(() => {
-
-            const selectedStatus =
-                String(
-                    subCategoryStatus ||
-                    "ALL"
-                ).toUpperCase();
-
-            // ====================================================
-            // ALL
-            // ====================================================
-
-            if (
-                selectedStatus === "ALL"
-            ) {
-                return subCategories;
-            }
-
-            // ====================================================
-            // FILTER
-            // ====================================================
-
-            return subCategories.filter(
-                (subCategory) => {
-
-                    const backendStatus =
-                        String(
-                            subCategory?.status ||
-                            ""
-                        ).toUpperCase();
-
-                    return (
-                        backendStatus ===
-                        selectedStatus
-                    );
-                }
+        if (!canCreateSubCategory) {
+            toast.error(
+                "You do not have permission to create subcategories."
             );
 
-        }, [
-            subCategories,
-            subCategoryStatus,
-        ]);
+            return;
+        }
 
-    // ============================================================
-    // OPEN CREATE SUB CATEGORY MODAL
-    // ============================================================
+        dispatch(
+            openModal({
+                type: "addSubCategory",
+            })
+        );
 
-    const handleCreateSubCategory =
-        () => {
+    }, [
+        isAuthenticated,
+        hasFullAccess,
+        permissionLoading,
+        permissionsLoaded,
+        canCreateSubCategory,
+        dispatch,
+    ]);
 
-            if (
-                !hasFullAccess &&
-                !permissionsLoaded
-            ) {
+    /* =====================================================
+       CLEAR ERROR
+    ===================================================== */
 
-                toastPermissionLoading();
+    useEffect(() => {
+        if (!error) {
+            return;
+        }
 
-                return;
-            }
+        const timer = setTimeout(() => {
+            dispatch(clearSubCategoryError());
+        }, 2000);
 
-            if (
-                !canCreateSubCategory
-            ) {
+        return () => clearTimeout(timer);
 
-                toastPermissionDenied();
+    }, [
+        error,
+        dispatch,
+    ]);
 
-                return;
-            }
-
-            dispatch(
-                openModal({
-                    type:
-                        "addSubCategory",
-                })
-            );
-        };
-
-    // ============================================================
-    // PERMISSION TOAST HELPERS
-    // ============================================================
-
-    const toastPermissionLoading =
-        () => {
-
-            import("react-hot-toast")
-                .then(
-                    ({ default: toast }) => {
-
-                        toast.error(
-                            "Permissions are still loading. Please try again."
-                        );
-
-                    }
-                );
-        };
-
-    const toastPermissionDenied =
-        () => {
-
-            import("react-hot-toast")
-                .then(
-                    ({ default: toast }) => {
-
-                        toast.error(
-                            "You do not have permission to create sub categories."
-                        );
-
-                    }
-                );
-        };
-
-    // ============================================================
-    // AUTH CHECKING
-    // ============================================================
+    /* =====================================================
+       AUTH CHECKING
+    ===================================================== */
 
     if (authChecking) {
         return <InvoiceSkeleton />;
     }
 
-    // ============================================================
-    // NOT AUTHENTICATED
-    // ============================================================
+    /* =====================================================
+       NOT AUTHENTICATED
+    ===================================================== */
 
     if (!isAuthenticated) {
         return null;
     }
 
-    // ============================================================
-    // PERMISSION LOADING
-    // ============================================================
+    /* =====================================================
+       PERMISSION LOADING
+    ===================================================== */
 
     if (
         !hasFullAccess &&
@@ -573,196 +373,112 @@ export default function SubCategoryDashboard() {
             !permissionsLoaded
         )
     ) {
-
         return <InvoiceSkeleton />;
     }
 
-    // ============================================================
-    // VIEW PERMISSION DENIED
-    // ============================================================
+    /* =====================================================
+       VIEW PERMISSION DENIED
+    ===================================================== */
 
-    if (
-        !hasFullAccess &&
-        !canViewSubCategory
-    ) {
-
+    if (!canViewSubCategory) {
         return (
             <div
                 className="
-                flex
-                h-screen
-                bg-gray-50
-                font-sans
-                text-[13px]
-                overflow-hidden
+                    flex h-screen items-center justify-center
+                    bg-gray-50 font-sans
                 "
             >
-
-                <div
-                    className="
-                    flex-1
-                    flex
-                    items-center
-                    justify-center
-                    "
-                >
+                <div className="px-6 text-center">
 
                     <div
                         className="
-                        text-center
-                        px-6
+                            mx-auto mb-4 flex h-16 w-16
+                            items-center justify-center
+                            rounded-full bg-red-50
+                            text-2xl font-semibold text-red-500
                         "
                     >
-
-                        <div
-                            className="
-                            w-14
-                            h-14
-                            rounded-full
-                            bg-red-50
-                            flex
-                            items-center
-                            justify-center
-                            mx-auto
-                            mb-4
-                            "
-                        >
-
-                            <span
-                                className="
-                                text-red-500
-                                text-xl
-                                font-semibold
-                                "
-                            >
-                                !
-                            </span>
-
-                        </div>
-
-                        <h2
-                            className="
-                            text-lg
-                            font-semibold
-                            text-gray-800
-                            "
-                        >
-                            Access Denied
-                        </h2>
-
-                        <p
-                            className="
-                            mt-1
-                            text-sm
-                            text-gray-500
-                            "
-                        >
-                            You do not have permission
-                            to view sub categories.
-                        </p>
-
+                        !
                     </div>
 
-                </div>
+                    <h2 className="text-lg font-semibold text-gray-800">
+                        Access Denied
+                    </h2>
 
+                    <p className="mt-1 max-w-sm text-sm text-gray-500">
+                        You do not have permission to view subcategories.
+                    </p>
+
+                </div>
             </div>
         );
     }
 
-    // ============================================================
-    // SUB CATEGORY API LOADING
-    // ============================================================
+    /* =====================================================
+       EMPTY STATE
+    ===================================================== */
 
-    if (loading) {
-        return <InvoiceSkeleton />;
-    }
+    const emptyStateTitle =
+        "Every category needs subcategories";
 
-    // ============================================================
-    // PAGE
-    // ============================================================
+    const emptyStateDescription =
+        "Create and organize your product subcategories under their respective categories.";
+
+    /* =====================================================
+       PAGE
+    ===================================================== */
 
     return (
         <div
             className="
-            flex
-            h-screen
-            bg-gray-50
-            font-sans
-            text-[13px]
-            overflow-hidden
+                flex h-screen overflow-hidden
+                bg-gray-50 font-sans text-[13px]
             "
         >
-
             <div
                 className="
-                flex-1
-                min-h-0
-                bg-white
-                overflow-y-auto
+                    min-h-0 flex-1 overflow-y-auto bg-white
                 "
             >
-
                 <div
                     className="
-                    px-2
-                    py-5
-                    max-w-30xl
-                    w-full
+                        w-full max-w-30xl px-2 py-5
                     "
                 >
 
-                    {/* =================================================
-                        SUB CATEGORY NAVBAR
-                    ================================================= */}
+                    {/* SUBCATEGORY NAVBAR */}
 
                     <NavbarSubCategory />
 
-                    {/* =================================================
-                        ERROR
-                    ================================================= */}
+                    {/* SUBCATEGORY OVERVIEW */}
 
-                    {error && (
+                    {/* <SubCategoryOverview
+                        canViewSubCategory={canViewSubCategory}
+                        isAuthenticated={isAuthenticated}
+                        authChecking={authChecking}
+                    /> */}
+
+                    {/* SUBCATEGORY TABLE / LOADING / EMPTY STATE */}
+
+                    {loading ? (
                         <div
                             className="
-                            mx-2
-                            mt-4
-                            px-4
-                            py-3
-                            rounded-md
-                            border
-                            border-red-200
-                            bg-red-50
-                            text-sm
-                            text-red-600
+                                flex min-h-[250px]
+                                items-center justify-center
                             "
                         >
-                            {error}
+                            <p className="text-sm text-gray-500">
+                                Loading subcategories...
+                            </p>
                         </div>
-                    )}
-
-                    {/* =================================================
-                        SUB CATEGORY TABLE / EMPTY STATE
-                    ================================================= */}
-
-                    {filteredSubCategories.length > 0 ? (
-
-                        <SubCategoryTable
-                            subCategories={
-                                filteredSubCategories
-                            }
-                        />
-
+                    ) : subCategories.length > 0 ? (
+                        <SubCategoryTable />
                     ) : (
-
                         <div
                             className="
-                            min-h-full
-                            flex
-                            flex-col
-                            items-center
-                            justify-center
-                            gap-3
-                            px-4
+                                flex min-h-full flex-col
+                                items-center justify-center
+                                gap-3 px-4
                             "
                         >
 
@@ -770,177 +486,115 @@ export default function SubCategoryDashboard() {
 
                             <div
                                 className="
-                                relative
-                                w-24
-                                h-24
-                                rounded-full
-                                bg-gray-100
-                                flex
-                                items-center
-                                justify-center
-                                mb-1
-                                flex-shrink-0
-                                mt-30
+                                    relative mt-30 mb-1
+                                    flex h-24 w-24 shrink-0
+                                    items-center justify-center
+                                    rounded-full bg-gray-100
                                 "
                             >
-
                                 <div
                                     className="
-                                    text-gray-400
-                                    text-4xl
+                                        flex items-center justify-center
+                                        text-gray-400
                                     "
                                 >
-                                    S
-                                </div>
-
-                                <div
-                                    className="
-                                    absolute
-                                    bottom-1
-                                    right-1
-                                    w-7
-                                    h-7
-                                    rounded-full
-                                    bg-blue-600
-                                    flex
-                                    items-center
-                                    justify-center
-                                    text-white
-                                    "
-                                >
-
-                                    <Plus
-                                        className="
-                                        w-4
-                                        h-4
-                                        "
+                                    <Tags
+                                        size={42}
+                                        strokeWidth={1.7}
                                     />
-
                                 </div>
 
+                                <div
+                                    className="
+                                        absolute bottom-1 right-1
+                                        flex h-7 w-7 items-center
+                                        justify-center rounded-full
+                                        bg-blue-500 text-white
+                                    "
+                                >
+                                    <Plus className="h-4 w-4" />
+                                </div>
                             </div>
 
                             {/* EMPTY STATE TITLE */}
 
                             <p
                                 className="
-                                text-base
-                                font-medium
-                                text-gray-800
-                                text-center
+                                    text-center text-base
+                                    font-medium text-gray-800
                                 "
                             >
-                                Every category starts with a sub category
+                                {emptyStateTitle}
                             </p>
 
                             {/* EMPTY STATE DESCRIPTION */}
 
                             <p
                                 className="
-                                text-sm
-                                text-gray-500
-                                text-center
-                                max-w-sm
+                                    max-w-sm text-center
+                                    text-sm text-gray-500
                                 "
                             >
-                                Create and manage your sub categories
-                                in one place.
+                                {emptyStateDescription}
                             </p>
 
                             {/* ACTION BUTTONS */}
 
                             <div
                                 className="
-                                flex
-                                items-center
-                                gap-2.5
-                                mt-1
-                                flex-wrap
-                                justify-center
+                                    mt-1 flex flex-wrap
+                                    items-center justify-center gap-2.5
                                 "
                             >
 
-                                {/* CREATE SUB CATEGORY */}
+                                {/* CREATE SUBCATEGORY */}
 
                                 {canCreateSubCategory && (
-
                                     <button
                                         type="button"
-                                        onClick={
-                                            handleCreateSubCategory
-                                        }
+                                        onClick={handleCreateSubCategory}
                                         className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        bg-blue-600
-                                        text-white
-                                        text-sm
-                                        font-medium
-                                        px-4
-                                        py-2
-                                        rounded-md
-                                        hover:bg-blue-700
-                                        transition-colors
-                                        whitespace-nowrap
+                                            flex items-center gap-2
+                                            whitespace-nowrap rounded-md
+                                            bg-blue-500 px-4 py-2
+                                            text-sm font-medium text-white
+                                            transition-colors hover:bg-blue-600
                                         "
                                     >
+                                        <Plus className="h-4 w-4" />
 
-                                        <Plus
-                                            className="
-                                            w-4
-                                            h-4
-                                            "
-                                        />
-
-                                        Create New Sub Category
-
+                                        Create New Subcategory
                                     </button>
-
                                 )}
 
                                 {/* IMPORT */}
 
                                 <button
                                     type="button"
+                                    onClick={() => {
+                                        toast(
+                                            "Subcategory import is not configured yet."
+                                        );
+                                    }}
                                     className="
-                                    flex
-                                    items-center
-                                    gap-2
-                                    bg-white
-                                    text-gray-700
-                                    text-sm
-                                    border
-                                    border-gray-300
-                                    px-4
-                                    py-2
-                                    rounded-md
-                                    hover:bg-gray-50
-                                    transition-colors
-                                    whitespace-nowrap
+                                        flex items-center gap-2
+                                        whitespace-nowrap rounded-md
+                                        border border-gray-300 bg-white
+                                        px-4 py-2 text-sm text-gray-700
+                                        transition-colors hover:bg-gray-50
                                     "
                                 >
-
-                                    <Download
-                                        className="
-                                        w-4
-                                        h-4
-                                        "
-                                    />
+                                    <Download className="h-4 w-4" />
 
                                     Import File
-
                                 </button>
 
                             </div>
-
                         </div>
                     )}
 
                 </div>
-
             </div>
-
         </div>
     );
 }

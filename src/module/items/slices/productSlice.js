@@ -63,6 +63,7 @@ const initialState = {
   },
 
   exsistingProduct: null,
+  currentRequestId: null,
 
   createdCategorySelection: null,
   createdSubCategorySelection: null,
@@ -306,14 +307,21 @@ const productSlice = createSlice({
 
     builder
 
-      .addCase(fetchAllProducts.pending, (state) => {
+      .addCase(fetchAllProducts.pending, (state, action) => {
         state.loading = true;
         state.error = null;
         state.success = false;
         state.message = "";
+
+        state.currentRequestId = action.meta.requestId;
       })
 
       .addCase(fetchAllProducts.fulfilled, (state, action) => {
+        // Ignore an older request if a newer request was started.
+        if (state.currentRequestId !== action.meta.requestId) {
+          return;
+        }
+
         state.loading = false;
         state.success = true;
         state.error = null;
@@ -321,17 +329,19 @@ const productSlice = createSlice({
         const response = action.payload;
         const data = response?.data;
 
-        state.products = Array.isArray(data?.content)
+        const products = Array.isArray(data?.content)
           ? data.content
           : Array.isArray(data)
             ? data
             : [];
 
+        state.products = products;
+
         state.pagination = {
           pageNumber: data?.pageNumber ?? 0,
-          pageSize: data?.pageSize ?? 20,
-          totalElements: data?.totalElements ?? state.products.length,
-          totalPages: data?.totalPages ?? (state.products.length > 0 ? 1 : 0),
+          pageSize: data?.pageSize ?? 10,
+          totalElements: data?.totalElements ?? products.length,
+          totalPages: data?.totalPages ?? (products.length > 0 ? 1 : 0),
           last: data?.last ?? true,
         };
 
@@ -339,6 +349,10 @@ const productSlice = createSlice({
       })
 
       .addCase(fetchAllProducts.rejected, (state, action) => {
+        if (state.currentRequestId !== action.meta.requestId) {
+          return;
+        }
+
         state.loading = false;
         state.success = false;
 
@@ -346,7 +360,6 @@ const productSlice = createSlice({
 
         state.message = "";
       });
-
     /* =====================================================
        FETCH PRODUCT BY ID
     ===================================================== */

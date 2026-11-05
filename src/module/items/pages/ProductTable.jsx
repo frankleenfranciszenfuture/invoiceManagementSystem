@@ -24,6 +24,7 @@ import {
 } from "../slices/productSlice";
 
 import Pagination from "../../../common/pagination/table/Pagination";
+import ToolTipText from "../../../common/toolTip/ToolTipText";
 
 /* =========================================================
    CONSTANTS
@@ -290,9 +291,9 @@ export default function ProductTable({
             return;
         }
 
-        dispatch(setExistingProduct(product));
+        dispatch(setExsistingProduct(product));
 
-        navigate(`/products/edit/${product.id}`);
+        navigate(`/items/edit/${product.id}`);
     };
 
     /* =====================================================
@@ -588,7 +589,7 @@ export default function ProductTable({
 
                                 <td className="px-4 py-3">
                                     <div className="
-                                        flex items-center justify-end gap-2
+                                        relative flex items-center justify-end gap-2
                                     ">
                                         {canViewProduct && (
                                             <button
@@ -598,6 +599,7 @@ export default function ProductTable({
                                                 }
                                                 title="View product"
                                                 className="
+                                                    group relative 
                                                     flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-blue-50
@@ -606,6 +608,7 @@ export default function ProductTable({
                                                 "
                                             >
                                                 <Eye size={16} />
+                                                <ToolTipText text="View" position="bottom" />
                                             </button>
                                         )}
 
@@ -617,7 +620,7 @@ export default function ProductTable({
                                                 }
                                                 title="Edit product"
                                                 className="
-                                                    flex h-8 w-8
+                                                    group relative flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-green-50
                                                     text-green-600 transition
@@ -625,6 +628,7 @@ export default function ProductTable({
                                                 "
                                             >
                                                 <Edit size={16} />
+                                                <ToolTipText text="Edit" position="bottom" />
                                             </button>
                                         )}
 
@@ -637,7 +641,7 @@ export default function ProductTable({
                                                 }
                                                 title="Delete product"
                                                 className="
-                                                    flex h-8 w-8
+                                                    group relative flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-red-50
                                                     text-red-600 transition
@@ -647,6 +651,7 @@ export default function ProductTable({
                                                 "
                                             >
                                                 <Trash2 size={16} />
+                                                <ToolTipText text="View" position="bottom" />
                                             </button>
                                         )}
                                     </div>

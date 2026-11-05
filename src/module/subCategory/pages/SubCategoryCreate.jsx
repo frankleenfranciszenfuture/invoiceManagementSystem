@@ -1,845 +1,531 @@
+
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { ChartColumnStackedIcon } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+
+import {
+    ArrowLeft,
+    Tags,
+    AlignLeft,
+    ListOrdered,
+    Save,
+    ChevronDown,
+    Loader2,
+    RotateCcw,
+    FolderTree,
+} from "lucide-react";
+
 import toast from "react-hot-toast";
-
-import { closeModal } from "../../ui/uiSlice";
-
-import {
-    fetchAllCategories,
-} from "../../category/thunks/categoryThunks";
-
-import {
-    resetSubCategoryForm,
-    setSubCategoryField,
-    setCreatedSubCategorySelection
-} from "../slices/subCategorySlice";
 
 import {
     createSubCategory,
+    fetchSubCategoryById,
     updateSubCategory,
+    fetchAllSubCategories,
 } from "../thunks/subCategoryThunks";
 
 import {
-    getUserPermission,
-} from "../../menuPermission/thunks/menuPermissionThunks";
+    resetSubCategoryForm,
+    setCreatedSubCategorySelection,
+} from "../slices/subCategorySlice";
+
+import { fetchAllCategories } from "../../category/thunks/categoryThunks";
+
 import CustomSelect from "../../../common/custom/CustomSelect";
 
-export default function SubCategoryCreate() {
+import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
+import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
 
+import { closeModal } from "../../../module/ui/uiSlice";
+
+/* =========================================================
+   INITIAL FORM DATA
+========================================================= */
+
+const initialFormData = {
+    subCategoryCode: "",
+    name: "",
+    categoryId: "",
+    description: "",
+    status: "ACTIVE",
+    displayOrder: 1,
+};
+
+/* =========================================================
+   REUSABLE FORM COMPONENTS
+========================================================= */
+
+const FormField = ({
+    label,
+    required = false,
+    children,
+    className = "",
+}) => (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+        <label className="text-sm font-medium text-gray-700">
+            {label}
+
+            {required && (
+                <span className="ml-1 text-red-500">*</span>
+            )}
+        </label>
+
+        {children}
+    </div>
+);
+
+const TextInput = ({
+    value,
+    onChange,
+    placeholder,
+    type = "text",
+    disabled = false,
+    maxLength,
+    min,
+}) => (
+    <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        maxLength={maxLength}
+        min={min}
+        className="
+            h-10 w-full rounded-lg border border-gray-200
+            bg-white px-3 text-sm text-gray-700
+            outline-none transition
+            placeholder:text-gray-400
+            focus:border-[#408DFB] focus:ring-2
+            focus:ring-[#408DFB]/10
+            disabled:cursor-not-allowed disabled:bg-gray-100
+        "
+    />
+);
+
+const TextAreaField = ({
+    value,
+    onChange,
+    placeholder,
+    rows = 4,
+}) => (
+    <textarea
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        rows={rows}
+        className="
+            w-full resize-none rounded-lg border border-gray-200
+            bg-white px-3 py-2.5 text-sm text-gray-700
+            outline-none transition
+            placeholder:text-gray-400
+            focus:border-[#408DFB] focus:ring-2
+            focus:ring-[#408DFB]/10
+        "
+    />
+);
+
+const SectionHeading = ({
+    icon: Icon,
+    title,
+    description,
+}) => (
+    <div className="mb-5 flex items-center gap-3">
+        <div className="
+            flex h-10 w-10 items-center justify-center
+            rounded-xl bg-blue-50 text-[#408DFB]
+        ">
+            <Icon size={19} />
+        </div>
+
+        <div>
+            <h3 className="text-sm font-semibold text-gray-800">
+                {title}
+            </h3>
+
+            {description && (
+                <p className="mt-0.5 text-xs text-gray-400">
+                    {description}
+                </p>
+            )}
+        </div>
+    </div>
+);
+
+/* =========================================================
+   MAIN COMPONENT
+========================================================= */
+
+const SubCategoryCreateSimple = ({ onClose }) => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
 
-    // =========================================================
-    // REDUX
-    // =========================================================
+    const { id } = useParams();
 
-    const { modal } = useSelector(
-        (state) => state.ui
+    const isEdit = Boolean(id);
+
+    /* =====================================================
+       REDUX STATE
+    ===================================================== */
+
+    const modalData = useSelector(
+        (state) => state.ui.modal?.data
     );
 
     const {
-        subCategory,
-        loading,
+        loading = false,
     } = useSelector(
-        (state) => state.subCategory
+        (state) => state.subCategory ?? {}
     );
+
+    const categories = useSelector(
+        (state) => state.category?.categories ?? []
+    );
+
+    /* =====================================================
+       LOCAL STATE
+    ===================================================== */
+
+    const [formData, setFormData] = useState(initialFormData);
+
+    const [saveMode, setSaveMode] = useState("close");
+
+    const [showSaveOptions, setShowSaveOptions] = useState(false);
 
     const {
-        categories = [],
-    } = useSelector(
-        (state) => state.category
-    );
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
 
-    // =========================================================
-    // AUTH
-    // =========================================================
+    /* =====================================================
+       DROPDOWN OPTIONS
+    ===================================================== */
 
-    const user = useSelector(
-        (state) => state.auth?.user
-    );
+    const statusOptions = [
+        {
+            label: "Active",
+            value: "ACTIVE",
+        },
+        {
+            label: "Inactive",
+            value: "INACTIVE",
+        },
+    ];
 
-    const isAuthenticated = useSelector(
-        (state) =>
-            state.auth?.isAuthenticated === true
-    );
+    const categoryOptions = categories.map((category) => ({
+        label: `${category.categoryName} (${category.categoryCode})`,
+        value: String(category.id),
+    }));
 
-    const authChecking = useSelector(
-        (state) =>
-            state.auth?.authChecking === true
-    );
+    /* =====================================================
+       FETCH CATEGORIES
+    ===================================================== */
 
-    // =========================================================
-    // USER PERMISSIONS
-    // =========================================================
+    useEffect(() => {
+        dispatch(fetchAllCategories({
+            page: 0,
+            size: 1000,
+        }));
+    }, [dispatch]);
 
-    const permissions = useSelector(
-        (state) =>
-            state.menuPermission?.userPermissions || []
-    );
+    /* =====================================================
+       FETCH SUBCATEGORY FOR EDIT
+    ===================================================== */
 
-    const permissionLoading = useSelector(
-        (state) =>
-            state.menuPermission?.loading === true
-    );
+    useEffect(() => {
+        let isMounted = true;
 
-    const permissionsLoaded = useSelector(
-        (state) =>
-            state.menuPermission?.userPermissionsLoaded === true
-    );
+        const loadSubCategory = async () => {
+            if (!isEdit) {
+                setFormData(initialFormData);
+                dispatch(resetSubCategoryForm());
+                return;
+            }
 
-    // =========================================================
-    // ADD / EDIT MODE
-    // =========================================================
+            try {
+                const response = await dispatch(
+                    fetchSubCategoryById(id)
+                ).unwrap();
 
-    const isEdit =
-        modal.type === "editSubCategory";
+                if (!isMounted) return;
 
-    const isOpen =
-        modal.open &&
-        (
-            modal.type === "addSubCategory" ||
-            modal.type === "editSubCategory"
-        );
+                const subCategory =
+                    response?.data ?? response;
 
-    // =========================================================
-    // LOCAL STATE
-    // =========================================================
+                if (!subCategory) {
+                    toast.error("Subcategory not found");
+                    return;
+                }
 
-    const [errors, setErrors] =
-        useState({});
+                setFormData({
+                    subCategoryCode:
+                        subCategory.subCategoryCode ?? "",
+                    name: subCategory.name ?? "",
+                    categoryId:
+                        subCategory.categoryId != null
+                            ? String(subCategory.categoryId)
+                            : "",
+                    description: subCategory.description ?? "",
+                    status: subCategory.status ?? "ACTIVE",
+                    displayOrder: subCategory.displayOrder ?? 1,
+                });
 
-    const [activeTab, setActiveTab] =
-        useState("subcategory");
+            } catch (error) {
+                if (isMounted) {
+                    toast.error(
+                        typeof error === "string"
+                            ? error
+                            : "Failed to fetch subcategory details"
+                    );
+                }
+            }
+        };
 
-    // =========================================================
-    // FORM
-    // =========================================================
+        loadSubCategory();
 
-    const form = subCategory || {
-        id: null,
-        categoryId: null,
-        name: "",
-        description: "",
-        displayOrder: 1,
-        status: "ACTIVE",
+        return () => {
+            isMounted = false;
+        };
+    }, [dispatch, id, isEdit]);
+
+    /* =====================================================
+       HANDLE FIELD CHANGE
+    ===================================================== */
+
+    const handleChange = (field, value) => {
+        setFormData((prev) => ({
+            ...prev,
+            [field]: value,
+        }));
     };
 
-    // =========================================================
-    // NORMALIZE
-    // =========================================================
+    /* =====================================================
+       HANDLE CLOSE
+    ===================================================== */
 
-    const normalizeModule = (value) =>
-        String(value ?? "")
-            .trim()
-            .toLowerCase();
+    const handleClose = () => {
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/settings/subCategoires");
+            }
+        });
+    };
 
-    const normalizeAction = (value) =>
-        String(value ?? "")
-            .trim()
-            .toUpperCase();
+    /* =====================================================
+       VALIDATION
+    ===================================================== */
 
-    // =========================================================
-    // ROLE
-    // =========================================================
-
-    const roleName =
-        user?.roleName ||
-        user?.role?.roleName ||
-        user?.role?.name ||
-        user?.role ||
-        user?.authority ||
-        "";
-
-    const normalizedRole =
-        normalizeAction(roleName);
-
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
-
-    const isAdmin =
-        normalizedRole === "ADMIN";
-
-    const hasFullAccess =
-        isSuperAdmin || isAdmin;
-
-    // =========================================================
-    // PERMISSION CHECK
-    // =========================================================
-
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
-
-        // -----------------------------------------------------
-        // ADMIN / SUPER ADMIN
-        // -----------------------------------------------------
-
-        if (hasFullAccess) {
-            return true;
-        }
-
-        // -----------------------------------------------------
-        // NORMALIZE REQUEST
-        // -----------------------------------------------------
-
-        const requestedModule =
-            normalizeModule(moduleName);
-
-        const requestedAction =
-            normalizeAction(actionName);
-
-        // -----------------------------------------------------
-        // PERMISSION LIST
-        // -----------------------------------------------------
-
-        if (!Array.isArray(permissions)) {
+    const validateForm = () => {
+        if (!formData.name.trim()) {
+            toast.error("Subcategory name is required");
             return false;
         }
 
-        // -----------------------------------------------------
-        // FIND PERMISSION
-        // -----------------------------------------------------
-
-        return permissions.some(
-            (permission) => {
-
-                const permissionModule =
-                    normalizeModule(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name ||
-                        ""
-                    );
-
-                // -------------------------------------------------
-                // MODULE MUST MATCH
-                // -------------------------------------------------
-
-                if (
-                    permissionModule !==
-                    requestedModule
-                ) {
-                    return false;
-                }
-
-                // -------------------------------------------------
-                // INACTIVE PERMISSION
-                // -------------------------------------------------
-
-                if (
-                    permission?.active === false ||
-                    normalizeAction(
-                        permission?.status
-                    ) === "INACTIVE"
-                ) {
-                    return false;
-                }
-
-                // -------------------------------------------------
-                // DIRECT ACTION
-                // -------------------------------------------------
-
-                const permissionAction =
-                    normalizeAction(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
-                        ""
-                    );
-
-                if (
-                    permissionAction ===
-                    requestedAction
-                ) {
-
-                    return (
-                        permission?.allowed === true ||
-                        permission?.allowed === "true"
-                    );
-                }
-
-                // -------------------------------------------------
-                // GROUPED ACTIONS
-                // -------------------------------------------------
-
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
-
-                    return permission.actions.some(
-                        (action) => {
-
-                            // -------------------------------------
-                            // STRING ACTION
-                            // -------------------------------------
-
-                            if (
-                                typeof action ===
-                                "string"
-                            ) {
-
-                                return (
-                                    normalizeAction(
-                                        action
-                                    ) ===
-                                    requestedAction
-                                );
-                            }
-
-                            // -------------------------------------
-                            // OBJECT ACTION
-                            // -------------------------------------
-
-                            const actionName =
-                                normalizeAction(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.name ||
-                                    ""
-                                );
-
-                            return (
-                                actionName ===
-                                requestedAction &&
-                                (
-                                    action?.allowed ===
-                                    true ||
-                                    action?.allowed ===
-                                    "true"
-                                ) &&
-                                action?.active !== false &&
-                                normalizeAction(
-                                    action?.status
-                                ) !==
-                                "INACTIVE"
-                            );
-                        }
-                    );
-                }
-
-                return false;
-            }
-        );
-    };
-
-    // =========================================================
-    // CREATE / EDIT PERMISSION
-    // =========================================================
-
-    const requiredAction =
-        isEdit
-            ? "EDIT"
-            : "CREATE";
-
-    const hasRequiredPermission =
-        hasPermission(
-            "SubCategories",
-            requiredAction
-        );
-
-    // =========================================================
-    // LOAD PERMISSIONS IF NECESSARY
-    // =========================================================
-
-    useEffect(() => {
-
-        if (!isOpen) {
-            return;
-        }
-
-        if (authChecking) {
-            return;
-        }
-
-        if (!isAuthenticated) {
-            return;
-        }
-
-        if (hasFullAccess) {
-            return;
-        }
-
-        // -----------------------------------------------------
-        // Load permissions when they are not loaded.
-        // -----------------------------------------------------
-
-        if (
-            !permissionsLoaded &&
-            !permissionLoading
-        ) {
-
-            dispatch(
-                getUserPermission()
-            );
-        }
-
-    }, [
-        isOpen,
-        authChecking,
-        isAuthenticated,
-        hasFullAccess,
-        permissionsLoaded,
-        permissionLoading,
-        dispatch,
-    ]);
-
-    // =========================================================
-    // LOAD CATEGORIES
-    // =========================================================
-
-    useEffect(() => {
-
-        if (!isOpen) {
-            return;
-        }
-
-        if (authChecking) {
-            return;
-        }
-
-        if (!isAuthenticated) {
-            return;
-        }
-
-        dispatch(
-            fetchAllCategories()
-        );
-
-    }, [
-        isOpen,
-        authChecking,
-        isAuthenticated,
-        dispatch,
-    ]);
-
-    // =========================================================
-    // ESCAPE KEY
-    // =========================================================
-
-    useEffect(() => {
-
-        if (!isOpen) {
-            return;
-        }
-
-        const handleEscape = (event) => {
-
-            if (
-                event.key === "Escape" &&
-                !loading
-            ) {
-
-                handleClose();
-            }
-        };
-
-        document.addEventListener(
-            "keydown",
-            handleEscape
-        );
-
-        return () => {
-
-            document.removeEventListener(
-                "keydown",
-                handleEscape
-            );
-        };
-
-    }, [
-        isOpen,
-        loading,
-    ]);
-
-    useEffect(() => {
-        if (modal.type === "addSubCategory" && modal.data) {
-            dispatch(setSubCategoryField({
-                field: "categoryId",
-                value: modal.data.categoryId,
-            }));
-
-            dispatch(setSubCategoryField({
-                field: "categoryName",
-                value: modal.data.categoryName,
-            }));
-        }
-    }, [modal.type, modal.data, dispatch]);
-
-    // =========================================================
-    // LOAD EXISTING DATA FOR EDIT
-    // =========================================================
-
-    useEffect(() => {
-
-        if (
-            modal.open &&
-            modal.type === "editSubCategory" &&
-            modal.data
-        ) {
-
-            const existingSubCategory =
-                modal.data;
-
-            dispatch(
-                setSubCategoryField({
-                    field: "id",
-                    value:
-                        existingSubCategory.id ??
-                        null,
-                })
-            );
-
-            dispatch(
-                setSubCategoryField({
-                    field: "categoryId",
-                    value:
-                        existingSubCategory.categoryId ??
-                        null,
-                })
-            );
-
-            dispatch(
-                setSubCategoryField({
-                    field: "name",
-                    value:
-                        existingSubCategory.name ??
-                        "",
-                })
-            );
-
-            dispatch(
-                setSubCategoryField({
-                    field: "description",
-                    value:
-                        existingSubCategory.description ??
-                        "",
-                })
-            );
-
-            dispatch(
-                setSubCategoryField({
-                    field: "displayOrder",
-                    value:
-                        existingSubCategory.displayOrder ??
-                        1,
-                })
-            );
-
-            dispatch(
-                setSubCategoryField({
-                    field: "status",
-                    value:
-                        existingSubCategory.status ??
-                        "ACTIVE",
-                })
-            );
-        }
-
-    }, [
-        modal.open,
-        modal.type,
-        modal.data,
-        dispatch,
-    ]);
-
-    // =========================================================
-    // CHANGE FIELD
-    // =========================================================
-
-    const handleChange = (
-        field,
-        value
-    ) => {
-
-        dispatch(
-            setSubCategoryField({
-                field,
-                value,
-            })
-        );
-
-        setErrors(
-            (previous) => {
-
-                if (!previous[field]) {
-                    return previous;
-                }
-
-                const updated = {
-                    ...previous,
-                };
-
-                delete updated[field];
-
-                return updated;
-            }
-        );
-    };
-
-    // =========================================================
-    // CLOSE MODAL
-    // =========================================================
-
-    const handleClose = () => {
-
-        dispatch(
-            closeModal()
-        );
-
-        dispatch(
-            resetSubCategoryForm()
-        );
-
-        setErrors({});
-        setActiveTab("subcategory");
-    };
-
-    // =========================================================
-    // VALIDATION
-    // =========================================================
-
-    const validateSubCategory = () => {
-
-        const newErrors = {};
-
-        if (!form.categoryId) {
-
-            newErrors.categoryId =
-                "Category is required";
-        }
-
-        if (
-            !String(
-                form.name ?? ""
-            ).trim()
-        ) {
-
-            newErrors.name =
-                "Sub Category Name is required";
-        }
-
-        if (
-            form.displayOrder === "" ||
-            form.displayOrder === null ||
-            form.displayOrder === undefined
-        ) {
-
-            newErrors.displayOrder =
-                "Display Order is required";
-
-        } else if (
-            Number(form.displayOrder) < 1
-        ) {
-
-            newErrors.displayOrder =
-                "Display Order must be at least 1";
-        }
-
-        setErrors(newErrors);
-
-        if (
-            newErrors.categoryId ||
-            newErrors.name ||
-            newErrors.displayOrder
-        ) {
-
-            setActiveTab(
-                "subcategory"
-            );
-
+        if (formData.name.trim().length < 2) {
             toast.error(
-                "Please complete Sub Category Information"
+                "Subcategory name must contain at least 2 characters"
             );
+            return false;
+        }
 
+        if (!formData.categoryId) {
+            toast.error("Please select a parent category");
+            return false;
+        }
+
+        if (
+            formData.subCategoryCode.trim() &&
+            formData.subCategoryCode.trim().length > 30
+        ) {
+            toast.error(
+                "Subcategory code cannot exceed 30 characters"
+            );
+            return false;
+        }
+
+        if (
+            !Number.isInteger(Number(formData.displayOrder)) ||
+            Number(formData.displayOrder) < 1
+        ) {
+            toast.error(
+                "Display order must be a positive whole number"
+            );
             return false;
         }
 
         return true;
     };
 
-    // =========================================================
-    // SAVE
-    // CREATE / UPDATE
-    // =========================================================
+    /* =====================================================
+       RESET FORM
+    ===================================================== */
 
-    const handleSave = async (e) => {
+    const handleReset = async () => {
+        if (loading) return;
 
-        e.preventDefault();
+        if (isEdit) {
+            try {
+                const response = await dispatch(
+                    fetchSubCategoryById(id)
+                ).unwrap();
 
-        // -----------------------------------------------------
-        // Prevent saving before permissions finish loading.
-        // -----------------------------------------------------
+                const subCategory =
+                    response?.data ?? response;
 
-        if (
-            !hasFullAccess &&
-            !permissionsLoaded
-        ) {
-
-            toast.error(
-                "Permissions are still loading. Please try again."
-            );
-
-            return;
-        }
-
-        // -----------------------------------------------------
-        // Permission check AGAIN before API call
-        // -----------------------------------------------------
-
-        if (!hasRequiredPermission) {
-
-            toast.error(
-                isEdit
-                    ? "You do not have permission to edit sub categories."
-                    : "You do not have permission to create sub categories."
-            );
-
-            return;
-        }
-
-        // -----------------------------------------------------
-        // VALIDATION
-        // -----------------------------------------------------
-
-        if (!validateSubCategory()) {
-            return;
-        }
-
-        // -----------------------------------------------------
-        // DISPLAY ORDER
-        // -----------------------------------------------------
-
-        const displayOrder =
-            Number(
-                form.displayOrder
-            );
-
-        if (
-            !Number.isInteger(
-                displayOrder
-            ) ||
-            displayOrder < 1
-        ) {
-
-            toast.error(
-                "Display order must be a valid number greater than 0"
-            );
-
-            return;
-        }
-
-        // -----------------------------------------------------
-        // PAYLOAD
-        // -----------------------------------------------------
-
-        const payload = {
-
-            categoryId:
-                Number(
-                    form.categoryId
-                ),
-
-            name:
-                form.name.trim(),
-
-            description:
-                form.description?.trim() ||
-                "",
-
-            displayOrder,
-
-            status:
-                form.status ||
-                "ACTIVE",
-        };
-
-        try {
-
-            // =================================================
-            // EDIT
-            // =================================================
-
-            if (isEdit) {
-
-                const subCategoryId =
-                    form.id ??
-                    modal.data?.id;
-
-                if (!subCategoryId) {
-
-                    toast.error(
-                        "Sub category ID is missing"
-                    );
-
+                if (!subCategory) {
+                    toast.error("Subcategory not found");
                     return;
                 }
 
-                await dispatch(
+                setFormData({
+                    subCategoryCode:
+                        subCategory.subCategoryCode ?? "",
+                    name: subCategory.name ?? "",
+                    categoryId:
+                        subCategory.categoryId != null
+                            ? String(subCategory.categoryId)
+                            : "",
+                    description: subCategory.description ?? "",
+                    status: subCategory.status ?? "ACTIVE",
+                    displayOrder: subCategory.displayOrder ?? 1,
+                });
+
+            } catch (error) {
+                toast.error(
+                    typeof error === "string"
+                        ? error
+                        : "Failed to reset subcategory form"
+                );
+            }
+
+            return;
+        }
+
+        setFormData(initialFormData);
+
+        dispatch(resetSubCategoryForm());
+    };
+
+    /* =====================================================
+       SAVE SUBCATEGORY
+    ===================================================== */
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (loading) return;
+
+        if (!validateForm()) return;
+
+        const payload = {
+            subCategoryCode: formData.subCategoryCode.trim(),
+            name: formData.name.trim(),
+            categoryId: Number(formData.categoryId),
+            description: formData.description.trim(),
+            status: formData.status,
+            displayOrder: Number(formData.displayOrder),
+        };
+
+        try {
+            let response;
+
+            /* =============================================
+               UPDATE SUBCATEGORY
+            ============================================= */
+
+            if (isEdit) {
+                response = await dispatch(
                     updateSubCategory({
-                        id: subCategoryId,
+                        id,
                         data: payload,
                     })
                 ).unwrap();
 
                 toast.success(
-                    "Sub category updated successfully"
+                    response?.message ||
+                    "Subcategory updated successfully"
                 );
 
+                navigate(-1);
+
+                return;
             }
 
-            // =================================================
-            // CREATE
-            // =================================================
+            /* =============================================
+               CREATE SUBCATEGORY
+            ============================================= */
 
-            else {
+            response = await dispatch(
+                createSubCategory(payload)
+            ).unwrap();
 
-                const response = await dispatch(
-                    createSubCategory(payload)
-                ).unwrap();
+            toast.success(
+                response?.message ||
+                "Subcategory created successfully"
+            );
 
-                const createdSubCategory =
-                    response?.data?.data ??
-                    response?.data ??
-                    response;
+            const createdSubCategory =
+                response?.data?.data ??
+                response?.data ??
+                response;
 
-                if (
-                    modal.data?.selectAfterCreate &&
-                    createdSubCategory?.id
-                ) {
-                    dispatch(
-                        setCreatedSubCategorySelection({
-                            item: createdSubCategory,
-                            targetField: modal.data.targetField,
-                        })
-                    );
-                }
-                toast.success(
-                    "Sub category created successfully"
+            /* =============================================
+               SELECT CREATED SUBCATEGORY
+            ============================================= */
+
+            if (modalData?.selectAfterCreate) {
+                dispatch(
+                    setCreatedSubCategorySelection({
+                        targetField: modalData.targetField,
+                        entity: createdSubCategory,
+                    })
                 );
+
+                dispatch(fetchAllSubCategories());
+
+                dispatch(closeModal());
+
+                return;
             }
 
-            // =================================================
-            // CLOSE + RESET
-            // =================================================
+            /* =============================================
+               SAVE & NEW
+            ============================================= */
 
-            dispatch(
-                closeModal()
-            );
+            if (saveMode === "new") {
+                setFormData(initialFormData);
 
-            dispatch(
-                resetSubCategoryForm()
-            );
+                dispatch(resetSubCategoryForm());
 
-            setErrors({});
-            setActiveTab("subcategory");
+                setSaveMode("close");
+
+                return;
+            }
+
+            /* =============================================
+               SAVE & CLOSE
+            ============================================= */
+
+            dispatch(fetchAllSubCategories());
+
+            dispatch(resetSubCategoryForm());
+
+            if (onClose) {
+                onClose();
+            } else {
+                dispatch(closeModal());
+                navigate("/settings/subCategoires");
+            }
 
         } catch (error) {
-
             console.error(
-                "Sub category save error:",
+                isEdit
+                    ? "Subcategory update error:"
+                    : "Subcategory creation error:",
                 error
             );
 
@@ -847,1208 +533,439 @@ export default function SubCategoryCreate() {
                 typeof error === "string"
                     ? error
                     : error?.message ||
-                    error?.response?.data?.message ||
-                    (
-                        isEdit
-                            ? "Failed to update sub category"
-                            : "Failed to create sub category"
-                    )
+                    (isEdit
+                        ? "Failed to update subcategory"
+                        : "Failed to create subcategory")
             );
         }
     };
 
-    // =========================================================
-    // DO NOT RENDER
-    // =========================================================
+    /* =====================================================
+       ESCAPE KEY
+    ===================================================== */
 
-    if (!isOpen) {
-        return null;
-    }
+    useEffect(() => {
+        const handleEscape = (e) => {
+            if (e.key === "Escape") {
+                setShowSaveOptions(false);
+            }
+        };
 
-    // =========================================================
-    // PERMISSION LOADING
-    // Same structure as CategoryCreate
-    // =========================================================
+        window.addEventListener("keydown", handleEscape);
 
-    if (
-        !hasFullAccess &&
-        (
-            authChecking ||
-            permissionLoading ||
-            !permissionsLoaded
-        )
-    ) {
+        return () => {
+            window.removeEventListener("keydown", handleEscape);
+        };
+    }, []);
 
+    /* =====================================================
+       LOADING SCREEN
+    ===================================================== */
+
+    if (isEdit && loading && !formData.name) {
         return (
-            <div
-                className="
-                    w-[950px]
-                    max-w-[95vw]
-                    min-h-[300px]
-
-                    bg-white
-                    rounded-xl
-                    shadow-2xl
-
-                    flex
-                    items-center
-                    justify-center
-
-                    p-8
-                "
-            >
-
-                <div className="text-center">
-
-                    <div
-                        className="
-                            w-10
-                            h-10
-
-                            mx-auto
-                            mb-3
-
-                            border-2
-                            border-blue-200
-                            border-t-blue-600
-
-                            rounded-full
-                            animate-spin
-                        "
+            <div className="
+                flex h-full items-center justify-center
+                bg-gray-50
+            ">
+                <div className="
+                    flex items-center gap-2
+                    text-sm text-gray-500
+                ">
+                    <Loader2
+                        size={20}
+                        className="animate-spin"
                     />
 
-                    <p
-                        className="
-                            text-sm
-                            font-medium
-                            text-gray-600
-                        "
-                    >
-                        Loading permissions...
-                    </p>
-
+                    Loading subcategory details...
                 </div>
-
             </div>
         );
     }
 
-    // =========================================================
-    // UNAUTHORIZED
-    // Same structure as CategoryCreate
-    // =========================================================
+    /* =====================================================
+       RENDER
+    ===================================================== */
 
-    if (!hasRequiredPermission) {
+    return (
+        <div className="
+            flex h-full min-h-0 flex-col
+            bg-gray-50 px-3.5 py-3
+        ">
 
-        return (
-            <div
-                className="
-                    w-[950px]
-                    max-w-[95vw]
-                    min-h-[300px]
+            {/* HEADER */}
 
-                    bg-white
-                    rounded-xl
-                    shadow-2xl
+            <div className="
+                mb-3 flex shrink-0 items-center
+                justify-between rounded-xl
+                border-b-[3px] border-[#B7E34A]
+                bg-white px-5 py-4 shadow-sm
+            ">
 
-                    overflow-hidden
-
-                    flex
-                    flex-col
-                "
-            >
-
-                {/* HEADER */}
-
-                <div
-                    className="
-                        shrink-0
-                        h-[68px]
-
-                        flex
-                        items-center
-                        justify-between
-
-                        px-6
-
-                        border-b
-                        border-gray-200
-
-                        bg-white
-                    "
-                >
-
-                    <div className="flex items-center gap-3">
-
-                        <div
-                            className="
-                                w-9
-                                h-9
-                                rounded-lg
-
-                                bg-red-50
-
-                                flex
-                                items-center
-                                justify-center
-                            "
-                        >
-
-                            <ChartColumnStackedIcon
-                                size={20}
-                                className="text-red-500"
-                            />
-
-                        </div>
-
-                        <div>
-
-                            <h2
-                                className="
-                                    text-[17px]
-                                    font-semibold
-                                    text-gray-800
-                                "
-                            >
-                                Access Denied
-                            </h2>
-
-                            <p
-                                className="
-                                    text-xs
-                                    text-gray-500
-                                    mt-0.5
-                                "
-                            >
-                                Sub category access restricted
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                {/* ACCESS DENIED BODY */}
-
-                <div
-                    className="
-                        flex-1
-
-                        flex
-                        items-center
-                        justify-center
-
-                        px-6
-                        py-10
-                    "
-                >
-
-                    <div className="text-center">
-
-                        <div
-                            className="
-                                w-12
-                                h-12
-
-                                mx-auto
-                                mb-3
-
-                                rounded-full
-
-                                bg-red-50
-
-                                flex
-                                items-center
-                                justify-center
-                            "
-                        >
-
-                            <span
-                                className="
-                                    text-red-500
-                                    text-lg
-                                    font-semibold
-                                "
-                            >
-                                !
-                            </span>
-
-                        </div>
-
-                        <h2
-                            className="
-                                text-lg
-                                font-semibold
-                                text-gray-800
-                            "
-                        >
-                            Access Denied
-                        </h2>
-
-                        <p
-                            className="
-                                mt-1
-                                text-sm
-                                text-gray-500
-                            "
-                        >
-                            {isEdit
-                                ? "You do not have permission to edit sub categories."
-                                : "You do not have permission to create sub categories."
-                            }
-                        </p>
-
-                    </div>
-
-                </div>
-
-                {/* FOOTER */}
-
-                <div
-                    className="
-                        shrink-0
-                        h-[68px]
-
-                        flex
-                        items-center
-                        justify-end
-
-                        px-6
-
-                        border-t
-                        border-gray-200
-
-                        bg-white
-                    "
-                >
+                <div className="flex items-center gap-3">
 
                     <button
                         type="button"
                         onClick={handleClose}
                         className="
-                            h-10
-                            px-5
-
-                            rounded-md
-
-                            border
-                            border-gray-300
-
-                            text-sm
-                            font-medium
-                            text-gray-700
-
-                            bg-white
-
-                            hover:bg-gray-50
-
-                            transition
+                            flex h-9 w-9 items-center
+                            justify-center rounded-lg
+                            border border-gray-200
+                            text-gray-500 transition
+                            hover:bg-gray-100
                         "
+                        title="Go Back"
                     >
-                        Close
+                        <ArrowLeft size={18} />
                     </button>
 
-                </div>
-
-            </div>
-        );
-    }
-
-    // =========================================================
-    // TABS
-    // =========================================================
-
-    const tabs = [
-        {
-            id: "subcategory",
-            label: "Sub Category Information",
-        },
-        {
-            id: "settings",
-            label: "Settings",
-        },
-    ];
-
-    // =========================================================
-    // CLASSES
-    // =========================================================
-
-    const inputClass = `
-        w-full
-        h-11
-        px-3
-
-        border
-        border-gray-300
-        rounded-md
-
-        text-sm
-        text-gray-700
-
-        bg-white
-
-        outline-none
-        transition
-
-        focus:border-blue-500
-        focus:ring-1
-        focus:ring-blue-500
-
-        disabled:bg-gray-100
-        disabled:text-gray-500
-        disabled:cursor-not-allowed
-    `;
-
-    const labelClass = `
-        block
-        text-xs
-        font-medium
-        text-gray-600
-        mb-1.5
-    `;
-
-    const getLabelClass = (required = false) => `
-    block
-    text-xs
-    font-medium
-    ${required ? "text-red-500" : "text-gray-500"}
-    mb-1.5
-`;
-    // =========================================================
-    // UI
-    // =========================================================
-
-    return (
-        <div
-            className="
-                   w-full
-        min-w-0
-        max-h-[80vh]
-        bg-white
-        rounded-lg
-        overflow-hidden
-        flex
-        flex-col
-            "
-        >
-
-            {/* =================================================
-                HEADER
-            ================================================= */}
-
-            <div
-                className="
-                    shrink-0
-                    h-[68px]
-
-                    flex
-                    items-center
-                    justify-between
-
-                    px-6
-
-                    border-b
-                    border-lime-500
-
-                    bg-white
-                "
-            >
-
-                <div className="flex items-center gap-3">
-
-                    <div
-                        className="
-                            w-9
-                            h-9
-                            rounded-lg
-
-                            bg-blue-50
-
-                            flex
-                            items-center
-                            justify-center
-                        "
-                    >
-
-                        <ChartColumnStackedIcon
-                            size={20}
-                            className="text-blue-600"
-                        />
-
-                    </div>
-
                     <div>
-
-                        <h2
-                            className="
-                                text-[16px]
-                                font-semibold
-                                text-gray-500
-                            "
-                        >
+                        <h2 className="text-base font-semibold text-gray-800">
                             {isEdit
-                                ? "Edit Sub Category"
-                                : "New Sub Category"}
+                                ? "Edit Subcategory"
+                                : "Create Subcategory"}
                         </h2>
 
-                        <p
-                            className="
-                                text-xs
-                                text-gray-400
-                                mt-0.5
-                            "
-                        >
+                        <p className="mt-0.5 text-xs text-gray-400">
                             {isEdit
-                                ? "Update sub category information"
-                                : "Create a new sub category"}
+                                ? "Update your subcategory information"
+                                : "Add a new subcategory to your organization"}
                         </p>
-
                     </div>
 
                 </div>
 
-            </div>
+                <div className="
+                    hidden items-center gap-2
+                    rounded-lg bg-blue-50 px-3 py-2 sm:flex
+                ">
+                    <FolderTree
+                        size={16}
+                        className="text-[#408DFB]"
+                    />
 
-            {/* =================================================
-                TABS
-            ================================================= */}
-
-            <div
-                className="
-                    shrink-0
-                    px-6
-
-                    border-b
-                    border-gray-200
-
-                    bg-white
-                "
-            >
-
-                <div
-                    className="
-                        flex
-                        items-center
-                        gap-8
-                        h-[52px]
-                    "
-                >
-
-                    {tabs.map((tab) => {
-
-                        const active =
-                            activeTab === tab.id;
-
-                        const hasError =
-                            tab.id === "subcategory" &&
-                            (
-                                errors.categoryId ||
-                                errors.name ||
-                                errors.displayOrder
-                            );
-
-                        return (
-                            <button
-                                key={tab.id}
-                                type="button"
-                                onClick={() =>
-                                    setActiveTab(tab.id)
-                                }
-                                className={`
-                                    relative
-                                    h-full
-
-                                    text-sm
-                                    font-medium
-
-                                    transition
-
-                                    ${active
-                                        ? "text-gray-500"
-                                        : hasError
-                                            ? "text-red-500"
-                                            : "text-gray-400 hover:text-gray-600"
-                                    }
-                                `}
-                            >
-
-                                <span
-                                    className="
-                                        flex
-                                        items-center
-                                        gap-1.5
-                                    "
-                                >
-
-                                    {tab.label}
-
-                                    {hasError && (
-                                        <span
-                                            className="
-                                                w-1.5
-                                                h-1.5
-
-                                                rounded-full
-
-                                                bg-red-500
-                                            "
-                                        />
-                                    )}
-
-                                </span>
-
-                                {active && (
-                                    <span
-                                        className="
-                                            absolute
-                                            left-0
-                                            right-0
-                                            bottom-0
-
-                                            h-[2px]
-
-                                            bg-lime-500
-
-                                            rounded-t
-                                        "
-                                    />
-                                )}
-
-                            </button>
-                        );
-                    })}
-
+                    <span className="
+                        text-xs font-medium text-[#408DFB]
+                    ">
+                        Subcategory
+                    </span>
                 </div>
 
             </div>
 
-            {/* =================================================
-                FORM
-            ================================================= */}
+            {/* FORM */}
 
             <form
-                onSubmit={handleSave}
+                onSubmit={handleSubmit}
                 className="
-                    flex
-                    flex-col
-                    flex-1
-                    min-h-0
-                    overflow-hidden
+                    flex min-h-0 flex-1 flex-col
+                    overflow-hidden rounded-xl
+                    bg-white shadow-sm
                 "
             >
 
-                {/* =================================================
-                    SCROLL BODY
-                ================================================= */}
+                <div className="flex-1 overflow-y-auto p-5">
 
-                <div
-                    className="
-                        flex-1
-                        min-h-0
+                    {/* SUBCATEGORY DETAILS */}
 
-                        overflow-y-auto
-                        overflow-x-hidden
+                    <section className="mb-7">
 
-                        px-7
-                        py-6
+                        <SectionHeading
+                            icon={Tags}
+                            title="Subcategory Details"
+                            description="Enter the basic subcategory information"
+                        />
 
-                        bg-gray-50/50
-                    "
-                >
+                        <div className="
+                            grid grid-cols-1 gap-5
+                            md:grid-cols-2 lg:grid-cols-3
+                        ">
 
-                    {/* =================================================
-                        SUB CATEGORY INFORMATION
-                    ================================================= */}
-
-                    {activeTab === "subcategory" && (
-
-                        <div>
-
-                            <div
-                                className="
-                                    mb-6
-
-                                    flex
-                                    items-start
-                                    justify-between
-
-                                    gap-6
-                                "
+                            <FormField
+                                label="Subcategory Name"
+                                required
                             >
+                                <TextInput
+                                    value={formData.name}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "name",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Enter subcategory name"
+                                    maxLength={100}
+                                />
+                            </FormField>
 
-                                <div>
+                            <FormField label="Subcategory Code">
+                                <TextInput
+                                    value={formData.subCategoryCode}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "subCategoryCode",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Enter subcategory code"
+                                    maxLength={30}
+                                />
+                            </FormField>
 
-                                    <h3
-                                        className="
-                                            text-md
-                                            font-semibold
-                                            text-gray-500
-                                        "
-                                    >
-                                        Sub Category Information
-                                    </h3>
-
-                                    <p
-                                        className="
-                                            text-xs
-                                            text-gray-400
-                                            mt-1
-                                        "
-                                    >
-                                        Configure the basic sub category
-                                        information.
-                                    </p>
-
-                                </div>
-
-                                <div
-                                    className="
-                                        flex
-                                        items-center
-                                        gap-3
-                                        shrink-0
-                                    "
-                                >
-
-                                    <label
-                                        className="
-                                            text-sm
-                                            font-semibold
-                                            text-gray-500
-                                        "
-                                    >
-                                        Status :
-                                    </label>
-
-                                    <span
-                                        className={`
-                                            inline-flex
-                                            items-center
-                                            justify-center
-
-                                            min-w-[85px]
-                                            h-7
-                                            px-3
-
-                                            rounded-full
-
-                                            text-sm
-                                            font-bold
-
-                                            ${form.status === "ACTIVE"
-                                                ? "bg-green-50 text-green-700"
-                                                : form.status === "INACTIVE"
-                                                    ? "bg-red-50 text-red-700"
-                                                    : "bg-yellow-50 text-yellow-700"
-                                            }
-                                        `}
-                                    >
-                                        {form.status || "ACTIVE"}
-                                    </span>
-
-                                </div>
-
-                            </div>
-
-                            <div
-                                className="
-                                    grid
-                                    grid-cols-2
-                                    gap-x-6
-                                    gap-y-5
-                                "
+                            <FormField
+                                label="Parent Category"
+                                required
                             >
-
-                                {/* CATEGORY */}
-
-                                <div>
-
-                                    <label
-                                        className={getLabelClass(true)}
-                                    >
-                                        Category
-
-                                        <span
-                                            className="
-                                                text-red-500
-                                                ml-1
-                                            "
-                                        >
-                                            *
-                                        </span>
-
-                                    </label>
-
-                                    <CustomSelect
-                                        value={form.categoryId ?? ""}
-                                        onChange={(value) =>
-                                            handleChange(
-                                                "categoryId",
-                                                value ? Number(value) : null
-                                            )
-                                        }
-                                        options={[
-                                            {
-                                                value: "",
-                                                label: "Select Category",
-                                            },
-                                            ...categories
-                                                .filter(
-                                                    (category) => category.status === "ACTIVE"
-                                                )
-                                                .sort(
-                                                    (a, b) =>
-                                                        (a.displayOrder ?? 0) -
-                                                        (b.displayOrder ?? 0)
-                                                )
-                                                .map((category) => ({
-                                                    value: category.id,
-                                                    label:
-                                                        category.categoryName || category.name,
-                                                })),
-                                        ]}
-                                        placeholder="Select Category"
-                                        disabled={loading}
-                                    />
-
-                                    {errors.categoryId && (
-                                        <p
-                                            className="
-                                                text-xs
-                                                text-red-500
-                                                mt-1
-                                            "
-                                        >
-                                            {
-                                                errors.categoryId
-                                            }
-                                        </p>
-                                    )}
-
-                                </div>
-
-                                {/* SUB CATEGORY NAME */}
-
-                                <div>
-
-                                    <label
-                                        className={getLabelClass(true)}
-                                    >
-                                        Sub Category Name
-
-                                        <span
-                                            className="
-                                                text-red-500
-                                                ml-1
-                                            "
-                                        >
-                                            *
-                                        </span>
-
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        value={
-                                            form.name ?? ""
-                                        }
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "name",
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="Enter sub category name"
-                                        className={inputClass}
-                                        disabled={loading}
-                                    />
-
-                                    {errors.name && (
-                                        <p
-                                            className="
-                                                text-xs
-                                                text-red-500
-                                                mt-1
-                                            "
-                                        >
-                                            {errors.name}
-                                        </p>
-                                    )}
-
-                                </div>
-
-                                {/* DESCRIPTION */}
-
-                                <div className="col-span-2">
-
-                                    <label
-                                        className={labelClass}
-                                    >
-                                        Description
-                                    </label>
-
-                                    <textarea
-                                        rows={5}
-                                        value={
-                                            form.description ?? ""
-                                        }
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "description",
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="Enter sub category description"
-                                        className="
-                                            w-full
-                                            h-[50px]
-                                            px-3
-                                            py-3
-
-                                            border
-                                            border-gray-300
-                                            rounded-md
-
-                                            text-sm
-                                            text-gray-700
-
-                                            bg-white
-
-                                            outline-none
-                                            resize-none
-                                            transition
-
-                                            focus:border-blue-500
-                                            focus:ring-1
-                                            focus:ring-blue-500
-
-                                            disabled:bg-gray-100
-                                            disabled:text-gray-500
-                                        "
-                                        disabled={loading}
-                                    />
-
-                                </div>
-
-                                {/* DISPLAY ORDER */}
-
-                                <div>
-
-                                    <label
-                                        className={getLabelClass(true)}
-                                    >
-                                        Display Order
-
-                                        <span
-                                            className="
-                                                text-red-500
-                                                ml-1
-                                            "
-                                        >
-                                            *
-                                        </span>
-
-                                    </label>
-
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        value={
-                                            form.displayOrder ?? 1
-                                        }
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "displayOrder",
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="Enter display order"
-                                        className={inputClass}
-                                        disabled={loading}
-                                    />
-
-                                    {errors.displayOrder && (
-                                        <p
-                                            className="
-                                                text-xs
-                                                text-red-500
-                                                mt-1
-                                            "
-                                        >
-                                            {
-                                                errors.displayOrder
-                                            }
-                                        </p>
-                                    )}
-
-                                </div>
-
-                            </div>
-
-                        </div>
-                    )}
-
-                    {/* =================================================
-                        SETTINGS
-                    ================================================= */}
-
-                    {activeTab === "settings" && (
-
-                        <div>
-
-                            <div className="mb-6">
-
-                                <h3
-                                    className="
-                                        text-base
-                                        font-semibold
-                                        text-gray-500
-                                    "
-                                >
-                                    Sub Category Settings
-                                </h3>
-
-                                <p
-                                    className="
-                                        text-xs
-                                        text-gray-400
-                                        mt-1
-                                    "
-                                >
-                                    Configure the sub category availability
-                                    and status.
-                                </p>
-
-                            </div>
-
-                            <div className="max-w-[460px]">
-
-                                <label
-                                    className={labelClass}
-                                >
-                                    Status
-                                </label>
-
                                 <CustomSelect
-                                    value={form.status || "ACTIVE"}
+                                    value={formData.categoryId}
+                                    onChange={(value) =>
+                                        handleChange(
+                                            "categoryId",
+                                            value
+                                        )
+                                    }
+                                    options={categoryOptions}
+                                    placeholder="Select parent category"
+                                />
+                            </FormField>
+
+                            <FormField label="Status" required>
+                                <CustomSelect
+                                    value={formData.status}
                                     onChange={(value) =>
                                         handleChange("status", value)
                                     }
-                                    options={[
-                                        { value: "ACTIVE", label: "ACTIVE" },
-                                        { value: "INACTIVE", label: "INACTIVE" },
-                                        { value: "DRAFT", label: "DRAFT" },
-                                    ]}
+                                    options={statusOptions}
+                                    placeholder="Select status"
                                 />
-
-                            </div>
-
-                            <div
-                                className="
-                                    mt-7
-
-                                    border
-                                    border-gray-200
-
-                                    rounded-lg
-
-                                    bg-white
-
-                                    p-5
-                                "
-                            >
-
-                                <div
-                                    className="
-                                        flex
-                                        items-center
-                                        justify-between
-                                    "
-                                >
-
-                                    <div>
-
-                                        <p
-                                            className="
-                                                text-sm
-                                                font-medium
-                                                text-gray-500
-                                            "
-                                        >
-                                            Sub Category Status
-                                        </p>
-
-                                        <p
-                                            className="
-                                                text-xs
-                                                text-gray-400
-                                                mt-1
-                                            "
-                                        >
-                                            This sub category is currently
-                                            set to{" "}
-
-                                            <span
-                                                className={`
-                                            inline-flex
-                                            items-center
-                                            justify-center
-
-                                            min-w-[85px]
-                                            h-7
-                                            px-3
-
-                                            rounded-full
-
-                                            text-xs
-                                            font-medium
-
-                                            ${form.status === "ACTIVE"
-                                                        ? "bg-green-50 text-green-700"
-                                                        : form.status === "INACTIVE"
-                                                            ? "bg-red-50 text-red-700"
-                                                            : "bg-yellow-50 text-yellow-700"
-                                                    }
-                                        `}
-                                            >
-                                                {
-                                                    form.status ||
-                                                    "ACTIVE"
-                                                }
-                                            </span>
-
-                                        </p>
-
-                                    </div>
-
-
-
-                                </div>
-
-                            </div>
+                            </FormField>
 
                         </div>
-                    )}
+
+                    </section>
+
+                    <div className="my-6 border-t border-gray-100" />
+
+                    {/* DESCRIPTION */}
+
+                    <section className="mb-7">
+
+                        <SectionHeading
+                            icon={AlignLeft}
+                            title="Description"
+                            description="Add additional information about this subcategory"
+                        />
+
+                        <div className="grid grid-cols-1 gap-5">
+
+                            <FormField label="Subcategory Description">
+
+                                <TextAreaField
+                                    value={formData.description}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "description",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Enter subcategory description"
+                                    rows={4}
+                                />
+
+                            </FormField>
+
+                        </div>
+
+                    </section>
+
+                    <div className="my-6 border-t border-gray-100" />
+
+                    {/* DISPLAY ORDER */}
+
+                    <section>
+
+                        <SectionHeading
+                            icon={ListOrdered}
+                            title="Display Settings"
+                            description="Configure the subcategory display order"
+                        />
+
+                        <div className="
+                            grid grid-cols-1 gap-5
+                            md:grid-cols-2 lg:grid-cols-3
+                        ">
+
+                            <FormField
+                                label="Display Order"
+                                required
+                            >
+                                <TextInput
+                                    type="number"
+                                    value={formData.displayOrder}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "displayOrder",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Enter display order"
+                                    min={1}
+                                />
+                            </FormField>
+
+                        </div>
+
+                    </section>
 
                 </div>
 
-                {/* =================================================
-                    FOOTER
-                ================================================= */}
+                {/* FOOTER */}
 
-                <div
-                    className="
-                        shrink-0
-                        h-[68px]
+                <div className="
+                    flex shrink-0 flex-wrap items-center
+                    justify-between gap-3 border-t
+                    border-gray-100 bg-white px-5 py-3
+                ">
 
-                        flex
-                        items-center
-                        justify-between
-
-                        px-6
-
-                        border-t
-                        border-gray-200
-
-                        bg-white
-                    "
-                >
-
-                    <div
+                    <button
+                        type="button"
+                        onClick={handleClose}
+                        disabled={loading}
                         className="
-                            text-xs
-                            text-gray-500
+                            rounded-lg border border-gray-200
+                            px-4 py-2 text-sm font-medium
+                            text-gray-600 transition
+                            hover:bg-gray-50
+                            disabled:opacity-50
                         "
                     >
+                        Cancel
+                    </button>
 
-                        <span className="text-red-500">
-                            *
-                        </span>
+                    <div className="flex items-center gap-2">
 
-                        {" "}Required fields
-
-                    </div>
-
-                    <div
-                        className="
-                            flex
-                            items-center
-                            gap-3
-                        "
-                    >
-
-                        {/* CANCEL */}
+                        {/* RESET */}
 
                         <button
                             type="button"
-                            onClick={handleClose}
+                            onClick={handleReset}
                             disabled={loading}
                             className="
-                                h-10
-                                px-5
-
-                                rounded-md
-
-                                border
-                                border-gray-300
-
-                                text-sm
-                                font-medium
-                                text-gray-700
-
-                                bg-white
-
+                                flex items-center gap-2
+                                rounded-lg border border-gray-200
+                                px-4 py-2 text-sm font-medium
+                                text-gray-600 transition
                                 hover:bg-gray-50
-
-                                transition
-
                                 disabled:opacity-50
-                                disabled:cursor-not-allowed
                             "
                         >
-                            Cancel
+                            <RotateCcw size={15} />
+
+                            Reset
                         </button>
 
                         {/* SAVE */}
 
                         <button
                             type="submit"
-                            disabled={
-                                loading ||
-                                !hasRequiredPermission
-                            }
+                            disabled={loading}
+                            onClick={() => setSaveMode("close")}
                             className="
-                                h-10
-                                px-6
-
-                                rounded-md
-
-                                bg-blue-600
-
-                                text-white
-
-                                text-sm
-                                font-medium
-
-                                hover:bg-blue-700
-
-                                transition
-
-                                disabled:opacity-50
+                                flex items-center gap-2
+                                rounded-lg bg-[#408DFB]
+                                px-5 py-2 text-sm font-medium
+                                text-white transition
+                                hover:bg-blue-600
                                 disabled:cursor-not-allowed
+                                disabled:opacity-60
                             "
                         >
+                            {loading ? (
+                                <Loader2
+                                    size={16}
+                                    className="animate-spin"
+                                />
+                            ) : (
+                                <Save size={16} />
+                            )}
 
                             {loading
-                                ? isEdit
-                                    ? "Updating..."
-                                    : "Saving..."
+                                ? "Saving..."
                                 : isEdit
-                                    ? "Update Sub Category"
-                                    : "Save Sub Category"}
-
+                                    ? "Update"
+                                    : "Save"}
                         </button>
+
+                        {/* SAVE OPTIONS */}
+
+                        {!isEdit && (
+                            <div className="relative">
+
+                                <button
+                                    type="button"
+                                    disabled={loading}
+                                    onClick={() =>
+                                        setShowSaveOptions((prev) => !prev)
+                                    }
+                                    className="
+                                        flex h-9 items-center
+                                        justify-center rounded-lg
+                                        border border-gray-200
+                                        px-2 text-gray-600
+                                        transition hover:bg-gray-50
+                                        disabled:opacity-50
+                                    "
+                                >
+                                    <ChevronDown size={17} />
+                                </button>
+
+                                {showSaveOptions && (
+                                    <div className="
+                                        absolute bottom-11 right-0
+                                        z-20 w-44 overflow-hidden
+                                        rounded-lg border border-gray-100
+                                        bg-white py-1 shadow-lg
+                                    ">
+
+                                        <button
+                                            type="submit"
+                                            onClick={() => {
+                                                setSaveMode("new");
+                                                setShowSaveOptions(false);
+                                            }}
+                                            className="
+                                                w-full px-4 py-2.5
+                                                text-left text-sm
+                                                text-gray-600 transition
+                                                hover:bg-blue-50
+                                                hover:text-[#408DFB]
+                                            "
+                                        >
+                                            Save & New
+                                        </button>
+
+                                        <button
+                                            type="submit"
+                                            onClick={() => {
+                                                setSaveMode("close");
+                                                setShowSaveOptions(false);
+                                            }}
+                                            className="
+                                                w-full px-4 py-2.5
+                                                text-left text-sm
+                                                text-gray-600 transition
+                                                hover:bg-blue-50
+                                                hover:text-[#408DFB]
+                                            "
+                                        >
+                                            Save & Close
+                                        </button>
+
+                                    </div>
+                                )}
+
+                            </div>
+                        )}
 
                     </div>
 
@@ -2056,6 +973,20 @@ export default function SubCategoryCreate() {
 
             </form>
 
+            {/* LEAVE CONFIRMATION */}
+
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave Subcategory?"
+                message="Are you sure you want to leave this subcategory page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
+
         </div>
     );
-}
+};
+
+export default SubCategoryCreateSimple;

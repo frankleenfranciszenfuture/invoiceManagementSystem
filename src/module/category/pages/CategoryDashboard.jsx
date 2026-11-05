@@ -1,6 +1,7 @@
+
 import React, {
     useEffect,
-    useMemo,
+    useCallback,
 } from "react";
 
 import {
@@ -11,24 +12,15 @@ import {
 import {
     Plus,
     Download,
+    Tags,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
-import CategoryTable from "./CategoryTable";
+import CategoryTable from "../pages/CategoryTable";
 import NavbarCategory from "../components/bars/nav/NavbarCategory";
 
 import {
-    fetchAllCategories,
-} from "../thunks/categoryThunks";
-
-import {
-    getUserPermission,
-} from "../../menuPermission/thunks/menuPermissionThunks";
-
-import {
-    setCategoryStatus,
-    setSelectedCategoryView,
     clearError,
 } from "../slices/categorySlice";
 
@@ -36,42 +28,65 @@ import {
     openModal,
 } from "../../ui/uiSlice";
 
+import {
+    getUserPermission,
+} from "../../../module/menuPermission/thunks/menuPermissionThunks";
+
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
 
-// ============================================================
-// CATEGORY DASHBOARD
-// ============================================================
+import CategoryOverview from "../pages/CategoryOverview";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMPTY_ARRAY = [];
+
+/* =========================================================
+   NORMALIZE HELPERS
+========================================================= */
+
+const normalizeModule = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
+const normalizeAction = (value) =>
+    String(value ?? "").trim().toUpperCase();
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function CategoryDashboard() {
-
     const dispatch = useDispatch();
 
-    // ============================================================
-    // AUTH STATE
-    // ============================================================
+    /* =====================================================
+       AUTH STATE
+    ===================================================== */
 
     const user = useSelector(
-        (state) =>
-            state.auth?.user
+        (state) => state.auth?.user
     );
 
     const isAuthenticated = useSelector(
-        (state) =>
-            state.auth?.isAuthenticated === true
+        (state) => state.auth?.isAuthenticated === true
     );
 
     const authChecking = useSelector(
-        (state) =>
-            state.auth?.authChecking === true
+        (state) => state.auth?.authChecking === true
     );
 
-    // ============================================================
-    // PERMISSION STATE
-    // ============================================================
+    /* =====================================================
+       PERMISSION STATE
+    ===================================================== */
 
     const permissions = useSelector(
-        (state) =>
-            state.menuPermission?.userPermissions || []
+        (state) => {
+            const value = state.menuPermission?.userPermissions;
+
+            return Array.isArray(value)
+                ? value
+                : EMPTY_ARRAY;
+        }
     );
 
     const permissionLoading = useSelector(
@@ -84,9 +99,9 @@ export default function CategoryDashboard() {
             state.menuPermission?.userPermissionsLoaded === true
     );
 
-    // ============================================================
-    // ROLE
-    // ============================================================
+    /* =====================================================
+       ROLE
+    ===================================================== */
 
     const roleName =
         user?.roleName ||
@@ -96,296 +111,191 @@ export default function CategoryDashboard() {
         user?.authority ||
         "";
 
-    const normalizedRole =
-        String(roleName)
-            .trim()
-            .toUpperCase();
-
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
-
-    const isAdmin =
-        normalizedRole === "ADMIN";
+    const normalizedRole = normalizeAction(roleName);
 
     const hasFullAccess =
-        isSuperAdmin || isAdmin;
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
-    // ============================================================
-    // PERMISSION CHECK
-    // ============================================================
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
+            if (hasFullAccess) {
+                return true;
+            }
 
-        // --------------------------------------------------------
-        // SUPER ADMIN / ADMIN
-        // --------------------------------------------------------
+            if (!Array.isArray(permissions)) {
+                return false;
+            }
 
-        if (hasFullAccess) {
-            return true;
-        }
+            const requestedModule =
+                normalizeModule(moduleName);
 
-        // --------------------------------------------------------
-        // PERMISSION ARRAY
-        // --------------------------------------------------------
+            const requestedAction =
+                normalizeAction(actionName);
 
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
+            return permissions.some((permission) => {
+                const permissionModule = normalizeModule(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                );
 
-        const requestedModule =
-            String(moduleName)
-                .trim()
-                .toLowerCase();
-
-        const requestedAction =
-            String(actionName)
-                .trim()
-                .toUpperCase();
-
-        // --------------------------------------------------------
-        // SUPPORT BOTH:
-        //
-        // 1. Flat permission:
-        // {
-        //     moduleName: "Categories",
-        //     actionName: "CREATE",
-        //     allowed: true
-        // }
-        //
-        // 2. Grouped permission:
-        // {
-        //     moduleName: "Categories",
-        //     actions: [
-        //         {
-        //             actionName: "CREATE",
-        //             allowed: true
-        //         }
-        //     ]
-        // }
-        // --------------------------------------------------------
-
-        return permissions.some(
-            (permission) => {
-
-                // ==================================================
-                // MODULE
-                // ==================================================
-
-                const permissionModule =
-                    String(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toLowerCase();
-
-                if (
-                    permissionModule !==
-                    requestedModule
-                ) {
+                if (permissionModule !== requestedModule) {
                     return false;
                 }
 
-                // ==================================================
-                // ACTIVE STATUS
-                // ==================================================
-
-                if (
-                    permission?.active === false
-                ) {
+                if (permission?.active === false) {
                     return false;
                 }
 
                 if (
-                    String(
-                        permission?.status || ""
-                    ).trim().toUpperCase() ===
-                    "INACTIVE"
+                    normalizeAction(permission?.status) === "INACTIVE"
                 ) {
                     return false;
                 }
 
-                // ==================================================
-                // GROUPED ACTIONS
-                // ==================================================
+                /* ACTION ARRAY */
 
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
-
-                    return permission.actions.some(
-                        (action) => {
-
-                            const permissionAction =
-                                String(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.action?.name ||
-                                    ""
-                                )
-                                    .trim()
-                                    .toUpperCase();
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
-
+                if (Array.isArray(permission?.actions)) {
+                    return permission.actions.some((action) => {
+                        if (typeof action === "string") {
                             return (
-                                permissionAction ===
-                                requestedAction &&
-                                allowed
+                                normalizeAction(action) === requestedAction
                             );
                         }
-                    );
+
+                        const permissionAction = normalizeAction(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        );
+
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
+
+                        if (action?.active === false) {
+                            return false;
+                        }
+
+                        if (
+                            normalizeAction(action?.status) === "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
                 }
 
-                // ==================================================
-                // FLAT ACTION
-                // ==================================================
+                /* DIRECT / FLAT ACTION */
 
-                const permissionAction =
-                    String(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toUpperCase();
+                const permissionAction = normalizeAction(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                );
 
                 const allowed =
                     permission?.allowed === true ||
                     permission?.allowed === "true";
 
                 return (
-                    permissionAction ===
-                    requestedAction &&
+                    permissionAction === requestedAction &&
                     allowed
                 );
-            }
-        );
-    };
+            });
+        },
+        [
+            hasFullAccess,
+            permissions,
+        ]
+    );
 
-    // ============================================================
-    // CATEGORY PERMISSIONS
-    // ============================================================
+    /* =====================================================
+       CATEGORY PERMISSIONS
+    ===================================================== */
 
-    const canViewCategory =
-        hasPermission(
-            "Categories",
-            "VIEW"
-        );
+    const canViewCategory = hasPermission(
+        "Categories",
+        "VIEW"
+    );
 
-    const canCreateCategory =
-        hasPermission(
-            "Categories",
-            "CREATE"
-        );
+    const canCreateCategory = hasPermission(
+        "Categories",
+        "CREATE"
+    );
 
-    // ============================================================
-    // CATEGORY STATE
-    // ============================================================
+    /* =====================================================
+       CATEGORY STATE
+    ===================================================== */
 
-    const categoriesFromRedux =
-        useSelector(
-            (state) =>
-                state.category?.categories
-        );
+    const categoriesFromRedux = useSelector(
+        (state) => state.category?.categories
+    );
 
-    const categories =
-        categoriesFromRedux ?? [];
+    const categories = Array.isArray(categoriesFromRedux)
+        ? categoriesFromRedux
+        : EMPTY_ARRAY;
 
-    const loading =
-        useSelector(
-            (state) =>
-                state.category?.loading || false
-        );
+    const loading = useSelector(
+        (state) => state.category?.loading === true
+    );
 
-    const error =
-        useSelector(
-            (state) =>
-                state.category?.error
-        );
+    const error = useSelector(
+        (state) => state.category?.error
+    );
 
-    // ============================================================
-    // CATEGORY FILTER STATE
-    // ============================================================
+    /* =====================================================
+       CATEGORY VIEW STATUS
+    ===================================================== */
 
-    const categoryStatus =
-        useSelector(
-            (state) =>
-                state.categoryView?.categoryStatus ||
-                "ALL"
-        );
+    const categoryStatus = useSelector(
+        (state) => {
+            const status = String(
+                state.categoryView?.status || "ALL"
+            ).trim().toUpperCase();
 
-    // ============================================================
-    // LOAD CURRENT USER PERMISSIONS
-    //
-    // NOTE:
-    //
-    // Ideally this should happen in AuthSlice/bootstrap.
-    // This fallback ensures CategoryDashboard can still
-    // initialize permissions if AuthSlice has not done so.
-    // ============================================================
+            return [
+                "ALL",
+                "ACTIVE",
+                "INACTIVE",
+                "DRAFT",
+            ].includes(status)
+                ? status
+                : "ALL";
+        }
+    );
+
+    /* =====================================================
+       LOAD USER PERMISSIONS
+    ===================================================== */
 
     useEffect(() => {
-
-        // --------------------------------------------------------
-        // AUTH STILL CHECKING
-        // --------------------------------------------------------
-
-        if (authChecking) {
+        if (authChecking || !isAuthenticated) {
             return;
         }
-
-        // --------------------------------------------------------
-        // NOT AUTHENTICATED
-        // --------------------------------------------------------
-
-        if (!isAuthenticated) {
-            return;
-        }
-
-        // --------------------------------------------------------
-        // ADMIN / SUPER ADMIN
-        //
-        // No permission request required.
-        // --------------------------------------------------------
 
         if (hasFullAccess) {
             return;
         }
 
-        // --------------------------------------------------------
-        // ALREADY LOADED
-        // --------------------------------------------------------
-
-        if (permissionsLoaded) {
+        if (permissionsLoaded || permissionLoading) {
             return;
         }
 
-        // --------------------------------------------------------
-        // CURRENTLY LOADING
-        // --------------------------------------------------------
-
-        if (permissionLoading) {
-            return;
-        }
-
-        // --------------------------------------------------------
-        // LOAD CURRENT USER EFFECTIVE PERMISSIONS
-        // --------------------------------------------------------
-
-        dispatch(
-            getUserPermission()
-        );
+        dispatch(getUserPermission());
 
     }, [
         authChecking,
@@ -396,314 +306,26 @@ export default function CategoryDashboard() {
         dispatch,
     ]);
 
-    // ============================================================
-    // FETCH CATEGORIES
-    // ============================================================
+    /* =====================================================
+       OPEN CREATE CATEGORY MODAL
+    ===================================================== */
 
-    useEffect(() => {
-
-        // --------------------------------------------------------
-        // AUTH CHECKING
-        // --------------------------------------------------------
-
-        if (authChecking) {
-            return;
-        }
-
-        // --------------------------------------------------------
-        // NOT AUTHENTICATED
-        // --------------------------------------------------------
-
+    const handleCreateCategory = useCallback(() => {
         if (!isAuthenticated) {
             return;
         }
 
-        // --------------------------------------------------------
-        // STAFF / OTHER ROLE
-        //
-        // Wait until permissions are loaded.
-        // --------------------------------------------------------
-
-        if (!hasFullAccess) {
-
-            if (!permissionsLoaded) {
-                return;
-            }
-
-            if (permissionLoading) {
-                return;
-            }
-
-            // No VIEW permission
-            if (!canViewCategory) {
-                return;
-            }
-        }
-
-        // --------------------------------------------------------
-        // FETCH CATEGORIES
-        // --------------------------------------------------------
-
-        dispatch(
-            fetchAllCategories()
-        );
-
-    }, [
-        authChecking,
-        isAuthenticated,
-        hasFullAccess,
-        permissionsLoaded,
-        permissionLoading,
-        canViewCategory,
-        dispatch,
-    ]);
-
-    // ============================================================
-    // SYNC URL STATUS → REDUX
-    // ============================================================
-
-    useEffect(() => {
-
-        const params =
-            new URLSearchParams(
-                window.location.search
-            );
-
-        const urlStatus =
-            params.get(
-                "categoryStatus"
-            );
-
-        if (!urlStatus) {
-            return;
-        }
-
-        const normalizedStatus =
-            String(urlStatus)
-                .toUpperCase();
-
-        const validStatuses = [
-            "ALL",
-            "ACTIVE",
-            "INACTIVE",
-            "DRAFT",
-        ];
-
         if (
-            !validStatuses.includes(
-                normalizedStatus
+            !hasFullAccess &&
+            (
+                permissionLoading ||
+                !permissionsLoaded
             )
         ) {
             return;
         }
 
-        dispatch(
-            setCategoryStatus(
-                normalizedStatus
-            )
-        );
-
-        const statusLabels = {
-
-            ALL:
-                "All Categories",
-
-            ACTIVE:
-                "Active Categories",
-
-            INACTIVE:
-                "Inactive Categories",
-
-            DRAFT:
-                "Draft Categories",
-        };
-
-        dispatch(
-            setSelectedCategoryView(
-                statusLabels[
-                normalizedStatus
-                ]
-            )
-        );
-
-    }, [
-        dispatch,
-    ]);
-
-    // ============================================================
-    // DEBUG
-    // ============================================================
-
-    useEffect(() => {
-
-        console.log(
-            "================================"
-        );
-
-        console.log(
-            "CATEGORY USER:",
-            user
-        );
-
-        console.log(
-            "CATEGORY ROLE:",
-            normalizedRole
-        );
-
-        console.log(
-            "CATEGORY FULL ACCESS:",
-            hasFullAccess
-        );
-
-        console.log(
-            "CATEGORY PERMISSIONS LOADING:",
-            permissionLoading
-        );
-
-        console.log(
-            "CATEGORY PERMISSIONS LOADED:",
-            permissionsLoaded
-        );
-
-        console.log(
-            "CATEGORY PERMISSIONS:",
-            permissions
-        );
-
-        console.log(
-            "CATEGORY VIEW PERMISSION:",
-            canViewCategory
-        );
-
-        console.log(
-            "CATEGORY CREATE PERMISSION:",
-            canCreateCategory
-        );
-
-        console.log(
-            "CATEGORIES FROM REDUX:",
-            categories
-        );
-
-        console.log(
-            "CATEGORY LOADING:",
-            loading
-        );
-
-        console.log(
-            "CATEGORY ERROR:",
-            error
-        );
-
-        console.log(
-            "CATEGORY STATUS:",
-            categoryStatus
-        );
-
-        console.log(
-            "================================"
-        );
-
-    }, [
-        user,
-        normalizedRole,
-        hasFullAccess,
-        permissionLoading,
-        permissionsLoaded,
-        permissions,
-        canViewCategory,
-        canCreateCategory,
-        categories,
-        loading,
-        error,
-        categoryStatus,
-    ]);
-
-    // ============================================================
-    // CLEAR ERROR
-    // ============================================================
-
-    useEffect(() => {
-
-        if (!error) {
-            return;
-        }
-
-        const timer =
-            setTimeout(() => {
-
-                dispatch(
-                    clearError()
-                );
-
-            }, 3000);
-
-        return () =>
-            clearTimeout(timer);
-
-    }, [
-        error,
-        dispatch,
-    ]);
-
-    // ============================================================
-    // FILTER CATEGORIES BY STATUS
-    // ============================================================
-
-    const filteredCategories =
-        useMemo(() => {
-
-            const selectedStatus =
-                String(
-                    categoryStatus || "ALL"
-                ).toUpperCase();
-
-            // ----------------------------------------------------
-            // ALL
-            // ----------------------------------------------------
-
-            if (
-                selectedStatus === "ALL"
-            ) {
-                return categories;
-            }
-
-            // ----------------------------------------------------
-            // FILTER
-            // ----------------------------------------------------
-
-            return categories.filter(
-                (category) => {
-
-                    const backendStatus =
-                        String(
-                            category?.status || ""
-                        ).toUpperCase();
-
-                    return (
-                        backendStatus ===
-                        selectedStatus
-                    );
-                }
-            );
-
-        }, [
-            categories,
-            categoryStatus,
-        ]);
-
-    // ============================================================
-    // OPEN CREATE CATEGORY MODAL
-    // ============================================================
-
-    const handleCreateCategory = () => {
-
-        // --------------------------------------------------------
-        // CREATE PERMISSION
-        // --------------------------------------------------------
-
         if (!canCreateCategory) {
-
             toast.error(
                 "You do not have permission to create categories."
             );
@@ -711,39 +333,60 @@ export default function CategoryDashboard() {
             return;
         }
 
-        // --------------------------------------------------------
-        // OPEN MODAL
-        // --------------------------------------------------------
-
         dispatch(
             openModal({
                 type: "addCategory",
             })
         );
-    };
 
-    // ============================================================
-    // AUTH CHECKING
-    // ============================================================
+    }, [
+        isAuthenticated,
+        hasFullAccess,
+        permissionLoading,
+        permissionsLoaded,
+        canCreateCategory,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       CLEAR ERROR
+    ===================================================== */
+
+    useEffect(() => {
+        if (!error) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            dispatch(clearError());
+        }, 2000);
+
+        return () => clearTimeout(timer);
+
+    }, [
+        error,
+        dispatch,
+    ]);
+
+    /* =====================================================
+       AUTH CHECKING
+    ===================================================== */
 
     if (authChecking) {
-
-        return (
-            <InvoiceSkeleton />
-        );
+        return <InvoiceSkeleton />;
     }
 
-    // ============================================================
-    // NOT AUTHENTICATED
-    // ============================================================
+    /* =====================================================
+       NOT AUTHENTICATED
+    ===================================================== */
 
     if (!isAuthenticated) {
         return null;
     }
 
-    // ============================================================
-    // PERMISSION LOADING
-    // ============================================================
+    /* =====================================================
+       PERMISSION LOADING
+    ===================================================== */
 
     if (
         !hasFullAccess &&
@@ -752,378 +395,236 @@ export default function CategoryDashboard() {
             !permissionsLoaded
         )
     ) {
-
-        return (
-            <InvoiceSkeleton />
-        );
+        return <InvoiceSkeleton />;
     }
 
-    // ============================================================
-    // VIEW PERMISSION DENIED
-    // ============================================================
+    /* =====================================================
+       VIEW PERMISSION DENIED
+    ===================================================== */
 
     if (!canViewCategory) {
-
         return (
             <div
                 className="
-                    flex
-                    h-screen
-                    items-center
-                    justify-center
-                    bg-gray-50
-                    font-sans
+                    flex h-screen items-center justify-center
+                    bg-gray-50 font-sans
                 "
             >
-
-                <div
-                    className="
-                        text-center
-                        px-6
-                    "
-                >
+                <div className="px-6 text-center">
 
                     <div
                         className="
-                            mx-auto
-                            mb-4
-                            w-16
-                            h-16
-                            rounded-full
-                            bg-red-50
-                            flex
-                            items-center
-                            justify-center
-                            text-red-500
-                            text-2xl
-                            font-semibold
+                            mx-auto mb-4 flex h-16 w-16
+                            items-center justify-center
+                            rounded-full bg-red-50
+                            text-2xl font-semibold text-red-500
                         "
                     >
                         !
                     </div>
 
-                    <h2
-                        className="
-                            text-lg
-                            font-semibold
-                            text-gray-800
-                        "
-                    >
+                    <h2 className="text-lg font-semibold text-gray-800">
                         Access Denied
                     </h2>
 
-                    <p
-                        className="
-                            mt-1
-                            text-sm
-                            text-gray-500
-                            max-w-sm
-                        "
-                    >
-                        You do not have permission
-                        to view categories.
+                    <p className="mt-1 max-w-sm text-sm text-gray-500">
+                        You do not have permission to view categories.
                     </p>
 
                 </div>
-
             </div>
         );
     }
 
-    // ============================================================
-    // CATEGORY LOADING
-    // ============================================================
+    /* =====================================================
+       EMPTY STATE MESSAGE
+    ===================================================== */
 
-    if (loading) {
+    const emptyStateTitle =
+        categoryStatus === "ALL"
+            ? "Every product starts with a category"
+            : `No ${categoryStatus.toLowerCase()} categories found`;
 
-        return (
-            <InvoiceSkeleton />
-        );
-    }
+    const emptyStateDescription =
+        categoryStatus === "ALL"
+            ? "Create and organize your product categories in one place."
+            : `There are currently no ${categoryStatus.toLowerCase()} categories to display.`;
 
-    // ============================================================
-    // PAGE
-    // ============================================================
+    /* =====================================================
+       PAGE
+    ===================================================== */
 
     return (
         <div
             className="
-                flex
-                h-screen
-                bg-gray-50
-                font-sans
-                text-[13px]
-                overflow-hidden
+                flex h-screen overflow-hidden
+                bg-gray-50 font-sans text-[13px]
             "
         >
-
             <div
                 className="
-                    flex-1
-                    min-h-0
-                    bg-white
-                    overflow-y-auto
+                    min-h-0 flex-1 overflow-y-auto bg-white
                 "
             >
-
                 <div
                     className="
-                        px-2
-                        py-5
-                        max-w-30xl
-                        w-full
+                        w-full max-w-30xl px-2 py-5
                     "
                 >
 
-                    {/* =================================================
-                        CATEGORY NAVBAR
-                    ================================================= */}
+                    {/* CATEGORY NAVBAR */}
 
                     <NavbarCategory />
 
-                    {/* =================================================
-                        ERROR
-                    ================================================= */}
+                    {/* CATEGORY OVERVIEW */}
 
-                    {error && (
+                    <CategoryOverview
+                        canViewCategory={canViewCategory}
+                        isAuthenticated={isAuthenticated}
+                        authChecking={authChecking}
+                    />
 
+                    {/* ERROR */}
+
+
+
+                    {/* CATEGORY TABLE / LOADING / EMPTY STATE */}
+
+                    {loading ? (
                         <div
                             className="
-                                mx-2
-                                mt-4
-                                px-4
-                                py-3
-                                rounded-md
-                                border
-                                border-red-200
-                                bg-red-50
-                                text-sm
-                                text-red-600
+                                flex min-h-[250px]
+                                items-center justify-center
                             "
                         >
-                            {error}
+                            <p className="text-sm text-gray-500">
+                                Loading categories...
+                            </p>
                         </div>
-                    )}
-
-                    {/* =================================================
-                        CATEGORY TABLE / EMPTY STATE
-                    ================================================= */}
-
-                    {filteredCategories.length > 0 ? (
-
-                        <CategoryTable
-                            categories={
-                                filteredCategories
-                            }
-                        />
-
+                    ) : categories.length > 0 ? (
+                        <CategoryTable />
                     ) : (
-
                         <div
                             className="
-                                min-h-full
-                                flex
-                                flex-col
-                                items-center
-                                justify-center
-                                gap-3
-                                px-4
+                                flex min-h-full flex-col
+                                items-center justify-center
+                                gap-3 px-4
                             "
                         >
 
-                            {/* =================================================
-                                EMPTY STATE ICON
-                            ================================================= */}
+                            {/* EMPTY STATE ICON */}
 
                             <div
                                 className="
-                                    relative
-                                    w-24
-                                    h-24
-                                    rounded-full
-                                    bg-gray-100
-                                    flex
-                                    items-center
-                                    justify-center
-                                    mb-1
-                                    flex-shrink-0
-                                    mt-30
+                                    relative mt-30 mb-1
+                                    flex h-24 w-24 shrink-0
+                                    items-center justify-center
+                                    rounded-full bg-gray-100
                                 "
                             >
-
                                 <div
                                     className="
+                                        flex items-center justify-center
                                         text-gray-400
-                                        text-4xl
                                     "
                                 >
-                                    C
+                                    <Tags
+                                        size={42}
+                                        strokeWidth={1.7}
+                                    />
                                 </div>
 
                                 <div
                                     className="
-                                        absolute
-                                        bottom-1
-                                        right-1
-                                        w-7
-                                        h-7
-                                        rounded-full
-                                        bg-blue-600
-                                        flex
-                                        items-center
-                                        justify-center
-                                        text-white
+                                        absolute bottom-1 right-1
+                                        flex h-7 w-7 items-center
+                                        justify-center rounded-full
+                                        bg-blue-500 text-white
                                     "
                                 >
-
-                                    <Plus
-                                        className="
-                                            w-4
-                                            h-4
-                                        "
-                                    />
-
+                                    <Plus className="h-4 w-4" />
                                 </div>
-
                             </div>
 
-                            {/* =================================================
-                                EMPTY STATE TITLE
-                            ================================================= */}
+                            {/* EMPTY STATE TITLE */}
 
                             <p
                                 className="
-                                    text-base
-                                    font-medium
-                                    text-gray-800
-                                    text-center
+                                    text-center text-base
+                                    font-medium text-gray-800
                                 "
                             >
-                                Every product starts with a category
+                                {emptyStateTitle}
                             </p>
 
-                            {/* =================================================
-                                EMPTY STATE DESCRIPTION
-                            ================================================= */}
+                            {/* EMPTY STATE DESCRIPTION */}
 
                             <p
                                 className="
-                                    text-sm
-                                    text-gray-500
-                                    text-center
-                                    max-w-sm
+                                    max-w-sm text-center
+                                    text-sm text-gray-500
                                 "
                             >
-                                Create and manage your categories
-                                in one place.
+                                {emptyStateDescription}
                             </p>
 
-                            {/* =================================================
-                                ACTION BUTTONS
-                            ================================================= */}
+                            {/* ACTION BUTTONS */}
 
                             <div
                                 className="
-                                    flex
-                                    items-center
-                                    gap-2.5
-                                    mt-1
-                                    flex-wrap
-                                    justify-center
+                                    mt-1 flex flex-wrap
+                                    items-center justify-center gap-2.5
                                 "
                             >
 
-                                {/* =================================================
-                                    CREATE CATEGORY
-                                ================================================= */}
+                                {/* CREATE CATEGORY */}
 
                                 {canCreateCategory && (
-
                                     <button
                                         type="button"
-                                        onClick={
-                                            handleCreateCategory
-                                        }
+                                        onClick={handleCreateCategory}
                                         className="
-                                            flex
-                                            items-center
-                                            gap-2
-                                            bg-blue-600
-                                            text-white
-                                            text-sm
-                                            font-medium
-                                            px-4
-                                            py-2
-                                            rounded-md
-                                            hover:bg-blue-700
-                                            transition-colors
-                                            whitespace-nowrap
+                                            flex items-center gap-2
+                                            whitespace-nowrap rounded-md
+                                            bg-blue-500 px-4 py-2
+                                            text-sm font-medium text-white
+                                            transition-colors hover:bg-blue-600
                                         "
                                     >
-
-                                        <Plus
-                                            className="
-                                                w-4
-                                                h-4
-                                            "
-                                        />
+                                        <Plus className="h-4 w-4" />
 
                                         Create New Category
-
                                     </button>
-
                                 )}
 
-                                {/* =================================================
-                                    IMPORT
-                                ================================================= */}
+                                {/* IMPORT */}
 
                                 <button
                                     type="button"
+                                    onClick={() => {
+                                        toast(
+                                            "Category import is not configured yet."
+                                        );
+                                    }}
                                     className="
-                                        flex
-                                        items-center
-                                        gap-2
-                                        bg-white
-                                        text-gray-700
-                                        text-sm
-                                        border
-                                        border-gray-300
-                                        px-4
-                                        py-2
-                                        rounded-md
-                                        hover:bg-gray-50
-                                        transition-colors
-                                        whitespace-nowrap
+                                        flex items-center gap-2
+                                        whitespace-nowrap rounded-md
+                                        border border-gray-300 bg-white
+                                        px-4 py-2 text-sm text-gray-700
+                                        transition-colors hover:bg-gray-50
                                     "
                                 >
-
-                                    <Download
-                                        className="
-                                            w-4
-                                            h-4
-                                        "
-                                    />
+                                    <Download className="h-4 w-4" />
 
                                     Import File
-
                                 </button>
 
                             </div>
-
                         </div>
                     )}
 
                 </div>
-
             </div>
-
-            {/* =========================================================
-                CATEGORY CREATE / EDIT MODAL
-            ========================================================= */}
-
-            {/* Global Modal handles CategoryCreate */}
-
         </div>
     );
 }

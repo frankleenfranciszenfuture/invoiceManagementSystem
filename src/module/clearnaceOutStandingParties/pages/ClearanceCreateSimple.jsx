@@ -1,714 +1,620 @@
 
-import React, {
-    useEffect,
-    useMemo,
-    useState,
-} from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
-    useDispatch,
-    useSelector,
-} from "react-redux";
-
-import {
-    useNavigate,
-    useParams,
-} from "react-router-dom";
-
-import {
+    ArrowLeft,
+    Wallet,
+    UserRound,
+    IndianRupee,
+    CalendarDays,
+    FileText,
+    Save,
     ChevronDown,
-    Landmark,
-    UserRoundArrowLeft,
-    X,
+    Loader2,
+    RotateCcw,
+    Search,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
 import {
-    resetClearanceForm,
-    setClearanceField,
-} from "../slices/clearanceSlice";
-
-import {
     createClearance,
-    updateClearance,
     fetchClearanceById,
+    updateClearance,
+    fetchAllClearance,
 } from "../thunks/clearanceThunks";
 
 import {
-    getUserPermission,
-} from "../../menuPermission/thunks/menuPermissionThunks";
+    fetchAllParties,
+} from "../../parties/thunks/partyThunks";
 
 import CustomSelect from "../../../common/custom/CustomSelect";
 
-const INITIAL_FORM = {
-    id: null,
+import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
+import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
+
+import { closeModal } from "../../../module/ui/uiSlice";
+
+/* =========================================================
+   INITIAL FORM DATA
+========================================================= */
+
+const initialFormData = {
     partyId: "",
     clearanceAmount: "",
-    paymentMethod: "CASH",
-    bankAccountId: "",
+    paymentMethod: "",
     paymentReferenceNumber: "",
-    clearanceDate: new Date().toISOString().slice(0, 10),
+    clearanceDate: new Date().toISOString().split("T")[0],
     remarks: "",
 };
 
-export default function ClearanceCreateSimple() {
+/* =========================================================
+   PAYMENT METHOD OPTIONS
+========================================================= */
+
+const paymentMethodOptions = [
+    { label: "Cash", value: "CASH" },
+    { label: "UPI", value: "UPI" },
+    { label: "Bank Transfer", value: "BANK_TRANSFER" },
+    { label: "Card", value: "CARD" },
+    { label: "Cheque", value: "CHEQUE" },
+];
+
+/* =========================================================
+   REUSABLE FORM COMPONENTS
+========================================================= */
+
+const FormField = ({
+    label,
+    required = false,
+    children,
+    className = "",
+}) => (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+        <label className="text-sm font-medium text-gray-700">
+            {label}
+            {required && (
+                <span className="ml-1 text-red-500">*</span>
+            )}
+        </label>
+
+        {children}
+    </div>
+);
+
+const TextInput = ({
+    value,
+    onChange,
+    placeholder,
+    type = "text",
+    disabled = false,
+    maxLength,
+    min,
+    step,
+}) => (
+    <input
+        type={type}
+        value={value ?? ""}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        maxLength={maxLength}
+        min={min}
+        step={step}
+        className="
+            h-10 w-full rounded-lg border border-gray-200
+            bg-white px-3 text-sm text-gray-700
+            outline-none transition
+            placeholder:text-gray-400
+            focus:border-[#408DFB] focus:ring-2
+            focus:ring-[#408DFB]/10
+            disabled:cursor-not-allowed disabled:bg-gray-100
+        "
+    />
+);
+
+const TextAreaField = ({
+    value,
+    onChange,
+    placeholder,
+    rows = 3,
+}) => (
+    <textarea
+        value={value ?? ""}
+        onChange={onChange}
+        placeholder={placeholder}
+        rows={rows}
+        className="
+            w-full resize-none rounded-lg border border-gray-200
+            bg-white px-3 py-2.5 text-sm text-gray-700
+            outline-none transition
+            placeholder:text-gray-400
+            focus:border-[#408DFB] focus:ring-2
+            focus:ring-[#408DFB]/10
+        "
+    />
+);
+
+const SectionHeading = ({
+    icon: Icon,
+    title,
+    description,
+}) => (
+    <div className="mb-5 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#408DFB]">
+            <Icon size={19} />
+        </div>
+
+        <div>
+            <h3 className="text-sm font-semibold text-gray-800">
+                {title}
+            </h3>
+
+            {description && (
+                <p className="mt-0.5 text-xs text-gray-400">
+                    {description}
+                </p>
+            )}
+        </div>
+    </div>
+);
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const getResponseData = (response) => {
+    if (!response) return null;
+
+    return (
+        response?.data?.data ??
+        response?.data ??
+        response?.result ??
+        response
+    );
+};
+
+const getPartyId = (party) =>
+    party?.id ??
+    party?.partyId ??
+    null;
+
+const getPartyName = (party) =>
+    party?.companyName ??
+    party?.partyName ??
+    party?.name ??
+    "Unnamed Party";
+
+const getOutstandingCredit = (party) => {
+    const amount = Number(
+        party?.outstandingCredit ??
+        party?.partyOutstandingCredit ??
+        0
+    );
+
+    return Number.isFinite(amount) ? amount : 0;
+};
+
+const formatCurrency = (amount) =>
+    new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        maximumFractionDigits: 2,
+    }).format(Number(amount || 0));
+
+/* =========================================================
+   MAIN COMPONENT
+========================================================= */
+
+const ClearanceCreateNew = ({ onClose }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+
     const { id } = useParams();
 
+    // ID exists = Edit mode
     const isEdit = Boolean(id);
 
-    /* =========================================================
-       REDUX
-    ========================================================= */
-
-    const clearanceState = useSelector(
-        (state) => state.clearance || {}
+    const modalData = useSelector(
+        (state) => state.ui.modal?.data
     );
 
     const {
-        clearance,
-        loading,
-    } = clearanceState;
+        loading = false,
+        actionLoading = false,
+    } = useSelector((state) => state.clearance ?? {});
 
-    const authState = useSelector(
-        (state) => state.auth || {}
+    const parties = useSelector(
+        (state) => state.party?.parties ?? []
     );
 
-    const { user } = authState;
-
-    const permissionState = useSelector(
-        (state) => state.menuPermission || {}
+    const partyLoading = useSelector(
+        (state) => state.party?.loading ?? false
     );
 
-    const form = clearance || INITIAL_FORM;
+    const [formData, setFormData] = useState(initialFormData);
 
-    /* =========================================================
-       AUTH
-    ========================================================= */
+    const [saveMode, setSaveMode] = useState("close");
+    const [showSaveOptions, setShowSaveOptions] = useState(false);
+    const [partySearch, setPartySearch] = useState("");
+    const [showPartyOptions, setShowPartyOptions] = useState(false);
 
-    const isAuthenticated =
-        authState.isAuthenticated !== false;
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
 
-    const authChecking = Boolean(
-        authState.authChecking ?? authState.loading
+    /* =====================================================
+       SELECTED PARTY
+    ===================================================== */
+
+    const selectedParty = useMemo(() => {
+        return parties.find(
+            (party) =>
+                String(getPartyId(party)) ===
+                String(formData.partyId)
+        ) || null;
+    }, [parties, formData.partyId]);
+
+    const currentOutstanding = selectedParty
+        ? getOutstandingCredit(selectedParty)
+        : 0;
+
+    /*
+     * In edit mode, the current outstanding may already reflect
+     * the existing clearance. Add the existing amount back when
+     * calculating the maximum editable amount.
+     */
+    const existingClearanceAmount = isEdit
+        ? Number(formData.clearanceAmount || 0)
+        : 0;
+
+    const maximumClearanceAmount =
+        currentOutstanding + existingClearanceAmount;
+
+    const outstandingAfterClearance = Math.max(
+        0,
+        maximumClearanceAmount -
+        Number(formData.clearanceAmount || 0)
     );
 
-    /* =========================================================
-       EDIT LOADING
-    ========================================================= */
+    /* =====================================================
+       PARTY OPTIONS
+    ===================================================== */
 
-    const [editLoading, setEditLoading] = useState(isEdit);
+    const partyOptions = useMemo(() => {
+        const keyword = partySearch.trim().toLowerCase();
 
-    const [editLoadError, setEditLoadError] = useState(false);
+        return parties
+            .filter((party) => {
+                const name = getPartyName(party).toLowerCase();
 
-    /* =========================================================
-       PERMISSIONS
-    ========================================================= */
+                const code = String(
+                    party.partyCode || party.code || ""
+                ).toLowerCase();
 
-    const userPermissions = Array.isArray(
-        permissionState.userPermissions
-    )
-        ? permissionState.userPermissions
-        : [];
+                const mobile = String(
+                    party.mobile || party.phone || ""
+                ).toLowerCase();
 
-    const permissionLoading = Boolean(
-        permissionState.userPermissionsLoading ??
-        permissionState.loading
-    );
+                return (
+                    !keyword ||
+                    name.includes(keyword) ||
+                    code.includes(keyword) ||
+                    mobile.includes(keyword)
+                );
+            })
+            .map((party) => ({
+                label: getPartyName(party),
+                value: String(getPartyId(party)),
+            }))
+            .filter((option) => option.value && option.value !== "undefined");
+    }, [parties, partySearch]);
 
-    const permissionsLoaded =
-        permissionState.userPermissionsLoaded === true ||
-        permissionState.permissionsLoaded === true ||
-        permissionState.loaded === true ||
-        (
-            permissionState.userPermissions !== undefined &&
-            permissionState.userPermissions !== null
-        );
+    /* =====================================================
+       FETCH PARTIES AND CLEARANCE FOR EDIT
+    ===================================================== */
 
-    /* =========================================================
-       LOCAL STATE
-    ========================================================= */
+    useEffect(() => {
+        let isMounted = true;
 
-    const [activeTab, setActiveTab] = useState("clearance");
+        const loadData = async () => {
+            try {
+                // Load parties for the selection dropdown.
+                await dispatch(fetchAllParties()).unwrap();
 
-    const [showSaveMenu, setShowSaveMenu] = useState(false);
+                if (!isMounted) return;
 
-    /* =========================================================
-       ROLE
-    ========================================================= */
-
-    const normalizeModule = (value) =>
-        String(value ?? "")
-            .trim()
-            .toLowerCase()
-            .replace(/\s+/g, " ");
-
-    const normalizeAction = (value) =>
-        String(value ?? "")
-            .trim()
-            .toUpperCase()
-            .replace(/[\s-]+/g, "_");
-
-    const role = useMemo(() => {
-        return (
-            user?.roleName ||
-            user?.role?.roleName ||
-            user?.role?.name ||
-            user?.role ||
-            user?.authority ||
-            ""
-        );
-    }, [user]);
-
-    const normalizedRole = normalizeAction(role);
-
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
-
-    const isAdmin =
-        normalizedRole === "ADMIN";
-
-    const hasFullAccess =
-        isSuperAdmin || isAdmin;
-
-    /* =========================================================
-       PERMISSION CHECK
-    ========================================================= */
-
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
-        if (hasFullAccess) {
-            return true;
-        }
-
-        const requestedModule =
-            normalizeModule(moduleName);
-
-        const requestedAction =
-            normalizeAction(actionName);
-
-        return userPermissions.some((permission) => {
-            const permissionModule = normalizeModule(
-                permission?.moduleName ||
-                permission?.module?.moduleName ||
-                permission?.module?.name ||
-                ""
-            );
-
-            if (permissionModule !== requestedModule) {
-                return false;
-            }
-
-            if (permission?.active === false) {
-                return false;
-            }
-
-            if (
-                normalizeAction(permission?.status) ===
-                "INACTIVE"
-            ) {
-                return false;
-            }
-
-            if (Array.isArray(permission?.actions)) {
-                const nestedAllowed =
-                    permission.actions.some((action) => {
-                        if (typeof action === "string") {
-                            return (
-                                normalizeAction(action) ===
-                                requestedAction
-                            );
-                        }
-
-                        const actionName = normalizeAction(
-                            action?.actionName ||
-                            action?.action?.actionName ||
-                            action?.action?.name ||
-                            action?.name ||
-                            ""
-                        );
-
-                        const allowed =
-                            action?.allowed === true ||
-                            action?.allowed === "true" ||
-                            action?.isAllowed === true ||
-                            action?.isAllowed === "true";
-
-                        if (action?.active === false) {
-                            return false;
-                        }
-
-                        if (
-                            normalizeAction(action?.status) ===
-                            "INACTIVE"
-                        ) {
-                            return false;
-                        }
-
-                        return (
-                            actionName === requestedAction &&
-                            allowed
-                        );
+                if (!isEdit) {
+                    setFormData({
+                        ...initialFormData,
+                        clearanceDate: new Date()
+                            .toISOString()
+                            .split("T")[0],
                     });
 
-                if (nestedAllowed) {
-                    return true;
+                    return;
                 }
-            }
 
-            const actionName = normalizeAction(
-                permission?.actionName ||
-                permission?.action?.actionName ||
-                permission?.action?.name ||
-                ""
-            );
-
-            const allowed =
-                permission?.allowed === true ||
-                permission?.allowed === "true" ||
-                permission?.isAllowed === true ||
-                permission?.isAllowed === "true";
-
-            return (
-                actionName === requestedAction &&
-                allowed
-            );
-        });
-    };
-
-    /* =========================================================
-       CREATE / EDIT PERMISSION
-    ========================================================= */
-
-    const hasCreatePermission = hasPermission(
-        "Clearances",
-        "CREATE"
-    );
-
-    const hasEditPermission = hasPermission(
-        "Clearances",
-        "EDIT"
-    );
-
-    const hasSavePermission = isEdit
-        ? hasEditPermission
-        : hasCreatePermission;
-
-    /* =========================================================
-       LOAD PERMISSIONS
-    ========================================================= */
-
-    useEffect(() => {
-        if (
-            authChecking ||
-            !isAuthenticated ||
-            hasFullAccess
-        ) {
-            return;
-        }
-
-        if (
-            !permissionsLoaded &&
-            !permissionLoading
-        ) {
-            dispatch(getUserPermission());
-        }
-    }, [
-        authChecking,
-        isAuthenticated,
-        hasFullAccess,
-        permissionsLoaded,
-        permissionLoading,
-        dispatch,
-    ]);
-
-    /* =========================================================
-       LOAD EXISTING CLEARANCE
-    ========================================================= */
-
-    useEffect(() => {
-        let cancelled = false;
-
-        const loadClearance = async () => {
-            if (!isEdit) {
-                setEditLoading(false);
-                setEditLoadError(false);
-                return;
-            }
-
-            setEditLoading(true);
-            setEditLoadError(false);
-
-            dispatch(resetClearanceForm());
-
-            try {
+                // Fetch existing clearance for edit.
                 const response = await dispatch(
                     fetchClearanceById(id)
                 ).unwrap();
 
-                if (cancelled) {
+                if (!isMounted) return;
+
+                const clearance = getResponseData(response);
+
+                if (!clearance) {
+                    toast.error("Clearance not found");
                     return;
                 }
 
-                const record =
-                    response?.data?.data ??
-                    response?.data ??
-                    response?.clearance ??
-                    response?.creditClearance ??
-                    response;
-
-                if (
-                    !record ||
-                    typeof record !== "object" ||
-                    Array.isArray(record) ||
-                    record.id == null
-                ) {
-                    throw new Error(
-                        "Clearance details were not found."
-                    );
-                }
-
-                const populatedForm = {
-                    ...INITIAL_FORM,
-                    ...record,
-
-                    id: record.id,
-
-                    partyId:
-                        record.partyId ??
-                        record.party?.id ??
+                setFormData({
+                    partyId: clearance.partyId ??
+                        clearance.party?.id ??
                         "",
-
                     clearanceAmount:
-                        record.clearanceAmount ?? "",
-
+                        clearance.clearanceAmount ?? "",
                     paymentMethod:
-                        record.paymentMethod ?? "CASH",
-
-                    bankAccountId:
-                        record.bankAccountId ??
-                        record.bankAccount?.id ??
-                        "",
-
+                        clearance.paymentMethod ?? "",
                     paymentReferenceNumber:
-                        record.paymentReferenceNumber ?? "",
-
+                        clearance.paymentReferenceNumber ?? "",
                     clearanceDate:
-                        record.clearanceDate ??
-                        INITIAL_FORM.clearanceDate,
-
-                    remarks:
-                        record.remarks ?? "",
-                };
-
-                Object.entries(populatedForm).forEach(
-                    ([field, value]) => {
-                        dispatch(
-                            setClearanceField({
-                                field,
-                                value,
-                            })
-                        );
-                    }
-                );
+                        clearance.clearanceDate ??
+                        new Date().toISOString().split("T")[0],
+                    remarks: clearance.remarks ?? "",
+                });
             } catch (error) {
-                if (cancelled) {
-                    return;
-                }
-
-                console.error(
-                    "Failed to load clearance:",
-                    error
-                );
-
-                setEditLoadError(true);
-
-                toast.error(
-                    typeof error === "string"
-                        ? error
-                        : error?.message ||
-                        "Failed to load clearance details."
-                );
-            } finally {
-                if (!cancelled) {
-                    setEditLoading(false);
+                if (isMounted) {
+                    toast.error(
+                        typeof error === "string"
+                            ? error
+                            : "Failed to load clearance details"
+                    );
                 }
             }
         };
 
-        loadClearance();
+        loadData();
 
         return () => {
-            cancelled = true;
+            isMounted = false;
         };
     }, [dispatch, id, isEdit]);
 
-    /* =========================================================
-       TABS
-    ========================================================= */
-
-    const tabs = [
-        {
-            id: "clearance",
-            label: "Clearance Details",
-        },
-        {
-            id: "payment",
-            label: "Payment Details",
-        },
-        {
-            id: "remarks",
-            label: "Remarks",
-        },
-        {
-            id: "settings",
-            label: "Settings",
-        },
-    ];
-
-    /* =========================================================
-       FIELD HANDLER
-    ========================================================= */
+    /* =====================================================
+       HANDLE FIELD CHANGE
+    ===================================================== */
 
     const handleChange = (field, value) => {
-        dispatch(
-            setClearanceField({
-                field,
-                value,
-            })
-        );
+        setFormData((prev) => ({
+            ...prev,
+            [field]: value,
+        }));
     };
 
-    /* =========================================================
-       CLOSE
-    ========================================================= */
+    /* =====================================================
+       HANDLE PARTY CHANGE
+    ===================================================== */
+
+    const handlePartyChange = (value) => {
+        handleChange("partyId", value);
+        setPartySearch("");
+        setShowPartyOptions(false);
+    };
+
+    /* =====================================================
+       CLOSE FORM
+    ===================================================== */
 
     const handleClose = () => {
-        if (loading || editLoading) {
-            return;
-        }
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/parties/clearances");
 
-        setShowSaveMenu(false);
-
-        dispatch(resetClearanceForm());
-
-        setActiveTab("clearance");
-
-        navigate("/clearances");
+                if (isEdit) {
+                    navigate("/parties/clearances");
+                }
+            }
+        });
     };
 
-    /* =========================================================
-       ESCAPE
-    ========================================================= */
+    /* =====================================================
+       VALIDATION
+    ===================================================== */
 
-    useEffect(() => {
-        const handleEscape = (event) => {
-            if (event.key !== "Escape") {
-                return;
-            }
-
-            handleClose();
-        };
-
-        document.addEventListener(
-            "keydown",
-            handleEscape
-        );
-
-        return () => {
-            document.removeEventListener(
-                "keydown",
-                handleEscape
-            );
-        };
-    }, [loading, editLoading]);
-
-    /* =========================================================
-       SAVE
-    ========================================================= */
-
-    const handleSave = async ({
-        saveAndNew = false,
-        saveAndClose = true,
-    } = {}) => {
-        if (!isAuthenticated) {
-            toast.error(
-                "You are not authenticated."
-            );
-            return;
+    const validateForm = () => {
+        if (!formData.partyId) {
+            toast.error("Please select a party");
+            return false;
         }
 
-        if (loading || editLoading) {
-            return;
-        }
-
-        if (isEdit && editLoadError) {
-            toast.error(
-                "Cannot update because clearance details failed to load."
-            );
-            return;
-        }
+        const amount = Number(formData.clearanceAmount);
 
         if (
-            !hasFullAccess &&
-            (
-                permissionLoading ||
-                !permissionsLoaded
-            )
+            formData.clearanceAmount === "" ||
+            formData.clearanceAmount === null ||
+            formData.clearanceAmount === undefined
         ) {
+            toast.error("Clearance amount is required");
+            return false;
+        }
+
+        if (!Number.isFinite(amount) || amount <= 0) {
+            toast.error("Enter a valid clearance amount");
+            return false;
+        }
+
+        if (amount > maximumClearanceAmount) {
             toast.error(
-                "Permissions are still loading. Please try again."
+                `Clearance amount cannot exceed ${formatCurrency(maximumClearanceAmount)}`
             );
+            return false;
+        }
+
+        if (!formData.paymentMethod) {
+            toast.error("Please select payment method");
+            return false;
+        }
+
+        if (!formData.clearanceDate) {
+            toast.error("Clearance date is required");
+            return false;
+        }
+
+        return true;
+    };
+
+    /* =====================================================
+       RESET FORM
+    ===================================================== */
+
+    const handleReset = () => {
+        if (isEdit) {
+            dispatch(fetchClearanceById(id))
+                .unwrap()
+                .then((response) => {
+                    const clearance = getResponseData(response);
+
+                    if (!clearance) {
+                        toast.error("Clearance not found");
+                        return;
+                    }
+
+                    setFormData({
+                        partyId: clearance.partyId ??
+                            clearance.party?.id ??
+                            "",
+                        clearanceAmount:
+                            clearance.clearanceAmount ?? "",
+                        paymentMethod:
+                            clearance.paymentMethod ?? "",
+                        paymentReferenceNumber:
+                            clearance.paymentReferenceNumber ?? "",
+                        clearanceDate:
+                            clearance.clearanceDate ??
+                            new Date().toISOString().split("T")[0],
+                        remarks: clearance.remarks ?? "",
+                    });
+
+                    setPartySearch("");
+                    setShowPartyOptions(false);
+
+                    toast.success("Clearance details restored");
+                })
+                .catch((error) => {
+                    toast.error(
+                        typeof error === "string"
+                            ? error
+                            : "Failed to reset clearance form"
+                    );
+                });
+
             return;
         }
 
-        if (!hasSavePermission) {
-            toast.error(
-                isEdit
-                    ? "You do not have permission to edit clearances."
-                    : "You do not have permission to create clearances."
-            );
-            return;
-        }
+        setFormData({
+            ...initialFormData,
+            clearanceDate: new Date()
+                .toISOString()
+                .split("T")[0],
+        });
 
-        /* PARTY ID */
+        setPartySearch("");
+        setShowPartyOptions(false);
+    };
 
-        if (
-            !form.partyId ||
-            !Number.isInteger(Number(form.partyId)) ||
-            Number(form.partyId) <= 0
-        ) {
-            setActiveTab("clearance");
-            toast.error("A valid party ID is required.");
-            return;
-        }
+    /* =====================================================
+       SAVE CLEARANCE
+    ===================================================== */
 
-        /* AMOUNT */
+    const handleSubmit = async (e, requestedSaveMode = null) => {
+        e?.preventDefault();
 
-        if (
-            form.clearanceAmount === "" ||
-            !Number.isFinite(Number(form.clearanceAmount)) ||
-            Number(form.clearanceAmount) <= 0
-        ) {
-            setActiveTab("clearance");
-            toast.error(
-                "Clearance amount must be greater than zero."
-            );
-            return;
-        }
+        if (actionLoading || loading) return;
 
-        /* PAYMENT METHOD */
+        if (!validateForm()) return;
 
-        const allowedMethods = [
-            "CASH",
-            "BANK_TRANSFER",
-            "CHEQUE",
-            "UPI",
-            "CARD",
-        ];
-
-        if (!allowedMethods.includes(form.paymentMethod)) {
-            setActiveTab("payment");
-            toast.error("Please select a valid payment method.");
-            return;
-        }
-
-        /* BANK ACCOUNT */
-
-        if (
-            ["BANK_TRANSFER", "CHEQUE"].includes(
-                form.paymentMethod
-            ) &&
-            (
-                !form.bankAccountId ||
-                Number(form.bankAccountId) <= 0
-            )
-        ) {
-            setActiveTab("payment");
-            toast.error(
-                "Bank account ID is required for this payment method."
-            );
-            return;
-        }
-
-        /* DATE */
-
-        if (!form.clearanceDate) {
-            setActiveTab("payment");
-            toast.error("Clearance date is required.");
-            return;
-        }
-
-        /* PAYLOAD */
+        const currentSaveMode =
+            requestedSaveMode || saveMode;
 
         const payload = {
-            partyId: Number(form.partyId),
-
-            clearanceAmount: Number(
-                form.clearanceAmount
-            ),
-
-            paymentMethod: form.paymentMethod,
-
-            bankAccountId: form.bankAccountId
-                ? Number(form.bankAccountId)
-                : null,
-
+            partyId: Number(formData.partyId),
+            clearanceAmount: Number(formData.clearanceAmount),
+            paymentMethod: formData.paymentMethod,
             paymentReferenceNumber:
-                form.paymentReferenceNumber?.trim() || "",
-
-            clearanceDate: form.clearanceDate,
-
-            remarks: form.remarks?.trim() || "",
+                formData.paymentReferenceNumber.trim(),
+            clearanceDate: formData.clearanceDate,
+            remarks: formData.remarks.trim(),
         };
 
-        /* CREATE / UPDATE */
-
         try {
+            let response;
+
             if (isEdit) {
-                await dispatch(
+                // UPDATE EXISTING CLEARANCE
+                response = await dispatch(
                     updateClearance({
-                        id: Number(id),
+                        id,
                         data: payload,
                     })
                 ).unwrap();
 
                 toast.success(
-                    "Clearance updated successfully."
+                    response?.message ||
+                    "Credit clearance updated successfully"
                 );
-            } else {
-                await dispatch(
-                    createClearance(payload)
-                ).unwrap();
 
-                toast.success(
-                    "Clearance created successfully."
-                );
-            }
+                await dispatch(fetchAllClearance());
 
-            setShowSaveMenu(false);
-
-            if (saveAndNew && !isEdit) {
-                dispatch(resetClearanceForm());
-                setActiveTab("clearance");
+                navigate(-1);
                 return;
             }
 
-            dispatch(resetClearanceForm());
-            setActiveTab("clearance");
+            // CREATE NEW CLEARANCE
+            response = await dispatch(
+                createClearance(payload)
+            ).unwrap();
 
-            if (saveAndClose) {
-                navigate("/clearances");
+            toast.success(
+                response?.message ||
+                "Credit clearance created successfully"
+            );
+
+            // Refresh clearance records and party outstanding values.
+            await Promise.all([
+                dispatch(fetchAllClearance()),
+                dispatch(fetchAllParties()),
+            ]);
+
+            if (currentSaveMode === "new") {
+                setFormData({
+                    ...initialFormData,
+                    clearanceDate: new Date()
+                        .toISOString()
+                        .split("T")[0],
+                });
+
+                setPartySearch("");
+                setShowPartyOptions(false);
+                setSaveMode("close");
+
+                return;
             }
+
+            dispatch(closeModal());
         } catch (error) {
             console.error(
                 isEdit
                     ? "Clearance update error:"
-                    : "Clearance create error:",
+                    : "Clearance creation error:",
                 error
             );
 
@@ -716,724 +622,506 @@ export default function ClearanceCreateSimple() {
                 typeof error === "string"
                     ? error
                     : error?.message ||
-                    error?.response?.data?.message ||
-                    (
-                        isEdit
-                            ? "Failed to update clearance."
-                            : "Failed to create clearance."
-                    )
+                    (isEdit
+                        ? "Failed to update clearance"
+                        : "Failed to create clearance")
             );
         }
     };
 
-    /* =========================================================
-       AUTH CHECK
-    ========================================================= */
+    /* =====================================================
+       ESCAPE KEY
+    ===================================================== */
 
-    if (authChecking) {
+    useEffect(() => {
+        const handleEscape = (e) => {
+            if (e.key === "Escape") {
+                setShowSaveOptions(false);
+                setShowPartyOptions(false);
+            }
+        };
+
+        window.addEventListener("keydown", handleEscape);
+
+        return () => {
+            window.removeEventListener("keydown", handleEscape);
+        };
+    }, []);
+
+    /* =====================================================
+       RENDER LOADING
+    ===================================================== */
+
+    if (isEdit && loading) {
         return (
-            <div className="flex-1 flex items-center justify-center bg-gray-50">
-                <div className="text-sm text-gray-500">
-                    Checking authentication...
+            <div className="flex h-full items-center justify-center bg-gray-50">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2
+                        size={20}
+                        className="animate-spin"
+                    />
+                    Loading clearance details...
                 </div>
             </div>
         );
     }
 
-    /* =========================================================
-       NOT AUTHENTICATED
-    ========================================================= */
+    /* =====================================================
+       RENDER
+    ===================================================== */
 
-    if (!isAuthenticated) {
-        return (
-            <div className="flex-1 flex items-center justify-center bg-gray-50 px-6">
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-10 text-center max-w-md w-full">
-                    <UserRoundArrowLeft
-                        className="mx-auto text-red-500 mb-4"
-                        size={42}
-                    />
+    return (
+        <div className="flex h-full min-h-0 flex-col bg-gray-50 px-3.5 py-3">
 
-                    <h2 className="text-lg font-semibold text-gray-800">
-                        Authentication Required
-                    </h2>
+            {/* HEADER */}
 
-                    <p className="text-sm text-gray-500 mt-2">
-                        Please sign in to manage clearances.
-                    </p>
+            <div className="mb-3 flex shrink-0 items-center justify-between rounded-xl border-b-[3px] border-[#B7E34A] bg-white px-5 py-4 shadow-sm">
+
+                <div className="flex items-center gap-3">
 
                     <button
                         type="button"
-                        onClick={() => navigate("/clearances")}
-                        className="mt-6 px-5 py-2.5 rounded-md bg-[#0F4659] hover:bg-[#0F4659]/90 text-white text-sm font-medium"
+                        onClick={handleClose}
+                        className="
+                            flex h-9 w-9 items-center justify-center
+                            rounded-lg border border-gray-200
+                            text-gray-500 transition hover:bg-gray-100
+                        "
+                        title="Go Back"
                     >
-                        Back to Clearances
+                        <ArrowLeft size={18} />
                     </button>
-                </div>
-            </div>
-        );
-    }
 
-    /* =========================================================
-       PERMISSION LOADING
-    ========================================================= */
-
-    if (
-        !hasFullAccess &&
-        (
-            permissionLoading ||
-            !permissionsLoaded
-        )
-    ) {
-        return (
-            <div className="flex items-center justify-center min-h-40">
-                <div className="text-center">
-                    <div className="w-10 h-10 mx-auto mb-3 border-2 border-[#0F4659]/20 border-t-[#0F4659] rounded-full animate-spin" />
-
-                    <p className="text-sm font-medium text-gray-600">
-                        Loading permissions...
-                    </p>
-                </div>
-            </div>
-        );
-    }
-
-    /* =========================================================
-       ACCESS DENIED
-    ========================================================= */
-
-    if (!hasSavePermission) {
-        return (
-            <div className="flex items-center justify-center py-8">
-                <div className="w-full max-w-md text-center">
-                    <div className="flex flex-col items-center">
-                        <div className="w-11 h-11 rounded-lg bg-red-50 flex items-center justify-center mb-3">
-                            <UserRoundArrowLeft
-                                size={21}
-                                className="text-red-500"
-                            />
-                        </div>
-
-                        <h2 className="text-[17px] font-semibold text-gray-800">
-                            Access Denied
+                    <div>
+                        <h2 className="text-base font-semibold text-gray-800">
+                            {isEdit
+                                ? "Edit Credit Clearance"
+                                : "Create Credit Clearance"}
                         </h2>
 
-                        <p className="mt-1.5 text-sm text-gray-500 leading-5">
+                        <p className="mt-0.5 text-xs text-gray-400">
                             {isEdit
-                                ? "You do not have permission to edit clearances."
-                                : "You do not have permission to create clearances."}
+                                ? "Update your credit clearance information"
+                                : "Record a payment against party outstanding credit"}
                         </p>
                     </div>
+
                 </div>
-            </div>
-        );
-    }
 
-    /* =========================================================
-       EDIT LOADING
-    ========================================================= */
-
-    if (editLoading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-64 bg-gray-50">
-                <div className="w-10 h-10 mb-3 border-2 border-[#0F4659]/20 border-t-[#0F4659] rounded-full animate-spin" />
-
-                <p className="text-sm font-medium text-[#0F4659]">
-                    Loading clearance details...
-                </p>
-            </div>
-        );
-    }
-
-    /* =========================================================
-       EDIT LOAD ERROR
-    ========================================================= */
-
-    if (isEdit && editLoadError) {
-        return (
-            <div className="flex items-center justify-center min-h-64 px-4">
-                <div className="w-full max-w-md p-8 bg-white border border-gray-200 rounded-xl text-center">
-                    <Landmark
-                        size={32}
-                        className="mx-auto mb-3 text-red-500"
+                <div className="hidden items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 sm:flex">
+                    <Wallet
+                        size={16}
+                        className="text-[#408DFB]"
                     />
 
-                    <h2 className="text-lg font-semibold text-[#0F4659]">
-                        Unable to Load Clearance
-                    </h2>
-
-                    <p className="text-sm text-gray-500 mt-2">
-                        The clearance could not be loaded. Please return to the clearance list and try again.
-                    </p>
-
-                    <button
-                        type="button"
-                        onClick={() => navigate("/clearances")}
-                        className="mt-5 h-10 px-5 rounded-md bg-[#0F4659] text-white text-sm font-medium hover:bg-[#0F4659]/90"
-                    >
-                        Back to Clearances
-                    </button>
+                    <span className="text-xs font-medium text-[#408DFB]">
+                        Credit Clearance
+                    </span>
                 </div>
+
             </div>
-        );
-    }
 
-    /* =========================================================
-       INPUT STYLES
-    ========================================================= */
+            {/* FORM */}
 
-    const inputClass =
-        "w-full h-10 border border-gray-300 rounded-md px-3 text-sm bg-white focus:outline-none focus:border-[#408DFB] focus:ring-2 focus:ring-[#408DFB]/20 transition";
+            <form
+                onSubmit={(e) => handleSubmit(e, "close")}
+                className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-white shadow-sm"
+            >
 
-    const getLabelClass = (required = false) => `
-        block
-        text-xs
-        font-medium
-        ${required ? "text-red-500" : "text-gray-400"}
-        mb-1.5
-    `;
+                <div className="flex-1 overflow-y-auto p-5">
 
-    /* =========================================================
-       CLEARANCE TAB
-    ========================================================= */
+                    {/* PARTY INFORMATION */}
 
-    const renderClearanceTab = () => (
-        <div className="w-full max-w-7xl">
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <div className="mb-6">
-                    <h2 className="text-base font-semibold text-gray-500">
-                        Clearance Information
-                    </h2>
+                    <section className="mb-7">
 
-                    <p className="text-sm text-gray-400 mt-1">
-                        Enter the party and amount for this clearance.
-                    </p>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-8 items-start">
-                    <div className="space-y-5">
-                        <div>
-                            <label className={getLabelClass(true)}>
-                                Party ID
-                                <span className="text-red-500 ml-1">*</span>
-                            </label>
-
-                            <input
-                                type="number"
-                                min="1"
-                                value={form.partyId ?? ""}
-                                onChange={(e) =>
-                                    handleChange(
-                                        "partyId",
-                                        e.target.value
-                                    )
-                                }
-                                placeholder="Enter party ID"
-                                className={inputClass}
-                                disabled={loading}
-                            />
-                        </div>
-
-                        <div>
-                            <label className={getLabelClass(true)}>
-                                Clearance Amount
-                                <span className="text-red-500 ml-1">*</span>
-                            </label>
-
-                            <input
-                                type="number"
-                                min="0.01"
-                                step="0.01"
-                                value={form.clearanceAmount ?? ""}
-                                onChange={(e) =>
-                                    handleChange(
-                                        "clearanceAmount",
-                                        e.target.value
-                                    )
-                                }
-                                placeholder="Enter clearance amount"
-                                className={inputClass}
-                                disabled={loading}
-                            />
-                        </div>
-
-                        <div>
-                            <label className={getLabelClass(true)}>
-                                Clearance Date
-                                <span className="text-red-500 ml-1">*</span>
-                            </label>
-
-                            <input
-                                type="date"
-                                value={form.clearanceDate ?? ""}
-                                onChange={(e) =>
-                                    handleChange(
-                                        "clearanceDate",
-                                        e.target.value
-                                    )
-                                }
-                                className={inputClass}
-                                disabled={loading}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Landmark
-                                size={18}
-                                className="text-gray-500"
-                            />
-
-                            <h3 className="text-sm font-semibold text-gray-500">
-                                Clearance Summary
-                            </h3>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <p className="text-xs text-gray-500">
-                                    Party ID
-                                </p>
-
-                                <p className="text-sm font-medium text-gray-400 mt-1">
-                                    {form.partyId || "Not selected"}
-                                </p>
-                            </div>
-
-                            <div>
-                                <p className="text-xs text-gray-500">
-                                    Clearance Amount
-                                </p>
-
-                                <p className="text-lg font-semibold text-gray-400 mt-1">
-                                    {Number(
-                                        form.clearanceAmount || 0
-                                    ).toLocaleString("en-IN", {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                    })}
-                                </p>
-                            </div>
-
-                            <div>
-                                <p className="text-xs text-gray-500">
-                                    Payment Method
-                                </p>
-
-                                <p className="text-sm font-medium text-gray-400 mt-1">
-                                    {form.paymentMethod || "CASH"}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-
-    /* =========================================================
-       PAYMENT TAB
-    ========================================================= */
-
-    const renderPaymentTab = () => (
-        <div className="w-full max-w-7xl">
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <div className="mb-6">
-                    <h2 className="text-base font-semibold text-gray-500">
-                        Payment Information
-                    </h2>
-
-                    <p className="text-sm text-gray-400 mt-1">
-                        Select the payment method and enter transaction details.
-                    </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-5xl">
-                    <div>
-                        <label className={getLabelClass(true)}>
-                            Payment Method
-                            <span className="text-red-500 ml-1">*</span>
-                        </label>
-
-                        <CustomSelect
-                            value={form.paymentMethod || "CASH"}
-                            onChange={(value) => {
-                                handleChange("paymentMethod", value);
-
-                                if (
-                                    !["BANK_TRANSFER", "CHEQUE"].includes(value)
-                                ) {
-                                    handleChange("bankAccountId", "");
-                                }
-                            }}
-                            options={[
-                                { value: "CASH", label: "CASH" },
-                                { value: "BANK_TRANSFER", label: "BANK TRANSFER" },
-                                { value: "CHEQUE", label: "CHEQUE" },
-                                { value: "UPI", label: "UPI" },
-                                { value: "CARD", label: "CARD" },
-                            ]}
+                        <SectionHeading
+                            icon={UserRound}
+                            title="Party Information"
+                            description="Select the party whose outstanding credit is being cleared"
                         />
-                    </div>
 
-                    {["BANK_TRANSFER", "CHEQUE"].includes(
-                        form.paymentMethod
-                    ) && (
-                            <div>
-                                <label className={getLabelClass(true)}>
-                                    Bank Account ID
-                                    <span className="text-red-500 ml-1">*</span>
-                                </label>
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
 
-                                <input
-                                    type="number"
-                                    min="1"
-                                    value={form.bankAccountId ?? ""}
-                                    onChange={(e) =>
-                                        handleChange(
-                                            "bankAccountId",
-                                            e.target.value
-                                        )
+                            <FormField
+                                label="Select Party"
+                                required
+                            >
+                                <div className="relative">
+                                    <CustomSelect
+                                        value={
+                                            formData.partyId
+                                                ? String(formData.partyId)
+                                                : ""
+                                        }
+                                        onChange={handlePartyChange}
+                                        options={partyOptions}
+                                        placeholder={
+                                            partyLoading
+                                                ? "Loading parties..."
+                                                : "Select party"
+                                        }
+                                    />
+                                </div>
+                            </FormField>
+
+                            <FormField label="Party Type">
+                                <TextInput
+                                    value={
+                                        selectedParty?.partyType || ""
                                     }
-                                    placeholder="Enter bank account ID"
-                                    className={inputClass}
-                                    disabled={loading}
+                                    disabled
+                                    placeholder="Party type"
                                 />
+                            </FormField>
+
+                        </div>
+
+                        {/* OUTSTANDING CREDIT */}
+
+                        {selectedParty && (
+                            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+
+                                <div className="rounded-xl border border-amber-100 bg-amber-50 p-4">
+                                    <p className="text-xs font-medium text-amber-700">
+                                        Current Outstanding Credit
+                                    </p>
+
+                                    <h3 className="mt-2 text-xl font-bold text-amber-800">
+                                        {formatCurrency(currentOutstanding)}
+                                    </h3>
+                                </div>
+
+                                <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+                                    <p className="text-xs font-medium text-emerald-700">
+                                        Outstanding After Clearance
+                                    </p>
+
+                                    <h3 className="mt-2 text-xl font-bold text-emerald-800">
+                                        {formatCurrency(outstandingAfterClearance)}
+                                    </h3>
+                                </div>
+
                             </div>
                         )}
 
-                    <div className="md:col-span-2">
-                        <label className={getLabelClass()}>
-                            Payment Reference Number
-                        </label>
+                    </section>
 
-                        <input
-                            type="text"
-                            value={form.paymentReferenceNumber || ""}
-                            onChange={(e) =>
-                                handleChange(
-                                    "paymentReferenceNumber",
-                                    e.target.value
-                                )
-                            }
-                            placeholder="Enter transaction or cheque reference"
-                            className={inputClass}
-                            disabled={loading}
-                        />
-                    </div>
-                </div>
+                    <div className="my-6 border-t border-gray-100" />
 
-                <div className="mt-7 p-4 rounded-lg bg-[#0F4659]/5 border border-[#0F4659]/20 max-w-5xl">
-                    <p className="text-sm font-medium text-gray-500">
-                        Payment Method
-                    </p>
+                    {/* CLEARANCE DETAILS */}
 
-                    <p className="text-xs text-gray-400 mt-1">
-                        {form.paymentMethod || "CASH"}
-                    </p>
-                </div>
-            </div>
-        </div>
-    );
+                    <section className="mb-7">
 
-    /* =========================================================
-       REMARKS TAB
-    ========================================================= */
-
-    const renderRemarksTab = () => (
-        <div className="w-full max-w-7xl">
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <div className="mb-6">
-                    <h2 className="text-base font-semibold text-gray-500">
-                        Remarks
-                    </h2>
-
-                    <p className="text-sm text-gray-400 mt-1">
-                        Add any additional information about this clearance.
-                    </p>
-                </div>
-
-                <div className="max-w-5xl">
-                    <label className={getLabelClass()}>
-                        Remarks / Description
-                    </label>
-
-                    <textarea
-                        rows={6}
-                        value={form.remarks || ""}
-                        onChange={(e) =>
-                            handleChange(
-                                "remarks",
-                                e.target.value
-                            )
-                        }
-                        placeholder="Enter clearance remarks..."
-                        className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm bg-white resize-none focus:outline-none focus:border-[#0F4659] focus:ring-2 focus:ring-[#0F4659]/20"
-                        disabled={loading}
-                    />
-                </div>
-            </div>
-        </div>
-    );
-
-    /* =========================================================
-       SETTINGS TAB
-    ========================================================= */
-
-    const renderSettingsTab = () => (
-        <div className="w-full max-w-7xl">
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <div className="mb-6">
-                    <h2 className="text-base font-semibold text-gray-500">
-                        Clearance Settings
-                    </h2>
-
-                    <p className="text-sm text-gray-400 mt-1">
-                        Review the clearance record before saving.
-                    </p>
-                </div>
-
-                <div className="max-w-md border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Landmark
-                            size={18}
-                            className="text-gray-500"
+                        <SectionHeading
+                            icon={IndianRupee}
+                            title="Clearance Details"
+                            description="Enter the clearance amount and payment information"
                         />
 
-                        <h3 className="text-sm font-semibold text-gray-500">
-                            Record Information
-                        </h3>
-                    </div>
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
 
-                    <div className="space-y-4">
-                        <div>
-                            <p className="text-xs text-gray-500">
-                                Record Type
-                            </p>
+                            <FormField
+                                label="Clearance Amount"
+                                required
+                            >
+                                <div className="relative">
+                                    <span className="
+                                        absolute left-3 top-1/2
+                                        -translate-y-1/2 text-sm
+                                        font-medium text-gray-500
+                                    ">
+                                        ₹
+                                    </span>
 
-                            <p className="text-sm font-medium text-gray-400 mt-1">
-                                Credit Clearance
-                            </p>
+                                    <input
+                                        type="number"
+                                        min="0.01"
+                                        step="0.01"
+                                        value={formData.clearanceAmount}
+                                        onChange={(e) =>
+                                            handleChange(
+                                                "clearanceAmount",
+                                                e.target.value
+                                            )
+                                        }
+                                        placeholder="Enter amount"
+                                        className="
+                                            h-10 w-full rounded-lg
+                                            border border-gray-200
+                                            bg-white pl-8 pr-3 text-sm
+                                            text-gray-700 outline-none
+                                            transition placeholder:text-gray-400
+                                            focus:border-[#408DFB]
+                                            focus:ring-2
+                                            focus:ring-[#408DFB]/10
+                                        "
+                                    />
+                                </div>
+
+                                {selectedParty && (
+                                    <p className="mt-1 text-[11px] text-gray-400">
+                                        Maximum amount:{" "}
+                                        {formatCurrency(maximumClearanceAmount)}
+                                    </p>
+                                )}
+                            </FormField>
+
+                            <FormField
+                                label="Payment Method"
+                                required
+                            >
+                                <CustomSelect
+                                    value={formData.paymentMethod}
+                                    onChange={(value) =>
+                                        handleChange(
+                                            "paymentMethod",
+                                            value
+                                        )
+                                    }
+                                    options={paymentMethodOptions}
+                                    placeholder="Select payment method"
+                                />
+                            </FormField>
+
+                            <FormField label="Clearance Date" required>
+                                <div className="relative">
+                                    <CalendarDays
+                                        size={16}
+                                        className="
+                                            absolute left-3 top-1/2
+                                            -translate-y-1/2
+                                            text-gray-400
+                                        "
+                                    />
+
+                                    <input
+                                        type="date"
+                                        value={formData.clearanceDate}
+                                        onChange={(e) =>
+                                            handleChange(
+                                                "clearanceDate",
+                                                e.target.value
+                                            )
+                                        }
+                                        className="
+                                            h-10 w-full rounded-lg
+                                            border border-gray-200
+                                            bg-white pl-9 pr-3 text-sm
+                                            text-gray-700 outline-none
+                                            transition focus:border-[#408DFB]
+                                            focus:ring-2
+                                            focus:ring-[#408DFB]/10
+                                        "
+                                    />
+                                </div>
+                            </FormField>
+
+                            <FormField
+                                label="Payment Reference Number"
+                                className="md:col-span-2 lg:col-span-3"
+                            >
+                                <TextInput
+                                    value={formData.paymentReferenceNumber}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "paymentReferenceNumber",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Enter transaction ID / cheque number"
+                                    maxLength={100}
+                                />
+                            </FormField>
+
                         </div>
 
-                        <div>
-                            <p className="text-xs text-gray-500">
-                                Operation
-                            </p>
+                    </section>
 
-                            <p className="text-sm font-medium text-gray-400 mt-1">
-                                {isEdit ? "Update existing clearance" : "Create new clearance"}
-                            </p>
-                        </div>
+                    <div className="my-6 border-t border-gray-100" />
 
-                        <div>
-                            <p className="text-xs text-gray-500">
-                                Clearance Date
-                            </p>
+                    {/* REMARKS */}
 
-                            <p className="text-sm font-medium text-gray-400 mt-1">
-                                {form.clearanceDate || "Not selected"}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+                    <section>
 
-    /* =========================================================
-       MAIN UI
-    ========================================================= */
-
-    return (
-        <div className="flex flex-col h-full min-h-0 bg-gray-50 px-3.5 py-5">
-            {/* HEADER */}
-
-            <div className="shrink-0 px-6 py-4 bg-white border border-lime-500 rounded flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div
-                        className="w-10 h-10 rounded-lg bg-[#408DFB] border border-blue-100 flex items-center justify-center cursor-pointer"
-                        onClick={() => navigate("/clearances")}
-                    >
-                        <Landmark
-                            size={20}
-                            className="text-gray-100"
+                        <SectionHeading
+                            icon={FileText}
+                            title="Additional Information"
+                            description="Add any notes related to this clearance"
                         />
-                    </div>
 
-                    <div>
-                        <h1
-                            className="text-lg font-semibold text-gray-500 cursor-pointer"
-                            onClick={() => navigate("/clearances")}
-                        >
-                            {isEdit
-                                ? "Edit Clearance"
-                                : "New Clearance"}
-                        </h1>
+                        <div className="grid grid-cols-1 gap-5">
 
-                        <p className="text-xs text-gray-400 mt-0.5">
-                            {isEdit
-                                ? `Update clearance details${form.id ? ` — #${form.id}` : ""}`
-                                : "Create a new credit clearance"}
-                        </p>
-                    </div>
+                            <FormField label="Remarks">
+                                <TextAreaField
+                                    value={formData.remarks}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "remarks",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Enter clearance remarks..."
+                                    rows={3}
+                                />
+                            </FormField>
+
+                        </div>
+
+                    </section>
+
                 </div>
 
-                <button
-                    type="button"
-                    disabled={loading || editLoading}
-                    onClick={handleClose}
-                    className="px-2 py-1 text-gray-100 bg-red-500 hover:text-gray-100 hover:bg-red-400  rounded disabled:opacity-50"
-                >
-                    <X size={20} />
-                </button>
-            </div>
+                {/* FOOTER */}
 
-            {/* TABS */}
+                <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-100 bg-white px-5 py-3">
 
-            <div className="shrink-0 px-6 bg-white border-b border-gray-200 flex items-center gap-7 overflow-x-auto">
-                {tabs.map((tab) => (
-                    <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`py-3 text-sm font-medium border-b-2 whitespace-nowrap transition ${activeTab === tab.id
-                            ? "text-gray-500 border-lime-500"
-                            : "text-gray-400 border-transparent hover:text-gray-500"
-                            }`}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* BODY */}
-
-            <div className="flex-1 min-h-0 overflow-y-auto py-6">
-                {activeTab === "clearance" && renderClearanceTab()}
-
-                {activeTab === "payment" && renderPaymentTab()}
-
-                {activeTab === "remarks" && renderRemarksTab()}
-
-                {activeTab === "settings" && renderSettingsTab()}
-            </div>
-
-            {/* FOOTER */}
-
-            <div className="shrink-0 border-t border-gray-200 bg-white px-6 py-2 flex items-center justify-end gap-3 mr-13">
-                <div className="text-xs text-gray-500">
-                    <span className="text-red-500">*</span>
-                    {" "}Required fields
-                </div>
-
-                <div className="flex items-center justify-end gap-3">
                     <button
                         type="button"
-                        disabled={loading || editLoading}
                         onClick={handleClose}
-                        className="h-10 px-5 border border-gray-300 rounded-md 
-                        bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={actionLoading}
+                        className="
+                            rounded-lg border border-gray-200
+                            px-4 py-2 text-sm font-medium
+                            text-gray-600 transition hover:bg-gray-50
+                            disabled:opacity-50
+                        "
                     >
                         Cancel
                     </button>
 
-                    <div className="relative flex">
-                        <button
-                            type="button"
-                            disabled={loading || editLoading}
-                            onClick={() =>
-                                handleSave({
-                                    saveAndNew: false,
-                                    saveAndClose: true,
-                                })
-                            }
-                            className="h-10 px-5 bg-[#408DFB] hover:bg-[#408DFB]/90 text-white text-sm font-medium rounded-l-md disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading
-                                ? isEdit ? "Updating..." : "Saving..."
-                                : isEdit ? "Update Clearance" : "Save Clearance"}
-                        </button>
+                    <div className="flex items-center gap-2">
 
                         <button
                             type="button"
-                            disabled={loading || editLoading}
-                            onClick={() =>
-                                setShowSaveMenu((previous) => !previous)
-                            }
-                            className="h-10 w-10 bg-[#408DFB] hover:bg-[#408DFB]/90 text-white rounded-r-md border-l border-white flex items-center justify-center disabled:opacity-50"
+                            onClick={handleReset}
+                            disabled={actionLoading || loading}
+                            className="
+                                flex items-center gap-2 rounded-lg
+                                border border-gray-200 px-4 py-2
+                                text-sm font-medium text-gray-600
+                                transition hover:bg-gray-50
+                                disabled:opacity-50
+                            "
                         >
-                            <ChevronDown
-                                size={16}
-                                className={
-                                    showSaveMenu
-                                        ? "rotate-180 transition-transform"
-                                        : "transition-transform"
-                                }
-                            />
+                            <RotateCcw size={15} />
+                            Reset
                         </button>
 
-                        {showSaveMenu && (
-                            <>
-                                <div
-                                    className="fixed inset-0 z-[80]"
-                                    onClick={() => setShowSaveMenu(false)}
+                        <button
+                            type="submit"
+                            disabled={actionLoading || loading}
+                            onClick={() => setSaveMode("close")}
+                            className="
+                                flex items-center gap-2 rounded-lg
+                                bg-[#408DFB] px-5 py-2 text-sm
+                                font-medium text-white transition
+                                hover:bg-blue-600 disabled:cursor-not-allowed
+                                disabled:opacity-60
+                            "
+                        >
+                            {actionLoading && saveMode === "close" ? (
+                                <Loader2
+                                    size={16}
+                                    className="animate-spin"
                                 />
+                            ) : (
+                                <Save size={16} />
+                            )}
 
-                                <div className="absolute right-0 bottom-full mb-2 w-56 bg-white border border-gray-200 rounded-md shadow-xl z-[90] overflow-hidden">
-                                    {!isEdit && (
+                            {actionLoading
+                                ? "Saving..."
+                                : isEdit
+                                    ? "Update"
+                                    : "Save"}
+                        </button>
+
+                        {!isEdit && (
+                            <div className="relative">
+
+                                <button
+                                    type="button"
+                                    disabled={actionLoading}
+                                    onClick={() =>
+                                        setShowSaveOptions((prev) => !prev)
+                                    }
+                                    className="
+                                        flex h-9 items-center justify-center
+                                        rounded-lg border border-gray-200
+                                        px-2 text-gray-600 transition
+                                        hover:bg-gray-50 disabled:opacity-50
+                                    "
+                                >
+                                    <ChevronDown size={17} />
+                                </button>
+
+                                {showSaveOptions && (
+                                    <div className="
+                                        absolute bottom-11 right-0 z-20
+                                        w-44 overflow-hidden rounded-lg
+                                        border border-gray-100 bg-white
+                                        py-1 shadow-lg
+                                    ">
+
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                setShowSaveMenu(false);
-
-                                                handleSave({
-                                                    saveAndNew: true,
-                                                    saveAndClose: false,
-                                                });
+                                                setSaveMode("new");
+                                                setShowSaveOptions(false);
+                                                handleSubmit(null, "new");
                                             }}
-                                            className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100"
+                                            className="
+                                                w-full px-4 py-2.5
+                                                text-left text-sm text-gray-600
+                                                transition hover:bg-blue-50
+                                                hover:text-[#408DFB]
+                                            "
                                         >
-                                            <div className="font-medium text-sm text-gray-700">
-                                                Save & New
-                                            </div>
-
-                                            <div className="text-xs text-gray-400 mt-0.5">
-                                                Save and create another clearance
-                                            </div>
+                                            Save & New
                                         </button>
-                                    )}
 
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setShowSaveMenu(false);
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSaveMode("close");
+                                                setShowSaveOptions(false);
+                                                handleSubmit(null, "close");
+                                            }}
+                                            className="
+                                                w-full px-4 py-2.5
+                                                text-left text-sm text-gray-600
+                                                transition hover:bg-blue-50
+                                                hover:text-[#408DFB]
+                                            "
+                                        >
+                                            Save & Close
+                                        </button>
 
-                                            handleSave({
-                                                saveAndNew: false,
-                                                saveAndClose: true,
-                                            });
-                                        }}
-                                        className="w-full text-left px-4 py-3 hover:bg-gray-50"
-                                    >
-                                        <div className="font-medium text-sm text-gray-700">
-                                            {isEdit
-                                                ? "Update & Close"
-                                                : "Save & Close"}
-                                        </div>
+                                    </div>
+                                )}
 
-                                        <div className="text-xs text-gray-400 mt-0.5">
-                                            {isEdit
-                                                ? "Update and return to clearances"
-                                                : "Save and return to clearances"}
-                                        </div>
-                                    </button>
-                                </div>
-                            </>
+                            </div>
                         )}
+
                     </div>
+
                 </div>
-            </div>
+
+            </form>
+
+            {/* LEAVE CONFIRMATION */}
+
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave Credit Clearance?"
+                message="Are you sure you want to leave this credit clearance page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
+
         </div>
     );
-}
+};
+
+export default ClearanceCreateNew;

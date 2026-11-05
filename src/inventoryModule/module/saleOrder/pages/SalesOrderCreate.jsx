@@ -31,7 +31,7 @@ import {
     clearSalesOrderError,
 } from "../slices/salesOrderSlice";
 
-import { loadCustomers } from "../../../../module/customer/thunks/customerThunks";
+import { fetchAllCustomers } from "../../../../module/customer/thunks/customerThunks";
 import { fetchAllParties } from "../../../../module/parties/thunks/partyThunks";
 import { fetchAllWarehouse } from "../../../../inventoryModule/module/warehouse/thunks/warehouseThunks";
 
@@ -322,7 +322,7 @@ export default function SalesOrderCreate({ onClose }) {
     // ---------------------------------------------------------
 
     useEffect(() => {
-        dispatch(loadCustomers());
+        dispatch(fetchAllCustomers());
         dispatch(fetchAllParties());
         dispatch(fetchAllWarehouse());
         dispatch(fetchAllProducts());

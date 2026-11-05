@@ -4,15 +4,31 @@ import api from "../../../api/api";
 /**
  * Fetch all categories
  */
+/**
+ * Fetch all categories with filters and pagination
+ */
 export const fetchAllCategories = createAsyncThunk(
   "category/fetchCategories",
-  async (_, { rejectWithValue }) => {
+  async (params = {}, { rejectWithValue }) => {
     try {
-      const res = await api.get("/categories");
+      const { status, page = 0, size = 20 } = params || {};
 
-      console.log("Categories:", res.data);
+      const config = {
+        params: {
+          page,
+          size,
+        },
+      };
 
-      return res.data;
+      let response;
+
+      if (status && status !== "ALL") {
+        response = await api.get(`/categories/status/${status}`, config);
+      } else {
+        response = await api.get("/categories", config);
+      }
+
+      return response.data;
     } catch (error) {
       return rejectWithValue(error?.response?.data?.message || error.message);
     }

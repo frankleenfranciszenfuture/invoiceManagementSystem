@@ -1,7 +1,25 @@
 
-import React, { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import React, { useCallback, useMemo } from "react";
+
+import {
+    useDispatch,
+    useSelector,
+} from "react-redux";
+
+import {
+    useNavigate,
+} from "react-router-dom";
+
+import {
+    Edit,
+    Trash2,
+    Tags,
+    Eye,
+    FolderTree,
+} from "lucide-react";
+
+import toast from "react-hot-toast";
+
 import {
     fetchAllSubCategories,
     deleteSubCategory,
@@ -11,90 +29,65 @@ import {
     setExsistingSubCategory,
 } from "../slices/subCategorySlice";
 
-import {
-    openModal,
-} from "../../ui/uiSlice";
-
-import {
-    ChevronDown,
-    Edit,
-    Trash2,
-    ListTree,
-    Eye,
-} from "lucide-react";
-
-import toast from "react-hot-toast";
 import Pagination from "../../../common/pagination/table/Pagination";
+import ToolTipText from "../.././../common/toolTip/ToolTipText";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMPTY_ARRAY = [];
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function SubCategoryTable({
-    subCategories = [],
+    fetchParams = {},
 }) {
-
     const dispatch = useDispatch();
-    const [showEdit, setShowEdit] = useState(false);
-    const [showView, setShowView] = useState(false);
+    const navigate = useNavigate();
 
-    const navigate = useNavigate(false);
-    // =====================================================
-    // REDUX STATE
-    // =====================================================
+    /* =====================================================
+       REDUX STATE
+    ===================================================== */
 
     const {
+        subCategories: reduxSubCategories = EMPTY_ARRAY,
         loading,
         error,
-        pagination,
+        pagination = {},
     } = useSelector(
-        (state) =>
-            state.subCategory || {}
+        (state) => state.subCategory || {}
     );
+
+    const currentSubCategories = Array.isArray(reduxSubCategories)
+        ? reduxSubCategories
+        : EMPTY_ARRAY;
 
     const {
-        pageNumber,
-        pageSize,
-        totalPages,
-        totalElements,
-    } = pagination || {};
+        pageNumber = 0,
+        pageSize = 20,
+        totalPages = 0,
+        totalElements = 0,
+    } = pagination;
 
-    const currentSubCategories =
-        subCategories || [];
-
-    // =====================================================
-    // AUTH
-    // =====================================================
+    /* =====================================================
+       AUTH STATE
+    ===================================================== */
 
     const user = useSelector(
-        (state) =>
-            state.auth?.user
+        (state) => state.auth?.user
     );
-
-    // =====================================================
-    // USER PERMISSIONS
-    // =====================================================
 
     const permissions = useSelector(
         (state) =>
-            Array.isArray(
-                state.menuPermission?.userPermissions
-            )
-                ? state.menuPermission.userPermissions
-                : []
+            state.menuPermission?.userPermissions || EMPTY_ARRAY
     );
 
-    const permissionLoading = useSelector(
-        (state) =>
-            state.menuPermission
-                ?.userPermissionsLoading === true
-    );
-
-    const permissionsLoaded = useSelector(
-        (state) =>
-            state.menuPermission
-                ?.userPermissionsLoaded === true
-    );
-
-    // =====================================================
-    // ROLE
-    // =====================================================
+    /* =====================================================
+       ROLE
+    ===================================================== */
 
     const roleName =
         user?.roleName ||
@@ -104,451 +97,269 @@ export default function SubCategoryTable({
         user?.authority ||
         "";
 
-    const normalizedRole =
-        String(roleName)
-            .trim()
-            .toUpperCase();
-
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
-
-    const isAdmin =
-        normalizedRole === "ADMIN";
+    const normalizedRole = String(roleName)
+        .trim()
+        .toUpperCase();
 
     const hasFullAccess =
-        isSuperAdmin ||
-        isAdmin;
+        normalizedRole === "SUPER_ADMIN" ||
+        normalizedRole === "ADMIN";
 
-    // =====================================================
-    // PERMISSION CHECKER
-    //
-    // Supports:
-    //
-    // FLAT
-    //
-    // {
-    //     moduleName: "Sub Categories",
-    //     actionName: "EDIT",
-    //     allowed: true
-    // }
-    //
-    // GROUPED
-    //
-    // {
-    //     moduleName: "Sub Categories",
-    //     actions: [
-    //         {
-    //             actionName: "EDIT",
-    //             allowed: true
-    //         }
-    //     ]
-    // }
-    // =====================================================
+    /* =====================================================
+       PERMISSION CHECK
+    ===================================================== */
 
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
+    const hasPermission = useCallback(
+        (moduleName, actionName) => {
+            if (hasFullAccess) return true;
 
-        // ADMIN / SUPER_ADMIN
-        if (hasFullAccess) {
-            return true;
-        }
+            if (!Array.isArray(permissions)) return false;
 
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
-
-        const requestedModule =
-            String(moduleName)
+            const requestedModule = String(moduleName)
                 .trim()
                 .toLowerCase();
 
-        const requestedAction =
-            String(actionName)
+            const requestedAction = String(actionName)
                 .trim()
                 .toUpperCase();
 
-        return permissions.some(
-            (permission) => {
+            return permissions.some((permission) => {
+                const permissionModule = String(
+                    permission?.moduleName ||
+                    permission?.module?.moduleName ||
+                    permission?.module?.name ||
+                    ""
+                )
+                    .trim()
+                    .toLowerCase();
 
-                const permissionModule =
-                    String(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toLowerCase();
-
-                if (
-                    permissionModule !==
-                    requestedModule
-                ) {
+                if (permissionModule !== requestedModule) {
                     return false;
                 }
 
-                // =================================================
-                // IGNORE INACTIVE PERMISSION
-                // =================================================
-
-                if (
-                    permission?.active === false
-                ) {
+                if (permission?.active === false) {
                     return false;
                 }
 
                 if (
-                    String(
-                        permission?.status || ""
-                    )
-                        .trim()
-                        .toUpperCase() ===
+                    String(permission?.status || "").toUpperCase() ===
                     "INACTIVE"
                 ) {
                     return false;
                 }
 
-                // =================================================
-                // GROUPED PERMISSION
-                // =================================================
+                if (Array.isArray(permission?.actions)) {
+                    return permission.actions.some((action) => {
+                        const permissionAction = String(
+                            action?.actionName ||
+                            action?.action?.actionName ||
+                            action?.action?.name ||
+                            action?.name ||
+                            ""
+                        )
+                            .trim()
+                            .toUpperCase();
 
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
+                        const allowed =
+                            action?.allowed === true ||
+                            action?.allowed === "true";
 
-                    return permission.actions.some(
-                        (action) => {
-
-                            const permissionAction =
-                                String(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.action?.name ||
-                                    ""
-                                )
-                                    .trim()
-                                    .toUpperCase();
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
-
-                            return (
-                                permissionAction ===
-                                requestedAction &&
-                                allowed
-                            );
+                        if (action?.active === false) {
+                            return false;
                         }
-                    );
+
+                        if (
+                            String(action?.status || "").toUpperCase() ===
+                            "INACTIVE"
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            permissionAction === requestedAction &&
+                            allowed
+                        );
+                    });
                 }
 
-                // =================================================
-                // FLAT PERMISSION
-                // =================================================
-
-                const permissionAction =
-                    String(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name ||
-                        ""
-                    )
-                        .trim()
-                        .toUpperCase();
+                const permissionAction = String(
+                    permission?.actionName ||
+                    permission?.action?.actionName ||
+                    permission?.action?.name ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
 
                 const allowed =
                     permission?.allowed === true ||
                     permission?.allowed === "true";
 
                 return (
-                    permissionAction ===
-                    requestedAction &&
+                    permissionAction === requestedAction &&
                     allowed
                 );
-            }
-        );
-    };
+            });
+        },
+        [hasFullAccess, permissions]
+    );
 
-    // =====================================================
-    // SUB CATEGORY PERMISSIONS
-    // =====================================================
+    const canViewSubCategory = hasPermission(
+        "Sub Categories",
+        "VIEW"
+    );
 
-    const canEditSubCategory =
-        hasPermission(
-            "SubCategories",
-            "EDIT"
-        );
+    const canEditSubCategory = hasPermission(
+        "Sub Categories",
+        "EDIT"
+    );
 
-    const canDeleteSubCategory =
-        hasPermission(
-            "SubCategories",
-            "DELETE"
-        );
+    const canDeleteSubCategory = hasPermission(
+        "Sub Categories",
+        "DELETE"
+    );
 
-    // =====================================================
-    // ANY ACTION AVAILABLE
-    // =====================================================
+    /* =====================================================
+       FETCH PARAMS
+    ===================================================== */
 
-    const canPerformAction =
-        canEditSubCategory ||
-        canDeleteSubCategory;
+    const getFetchParams = useCallback(
+        (page, size) => ({
+            ...fetchParams,
+            page,
+            size,
+        }),
+        [fetchParams]
+    );
 
-    // =====================================================
-    // DELETE SUB CATEGORY
-    // =====================================================
+    /* =====================================================
+       REFRESH SUBCATEGORIES
+    ===================================================== */
 
-    const handleDelete = async (
-        id
-    ) => {
-
-        // =================================================
-        // PERMISSION CHECK
-        // =================================================
-
-        if (
-            !hasFullAccess &&
-            !permissionsLoaded
-        ) {
-
-            toast.error(
-                "Permissions are still loading. Please try again."
+    const refreshSubCategories = useCallback(
+        (page = pageNumber, size = pageSize) => {
+            dispatch(
+                fetchAllSubCategories(
+                    getFetchParams(page, size)
+                )
             );
+        },
+        [
+            dispatch,
+            getFetchParams,
+            pageNumber,
+            pageSize,
+        ]
+    );
 
+    /* =====================================================
+       DELETE SUBCATEGORY
+    ===================================================== */
+
+    const handleDelete = async (id) => {
+        if (!canDeleteSubCategory) {
+            toast.error(
+                "You do not have permission to delete Subcategory."
+            );
             return;
         }
 
-        if (
-            !canDeleteSubCategory
-        ) {
-
-            toast.error(
-                "You do not have permission to delete sub categories."
-            );
-
-            return;
-        }
-
-        // =================================================
-        // CONFIRM
-        // =================================================
-
-        if (
-            !window.confirm(
-                "Delete this sub category?"
-            )
-        ) {
+        if (!window.confirm("Delete this Subcategory?")) {
             return;
         }
 
         try {
-
             await dispatch(
                 deleteSubCategory(id)
             ).unwrap();
 
             toast.success(
-                "Sub category deleted successfully"
+                "Subcategory deleted successfully"
             );
 
-            dispatch(
-                fetchAllSubCategories()
+            const nextPage =
+                currentSubCategories.length === 1 && pageNumber > 0
+                    ? pageNumber - 1
+                    : pageNumber;
+
+            refreshSubCategories(
+                nextPage,
+                pageSize
             );
 
         } catch (error) {
-
             toast.error(
                 typeof error === "string"
                     ? error
                     : error?.message ||
-                    "Failed to delete sub category"
+                    "Failed to delete Subcategory"
             );
         }
     };
 
-    // =====================================================
-    // VIEW SUB CATEGORY
-    // =====================================================
+    /* =====================================================
+       VIEW SUBCATEGORY
+    ===================================================== */
 
-    const handleView = (
-        subCategory
-    ) => {
-
-        try {
-
-            dispatch(
-                setExsistingSubCategory(
-                    subCategory
-                )
-            );
-
-        } catch (error) {
-
+    const handleView = (subCategory) => {
+        if (!canViewSubCategory) {
             toast.error(
-                "Failed to open sub category"
+                "You do not have permission to view Subcategories."
             );
-        }
-    };
-
-    // =====================================================
-    // EDIT SUB CATEGORY
-    // =====================================================
-
-    const handleEdit = (
-        subCategory
-    ) => {
-
-        // =================================================
-        // PERMISSION CHECK
-        // =================================================
-
-        if (
-            !hasFullAccess &&
-            !permissionsLoaded
-        ) {
-
-            toast.error(
-                "Permissions are still loading. Please try again."
-            );
-
             return;
         }
 
-        if (
-            !canEditSubCategory
-        ) {
+        dispatch(
+            setExsistingSubCategory(subCategory)
+        );
 
+        navigate(
+            `/settings/subCategoires/view/${subCategory.id}`
+        );
+    };
+
+    /* =====================================================
+       EDIT SUBCATEGORY
+    ===================================================== */
+
+    const handleEdit = (subCategory) => {
+        if (!canEditSubCategory) {
             toast.error(
-                "You do not have permission to edit sub categories."
+                "You do not have permission to edit Subcategory."
             );
-
             return;
         }
 
-        try {
+        dispatch(
+            setExsistingSubCategory(subCategory)
+        );
 
-            dispatch(
-                openModal({
-                    type:
-                        "editSubCategory",
-                    data:
-                        subCategory,
-                })
-            );
-
-        } catch (error) {
-
-            toast.error(
-                "Failed to open sub category"
-            );
-        }
+        navigate(
+            `/settings/subCategoires/edit/${subCategory.id}`
+        );
     };
 
-    // =====================================================
-    // SUB CATEGORY INITIALS
-    // =====================================================
+    /* =====================================================
+       INITIALS
+    ===================================================== */
 
-    const initials = (
-        name
-    ) =>
-        name
-            ?.split(" ")
-            .map(
-                (word) =>
-                    word[0]
-            )
-            .join("")
-            .slice(0, 2)
-            .toUpperCase() ||
-        "SC";
-
-    // =====================================================
-    // STATUS COLORS
-    // =====================================================
-
-    const statusColor = {
-
-        ACTIVE:
-            "bg-green-100 text-green-700",
-
-        INACTIVE:
-            "bg-gray-100 text-gray-700",
-
-        DRAFT:
-            "bg-yellow-100 text-yellow-700",
-
+    const initials = (name = "") => {
+        return (
+            String(name)
+                .split(" ")
+                .filter(Boolean)
+                .map((word) => word[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase() || "SC"
+        );
     };
 
-    // =====================================================
-    // SUB CATEGORY NAME COLOR
-    // =====================================================
+    /* =====================================================
+       AVATAR COLORS
+    ===================================================== */
 
-    const getSubCategoryNameColor = (
-        name
-    ) => {
-
-        if (!name) {
-            return "bg-gray-100 text-gray-700";
-        }
-
-        const hasNumber =
-            /\d/.test(name);
-
-        if (hasNumber) {
-            return "bg-blue-100 text-blue-700";
-        }
-
-        return "bg-purple-100 text-purple-700";
-    };
-
-    // =====================================================
-    // SUB CATEGORY CODE COLOR
-    // =====================================================
-
-    const getSubCategoryCodeColor = (
-        subCategoryCode
-    ) => {
-
-        if (!subCategoryCode) {
-            return "bg-gray-100 text-gray-700";
-        }
-
-        const value =
-            subCategoryCode
-                .trim()
-                .toUpperCase();
-
-        const lastPart =
-            value
-                .split("-")
-                .pop();
-
-        if (
-            /^\d+$/.test(lastPart)
-        ) {
-
-            return "bg-gray-100 text-orange-400";
-        }
-
-        if (
-            /^[A-Z]+$/.test(lastPart)
-        ) {
-
-            return "bg-gray-100 text-pink-400";
-        }
-
-        return "bg-gray-100 text-gray-700";
-    };
-
-    // =====================================================
-    // AVATAR COLORS
-    // =====================================================
-
-    const avatarColors = [
-
+    const AVATAR_COLORS = [
         "bg-pink-500 text-white",
         "bg-green-500 text-white",
         "bg-blue-500 text-white",
@@ -556,625 +367,316 @@ export default function SubCategoryTable({
         "bg-orange-500 text-white",
         "bg-cyan-500 text-white",
         "bg-indigo-500 text-white",
-
     ];
 
-    const getAvatarColor = (
-        name = ""
-    ) => {
+    const getAvatarColor = (name = "") => {
+        const index = String(name)
+            .split("")
+            .reduce(
+                (acc, char) => acc + char.charCodeAt(0),
+                0
+            ) % AVATAR_COLORS.length;
 
-        const index =
-            name
-                .split("")
-                .reduce(
-                    (
-                        acc,
-                        char
-                    ) =>
-                        acc +
-                        char.charCodeAt(0),
-                    0
-                ) %
-            avatarColors.length;
-
-        return avatarColors[index];
+        return AVATAR_COLORS[index];
     };
 
-    // =====================================================
-    // PERMISSION LOADING
-    // =====================================================
+    /* =====================================================
+       SORTING
+    ===================================================== */
 
-    if (
-        !hasFullAccess &&
-        (
-            permissionLoading ||
-            !permissionsLoaded
-        )
-    ) {
+    const sortedSubCategories = useMemo(
+        () => [...currentSubCategories],
+        [currentSubCategories]
+    );
 
+    /* =====================================================
+       LOADING
+    ===================================================== */
+
+    if (loading && !currentSubCategories.length) {
         return (
-            <div
-                className="
-                flex
-                items-center
-                justify-center
-                py-10
-                "
-            >
-
-                <p
-                    className="
-                    text-sm
-                    text-gray-500
-                    "
-                >
-                    Loading permissions...
+            <div className="flex items-center justify-center py-10">
+                <p className="text-gray-500">
+                    Loading subcategories...
                 </p>
-
             </div>
         );
     }
 
-    // =====================================================
-    // LOADING
-    // =====================================================
+    /* =====================================================
+       ERROR
+    ===================================================== */
 
-    if (loading) {
-
+    if (error && !currentSubCategories.length) {
         return (
-
-            <div
-                className="
-                flex
-                items-center
-                justify-center
-                py-10
-                "
-            >
-
-                <p
-                    className="
-                    text-gray-500
-                    "
-                >
-                    Loading sub categories...
-                </p>
-
-            </div>
-        );
-    }
-
-    // =====================================================
-    // ERROR
-    // =====================================================
-
-    if (error) {
-
-        return (
-
-            <div
-                className="
-                bg-white
-                rounded-xl
-                border
-                border-red-200
-                p-8
-                text-center
-                "
-            >
-
-                <p
-                    className="
-                    text-red-500
-                    "
-                >
+            <div className="rounded-xl border border-red-200 bg-white p-8 text-center">
+                <p className="text-red-500">
                     {error}
                 </p>
 
-            </div>
-        );
-    }
-
-    // =====================================================
-    // EMPTY STATE
-    // =====================================================
-
-    if (
-        !currentSubCategories.length
-    ) {
-
-        return (
-
-            <div
-                className="
-                bg-white
-                rounded-2xl
-                border
-                border-gray-200
-                p-8
-                text-center
-                "
-            >
-
-                <ListTree
-                    className="
-                    mx-auto
-                    mb-3
-                    h-10
-                    w-10
-                    text-gray-300
-                    "
-                />
-
-                <p
-                    className="
-                    text-gray-500
-                    "
+                <button
+                    type="button"
+                    onClick={() => refreshSubCategories()}
+                    className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
                 >
-                    No sub categories found.
-                </p>
-
+                    Retry
+                </button>
             </div>
         );
     }
 
-    // =====================================================
-    // TABLE
-    // =====================================================
+    /* =====================================================
+       EMPTY STATE
+    ===================================================== */
+
+    if (!currentSubCategories.length) {
+        return (
+            <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
+                <Tags className="mx-auto mb-3 h-10 w-10 text-gray-300" />
+
+                <p className="text-gray-500">
+                    No subcategories found.
+                </p>
+            </div>
+        );
+    }
+
+    /* =====================================================
+       TABLE
+    ===================================================== */
 
     return (
+        <div className="overflow-x-auto overflow-y-visible rounded-xl border border-gray-200 bg-white">
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto overflow-y-visible">
-            <div className="overflow-x-auto overflow-y-visible">
-                <table className="w-full">
-                    <thead className="bg-[#FEFEFD]/20 border-b border-gray-300">
+            <table className="w-full">
 
-
-                        <tr>
-
-                            {[
-                                "SubCategory Name",
-                                "Category Name",
-                                "SubCategoryCode",
-                                "Description",
-                                "Status",
-                                "Actions",
-                            ].map((header) => (
-
-                                <th
-                                    key={header}
-                                    className={`
-                                    px-4
-                                    py-3
-                                    font-medium
-                                    text-md
-                                    text-gray-400
-                                    uppercase
+                <thead className="border-b border-gray-300 bg-[#FAF9F7]/20">
+                    <tr>
+                        {[
+                            "Subcategory",
+                            "Category",
+                            "Description",
+                            "Actions",
+                        ].map((header) => (
+                            <th
+                                key={header}
+                                className={`
+                                    px-5 py-3 text-md font-medium
+                                    uppercase text-gray-400
                                     ${header === "Actions"
-                                            ? "text-center"
-                                            : "text-left"
-                                        }
+                                        ? "text-right"
+                                        : "text-left"
+                                    }
                                 `}
-                                >
-                                    {header}
-                                </th>
+                            >
+                                {header}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
 
-                            ))}
+                <tbody>
+                    {sortedSubCategories.map((subCategory) => {
 
-                        </tr>
+                        const categoryName =
+                            subCategory.category?.categoryName ||
+                            subCategory.categoryName ||
+                            "—";
 
-                    </thead>
+                        const categoryCode =
+                            subCategory.category?.categoryCode ||
+                            subCategory.categoryCode ||
+                            "";
 
-                    {/* =================================================
-                        TABLE BODY
-                    ================================================= */}
+                        return (
+                            <tr
+                                key={subCategory.id}
+                                className="
+                                    cursor-pointer border-b border-gray-100
+                                    text-xs transition-colors hover:bg-gray-50
+                                "
+                            >
 
-                    <tbody>
+                                {/* SUBCATEGORY */}
 
-                        {[...currentSubCategories]
-                            .sort(
-                                (a, b) =>
-                                    (a.id || 0) -
-                                    (b.id || 0)
-                            )
-                            .map(
-                                (
-                                    subCategory,
-                                    index
-                                ) => (
+                                <td className="overflow-hidden px-3 py-3">
+                                    <div className="flex min-w-0 items-center gap-2">
 
-                                    <tr
-                                        key={
-                                            subCategory.id ||
-                                            index
-                                        }
-                                        className="
-                                        border-b
-                                        border-gray-100
-                                        hover:bg-gray-50
-                                        text-sm
-                                        cursor-pointer
-                                        transition-colors
-                                        "
-                                    >
-
-                                        {/* =================================
-                                            SUB CATEGORY NAME
-                                        ================================= */}
-
-                                        <td
-                                            className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                            "
-                                        >
-
-                                            <div
-                                                className="
-                                                flex
-                                                items-center
-                                                gap-2
-                                                min-w-0
-                                                "
-                                            >
-
-                                                <div
-                                                    className={`
-w - 9
-h - 9
-min - w - [36px]
-rounded - full
-flex
-items - center
-justify - center
-text - sm
-font - bold
-                                                    ${getAvatarColor(
-                                                        subCategory.name
-                                                    )
-                                                        }
-`}
-                                                >
-
-                                                    {
-                                                        initials(
-                                                            subCategory.name
-                                                        )
-                                                    }
-
-                                                </div>
-
-                                                <div
-                                                    className="
-                                                    min-w-0
-                                                    "
-                                                >
-
-                                                    <p
-                                                        className="
-                                                        font-medium
-                                                        text-gray-800
-                                                        truncate
-                                                        "
-                                                        title={
-                                                            subCategory.name ||
-                                                            ""
-                                                        }
-                                                    >
-                                                        {
-                                                            subCategory.name ||
-                                                            "—"
-                                                        }
-                                                    </p>
-
-                                                    <p
-                                                        className="
-                                                        text-xs
-                                                        text-gray-500
-                                                        "
-                                                    >
-                                                        ID: #
-                                                        {
-                                                            subCategory.id
-                                                        }
-                                                    </p>
-
-                                                </div>
-
-                                            </div>
-
-                                        </td>
-
-                                        {/* =================================
-                                            CATEGORY
-                                        ================================= */}
-
-                                        <td
-                                            className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                            "
-                                        >
-
-                                            <div
-                                                className="
-                                                min-w-0
-                                                "
-                                            >
-
-                                                <p
-                                                    className="
-                                                    font-medium
-                                                    text-gray-700
-                                                    truncate
-                                                    "
-                                                    title={
-                                                        subCategory.categoryName ||
-                                                        ""
-                                                    }
-                                                >
-                                                    {
-                                                        subCategory.categoryName ||
-                                                        "—"
-                                                    }
-                                                </p>
-
-
-
-                                                <p
-                                                    className="
-                                                    text-xs
-                                                    text-gray-500
-                                                    truncate
-                                                    "
-                                                    title={
-                                                        subCategory.categoryCode ||
-                                                        ""
-                                                    }
-                                                >
-                                                    {
-                                                        subCategory.categoryCode ||
-                                                        "—"
-                                                    }
-                                                </p>
-
-                                            </div>
-
-                                        </td>
-
-                                        {/* =================================
-                                            SUB CATEGORY CODE
-                                        ================================= */}
-
-                                        <td
-                                            className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                            "
-                                        >
-
-                                            <p
-                                                className={`
-inline - flex
-items - center
-w - fit
-max - w - full
-px - 2.5
-py - 1
-rounded - md
-text - xs
-font - medium
-truncate
-                                                ${getSubCategoryCodeColor(
-                                                    subCategory.subCategoryCode
-                                                )
-                                                    }
-`}
-                                                title={
-                                                    subCategory.subCategoryCode ||
-                                                    ""
-                                                }
-                                            >
-                                                {
-                                                    subCategory.subCategoryCode ||
-                                                    "—"
-                                                }
-                                            </p>
-
-                                        </td>
-
-                                        {/* =================================
-                                            DESCRIPTION
-                                        ================================= */}
-
-                                        <td
-                                            className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                            "
-                                        >
-
-                                            <p
-                                                className="
-                                                truncate
-                                                text-gray-700
-                                                "
-                                                title={
-                                                    subCategory.description ||
-                                                    ""
-                                                }
-                                            >
-                                                {
-                                                    subCategory.description ||
-                                                    "—"
-                                                }
-                                            </p>
-
-                                        </td>
-
-                                        {/* =================================
-                                            STATUS
-                                        ================================= */}
-
-                                        <td
-                                            className="
-                                            px-2
-                                            py-3
-                                            overflow-hidden
-                                            "
-                                        >
-
-                                            <span
-                                                className={`
-                                            inline - block
-                                            px - 2
-                                            py - 1
-                                            rounded - full
-                                            text - xs
-                                            font - medium
-                                                ${statusColor[
-                                                    subCategory.status
-                                                    ] ||
-                                                    "bg-gray-100 text-gray-700"
-                                                    }
+                                        <div
+                                            className={`
+                                                flex h-9 w-9 min-w-[36px]
+                                                items-center justify-center
+                                                rounded-full text-sm font-bold
+                                                ${getAvatarColor(subCategory.subCategoryName)}
                                             `}
+                                        >
+                                            {initials(subCategory.subCategoryName)}
+                                        </div>
+
+                                        <div className="min-w-0">
+
+                                            <p
+                                                className="truncate font-medium text-gray-800"
+                                                title={subCategory.subCategoryName || ""}
                                             >
-                                                {
-                                                    subCategory.status ||
-                                                    "—"
-                                                }
-                                            </span>
+                                                {subCategory.subCategoryName || "—"}
+                                            </p>
 
-                                        </td>
+                                            <p className="text-xs text-gray-500">
+                                                {subCategory.subCategoryCode || "—"}
+                                            </p>
 
-                                        {/* =================================
-                                            ACTIONS
-                                        ================================= */}
+                                        </div>
+                                    </div>
+                                </td>
 
-                                        {/* Actions */}
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center justify-center gap-2">
+                                {/* CATEGORY */}
 
-                                                {/* View */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setShowView(true);
-                                                        dispatch(setExsistingSubCategory(subCategory));
-                                                        navigate(`/settings/subCategories/view/${subCategory.id}`);
-                                                    }}
-                                                    title="View"
-                                                    className="
-                                                flex h-8 w-8 items-center justify-center
-                                                rounded-lg
-                                                bg-blue-50
-                                                text-blue-600
-                                                transition
-                                                hover:bg-blue-100
-                                                hover:text-blue-700
-                                            "
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
+                                <td className="px-3 py-3">
+                                    <div className="flex items-center gap-2">
 
-                                                {/* Edit */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
+                                        <FolderTree
+                                            size={15}
+                                            className="text-gray-400"
+                                        />
 
-                                                        dispatch(setExsistingSubCategory(subCategory));
-                                                        dispatch(
-                                                            openModal({
-                                                                type: "editSubCategory",
-                                                                data: subCategory,
-                                                            })
-                                                        );
-                                                    }}
-                                                    title="Edit"
-                                                    className="
-                                                    flex h-8 w-8 items-center justify-center
-                                                    rounded-lg
-                                                    bg-amber-50
-                                                    text-amber-600
-                                                    transition
-                                                    hover:bg-amber-100
-                                                    hover:text-amber-700
-                                                        "
-                                                >
-                                                    <Edit size={16} />
-                                                </button>
+                                        <div className="min-w-0">
 
-                                                {/* Delete */}
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
+                                            <p
+                                                className="truncate font-medium text-gray-700"
+                                                title={categoryName}
+                                            >
+                                                {categoryName}
+                                            </p>
 
-                                                        // Your delete confirmation logic
-                                                        handleDelete(subCategory.id);
-                                                    }}
-                                                    title="Delete"
-                                                    className="
-                                                flex h-8 w-8 items-center justify-center
-                                                rounded-lg
-                                                bg-red-50
-                                                text-red-600
-                                                transition
-                                                hover:bg-red-100
-                                                hover:text-red-700
-                                            "
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                            {categoryCode && (
+                                                <p className="text-xs text-gray-500">
+                                                    {categoryCode}
+                                                </p>
+                                            )}
 
-                                            </div>
-                                        </td>
-                                    </tr>
+                                        </div>
+                                    </div>
+                                </td>
 
-                                )
-                            )}
+                                {/* DESCRIPTION */}
 
-                    </tbody>
+                                <td className="max-w-[260px] px-3 py-3">
+                                    <p
+                                        className="truncate font-medium text-gray-700"
+                                        title={subCategory.description || ""}
+                                    >
+                                        {subCategory.description || "—"}
+                                    </p>
+                                </td>
 
-                </table>
+                                {/* ACTIONS */}
 
-                {/* =====================================================
-                    PAGINATION
-                ===================================================== */}
+                                <td className="px-4 py-3">
+                                    <div className="relative flex items-center justify-end gap-2">
 
-                <Pagination
-                    page={Number(pageNumber) || 0}
-                    size={Number(pageSize) || 10}
-                    totalElements={Number(totalElements) || 0}
-                    totalPages={Number(totalPages) || 0}
-                    loading={loading}
-                    label="categories"
-                    onPageChange={(nextPage) => {
-                        dispatch(
-                            fetchAllSubCategories({
-                                page: nextPage,
-                                size: Number(pageSize) || 10,
-                            })
+                                        {/* VIEW */}
+
+                                        {canViewSubCategory && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleView(subCategory);
+                                                }}
+                                                className="
+                                                    group relative flex h-8 w-8 items-center justify-center
+                                                    rounded-lg bg-blue-50 text-blue-600
+                                                    transition hover:bg-blue-100 hover:text-blue-700
+                                                "
+                                            >
+                                                <Eye size={16} />
+
+                                                <ToolTipText
+                                                    text="View"
+                                                    position="bottom"
+                                                />
+                                            </button>
+                                        )}
+
+                                        {/* EDIT */}
+
+                                        {canEditSubCategory && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleEdit(subCategory);
+                                                }}
+                                                className="
+                                                    group relative flex h-8 w-8 items-center justify-center
+                                                    rounded-lg bg-amber-50 text-amber-600
+                                                    transition hover:bg-amber-100 hover:text-amber-700
+                                                "
+                                            >
+                                                <Edit size={16} />
+
+                                                <ToolTipText
+                                                    text="Edit"
+                                                    position="bottom"
+                                                />
+                                            </button>
+                                        )}
+
+                                        {/* DELETE */}
+
+                                        {canDeleteSubCategory && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDelete(subCategory.id);
+                                                }}
+                                                title="Delete"
+                                                className="
+                                                    group relative flex h-8 w-8 items-center justify-center
+                                                    rounded-lg bg-red-50 text-red-600
+                                                    transition hover:bg-red-100 hover:text-red-700
+                                                "
+                                            >
+                                                <Trash2 size={16} />
+
+                                                <ToolTipText
+                                                    text="Delete"
+                                                    position="bottom"
+                                                />
+                                            </button>
+                                        )}
+
+                                    </div>
+                                </td>
+
+                            </tr>
                         );
-                    }}
-                    onPageSizeChange={(nextSize) => {
-                        dispatch(
-                            fetchAllSubCategories({
-                                page: 0,
-                                size: nextSize,
-                            })
-                        );
-                    }}
-                />
+                    })}
+                </tbody>
 
+            </table>
 
-            </div>
+            {/* PAGINATION */}
+
+            <Pagination
+                page={Number(pageNumber) || 0}
+                size={Number(pageSize) || 20}
+                totalElements={Number(totalElements) || 0}
+                totalPages={Number(totalPages) || 0}
+                loading={loading}
+                label="subcategories"
+                onPageChange={(nextPage) => {
+                    refreshSubCategories(
+                        nextPage,
+                        Number(pageSize) || 20
+                    );
+                }}
+                onPageSizeChange={(nextSize) => {
+                    refreshSubCategories(0, nextSize);
+                }}
+            />
 
         </div>
     );

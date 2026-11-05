@@ -6,7 +6,7 @@ import React, {
 } from "react";
 
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
     ArrowLeft,
@@ -24,6 +24,8 @@ import toast from "react-hot-toast";
 
 import {
     createProduct,
+    fetchProductById,
+    updateProduct,
 } from "../thunks/productThunks";
 
 import {
@@ -62,6 +64,8 @@ import SearchMultiSelect from "../../../common/custom/SerachMultiSelect";
 import SearchableCreateSelect from "../../../common/custom/SearchableCreateSelect";
 
 import { openModal } from "../../../module/ui/uiSlice";
+import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
+import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
 
 /* =========================================================
    INITIAL FORM DATA
@@ -188,14 +192,102 @@ const SectionHeading = ({
     </div>
 );
 
+const getProductData = (response) => {
+    let data = response;
+
+    // Unwrap common ApiResponse structures.
+    for (let i = 0; i < 3; i++) {
+        if (data?.data && typeof data.data === "object") {
+            data = data.data;
+        } else {
+            break;
+        }
+    }
+
+    return data?.product ?? data;
+};
+
+const getRelationList = (value) => {
+    let current = value;
+
+    for (let i = 0; i < 5; i++) {
+        if (Array.isArray(current)) {
+            return current;
+        }
+
+        if (!current || typeof current !== "object") {
+            return [];
+        }
+
+        if (Array.isArray(current.content)) {
+            return current.content;
+        }
+
+        if (Array.isArray(current.items)) {
+            return current.items;
+        }
+
+        if (Array.isArray(current.data)) {
+            return current.data;
+        }
+
+        if (current.data && typeof current.data === "object") {
+            current = current.data;
+            continue;
+        }
+
+        return [];
+    }
+
+    return [];
+};
+
+const getRelationId = (item, type) => {
+    if (typeof item === "number" || typeof item === "string") {
+        const id = Number(item);
+
+        return Number.isFinite(id) && id > 0 ? id : null;
+    }
+
+    if (!item || typeof item !== "object") {
+        return null;
+    }
+
+    const id = type === "size"
+        ? (
+            item.id ??
+            item.sizeId ??
+            item.size?.id ??
+            item.size?.sizeId
+        )
+        : (
+            item.id ??
+            item.unitId ??
+            item.unit?.id ??
+            item.unit?.unitId
+        );
+
+    const numericId = Number(id);
+
+    return Number.isFinite(numericId) && numericId > 0
+        ? numericId
+        : null;
+};
+
 /* =========================================================
    MAIN COMPONENT
 ========================================================= */
 
-const ProductCreateNew = () => {
+const ProductCreateNew = ({ onClose }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
+    const { id } = useParams();
+
+    const isEditMode = Boolean(id);
+
+    const [isProductLoading, setIsProductLoading] = useState(false);
+    const [existingImageUrl, setExistingImageUrl] = useState("");
     /* =====================================================
        PRODUCT REDUX STATE
     ===================================================== */
@@ -259,6 +351,14 @@ const ProductCreateNew = () => {
         () => getList(taxMasterState.taxMasters),
         [taxMasterState.taxMasters]
     );
+
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
+
 
     /* =====================================================
        AUTH STATE
@@ -410,7 +510,7 @@ const ProductCreateNew = () => {
 
     const hasRequiredPermission = hasPermission(
         "Products",
-        "CREATE"
+        isEditMode ? "EDIT" : "CREATE"
     );
 
     /* =====================================================
@@ -432,6 +532,158 @@ const ProductCreateNew = () => {
         permissionsLoaded,
         permissionLoading,
         dispatch,
+    ]);
+
+    /* =========================================================
+   LOAD PRODUCT FOR EDIT
+========================================================= */
+
+    useEffect(() => {
+        if (!id || authChecking || !isAuthenticated) {
+            return;
+        }
+
+        let cancelled = false;
+
+        const loadProduct = async () => {
+            try {
+                setIsProductLoading(true);
+
+                const response = await dispatch(
+                    fetchProductById(id)
+                ).unwrap();
+
+                if (cancelled) return;
+
+                const product = getProductData(response);
+
+                console.log("EDIT PRODUCT FULL RESPONSE:", response);
+                console.log("EDIT PRODUCT DATA:", product);
+
+                console.log("PRODUCT SIZES:", {
+                    sizes: product?.sizes,
+                    productSizes: product?.productSizes,
+                    sizeIds: product?.sizeIds,
+                });
+
+                console.log("PRODUCT UNITS:", {
+                    units: product?.units,
+                    productUnits: product?.productUnits,
+                    unitIds: product?.unitIds,
+                });
+                if (!product || typeof product !== "object") {
+                    throw new Error("Product details not found");
+                }
+
+                const categoryId =
+                    product.categoryId ??
+                    product.category?.id ??
+                    product.category?.categoryId ??
+                    product.subCategory?.categoryId ??
+                    product.subCategory?.category?.id ??
+                    "";
+
+                const subCategoryId =
+                    product.subCategoryId ??
+                    product.subCategory?.id ??
+                    product.subCategory?.subCategoryId ??
+                    "";
+
+                const taxId =
+                    product.taxId ??
+                    product.taxMaster?.id ??
+                    product.taxMaster?.taxId ??
+                    "";
+
+                const sizeItems = getRelationList(
+                    product.sizes ??
+                    product.productSizes ??
+                    product.sizeIds
+                );
+
+                const unitItems = getRelationList(
+                    product.units ??
+                    product.productUnits ??
+                    product.unitIds
+                );
+
+                const selectedSizeIds = [
+                    ...new Set(
+                        sizeItems
+                            .map((item) => getRelationId(item, "size"))
+                            .filter(Boolean)
+                    ),
+                ];
+
+                const selectedUnitIds = [
+                    ...new Set(
+                        unitItems
+                            .map((item) => getRelationId(item, "unit"))
+                            .filter(Boolean)
+                    ),
+                ];
+
+                // Resolve IDs to complete master objects.
+                // Store only numeric IDs.
+                // SearchMultiSelect expects selected IDs, not objects.
+                const selectedSizes = selectedSizeIds;
+                const selectedUnits = selectedUnitIds;
+
+                setFormData({
+                    productName: product.productName ?? "",
+                    categoryId: categoryId != null
+                        ? String(categoryId)
+                        : "",
+                    subCategoryId: subCategoryId != null
+                        ? String(subCategoryId)
+                        : "",
+                    brand: product.brand ?? "",
+                    hsnCode: product.hsnCode ?? "",
+                    sellingPrice: product.sellingPrice ?? "",
+                    purchasingPrice: product.purchasingPrice ?? "",
+                    taxId: taxId != null ? String(taxId) : "",
+                    minimumStock: product.minimumStock ?? "",
+                    maximumStock: product.maximumStock ?? "",
+                    sizes: selectedSizes,
+                    units: selectedUnits,
+                    status: product.status ?? "ACTIVE",
+                    description: product.description ?? "",
+                    image: null,
+                });
+
+                setExistingImageUrl(
+                    product.imageUrl ??
+                    product.imageURL ??
+                    product.image ??
+                    ""
+                );
+            } catch (error) {
+                if (!cancelled) {
+                    console.error("Load product error:", error);
+
+                    toast.error(
+                        typeof error === "string"
+                            ? error
+                            : error?.message || "Failed to load product"
+                    );
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsProductLoading(false);
+                }
+            }
+        };
+
+        loadProduct();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        id,
+        dispatch,
+        authChecking,
+        isAuthenticated,
     ]);
 
     /* =====================================================
@@ -619,6 +871,7 @@ const ProductCreateNew = () => {
         }));
     };
 
+
     /* =====================================================
        SUBCATEGORY MODAL
     ===================================================== */
@@ -660,6 +913,18 @@ const ProductCreateNew = () => {
                 selectAfterCreate: true,
             },
         }));
+    };
+
+
+
+    const handleClose = () => {
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/items")
+            }
+        });
     };
 
     /* =====================================================
@@ -748,21 +1013,25 @@ const ProductCreateNew = () => {
     ===================================================== */
 
     const sizeOptions = useMemo(() => {
-        return sizes.map((item) => ({
-            ...item,
-            id: item.id ?? item.sizeId,
-        }));
+        return sizes
+            .map((item) => ({
+                ...item,
+                id: Number(item.id ?? item.sizeId),
+            }))
+            .filter((item) => Number.isFinite(item.id) && item.id > 0);
     }, [sizes]);
 
     /* =====================================================
-       UNIT OPTIONS
-    ===================================================== */
+     UNITS OPTIONS
+  ===================================================== */
 
     const unitOptions = useMemo(() => {
-        return units.map((item) => ({
-            ...item,
-            id: item.id ?? item.unitId,
-        }));
+        return units
+            .map((item) => ({
+                ...item,
+                id: Number(item.id ?? item.unitId),
+            }))
+            .filter((item) => Number.isFinite(item.id) && item.id > 0);
     }, [units]);
 
     /* =====================================================
@@ -910,14 +1179,14 @@ const ProductCreateNew = () => {
         return true;
     };
 
-    /* =====================================================
-       SAVE PRODUCT
-    ===================================================== */
+    /* =========================================================
+   SAVE / UPDATE PRODUCT
+========================================================= */
 
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        if (loading) return;
+        if (loading || isProductLoading) return;
 
         if (!isAuthenticated) {
             toast.error("You are not authenticated");
@@ -929,8 +1198,12 @@ const ProductCreateNew = () => {
             return;
         }
 
-        if (!hasRequiredPermission) {
-            toast.error("You do not have permission to create products");
+        const requiredAction = isEditMode ? "EDIT" : "CREATE";
+
+        if (!hasPermission("Products", requiredAction)) {
+            toast.error(
+                `You do not have permission to ${isEditMode ? "edit" : "create"} products`
+            );
             return;
         }
 
@@ -940,7 +1213,6 @@ const ProductCreateNew = () => {
             const payload = {
                 productName: formData.productName.trim(),
 
-                // Include categoryId if your backend DTO expects it.
                 categoryId: Number(formData.categoryId),
                 subCategoryId: Number(formData.subCategoryId),
 
@@ -971,33 +1243,41 @@ const ProductCreateNew = () => {
                         ? null
                         : Number(formData.maximumStock),
 
-                sizeIds: formData.sizes
-                    .map((item) => Number(item.id ?? item.sizeId))
-                    .filter(Number.isFinite),
+                sizeIds: formData.sizes.map(Number),
 
-                unitIds: formData.units
-                    .map((item) => Number(item.id ?? item.unitId))
-                    .filter(Number.isFinite),
+                unitIds: formData.units.map(Number),
 
                 status: formData.status,
                 description: formData.description.trim(),
 
+                // null means no new image was selected.
+                // buildProductFormData appends only an actual File.
                 image: formData.image,
             };
 
-            const response = await dispatch(
-                createProduct(payload)
-            ).unwrap();
+            const response = isEditMode
+                ? await dispatch(
+                    updateProduct({
+                        id,
+                        data: payload,
+                    })
+                ).unwrap()
+                : await dispatch(
+                    createProduct(payload)
+                ).unwrap();
 
             toast.success(
-                response?.message || "Product created successfully"
+                response?.message ||
+                (isEditMode
+                    ? "Product updated successfully"
+                    : "Product created successfully")
             );
 
-            if (saveMode === "new") {
+            if (!isEditMode && saveMode === "new") {
                 setFormData({ ...initialFormData });
+                setExistingImageUrl("");
 
                 dispatch(resetProductForm());
-
                 dispatch(clearCreatedCategorySelection());
                 dispatch(clearCreatedSubCategorySelection());
                 dispatch(clearCreatedTaxMasterSelection());
@@ -1007,15 +1287,24 @@ const ProductCreateNew = () => {
             }
 
             dispatch(resetProductForm());
-            navigate("/products");
+
+            dispatch(clearCreatedCategorySelection());
+            dispatch(clearCreatedSubCategorySelection());
+            dispatch(clearCreatedTaxMasterSelection());
+
+            navigate("/items");
 
         } catch (error) {
-            console.error("Product creation error:", error);
+            console.error(
+                isEditMode ? "Product update error:" : "Product creation error:",
+                error
+            );
 
             toast.error(
                 typeof error === "string"
                     ? error
-                    : error?.message || "Failed to create product"
+                    : error?.message ||
+                    `Failed to ${isEditMode ? "update" : "create"} product`
             );
         }
     };
@@ -1093,7 +1382,7 @@ const ProductCreateNew = () => {
                     </h2>
 
                     <p className="mt-1 text-sm text-gray-500">
-                        You do not have permission to create products.
+                        You do not have permission to {isEditMode ? "edit" : "create"} products.
                     </p>
 
                     <button
@@ -1107,6 +1396,17 @@ const ProductCreateNew = () => {
                     >
                         Go Back
                     </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (isEditMode && isProductLoading) {
+        return (
+            <div className="flex h-full items-center justify-center bg-gray-50">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 size={20} className="animate-spin" />
+                    Loading product details...
                 </div>
             </div>
         );
@@ -1146,11 +1446,13 @@ const ProductCreateNew = () => {
 
                     <div>
                         <h2 className="text-base font-semibold text-gray-800">
-                            Create Product
+                            {isEditMode ? "Edit Product" : "Create Product"}
                         </h2>
 
                         <p className="mt-0.5 text-xs text-gray-400">
-                            Create and configure your product information
+                            {isEditMode
+                                ? "Update and manage your product information"
+                                : "Create and configure your product information"}
                         </p>
                     </div>
                 </div>
@@ -1368,46 +1670,44 @@ const ProductCreateNew = () => {
                         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
 
                             {/* SIZES */}
+
                             <FormField label="Sizes">
                                 <SearchMultiSelect
                                     label="Sizes"
                                     selected={formData.sizes}
                                     options={sizeOptions}
-                                    onAdd={(item) => {
-                                        const itemId = item.id ?? item.sizeId;
-
-                                        setFormData((previous) => {
-                                            const alreadySelected = previous.sizes.some(
-                                                (size) =>
-                                                    String(size.id ?? size.sizeId) === String(itemId)
-                                            );
-
-                                            if (alreadySelected) return previous;
-
-                                            return {
-                                                ...previous,
-                                                sizes: [...previous.sizes, item],
-                                            };
-                                        });
-                                    }}
-                                    onRemove={(item) => {
-                                        const itemId = item.id ?? item.sizeId;
-
-                                        setFormData((previous) => ({
-                                            ...previous,
-                                            sizes: previous.sizes.filter(
-                                                (size) =>
-                                                    String(size.id ?? size.sizeId) !== String(itemId)
-                                            ),
-                                        }));
-                                    }}
-                                    getOptionKey={(item) => item.id ?? item.sizeId}
+                                    getOptionKey={(item) => item.id}
                                     getOptionLabel={(item) =>
                                         `${item.sizeName || item.name || "Size"}${item.sizeCode ? ` (${item.sizeCode})` : ""
                                         }`
                                     }
+                                    onAdd={(sizeId) => {
+                                        setFormData((previous) => {
+                                            if (
+                                                previous.sizes.some(
+                                                    (id) => Number(id) === Number(sizeId)
+                                                )
+                                            ) {
+                                                return previous;
+                                            }
+
+                                            return {
+                                                ...previous,
+                                                sizes: [...previous.sizes, Number(sizeId)],
+                                            };
+                                        });
+                                    }}
+                                    onRemove={(sizeId) => {
+                                        setFormData((previous) => ({
+                                            ...previous,
+                                            sizes: previous.sizes.filter(
+                                                (id) => Number(id) !== Number(sizeId)
+                                            ),
+                                        }));
+                                    }}
                                     placeholder="Search and select sizes"
-                                    onCreateNew={(sizeName) => {
+                                    addLabel="Add Size"
+                                    onCreate={(sizeName) => {
                                         dispatch(
                                             openModal({
                                                 type: "addSize",
@@ -1422,46 +1722,44 @@ const ProductCreateNew = () => {
                             </FormField>
 
                             {/* UNITS */}
+
                             <FormField label="Units">
                                 <SearchMultiSelect
                                     label="Units"
                                     selected={formData.units}
                                     options={unitOptions}
-                                    onAdd={(item) => {
-                                        const itemId = item.id ?? item.unitId;
-
-                                        setFormData((previous) => {
-                                            const alreadySelected = previous.units.some(
-                                                (unit) =>
-                                                    String(unit.id ?? unit.unitId) === String(itemId)
-                                            );
-
-                                            if (alreadySelected) return previous;
-
-                                            return {
-                                                ...previous,
-                                                units: [...previous.units, item],
-                                            };
-                                        });
-                                    }}
-                                    onRemove={(item) => {
-                                        const itemId = item.id ?? item.unitId;
-
-                                        setFormData((previous) => ({
-                                            ...previous,
-                                            units: previous.units.filter(
-                                                (unit) =>
-                                                    String(unit.id ?? unit.unitId) !== String(itemId)
-                                            ),
-                                        }));
-                                    }}
-                                    getOptionKey={(item) => item.id ?? item.unitId}
+                                    getOptionKey={(item) => item.id}
                                     getOptionLabel={(item) =>
                                         `${item.unitName || item.name || "Unit"}${item.unitCode ? ` (${item.unitCode})` : ""
                                         }`
                                     }
+                                    onAdd={(unitId) => {
+                                        setFormData((previous) => {
+                                            if (
+                                                previous.units.some(
+                                                    (id) => Number(id) === Number(unitId)
+                                                )
+                                            ) {
+                                                return previous;
+                                            }
+
+                                            return {
+                                                ...previous,
+                                                units: [...previous.units, Number(unitId)],
+                                            };
+                                        });
+                                    }}
+                                    onRemove={(unitId) => {
+                                        setFormData((previous) => ({
+                                            ...previous,
+                                            units: previous.units.filter(
+                                                (id) => Number(id) !== Number(unitId)
+                                            ),
+                                        }));
+                                    }}
                                     placeholder="Search and select units"
-                                    onCreateNew={(unitName) => {
+                                    addLabel="Add Unit"
+                                    onCreate={(unitName) => {
                                         dispatch(
                                             openModal({
                                                 type: "addUnit",
@@ -1477,6 +1775,7 @@ const ProductCreateNew = () => {
 
                         </div>
                     </section>
+
 
                     <div className="my-6 border-t border-gray-100" />
 
@@ -1506,9 +1805,27 @@ const ProductCreateNew = () => {
                                 "
                             />
 
+                            {existingImageUrl && !formData.image && (
+                                <div className="mt-3">
+                                    <p className="mb-2 text-xs font-medium text-gray-500">
+                                        Current Product Image
+                                    </p>
+
+                                    <img
+                                        src={existingImageUrl}
+                                        alt="Current product"
+                                        className="
+                h-24 w-24 rounded-lg border
+                border-gray-200 object-cover
+            "
+                                    />
+                                </div>
+                            )}
+
+
                             {formData.image && (
                                 <p className="mt-2 text-xs text-gray-500">
-                                    Selected: {formData.image.name}
+                                    New image selected: {formData.image.name}
                                 </p>
                             )}
                         </FormField>
@@ -1524,7 +1841,7 @@ const ProductCreateNew = () => {
                 ">
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         disabled={loading}
                         className="
                             rounded-lg border border-gray-200
@@ -1571,70 +1888,84 @@ const ProductCreateNew = () => {
                                 <Save size={16} />
                             )}
 
-                            {loading ? "Saving..." : "Save"}
+                            {loading
+                                ? (isEditMode ? "Updating..." : "Saving...")
+                                : (isEditMode ? "Update" : "Save")}
                         </button>
+                        {!isEditMode && (
 
-                        <div className="relative">
-                            <button
-                                type="button"
-                                disabled={loading}
-                                onClick={() =>
-                                    setShowSaveOptions((previous) => !previous)
-                                }
-                                className="
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    disabled={loading}
+                                    onClick={() =>
+                                        setShowSaveOptions((previous) => !previous)
+                                    }
+                                    className="
                                     flex h-9 items-center justify-center
                                     rounded-lg border border-gray-200
                                     px-2 text-gray-600 transition
                                     hover:bg-gray-50 disabled:opacity-50
                                 "
-                            >
-                                <ChevronDown size={17} />
-                            </button>
+                                >
+                                    <ChevronDown size={17} />
+                                </button>
 
-                            {showSaveOptions && (
-                                <div className="
+                                {showSaveOptions && (
+                                    <div className="
                                     absolute bottom-11 right-0 z-20
                                     w-44 overflow-hidden rounded-lg
                                     border border-gray-100 bg-white
                                     py-1 shadow-lg
                                 ">
-                                    <button
-                                        type="submit"
-                                        onClick={() => {
-                                            setSaveMode("new");
-                                            setShowSaveOptions(false);
-                                        }}
-                                        className="
+                                        <button
+                                            type="submit"
+                                            onClick={() => {
+                                                setSaveMode("new");
+                                                setShowSaveOptions(false);
+                                            }}
+                                            className="
                                             w-full px-4 py-2.5 text-left
                                             text-sm text-gray-600
                                             transition hover:bg-blue-50
                                             hover:text-[#408DFB]
                                         "
-                                    >
-                                        Save & New
-                                    </button>
+                                        >
+                                            Save & New
+                                        </button>
 
-                                    <button
-                                        type="submit"
-                                        onClick={() => {
-                                            setSaveMode("close");
-                                            setShowSaveOptions(false);
-                                        }}
-                                        className="
+                                        <button
+                                            type="submit"
+                                            onClick={() => {
+                                                setSaveMode("close");
+                                                setShowSaveOptions(false);
+                                            }}
+                                            className="
                                             w-full px-4 py-2.5 text-left
                                             text-sm text-gray-600
                                             transition hover:bg-blue-50
                                             hover:text-[#408DFB]
                                         "
-                                    >
-                                        Save & Close
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                                        >
+                                            Save & Close
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </form>
+
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave products?"
+                message="Are you sure you want to leave this products page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
         </div>
     );
 };

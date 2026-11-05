@@ -1,815 +1,392 @@
-import React, {
-    useEffect,
-    useState,
-} from "react";
+
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
-    useDispatch,
-    useSelector,
-} from "react-redux";
-
-import {
-    UserRoundArrowLeft,
+    ArrowLeft,
+    Ruler,
+    Tag,
+    Save,
+    ChevronDown,
+    Loader2,
+    RotateCcw,
+    AlignLeft,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 
 import {
-    closeModal,
-} from "../../ui/uiSlice";
-
-import {
-    resetUnitForm,
-    setUnitField,
-    setCreatedUnitSelection
-} from "../slices/unitSlice";
-
-import {
     createUnit,
+    fetchUnitById,
     updateUnit,
+    fetchAllUnits,
 } from "../thunks/unitThunks";
 
-import {
-    getUserPermission,
-} from "../../menuPermission/thunks/menuPermissionThunks";
+import { resetUnitForm } from "../slices/unitSlice";
+
 import CustomSelect from "../../../common/custom/CustomSelect";
 
-export default function UnitCreate() {
+import { closeModal } from "../../../module/ui/uiSlice";
 
+import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
+import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
+
+/* =========================================================
+   INITIAL FORM DATA
+========================================================= */
+
+const initialFormData = {
+    unitName: "",
+    unitShortName: "",
+    description: "",
+    status: "ACTIVE",
+};
+
+/* =========================================================
+   REUSABLE FORM COMPONENTS
+========================================================= */
+
+const FormField = ({
+    label,
+    required = false,
+    children,
+    className = "",
+}) => (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+        <label className="text-sm font-medium text-gray-700">
+            {label}
+            {required && <span className="ml-1 text-red-500">*</span>}
+        </label>
+
+        {children}
+    </div>
+);
+
+const TextInput = ({
+    value,
+    onChange,
+    placeholder,
+    type = "text",
+    disabled = false,
+    maxLength,
+}) => (
+    <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        maxLength={maxLength}
+        className="
+            h-10 w-full rounded-lg border border-gray-200
+            bg-white px-3 text-sm text-gray-700
+            outline-none transition
+            placeholder:text-gray-400
+            focus:border-[#408DFB] focus:ring-2
+            focus:ring-[#408DFB]/10
+            disabled:cursor-not-allowed disabled:bg-gray-100
+        "
+    />
+);
+
+const TextAreaField = ({
+    value,
+    onChange,
+    placeholder,
+    rows = 3,
+}) => (
+    <textarea
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        rows={rows}
+        className="
+            w-full resize-none rounded-lg border border-gray-200
+            bg-white px-3 py-2.5 text-sm text-gray-700
+            outline-none transition
+            placeholder:text-gray-400
+            focus:border-[#408DFB] focus:ring-2
+            focus:ring-[#408DFB]/10
+        "
+    />
+);
+
+const SectionHeading = ({
+    icon: Icon,
+    title,
+    description,
+}) => (
+    <div className="mb-5 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#408DFB]">
+            <Icon size={19} />
+        </div>
+
+        <div>
+            <h3 className="text-sm font-semibold text-gray-800">
+                {title}
+            </h3>
+
+            {description && (
+                <p className="mt-0.5 text-xs text-gray-400">
+                    {description}
+                </p>
+            )}
+        </div>
+    </div>
+);
+
+/* =========================================================
+   MAIN COMPONENT
+========================================================= */
+
+const UnitCreate = ({ onClose }) => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
 
-    // =========================================================
-    // REDUX
-    // =========================================================
+    const { id } = useParams();
 
-    const {
-        modal,
-    } = useSelector(
-        (state) => state.ui
+    // ID exists = Edit mode
+    const isEdit = Boolean(id);
+
+    const modalOpen = useSelector(
+        (state) => state.ui.modal?.open
     );
 
     const {
-        unit,
-        loading,
-    } = useSelector(
-        (state) => state.unit
-    );
+        loading = false,
+        actionLoading = false,
+    } = useSelector((state) => state.unit ?? {});
 
-    // =========================================================
-    // AUTH
-    // =========================================================
+    const [formData, setFormData] = useState(initialFormData);
 
-    const user = useSelector(
-        (state) =>
-            state.auth?.user
-    );
+    const [saveMode, setSaveMode] = useState("close");
+    const [showSaveOptions, setShowSaveOptions] = useState(false);
 
-    const isAuthenticated = useSelector(
-        (state) =>
-            state.auth?.isAuthenticated === true
-    );
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
 
-    const authChecking = useSelector(
-        (state) =>
-            state.auth?.authChecking === true
-    );
+    /* =====================================================
+       FETCH UNIT FOR EDIT
+    ===================================================== */
 
-    // =========================================================
-    // USER PERMISSIONS
-    // =========================================================
+    useEffect(() => {
+        let isMounted = true;
 
-    const permissions = useSelector(
-        (state) =>
-            state.menuPermission?.userPermissions || []
-    );
-
-    const permissionLoading = useSelector(
-        (state) =>
-            state.menuPermission?.loading === true
-    );
-
-    const permissionsLoaded = useSelector(
-        (state) =>
-            state.menuPermission
-                ?.userPermissionsLoaded === true
-    );
-
-    // =========================================================
-    // NORMALIZE HELPERS
-    // =========================================================
-
-    const normalizeModule = (
-        value
-    ) =>
-        String(value ?? "")
-            .trim()
-            .toLowerCase();
-
-    const normalizeAction = (
-        value
-    ) =>
-        String(value ?? "")
-            .trim()
-            .toUpperCase();
-
-    // =========================================================
-    // ROLE
-    // =========================================================
-
-    const roleName =
-        user?.roleName ||
-        user?.role?.roleName ||
-        user?.role?.name ||
-        user?.role ||
-        user?.authority ||
-        "";
-
-    const normalizedRole =
-        normalizeAction(
-            roleName
-        );
-
-    const isSuperAdmin =
-        normalizedRole === "SUPER_ADMIN";
-
-    const isAdmin =
-        normalizedRole === "ADMIN";
-
-    const hasFullAccess =
-        isSuperAdmin ||
-        isAdmin;
-
-    // =========================================================
-    // ADD / EDIT MODE
-    // =========================================================
-
-    const isEdit =
-        modal.type === "editUnit";
-
-    const isAdd =
-        modal.type === "addUnit";
-
-    const isOpen =
-        modal.open &&
-        (
-            isAdd ||
-            isEdit
-        );
-
-    // =========================================================
-    // PERMISSION CHECKER
-    // =========================================================
-
-    const hasPermission = (
-        moduleName,
-        actionName
-    ) => {
-
-        if (hasFullAccess) {
-            return true;
-        }
-
-        const requestedModule =
-            normalizeModule(
-                moduleName
-            );
-
-        const requestedAction =
-            normalizeAction(
-                actionName
-            );
-
-        if (!Array.isArray(permissions)) {
-            return false;
-        }
-
-        return permissions.some(
-            (permission) => {
-
-                // =================================================
-                // MODULE
-                // =================================================
-
-                const permissionModule =
-                    normalizeModule(
-                        permission?.moduleName ||
-                        permission?.module?.moduleName ||
-                        permission?.module?.name
-                    );
-
-                if (
-                    permissionModule !==
-                    requestedModule
-                ) {
-                    return false;
-                }
-
-                // =================================================
-                // PERMISSION STATUS
-                // =================================================
-
-                if (
-                    permission?.active === false
-                ) {
-                    return false;
-                }
-
-                if (
-                    normalizeAction(
-                        permission?.status
-                    ) === "INACTIVE"
-                ) {
-                    return false;
-                }
-
-                // =================================================
-                // GROUPED ACTIONS
-                // =================================================
-
-                if (
-                    Array.isArray(
-                        permission?.actions
-                    )
-                ) {
-
-                    return permission.actions.some(
-                        (action) => {
-
-                            // -------------------------------------
-                            // STRING ACTION
-                            // -------------------------------------
-
-                            if (
-                                typeof action ===
-                                "string"
-                            ) {
-
-                                return (
-                                    normalizeAction(
-                                        action
-                                    ) ===
-                                    requestedAction
-                                );
-                            }
-
-                            // -------------------------------------
-                            // OBJECT ACTION
-                            // -------------------------------------
-
-                            const permissionAction =
-                                normalizeAction(
-                                    action?.actionName ||
-                                    action?.action?.actionName ||
-                                    action?.action?.name ||
-                                    action?.name
-                                );
-
-                            const allowed =
-                                action?.allowed === true ||
-                                action?.allowed === "true";
-
-                            if (
-                                action?.active === false
-                            ) {
-                                return false;
-                            }
-
-                            if (
-                                normalizeAction(
-                                    action?.status
-                                ) === "INACTIVE"
-                            ) {
-                                return false;
-                            }
-
-                            return (
-                                permissionAction ===
-                                requestedAction &&
-                                allowed
-                            );
-                        }
-                    );
-                }
-
-                // =================================================
-                // FLAT PERMISSION
-                // =================================================
-
-                const permissionAction =
-                    normalizeAction(
-                        permission?.actionName ||
-                        permission?.action?.actionName ||
-                        permission?.action?.name
-                    );
-
-                const allowed =
-                    permission?.allowed === true ||
-                    permission?.allowed === "true";
-
-                return (
-                    permissionAction ===
-                    requestedAction &&
-                    allowed
-                );
+        const loadUnit = async () => {
+            if (!isEdit) {
+                setFormData(initialFormData);
+                return;
             }
-        );
-    };
 
-    // =========================================================
-    // REQUIRED ACTION
-    // =========================================================
+            try {
+                const response = await dispatch(
+                    fetchUnitById(id)
+                ).unwrap();
 
-    const requiredAction =
-        isEdit
-            ? "EDIT"
-            : "CREATE";
+                if (!isMounted) return;
 
-    // =========================================================
-    // CURRENT MODE PERMISSION
-    // =========================================================
+                // Supports wrapped and unwrapped API responses
+                const unit = response?.data ?? response;
 
-    const hasRequiredPermission =
-        hasPermission(
-            "Units",
-            requiredAction
-        );
-
-    // =========================================================
-    // FORM
-    // =========================================================
-
-    const form =
-        unit || {
-            id: null,
-            unitName: "",
-            unitShortName: "",
-            unitCode: "",
-            description: "",
-            status: "ACTIVE",
-        };
-
-    // =========================================================
-    // LOCAL FORM STATE
-    // =========================================================
-
-    const [
-        errors,
-        setErrors
-    ] = useState({});
-
-    const [
-        activeTab,
-        setActiveTab
-    ] = useState("unit");
-
-    // =========================================================
-    // TABS
-    // =========================================================
-
-    const tabs = [
-        {
-            id: "unit",
-            label: "Unit Information",
-        },
-        {
-            id: "settings",
-            label: "Settings",
-        },
-    ];
-
-    // =========================================================
-    // LOAD PERMISSIONS
-    // =========================================================
-
-    useEffect(() => {
-
-        if (!isOpen) {
-            return;
-        }
-
-        if (authChecking) {
-            return;
-        }
-
-        if (!isAuthenticated) {
-            return;
-        }
-
-        if (hasFullAccess) {
-            return;
-        }
-
-        if (
-            !permissionsLoaded &&
-            !permissionLoading
-        ) {
-
-            dispatch(
-                getUserPermission()
-            );
-        }
-
-    }, [
-        isOpen,
-        authChecking,
-        isAuthenticated,
-        hasFullAccess,
-        permissionsLoaded,
-        permissionLoading,
-        dispatch,
-    ]);
-
-    // =========================================================
-    // CHANGE FIELD
-    // =========================================================
-
-    const handleChange = (
-        field,
-        value
-    ) => {
-
-        dispatch(
-            setUnitField({
-                field,
-                value,
-            })
-        );
-
-        if (errors[field]) {
-
-            setErrors(
-                (previous) => {
-
-                    const updated = {
-                        ...previous,
-                    };
-
-                    delete updated[field];
-
-                    return updated;
-                }
-            );
-        }
-    };
-
-    // =========================================================
-    // CLOSE MODAL
-    // =========================================================
-
-    const handleClose = () => {
-
-        dispatch(
-            closeModal()
-        );
-
-        dispatch(
-            resetUnitForm()
-        );
-
-        setErrors({});
-        setActiveTab("unit");
-    };
-
-    // =========================================================
-    // ESCAPE KEY
-    // =========================================================
-
-    useEffect(() => {
-
-        if (!isOpen) {
-            return;
-        }
-
-        const handleEscape = (
-            event
-        ) => {
-
-            if (
-                event.key === "Escape"
-            ) {
-                handleClose();
-            }
-        };
-
-        document.addEventListener(
-            "keydown",
-            handleEscape
-        );
-
-        return () => {
-
-            document.removeEventListener(
-                "keydown",
-                handleEscape
-            );
-        };
-
-    }, [isOpen]);
-
-    useEffect(() => {
-        if (modal.open && modal.type === "addUnit") {
-            dispatch(resetUnitForm());
-
-            dispatch(
-                setUnitField({
-                    field: "unitName",
-                    value: modal.data?.initialValue ?? modal.data?.unitName ?? "",
-                })
-            );
-
-            setErrors({});
-            setActiveTab("unit");
-        }
-    }, [modal.open, modal.type, modal.data, dispatch]);
-
-    // =========================================================
-    // LOAD EXISTING DATA FOR EDIT
-    // =========================================================
-
-    useEffect(() => {
-
-        if (
-            modal.open &&
-            modal.type === "editUnit" &&
-            modal.data
-        ) {
-
-            const existingUnit =
-                modal.data;
-
-            dispatch(
-                setUnitField({
-                    field: "id",
-                    value:
-                        existingUnit.id ??
-                        null,
-                })
-            );
-
-            dispatch(
-                setUnitField({
-                    field: "unitName",
-                    value:
-                        existingUnit.unitName ??
-                        "",
-                })
-            );
-
-            dispatch(
-                setUnitField({
-                    field: "unitShortName",
-                    value:
-                        existingUnit.unitShortName ??
-                        "",
-                })
-            );
-
-            dispatch(
-                setUnitField({
-                    field: "unitCode",
-                    value:
-                        existingUnit.unitCode ??
-                        "",
-                })
-            );
-
-            dispatch(
-                setUnitField({
-                    field: "description",
-                    value:
-                        existingUnit.description ??
-                        "",
-                })
-            );
-
-            dispatch(
-                setUnitField({
-                    field: "status",
-                    value:
-                        existingUnit.status ??
-                        "ACTIVE",
-                })
-            );
-        }
-
-    }, [
-        modal.open,
-        modal.type,
-        modal.data,
-        dispatch,
-    ]);
-
-    // =========================================================
-    // SAVE
-    // CREATE / UPDATE
-    // =========================================================
-
-    const handleSave = async (
-        e
-    ) => {
-
-        e.preventDefault();
-
-        // =====================================================
-        // AUTH CHECK
-        // =====================================================
-
-        if (!isAuthenticated) {
-
-            toast.error(
-                "You are not authenticated."
-            );
-
-            return;
-        }
-
-        // =====================================================
-        // PERMISSION LOADING
-        // =====================================================
-
-        if (
-            !hasFullAccess &&
-            !permissionsLoaded
-        ) {
-
-            toast.error(
-                "Permissions are still loading. Please try again."
-            );
-
-            return;
-        }
-
-        // =====================================================
-        // PERMISSION CHECK
-        // =====================================================
-
-        if (!hasRequiredPermission) {
-
-            toast.error(
-                isEdit
-                    ? "You do not have permission to edit units."
-                    : "You do not have permission to create units."
-            );
-
-            return;
-        }
-
-        // =====================================================
-        // UNIT NAME
-        // =====================================================
-
-        if (
-            !form.unitName?.trim()
-        ) {
-
-            setErrors({
-                unitName:
-                    "Unit name is required",
-            });
-
-            setActiveTab("unit");
-
-            toast.error(
-                "Unit name is required"
-            );
-
-            return;
-        }
-
-        // =====================================================
-        // UNIT SHORT NAME
-        // =====================================================
-
-        if (
-            !form.unitShortName?.trim()
-        ) {
-
-            setErrors({
-                unitShortName:
-                    "Unit short name is required",
-            });
-
-            setActiveTab("unit");
-
-            toast.error(
-                "Unit short name is required"
-            );
-
-            return;
-        }
-
-        // =====================================================
-        // CLEAR ERRORS
-        // =====================================================
-
-        setErrors({});
-
-        // =====================================================
-        // PAYLOAD
-        // =====================================================
-
-        const payload = {
-
-            unitName:
-                form.unitName.trim(),
-
-            unitShortName:
-                form.unitShortName.trim(),
-
-            description:
-                form.description?.trim() ||
-                "",
-
-            status:
-                form.status ||
-                "ACTIVE",
-        };
-
-        try {
-
-            // =================================================
-            // EDIT
-            // =================================================
-
-            if (isEdit) {
-
-                const unitId =
-                    form.id ??
-                    modal.data?.id;
-
-                if (!unitId) {
-
-                    toast.error(
-                        "Unit ID is missing"
-                    );
-
+                if (!unit) {
+                    toast.error("Unit not found");
                     return;
                 }
 
-                await dispatch(
+                setFormData({
+                    unitName: unit.unitName ?? "",
+                    unitShortName: unit.unitShortName ?? "",
+                    description: unit.description ?? "",
+                    status: unit.status ?? "ACTIVE",
+                });
+            } catch (error) {
+                if (isMounted) {
+                    toast.error(
+                        typeof error === "string"
+                            ? error
+                            : "Failed to fetch unit details"
+                    );
+                }
+            }
+        };
+
+        loadUnit();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [dispatch, id, isEdit]);
+
+    /* =====================================================
+       HANDLE FIELD CHANGE
+    ===================================================== */
+
+    const handleChange = (field, value) => {
+        setFormData((prev) => ({
+            ...prev,
+            [field]: value,
+        }));
+    };
+
+    /* =====================================================
+       HANDLE CLOSE
+    ===================================================== */
+
+    const handleClose = () => {
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+                return;
+            }
+
+            if (modalOpen) {
+                dispatch(closeModal());
+                return;
+            }
+
+            navigate("/settings/units");
+        });
+    };
+
+    /* =====================================================
+       VALIDATION
+    ===================================================== */
+
+    const validateForm = () => {
+        if (!formData.unitName.trim()) {
+            toast.error("Unit name is required");
+            return false;
+        }
+
+        if (!formData.unitShortName.trim()) {
+            toast.error("Unit short name is required");
+            return false;
+        }
+
+        if (formData.unitName.trim().length > 100) {
+            toast.error("Unit name cannot exceed 100 characters");
+            return false;
+        }
+
+        if (formData.unitShortName.trim().length > 20) {
+            toast.error("Unit short name cannot exceed 20 characters");
+            return false;
+        }
+
+        return true;
+    };
+
+    /* =====================================================
+       RESET FORM
+    ===================================================== */
+
+    const handleReset = () => {
+        if (isEdit) {
+            dispatch(fetchUnitById(id))
+                .unwrap()
+                .then((response) => {
+                    const unit = response?.data ?? response;
+
+                    setFormData({
+                        unitName: unit?.unitName ?? "",
+                        unitShortName: unit?.unitShortName ?? "",
+                        description: unit?.description ?? "",
+                        status: unit?.status ?? "ACTIVE",
+                    });
+                })
+                .catch(() => {
+                    toast.error("Failed to reset unit form");
+                });
+
+            return;
+        }
+
+        setFormData(initialFormData);
+        setSaveMode("close");
+        dispatch(resetUnitForm());
+    };
+
+    /* =====================================================
+       SAVE UNIT
+    ===================================================== */
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (actionLoading || loading) return;
+
+        if (!validateForm()) return;
+
+        // Matches UnitRequest fields.
+        // Unit code is generated by the backend.
+        const payload = {
+            unitName: formData.unitName.trim(),
+            unitShortName: formData.unitShortName.trim(),
+            description: formData.description.trim(),
+        };
+
+        // Include status when updating an existing unit.
+        if (isEdit) {
+            payload.status = formData.status;
+        }
+
+        try {
+            let response;
+
+            if (isEdit) {
+                response = await dispatch(
                     updateUnit({
-                        id: unitId,
+                        id,
                         data: payload,
                     })
                 ).unwrap();
 
                 toast.success(
-                    "Unit updated successfully"
+                    response?.message || "Unit updated successfully"
                 );
 
-            } else {
-
-                // =================================================
-                // CREATE
-                // =================================================
-
-                const response = await dispatch(createUnit(payload)).unwrap();
-
-                const createdUnit =
-                    response?.data?.data ??
-                    response?.data ??
-                    response?.result?.data ??
-                    response?.result ??
-                    response;
-
-                const createdUnitId = createdUnit?.id ?? createdUnit?.unitId;
-
-                if (modal.data?.selectAfterCreate && createdUnitId != null) {
-                    dispatch(
-                        setCreatedUnitSelection({
-                            item: {
-                                ...createdUnit,
-                                id: createdUnitId,
-                            },
-                            targetField: modal.data.targetField,
-                            rowIndex: modal.data.rowIndex,
-                        })
-                    );
-                }
-
-                toast.success("Unit created successfully");
-
+                navigate(-1);
+                return;
             }
 
-            // =================================================
-            // CLOSE + RESET
-            // =================================================
+            response = await dispatch(
+                createUnit(payload)
+            ).unwrap();
 
-            dispatch(
-                closeModal()
+            toast.success(
+                response?.message || "Unit created successfully"
             );
 
-            dispatch(
-                resetUnitForm()
-            );
+            // Refresh units after creation.
+            dispatch(fetchAllUnits());
 
-            setErrors({});
-            setActiveTab("unit");
+            // Save & New
+            if (saveMode === "new") {
+                setFormData(initialFormData);
+                setSaveMode("close");
+                dispatch(resetUnitForm());
+                return;
+            }
+
+            // Save & Close
+            if (onClose) {
+                onClose();
+            } else if (modalOpen) {
+                dispatch(closeModal());
+            } else {
+                navigate("/settings/units");
+            }
+
+            dispatch(resetUnitForm());
 
         } catch (error) {
-
             console.error(
-                "Unit save error:",
+                isEdit ? "Unit update error:" : "Unit creation error:",
                 error
             );
 
@@ -817,1398 +394,326 @@ export default function UnitCreate() {
                 typeof error === "string"
                     ? error
                     : error?.message ||
-                    error?.response?.data?.message ||
-                    (
-                        isEdit
-                            ? "Failed to update unit"
-                            : "Failed to create unit"
-                    )
+                    (isEdit
+                        ? "Failed to update unit"
+                        : "Failed to create unit")
             );
         }
     };
 
-    // =========================================================
-    // DO NOT RENDER
-    // =========================================================
+    /* =====================================================
+       ESCAPE KEY
+    ===================================================== */
 
-    if (!isOpen) {
-        return null;
-    }
+    useEffect(() => {
+        const handleEscape = (e) => {
+            if (e.key === "Escape") {
+                setShowSaveOptions(false);
+            }
+        };
 
-    // =========================================================
-    // AUTH CHECKING
-    // =========================================================
+        window.addEventListener("keydown", handleEscape);
 
-    if (authChecking) {
+        return () => {
+            window.removeEventListener("keydown", handleEscape);
+        };
+    }, []);
 
+    /* =====================================================
+       STATUS OPTIONS
+    ===================================================== */
+
+    const statusOptions = [
+        { label: "Active", value: "ACTIVE" },
+        { label: "Inactive", value: "INACTIVE" },
+    ];
+
+    /* =====================================================
+       RENDER
+    ===================================================== */
+
+    if (isEdit && loading) {
         return (
-            <div
-                className="
-                    w-[950px]
-                    max-w-[95vw]
-                    min-h-[300px]
-                    bg-white
-                    rounded-xl
-                    shadow-2xl
-                    overflow-hidden
-                    flex
-                    flex-col
-                "
-            >
-
-                <div
-                    className="
-                        shrink-0
-                        h-[68px]
-                        flex
-                        items-center
-                        px-6
-                        border-b
-                        border-gray-200
-                        bg-white
-                    "
-                >
-
-                    <div className="flex items-center gap-3">
-
-                        <div
-                            className="
-                                w-9
-                                h-9
-                                rounded-lg
-                                bg-blue-50
-                                flex
-                                items-center
-                                justify-center
-                            "
-                        >
-
-                            <UserRoundArrowLeft
-                                size={20}
-                                className="text-blue-600"
-                            />
-
-                        </div>
-
-                        <div>
-
-                            <h2
-                                className="
-                                    text-[17px]
-                                    font-semibold
-                                    text-gray-800
-                                "
-                            >
-                                {isEdit
-                                    ? "Edit Unit"
-                                    : "New Unit"
-                                }
-                            </h2>
-
-                            <p
-                                className="
-                                    text-xs
-                                    text-gray-500
-                                    mt-0.5
-                                "
-                            >
-                                Checking authentication
-                            </p>
-
-                        </div>
-
-                    </div>
-
+            <div className="flex h-full items-center justify-center bg-gray-50">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 size={20} className="animate-spin" />
+                    Loading unit details...
                 </div>
-
-                <div
-                    className="
-                        flex-1
-                        flex
-                        items-center
-                        justify-center
-                        px-6
-                        py-10
-                    "
-                >
-
-                    <div className="text-center">
-
-                        <div
-                            className="
-                                w-10
-                                h-10
-                                mx-auto
-                                mb-3
-                                border-2
-                                border-blue-200
-                                border-t-blue-600
-                                rounded-full
-                                animate-spin
-                            "
-                        />
-
-                        <p
-                            className="
-                                text-sm
-                                font-medium
-                                text-gray-600
-                            "
-                        >
-                            Checking authentication...
-                        </p>
-
-                    </div>
-
-                </div>
-
             </div>
         );
     }
 
-    // =========================================================
-    // NOT AUTHENTICATED
-    // =========================================================
+    return (
+        <div className="flex h-full min-h-0 flex-col bg-gray-50 px-3.5 py-3">
 
-    if (!isAuthenticated) {
-        return null;
-    }
+            {/* HEADER */}
 
-    // =========================================================
-    // PERMISSION LOADING
-    // =========================================================
+            <div className="mb-3 flex shrink-0 items-center justify-between rounded-xl border-b-[3px] border-[#B7E34A] bg-white px-5 py-4 shadow-sm">
 
-    if (
-        !hasFullAccess &&
-        (
-            permissionLoading ||
-            !permissionsLoaded
-        )
-    ) {
+                <div className="flex items-center gap-3">
 
-        return (
-            <div
-                className="
-                    w-[950px]
-                    max-w-[95vw]
-                    min-h-[300px]
-                    bg-white
-                    rounded-xl
-                    shadow-2xl
-                    overflow-hidden
-                    flex
-                    flex-col
-                "
-            >
+                    <button
+                        type="button"
+                        onClick={handleClose}
+                        className="
+                            flex h-9 w-9 items-center justify-center
+                            rounded-lg border border-gray-200
+                            text-gray-500 transition hover:bg-gray-100
+                        "
+                        title="Go Back"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
 
-                {/* HEADER */}
+                    <div>
+                        <h2 className="text-base font-semibold text-gray-800">
+                            {isEdit ? "Edit Unit" : "Create Unit"}
+                        </h2>
 
-                <div
-                    className="
-                        shrink-0
-                        h-[68px]
-                        flex
-                        items-center
-                        justify-between
-                        px-6
-                        border-b
-                        border-gray-200
-                        bg-white
-                    "
-                >
-
-                    <div className="flex items-center gap-3">
-
-                        <div
-                            className="
-                                w-9
-                                h-9
-                                rounded-lg
-                                bg-blue-50
-                                flex
-                                items-center
-                                justify-center
-                            "
-                        >
-
-                            <UserRoundArrowLeft
-                                size={20}
-                                className="text-blue-600"
-                            />
-
-                        </div>
-
-                        <div>
-
-                            <h2
-                                className="
-                                    text-[17px]
-                                    font-semibold
-                                    text-gray-800
-                                "
-                            >
-                                {isEdit
-                                    ? "Edit Unit"
-                                    : "New Unit"
-                                }
-                            </h2>
-
-                            <p
-                                className="
-                                    text-xs
-                                    text-gray-500
-                                    mt-0.5
-                                "
-                            >
-                                Loading permissions
-                            </p>
-
-                        </div>
-
+                        <p className="mt-0.5 text-xs text-gray-400">
+                            {isEdit
+                                ? "Update your unit information"
+                                : "Add a new unit to your organization"}
+                        </p>
                     </div>
 
                 </div>
 
-                {/* BODY */}
+                <div className="hidden items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 sm:flex">
+                    <Ruler size={16} className="text-[#408DFB]" />
 
-                <div
-                    className="
-                        flex-1
-                        flex
-                        items-center
-                        justify-center
-                        px-6
-                        py-10
-                    "
-                >
+                    <span className="text-xs font-medium text-[#408DFB]">
+                        Unit
+                    </span>
+                </div>
 
-                    <div className="text-center">
+            </div>
 
-                        <div
-                            className="
-                                w-10
-                                h-10
-                                mx-auto
-                                mb-3
-                                border-2
-                                border-blue-200
-                                border-t-blue-600
-                                rounded-full
-                                animate-spin
-                            "
+            {/* FORM */}
+
+            <form
+                onSubmit={handleSubmit}
+                className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-white shadow-sm"
+            >
+
+                <div className="flex-1 overflow-y-auto p-5">
+
+                    {/* UNIT DETAILS */}
+
+                    <section className="mb-7">
+
+                        <SectionHeading
+                            icon={Ruler}
+                            title="Unit Details"
+                            description="Enter the basic unit information"
                         />
 
-                        <p
-                            className="
-                                text-sm
-                                font-medium
-                                text-gray-600
-                            "
-                        >
-                            Loading permissions...
-                        </p>
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-2">
 
-                    </div>
+                            <FormField label="Unit Name" required>
+                                <TextInput
+                                    value={formData.unitName}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "unitName",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Enter unit name"
+                                    maxLength={100}
+                                />
+                            </FormField>
+
+                            <FormField label="Short Name" required>
+                                <TextInput
+                                    value={formData.unitShortName}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "unitShortName",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Enter short name (e.g. PCS, KG, MTR)"
+                                    maxLength={20}
+                                />
+                            </FormField>
+
+                            {isEdit && (
+                                <FormField label="Status" required>
+                                    <CustomSelect
+                                        value={formData.status}
+                                        onChange={(value) =>
+                                            handleChange("status", value)
+                                        }
+                                        options={statusOptions}
+                                        placeholder="Select status"
+                                    />
+                                </FormField>
+                            )}
+
+                        </div>
+
+                    </section>
+
+                    <div className="my-6 border-t border-gray-100" />
+
+                    {/* DESCRIPTION */}
+
+                    <section>
+
+                        <SectionHeading
+                            icon={AlignLeft}
+                            title="Description"
+                            description="Add additional information about this unit"
+                        />
+
+                        <div className="grid grid-cols-1 gap-5">
+
+                            <FormField label="Description">
+                                <TextAreaField
+                                    value={formData.description}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "description",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Enter unit description"
+                                    rows={4}
+                                />
+                            </FormField>
+
+                        </div>
+
+                    </section>
 
                 </div>
 
                 {/* FOOTER */}
 
-                <div
-                    className="
-                        shrink-0
-                        h-[68px]
-                        flex
-                        items-center
-                        justify-end
-                        px-6
-                        border-t
-                        border-gray-200
-                        bg-white
-                    "
-                >
+                <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-100 bg-white px-5 py-3">
 
                     <button
                         type="button"
                         onClick={handleClose}
+                        disabled={actionLoading}
                         className="
-                            h-10
-                            px-5
-                            rounded-md
-                            border
-                            border-gray-300
-                            text-sm
-                            font-medium
-                            text-gray-700
-                            bg-white
-                            hover:bg-gray-50
-                            transition
+                            rounded-lg border border-gray-200
+                            px-4 py-2 text-sm font-medium
+                            text-gray-600 transition hover:bg-gray-50
+                            disabled:opacity-50
                         "
                     >
-                        Close
+                        Cancel
                     </button>
 
-                </div>
-
-            </div>
-        );
-    }
-
-    // =========================================================
-    // ACCESS DENIED
-    // =========================================================
-
-    if (!hasRequiredPermission) {
-
-        return (
-            <div
-                className="
-                    w-[950px]
-                    max-w-[95vw]
-                    min-h-[300px]
-                    bg-white
-                    rounded-xl
-                    shadow-2xl
-                    overflow-hidden
-                    flex
-                    flex-col
-                "
-            >
-
-                {/* =================================================
-                    ACCESS DENIED HEADER
-                ================================================= */}
-
-                <div
-                    className="
-                        shrink-0
-                        h-[68px]
-                        flex
-                        items-center
-                        justify-between
-                        px-6
-                        border-b
-                        border-gray-200
-                        bg-white
-                    "
-                >
-
-                    <div
-                        className="
-                            flex
-                            items-center
-                            gap-3
-                        "
-                    >
-
-                        <div
-                            className="
-                                w-9
-                                h-9
-                                rounded-lg
-                                bg-red-50
-                                flex
-                                items-center
-                                justify-center
-                            "
-                        >
-
-                            <UserRoundArrowLeft
-                                size={20}
-                                className="text-red-500"
-                            />
-
-                        </div>
-
-                        <div>
-
-                            <h2
-                                className="
-                                    text-[17px]
-                                    font-semibold
-                                    text-gray-800
-                                "
-                            >
-                                Access Denied
-                            </h2>
-
-                            <p
-                                className="
-                                    text-xs
-                                    text-gray-500
-                                    mt-0.5
-                                "
-                            >
-                                Unit access restricted
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                {/* =================================================
-                    ACCESS DENIED BODY
-                ================================================= */}
-
-                <div
-                    className="
-                        flex-1
-                        flex
-                        items-center
-                        justify-center
-                        px-6
-                        py-10
-                    "
-                >
-
-                    <div className="text-center">
-
-                        <div
-                            className="
-                                w-12
-                                h-12
-                                mx-auto
-                                mb-3
-                                rounded-full
-                                bg-red-50
-                                flex
-                                items-center
-                                justify-center
-                            "
-                        >
-
-                            <span
-                                className="
-                                    text-red-500
-                                    text-lg
-                                    font-semibold
-                                "
-                            >
-                                !
-                            </span>
-
-                        </div>
-
-                        <h2
-                            className="
-                                text-lg
-                                font-semibold
-                                text-gray-800
-                            "
-                        >
-                            Access Denied
-                        </h2>
-
-                        <p
-                            className="
-                                mt-1
-                                text-sm
-                                text-gray-500
-                            "
-                        >
-                            {isEdit
-                                ? "You do not have permission to edit units."
-                                : "You do not have permission to create units."
-                            }
-                        </p>
-
-                    </div>
-
-                </div>
-
-                {/* =================================================
-                    ACCESS DENIED FOOTER
-                ================================================= */}
-
-                <div
-                    className="
-                        shrink-0
-                        h-[68px]
-                        flex
-                        items-center
-                        justify-end
-                        px-6
-                        border-t
-                        border-gray-200
-                        bg-white
-                    "
-                >
-
-                    <button
-                        type="button"
-                        onClick={handleClose}
-                        className="
-                            h-10
-                            px-5
-                            rounded-md
-                            border
-                            border-gray-300
-                            text-sm
-                            font-medium
-                            text-gray-700
-                            bg-white
-                            hover:bg-gray-50
-                            transition
-                        "
-                    >
-                        Close
-                    </button>
-
-                </div>
-
-            </div>
-        );
-    }
-
-    // =========================================================
-    // INPUT CLASS
-    // =========================================================
-
-    const inputClass = `
-        w-full
-        h-11
-        px-3
-        border
-        border-gray-300
-        rounded-md
-        text-sm
-        text-gray-700
-        bg-white
-        outline-none
-        transition
-        focus:border-blue-500
-        focus:ring-1
-        focus:ring-blue-500
-        disabled:bg-gray-100
-        disabled:text-gray-500
-        disabled:cursor-not-allowed
-    `;
-
-    const labelClass = `
-        block
-        text-xs
-        font-medium
-        text-gray-600
-        mb-1.5
-    `;
-
-    const getLabelClass = (required = false) => `
-    block
-    text-xs
-    font-medium
-    ${required ? "text-red-500" : "text-gray-500"}
-    mb-1.5
-`;
-
-    // =========================================================
-    // NORMAL UI
-    // =========================================================
-
-    return (
-        <div
-            className="
-                   w-full
-        min-w-0
-        max-h-[80vh]
-        bg-white
-        rounded-lg
-        overflow-hidden
-        flex
-        flex-col
-            "
-        >
-
-            {/* =================================================
-                HEADER
-            ================================================= */}
-
-            <div
-                className="
-                    shrink-0
-                    h-[68px]
-
-                    flex
-                    items-center
-                    justify-between
-
-                    px-6
-
-                    border-b
-                    border-lime-500
-
-                    bg-white
-                "
-            >
-
-                <div
-                    className="
-                        flex
-                        items-center
-                        gap-3
-                    "
-                >
-
-                    <div
-                        className="
-                            w-9
-                            h-9
-                            rounded-lg
-
-                            bg-blue-50
-
-                            flex
-                            items-center
-                            justify-center
-                        "
-                    >
-
-                        <UserRoundArrowLeft
-                            size={20}
-                            className="text-blue-600"
-                        />
-
-                    </div>
-
-                    <div>
-
-                        <h2
-                            className="
-                                text-[16px]
-                                font-semibold
-                                text-gray-500
-                            "
-                        >
-                            {isEdit
-                                ? "Edit Unit"
-                                : "New Unit"}
-                        </h2>
-
-                        <p
-                            className="
-                                text-xs
-                                text-gray-400
-                                mt-0.5
-                            "
-                        >
-                            {isEdit
-                                ? "Update unit information"
-                                : "Create a new unit"}
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            {/* =================================================
-                TABS
-            ================================================= */}
-
-            <div
-                className="
-                    shrink-0
-                    px-6
-
-                    border-b
-                    border-gray-200
-
-                    bg-white
-                "
-            >
-
-                <div
-                    className="
-                        flex
-                        items-center
-                        gap-8
-                        h-[52px]
-                    "
-                >
-
-                    {tabs.map(
-                        (tab) => {
-
-                            const active =
-                                activeTab ===
-                                tab.id;
-
-                            const hasError =
-                                tab.id ===
-                                "unit" &&
-                                (
-                                    errors?.unitName ||
-                                    errors?.unitShortName
-                                );
-
-                            return (
-
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    onClick={() =>
-                                        setActiveTab(
-                                            tab.id
-                                        )
-                                    }
-                                    className={`
-                                        relative
-                                        h-full
-
-                                        text-sm
-                                        font-medium
-
-                                        transition
-
-                                        ${active
-                                            ? "text-gray-500"
-                                            : hasError
-                                                ? "text-red-500"
-                                                : "text-gray-400 hover:text-gray-600"
-                                        }
-                                    `}
-                                >
-
-                                    <span
-                                        className="
-                                            flex
-                                            items-center
-                                            gap-1.5
-                                        "
-                                    >
-
-                                        {tab.label}
-
-                                        {hasError && (
-                                            <span
-                                                className="
-                                                    w-1.5
-                                                    h-1.5
-                                                    rounded-full
-                                                    bg-red-500
-                                                "
-                                            />
-                                        )}
-
-                                    </span>
-
-                                    {active && (
-                                        <span
-                                            className="
-                                                absolute
-                                                left-0
-                                                right-0
-                                                bottom-0
-
-                                                h-[2px]
-
-                                                bg-lime-500
-
-                                                rounded-t
-                                            "
-                                        />
-                                    )}
-
-                                </button>
-                            );
-                        }
-                    )}
-
-                </div>
-
-            </div>
-
-            {/* =================================================
-                FORM
-            ================================================= */}
-
-            <form
-                onSubmit={handleSave}
-                className="
-                    flex
-                    flex-col
-                    flex-1
-                    min-h-0
-                    overflow-hidden
-                "
-            >
-
-                {/* =================================================
-                    SCROLL BODY
-                ================================================= */}
-
-                <div
-                    className="
-                        flex-1
-                        min-h-0
-
-                        overflow-y-auto
-                        overflow-x-hidden
-
-                        px-7
-                        py-6
-
-                        bg-gray-50/50
-                    "
-                >
-
-                    {/* =================================================
-                        UNIT INFORMATION
-                    ================================================= */}
-
-                    {activeTab === "unit" && (
-
-                        <div>
-
-                            <div
-                                className="
-                                    mb-6
-
-                                    flex
-                                    items-start
-                                    justify-between
-
-                                    gap-6
-                                "
-                            >
-
-                                <div>
-
-                                    <h3
-                                        className="
-                                            text-base
-                                            font-semibold
-                                            text-gray-500
-                                        "
-                                    >
-                                        Unit Information
-                                    </h3>
-
-                                    <p
-                                        className="
-                                            text-xs
-                                            text-gray-400
-                                            mt-1
-                                        "
-                                    >
-                                        Configure the basic unit information.
-                                    </p>
-
-                                </div>
-
-                                <div
-                                    className="
-                                        flex
-                                        items-center
-                                        gap-3
-                                        shrink-0
-                                    "
-                                >
-
-                                    <label
-                                        className="
-                                            text-sm
-                                            font-semibold
-                                            text-gray-500
-                                        "
-                                    >
-                                        Status :
-                                    </label>
-
-                                    <span
-                                        className={`
-                                            inline-flex
-                                            items-center
-                                            justify-center
-
-                                            min-w-[85px]
-                                            h-7
-                                            px-3
-
-                                            rounded-full
-
-                                            text-sm
-                                            font-bold
-
-                                            ${form.status === "ACTIVE"
-                                                ? "bg-green-50 text-green-700"
-                                                : form.status === "INACTIVE"
-                                                    ? "bg-red-50 text-red-700"
-                                                    : "bg-yellow-50 text-yellow-700"
-                                            }
-                                        `}
-                                    >
-                                        {
-                                            form.status ||
-                                            "ACTIVE"
-                                        }
-                                    </span>
-
-                                </div>
-
-                            </div>
-
-                            {/* UNIT FIELDS */}
-
-                            <div
-                                className="
-                                    grid
-                                    grid-cols-2
-                                    gap-x-6
-                                    gap-y-5
-                                "
-                            >
-
-                                {/* UNIT NAME */}
-
-                                <div>
-
-                                    <label
-                                        className={getLabelClass(true)}
-                                    >
-                                        Unit Name
-
-                                        <span
-                                            className="
-                                                text-red-500
-                                                ml-1
-                                            "
-                                        >
-                                            *
-                                        </span>
-
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        value={
-                                            form.unitName ??
-                                            ""
-                                        }
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "unitName",
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="Enter unit name"
-                                        className={
-                                            inputClass
-                                        }
-                                    />
-
-                                    {errors?.unitName && (
-                                        <p
-                                            className="
-                                                text-xs
-                                                text-red-500
-                                                mt-1
-                                            "
-                                        >
-                                            {
-                                                errors.unitName
-                                            }
-                                        </p>
-                                    )}
-
-                                </div>
-
-                                {/* UNIT SHORT NAME */}
-
-                                <div>
-
-                                    <label
-                                        className={getLabelClass(true)}
-                                    >
-                                        Unit Short Name
-
-                                        <span
-                                            className="
-                                                text-red-500
-                                                ml-1
-                                            "
-                                        >
-                                            *
-                                        </span>
-
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        value={
-                                            form.unitShortName ??
-                                            ""
-                                        }
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "unitShortName",
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="Enter unit short name"
-                                        className={
-                                            inputClass
-                                        }
-                                    />
-
-                                    {errors?.unitShortName && (
-                                        <p
-                                            className="
-                                                text-xs
-                                                text-red-500
-                                                mt-1
-                                            "
-                                        >
-                                            {
-                                                errors.unitShortName
-                                            }
-                                        </p>
-                                    )}
-
-                                </div>
-
-                                {/* DESCRIPTION */}
-
-                                <div
-                                    className="
-                                        col-span-2
-                                    "
-                                >
-
-                                    <label
-                                        className={labelClass}
-                                    >
-                                        Description
-                                    </label>
-
-                                    <textarea
-                                        rows={5}
-                                        value={
-                                            form.description ??
-                                            ""
-                                        }
-                                        onChange={(e) =>
-                                            handleChange(
-                                                "description",
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="Enter unit description"
-                                        className="
-                                            w-full
-                                            h-[50px]
-                                            px-3
-                                            py-3
-
-                                            border
-                                            border-gray-300
-
-                                            rounded-md
-
-                                            text-sm
-                                            text-gray-700
-
-                                            bg-white
-
-                                            outline-none
-                                            resize-none
-
-                                            transition
-
-                                            focus:border-blue-500
-                                            focus:ring-1
-                                            focus:ring-blue-500
-                                        "
-                                    />
-
-                                </div>
-
-                            </div>
-
-                        </div>
-                    )}
-
-                    {/* =================================================
-                        SETTINGS
-                    ================================================= */}
-
-                    {activeTab === "settings" && (
-
-                        <div>
-
-                            <div
-                                className="
-                                    mb-6
-                                "
-                            >
-
-                                <h3
-                                    className="
-                                        text-base
-                                        font-semibold
-                                        text-gray-500
-                                    "
-                                >
-                                    Unit Settings
-                                </h3>
-
-                                <p
-                                    className="
-                                        text-xs
-                                        text-gray-400
-                                        mt-1
-                                    "
-                                >
-                                    Configure the unit availability and status.
-                                </p>
-
-                            </div>
-
-                            {/* STATUS */}
-
-                            <div
-                                className="
-                                    max-w-[460px]
-                                "
-                            >
-
-                                <label
-                                    className={
-                                        labelClass
-                                    }
-                                >
-                                    Status
-                                </label>
-
-                                <CustomSelect
-                                    value={form.status || "ACTIVE"}
-                                    onChange={(value) =>
-                                        handleChange("status", value)
-                                    }
-                                    options={[
-                                        { value: "ACTIVE", label: "ACTIVE" },
-                                        { value: "INACTIVE", label: "INACTIVE" },
-                                        { value: "DRAFT", label: "DRAFT" },
-                                    ]}
-                                />
-
-                            </div>
-
-                            {/* UNIT STATE */}
-
-                            <div
-                                className="
-                                    mt-7
-
-                                    border
-                                    border-gray-200
-
-                                    rounded-lg
-
-                                    bg-white
-
-                                    p-5
-                                "
-                            >
-
-                                <div
-                                    className="
-                                        flex
-                                        items-center
-                                        justify-between
-                                    "
-                                >
-
-                                    <div>
-
-                                        <p
-                                            className="
-                                                text-sm
-                                                font-medium
-                                                text-gray-500
-                                            "
-                                        >
-                                            Unit Status
-                                        </p>
-
-                                        <p
-                                            className="
-                                                text-xs
-                                                text-gray-500
-                                                mt-1
-                                            "
-                                        >
-                                            This unit is currently set to{" "}
-
-                                            <span
-                                                className={`
-                                            inline-flex
-                                            items-center
-                                            justify-center
-
-                                            min-w-[85px]
-                                            h-7
-                                            px-3
-
-                                            rounded-full
-
-                                            text-xs
-                                            font-medium
-
-                                            ${form.status === "ACTIVE"
-                                                        ? "bg-green-50 text-green-700"
-                                                        : form.status === "INACTIVE"
-                                                            ? "bg-red-50 text-red-700"
-                                                            : "bg-yellow-50 text-yellow-700"
-                                                    }
-                                        `}
-                                            >
-                                                {
-                                                    form.status ||
-                                                    "ACTIVE"
-                                                }
-                                            </span>
-
-                                        </p>
-
-                                    </div>
-
-
-
-                                </div>
-
-                            </div>
-
-                        </div>
-                    )}
-
-                </div>
-
-                {/* =================================================
-                    FOOTER
-                ================================================= */}
-
-                <div
-                    className="
-                        shrink-0
-                        h-[68px]
-
-                        flex
-                        items-center
-                        justify-between
-
-                        px-6
-
-                        border-t
-                        border-gray-200
-
-                        bg-white
-                    "
-                >
-
-                    <div
-                        className="
-                            text-xs
-                            text-gray-500
-                        "
-                    >
-
-                        <span
-                            className="text-red-500"
-                        >
-                            *
-                        </span>
-
-                        {" "}Required fields
-
-                    </div>
-
-                    <div
-                        className="
-                            flex
-                            items-center
-                            gap-3
-                        "
-                    >
-
-                        {/* CANCEL */}
+                    <div className="flex items-center gap-2">
 
                         <button
                             type="button"
-                            onClick={
-                                handleClose
-                            }
-                            disabled={
-                                loading
-                            }
+                            onClick={handleReset}
+                            disabled={actionLoading || loading}
                             className="
-                                h-10
-                                px-5
-
-                                rounded-md
-
-                                border
-                                border-gray-300
-
-                                text-sm
-                                font-medium
-                                text-gray-700
-
-                                bg-white
-
-                                hover:bg-gray-50
-
-                                transition
-
+                                flex items-center gap-2 rounded-lg
+                                border border-gray-200 px-4 py-2
+                                text-sm font-medium text-gray-600
+                                transition hover:bg-gray-50
                                 disabled:opacity-50
-                                disabled:cursor-not-allowed
                             "
                         >
-                            Cancel
+                            <RotateCcw size={15} />
+                            Reset
                         </button>
-
-                        {/* SAVE / UPDATE */}
 
                         <button
                             type="submit"
-                            disabled={
-                                loading ||
-                                !hasRequiredPermission
-                            }
+                            disabled={actionLoading || loading}
+                            onClick={() => setSaveMode("close")}
                             className="
-                                h-10
-                                px-6
-
-                                rounded-md
-
-                                bg-blue-600
-
-                                text-white
-
-                                text-sm
-                                font-medium
-
-                                hover:bg-blue-700
-
-                                transition
-
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
+                                flex items-center gap-2 rounded-lg
+                                bg-[#408DFB] px-5 py-2 text-sm
+                                font-medium text-white transition
+                                hover:bg-blue-600 disabled:cursor-not-allowed
+                                disabled:opacity-60
                             "
                         >
+                            {actionLoading ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <Save size={16} />
+                            )}
 
-                            {loading
-                                ? isEdit
-                                    ? "Updating..."
-                                    : "Saving..."
+                            {actionLoading
+                                ? "Saving..."
                                 : isEdit
-                                    ? "Update Unit"
-                                    : "Save Unit"
-                            }
-
+                                    ? "Update"
+                                    : "Save"}
                         </button>
+
+                        {!isEdit && (
+                            <div className="relative">
+
+                                <button
+                                    type="button"
+                                    disabled={actionLoading}
+                                    onClick={() =>
+                                        setShowSaveOptions((prev) => !prev)
+                                    }
+                                    className="
+                                        flex h-9 items-center justify-center
+                                        rounded-lg border border-gray-200
+                                        px-2 text-gray-600 transition
+                                        hover:bg-gray-50 disabled:opacity-50
+                                    "
+                                >
+                                    <ChevronDown size={17} />
+                                </button>
+
+                                {showSaveOptions && (
+                                    <div className="
+                                        absolute bottom-11 right-0 z-20
+                                        w-44 overflow-hidden rounded-lg
+                                        border border-gray-100 bg-white
+                                        py-1 shadow-lg
+                                    ">
+
+                                        <button
+                                            type="submit"
+                                            onClick={() => {
+                                                setSaveMode("new");
+                                                setShowSaveOptions(false);
+                                            }}
+                                            className="
+                                                w-full px-4 py-2.5
+                                                text-left text-sm text-gray-600
+                                                transition hover:bg-blue-50
+                                                hover:text-[#408DFB]
+                                            "
+                                        >
+                                            Save & New
+                                        </button>
+
+                                        <button
+                                            type="submit"
+                                            onClick={() => {
+                                                setSaveMode("close");
+                                                setShowSaveOptions(false);
+                                            }}
+                                            className="
+                                                w-full px-4 py-2.5
+                                                text-left text-sm text-gray-600
+                                                transition hover:bg-blue-50
+                                                hover:text-[#408DFB]
+                                            "
+                                        >
+                                            Save & Close
+                                        </button>
+
+                                    </div>
+                                )}
+
+                            </div>
+                        )}
 
                     </div>
 
@@ -2216,6 +721,18 @@ export default function UnitCreate() {
 
             </form>
 
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave Unit?"
+                message="Are you sure you want to leave this unit page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
+
         </div>
     );
-}
+};
+
+export default UnitCreate;

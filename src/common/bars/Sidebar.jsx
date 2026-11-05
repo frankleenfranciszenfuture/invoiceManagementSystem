@@ -57,12 +57,12 @@ const NAV = [
         icon: Users,
         to: "/customers",
         dropdown: true,
-        children: [
-            {
-                label: "Create",
-                to: "/customers/new",
-            },
-        ],
+        // children: [
+        //     {
+        //         label: "Create",
+        //         to: "/customers/new",
+        //     },
+        // ],
     },
     {
         label: "Items",
@@ -73,14 +73,19 @@ const NAV = [
         basePath: "/items",
         dropdown: true,
     },
+
     {
         label: "Parties",
         moduleName: "Parties",
         icon: Package,
         to: "/parties",
-        addTo: "/parties/newSimple",
-        basePath: "/parties",
         dropdown: true,
+        children: [
+            {
+                label: "Oustanding Clearance",
+                to: "/parties/clearances",
+            },
+        ],
     },
     {
         label: "Sales Persons",

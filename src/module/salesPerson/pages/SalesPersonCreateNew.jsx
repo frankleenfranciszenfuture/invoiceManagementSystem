@@ -37,6 +37,8 @@ import {
 } from "../../menuPermission/thunks/menuPermissionThunks";
 
 import CustomSelect from "../../../common/custom/CustomSelect";
+import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
+import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
 
 /* =========================================================
    FORM FIELD
@@ -129,7 +131,7 @@ const SectionHeading = ({
    MAIN COMPONENT
 ========================================================= */
 
-const SalesPersonCreateNew = () => {
+const SalesPersonCreateNew = ({ onClose }) => {
 
     const dispatch = useDispatch();
 
@@ -192,6 +194,13 @@ const SalesPersonCreateNew = () => {
     const [saveMode, setSaveMode] = useState("close");
 
     const [showSaveOptions, setShowSaveOptions] = useState(false);
+
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
 
     /* =====================================================
        NORMALIZATION
@@ -396,6 +405,16 @@ const SalesPersonCreateNew = () => {
         setSaveMode("close");
 
         setShowSaveOptions(false);
+    };
+
+    const handleClose = () => {
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/salesPersons")
+            }
+        });
     };
 
     /* =====================================================
@@ -870,7 +889,7 @@ const SalesPersonCreateNew = () => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         disabled={loading}
                         className="
                             rounded-lg border border-gray-200
@@ -1015,6 +1034,16 @@ const SalesPersonCreateNew = () => {
                 </div>
 
             </form>
+
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave SalesPerson?"
+                message="Are you sure you want to leave this sales person page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
 
         </div>
     );

@@ -1,31 +1,66 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const VALID_STATUSES = ["ALL", "ACTIVE", "INACTIVE", "DRAFT"];
+
+const DEFAULT_VIEWS = [
+  {
+    label: "All Categories",
+    value: "ALL",
+  },
+  {
+    label: "Active Categories",
+    value: "ACTIVE",
+  },
+  {
+    label: "Inactive Categories",
+    value: "INACTIVE",
+  },
+  {
+    label: "Draft Categories",
+    value: "DRAFT",
+  },
+];
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const normalizeStatus = (value) => {
+  const status = String(value ?? "ALL")
+    .trim()
+    .toUpperCase();
+
+  return VALID_STATUSES.includes(status) ? status : "ALL";
+};
+
+const getViewLabel = (status) => {
+  return (
+    DEFAULT_VIEWS.find((view) => view.value === status)?.label ||
+    "All Categories"
+  );
+};
+
+/* =========================================================
+   INITIAL STATE
+========================================================= */
+
 const initialState = {
   selectedCategoryView: "All Categories",
 
-  categoryStatus: "ALL",
+  status: "ALL",
 
   search: "",
 
-  views: [
-    {
-      label: "All Categories",
-      value: "ALL",
-    },
-    {
-      label: "Active Categories",
-      value: "ACTIVE",
-    },
-    {
-      label: "Inactive Categories",
-      value: "INACTIVE",
-    },
-    {
-      label: "Draft Categories",
-      value: "DRAFT",
-    },
-  ],
+  views: DEFAULT_VIEWS,
 };
+
+/* =========================================================
+   SLICE
+========================================================= */
 
 const categoryViewSlice = createSlice({
   name: "categoryView",
@@ -33,37 +68,43 @@ const categoryViewSlice = createSlice({
   initialState,
 
   reducers: {
-    /* =====================================================
-       SEARCH
-    ===================================================== */
+    /* =================================================
+           SEARCH
+        ================================================= */
 
     setSearch(state, action) {
-      state.search = action.payload;
+      state.search = action.payload ?? "";
     },
 
-    /* =====================================================
-       SELECTED VIEW
-    ===================================================== */
+    /* =================================================
+           SELECTED VIEW
+        ================================================= */
 
     setSelectedCategoryView(state, action) {
-      state.selectedCategoryView = action.payload;
+      const status = normalizeStatus(action.payload);
+
+      state.status = status;
+      state.selectedCategoryView = getViewLabel(status);
     },
 
-    /* =====================================================
-       CATEGORY STATUS
-    ===================================================== */
+    /* =================================================
+           CATEGORY STATUS
+        ================================================= */
 
     setCategoryStatus(state, action) {
-      state.categoryStatus = action.payload;
+      const status = normalizeStatus(action.payload);
+
+      state.status = status;
+      state.selectedCategoryView = getViewLabel(status);
     },
 
-    /* =====================================================
-       RESET VIEW
-    ===================================================== */
+    /* =================================================
+           RESET VIEW
+        ================================================= */
 
     resetCategoryView(state) {
       state.selectedCategoryView = "All Categories";
-      state.categoryStatus = "ALL";
+      state.status = "ALL";
       state.search = "";
     },
   },
@@ -71,7 +112,7 @@ const categoryViewSlice = createSlice({
 
 /* =========================================================
    ACTIONS
-   ========================================================= */
+========================================================= */
 
 export const {
   setSearch,
@@ -82,6 +123,6 @@ export const {
 
 /* =========================================================
    REDUCER
-   ========================================================= */
+========================================================= */
 
 export default categoryViewSlice.reducer;

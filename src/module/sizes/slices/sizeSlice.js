@@ -52,6 +52,49 @@ const initialState = {
   message: "",
 };
 
+const extractMasterData = (response) => {
+  let data = response;
+
+  // Unwrap nested API response structures.
+  for (let i = 0; i < 4; i++) {
+    if (
+      data?.data &&
+      typeof data.data === "object" &&
+      !Array.isArray(data.data)
+    ) {
+      data = data.data;
+    } else {
+      break;
+    }
+  }
+
+  if (Array.isArray(data)) {
+    return {
+      items: data,
+      pagination: null,
+    };
+  }
+
+  if (Array.isArray(data?.content)) {
+    return {
+      items: data.content,
+      pagination: data,
+    };
+  }
+
+  if (Array.isArray(data?.items)) {
+    return {
+      items: data.items,
+      pagination: data,
+    };
+  }
+
+  return {
+    items: [],
+    pagination: null,
+  };
+};
+
 /* =========================================================
    SLICE
    ========================================================= */
@@ -176,25 +219,22 @@ const sizeSlice = createSlice({
         state.success = true;
         state.error = null;
 
-        const response = action.payload;
+        const { items, pagination } = extractMasterData(action.payload);
 
-        const data = response?.data;
-
-        state.sizes = data?.content || [];
+        state.sizes = items.map((item) => ({
+          ...item,
+          id: item.id ?? item.sizeId,
+        }));
 
         state.pagination = {
-          pageNumber: data?.pageNumber ?? 0,
-
-          pageSize: data?.pageSize ?? 20,
-
-          totalElements: data?.totalElements ?? 0,
-
-          totalPages: data?.totalPages ?? 0,
-
-          last: data?.last ?? true,
+          pageNumber: pagination?.pageNumber ?? 0,
+          pageSize: pagination?.pageSize ?? items.length,
+          totalElements: pagination?.totalElements ?? items.length,
+          totalPages: pagination?.totalPages ?? (items.length ? 1 : 0),
+          last: pagination?.last ?? true,
         };
 
-        state.message = response?.message || "";
+        state.message = action.payload?.message || "";
       })
 
       .addCase(fetchAllSizes.rejected, (state, action) => {

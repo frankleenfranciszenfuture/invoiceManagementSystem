@@ -357,7 +357,7 @@ const PartyCreateNew = ({ onClose }) => {
             if (onClose) {
                 onClose();
             } else {
-                dispatch(closeModal());
+                navigate("/parties")
             }
         });
     };

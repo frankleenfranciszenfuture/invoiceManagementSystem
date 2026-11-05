@@ -2,19 +2,36 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../../api/api";
 
 /**
- * Fetch all sizes
+ * Fetch all sizes with pagination and status filtering
+ *
+ * Supported params:
+ * {
+ *   status: "ACTIVE" | "INACTIVE",
+ *   page: 0,
+ *   size: 20
+ * }
  */
 export const fetchAllSizes = createAsyncThunk(
   "size/fetchSizes",
-  async (_, { rejectWithValue }) => {
+  async (params = {}, { rejectWithValue }) => {
     try {
-      const res = await api.get("/sizes");
+      const queryParams = { ...params };
 
-      console.log("Sizes:", res.data);
+      if (!queryParams.status || queryParams.status === "ALL") {
+        delete queryParams.status;
+      }
+
+      const res = await api.get("/sizes", {
+        params: queryParams,
+      });
 
       return res.data;
     } catch (error) {
-      return rejectWithValue(error?.response?.data?.message || error.message);
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to fetch sizes",
+      );
     }
   },
 );
@@ -30,7 +47,11 @@ export const fetchSizeById = createAsyncThunk(
 
       return res.data;
     } catch (error) {
-      return rejectWithValue(error?.response?.data?.message || error.message);
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to fetch size",
+      );
     }
   },
 );
@@ -46,7 +67,11 @@ export const createSize = createAsyncThunk(
 
       return res.data;
     } catch (error) {
-      return rejectWithValue(error?.response?.data?.message || error.message);
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to create size",
+      );
     }
   },
 );
@@ -62,7 +87,11 @@ export const updateSize = createAsyncThunk(
 
       return res.data;
     } catch (error) {
-      return rejectWithValue(error?.response?.data?.message || error.message);
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to update size",
+      );
     }
   },
 );
@@ -78,7 +107,11 @@ export const deleteSize = createAsyncThunk(
 
       return res.data;
     } catch (error) {
-      return rejectWithValue(error?.response?.data?.message || error.message);
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to delete size",
+      );
     }
   },
 );
@@ -94,23 +127,42 @@ export const reactivateSize = createAsyncThunk(
 
       return res.data;
     } catch (error) {
-      return rejectWithValue(error?.response?.data?.message || error.message);
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to reactivate size",
+      );
     }
   },
 );
 
 /**
  * Fetch sizes by status
+ *
+ * Uses the same backend query parameter:
+ * GET /sizes?status=ACTIVE
  */
 export const fetchSizesByStatus = createAsyncThunk(
   "size/fetchByStatus",
   async (status, { rejectWithValue }) => {
     try {
-      const res = await api.get(`/sizes/status/${status}`);
+      const params = {};
+
+      if (status && status !== "ALL") {
+        params.status = status;
+      }
+
+      const res = await api.get("/sizes", {
+        params,
+      });
 
       return res.data;
     } catch (error) {
-      return rejectWithValue(error?.response?.data?.message || error.message);
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to fetch sizes by status",
+      );
     }
   },
 );

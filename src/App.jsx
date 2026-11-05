@@ -114,21 +114,18 @@ import SalesPersonDashboard from "./module/salesPerson/pages/SalesPersonDashboar
 import CurrencyDashboard from "./module/currency/pages/CurrencyDashboard";
 import CurrencyCreateSimple from "./module/currency/pages/CurrencyCreateSimple";
 import SaleInvoice from "./module/invoices/pages/SaleInvoice";
-import InvoiceOverViewDashboard1 from "./module/invoices/overview/pages/InvoiceOverViewDashboard1";
-import InvoiceprofileOverview from "./module/invoices/overview/pages/InvoiceprofileOverview";
-import InvoicePreviewCard from "./module/invoices/overview/pages/InvoicePreviewCard";
 import InvoiceOverViewPreviewDashboard from "./module/invoices/overview/pages/InvoiceOverViewPreviewDashboard";
 import EmailSignatureCreateSimple from "./module/emailSignature/pages/EmailSignatureCreateSimple";
 import EmailSignatureDashboard from "./module/emailSignature/pages/EmailSignatureDashboard";
-import EmailSignatureTable from "./module/emailSignature/pages/EmailSignatureTable";
+
 import PartyDashboard from "./module/parties/pages/PartyDashboard";
 import PartyCreateSimple from "./module/parties/pages/PartyCreateSimple";
-import PartyProfileView from "./module/parties/pages/PartyProfileView";
+
 import ClearanceCreateSimple from "./module/clearnaceOutStandingParties/pages/ClearanceCreateSimple";
 import ClearanceDashboard from "./module/clearnaceOutStandingParties/pages/ClearanceDashboard";
 import UnitProfileView from "./module/units/pages/UnitProfileView";
 import SizeProfileView from "./module/sizes/pages/SizeProfileView";
-import CategoryProfileView from "./module/category/pages/CategoryProfileView";
+
 import CustomerCreateModal from "./module/customer/pages/CustomerCreateModal";
 import CurrencyModel from "./module/currency/pages/CurrencyModel";
 import InventoryDashbaord from "./inventoryModule/inventory/pages/InventoryDashbaord";
@@ -139,7 +136,7 @@ import InventoryStockAdjustment from "./inventoryModule/module/openingStock/page
 import SalesOrderCreate from "./inventoryModule/module/saleOrder/pages/SalesOrderCreate";
 import SaleOrderDashboard from "./inventoryModule/module/saleOrder/pages/SaleOrderDashboard";
 import SaleOrderTable from "./inventoryModule/module/saleOrder/pages/SaleOrderTable";
-import SalesOrderOverview from "./inventoryModule/module/saleOrder/pages/SalesOrderOverview";
+
 import PurchaseOrderCreate from "./inventoryModule/module/purchaseOrder/pages/PurchaseOrderCreate";
 import PurchaseOrderDashboard from "./inventoryModule/module/purchaseOrder/pages/PurchaseOrderDashboard";
 import PurchaseOrderViewDetails from "./inventoryModule/module/purchaseOrder/pages/PurchaseOrderViewDetails";
@@ -170,9 +167,20 @@ import RoleViewDetails from "./module/role/pages/RoleViewDetails";
 import RoleCreateSimple from "./module/role/pages/RoleCreateSimple";
 import UserCreateSimple from "./module/users/pages/UserCreateSimple";
 import UserViewDetails from "./module/users/pages/UserViewDetails";
-import TaxMasterCreate from "./module/taxMaster/pages/TaxMasterCreate";
 import TaxCreateSimple from "./module/taxMaster/pages/TaxCreateSimple";
 import TaxMasterViewDetails from "./module/taxMaster/pages/TaxMasterViewDetails";
+import ProductViewDetails from "./module/items/pages/Productviewdetails";
+import ClearanceViewDetails from "./module/clearnaceOutStandingParties/pages/ClearanceViewDetails";
+import CustomerCreateNew from "./module/customer/pages/CustomerCreateNew";
+import CustomerViewDetails from "./module/customer/pages/CustomerViewDetails";
+import CategoryViewDetails from "./module/category/pages/CategoryViewDetails";
+import CategoryCreateSimple from "./module/category/pages/CategoryCreateSimple";
+import SubCategoryCreate from "./module/subCategory/pages/SubCategoryCreate";
+import SubCategoryViewDetails from "./module/subCategory/pages/SubCategoryViewDetails";
+import SizeCreate from "./module/sizes/pages/SizeCreate";
+import SizeViewDetails from "./module/sizes/pages/SizeViewDetails";
+import UnitViewDetails from "./module/units/pages/UnitViewDetails";
+import UnitCreate from "./module/units/pages/UnitCreate";
 
 
 
@@ -357,29 +365,24 @@ function AppContent() {
         />
 
         <Route
-          path="/customers/table"
-          element={<CustomerTable />}
-        />
-
-        <Route
           path="/customers/model"
           element={<CustomerCreateModal />}
         />
 
         <Route
-          path="/customers/new"
-          element={<CreateCustomer />}
+          path="/customers/create"
+          element={<CustomerCreateNew />}
         />
 
         <Route
           path="/customers/edit/:id"
-          element={<CreateCustomer />}
+          element={<CustomerCreateNew />}
         />
 
         <Route
           path="/customers/view/:id"
           // element={<CustomerOverViewDashboard />}
-          element={<CustomerProfileOverview />}
+          element={<CustomerViewDetails />}
         />
 
 
@@ -410,8 +413,8 @@ function AppContent() {
         />
 
         <Route
-          path="/items/editSimple/:id"
-          element={<ProductCreateSimple />}
+          path="/items/edit/:id"
+          element={<ProductCreateNew />}
         />
 
         <Route
@@ -429,11 +432,15 @@ function AppContent() {
           element={<ProductTable />}
         />
 
-        <Route
+        {/* <Route
           path="/items/view/:id"
           element={<ProductOverViewDashboard />}
-        />
+        /> */}
 
+        <Route
+          path="/items/view/:id"
+          element={<ProductViewDetails />}
+        />
 
         {/* =================================================
                     TAX MASTER
@@ -471,9 +478,21 @@ function AppContent() {
         />
 
         <Route
-          path="/settings/sizes/view/:id"
-          element={<SizeProfileView />}
+          path="/settings/sizes/create"
+          element={<SizeCreate />}
         />
+
+        <Route
+          path="/settings/sizes/edit/:id"
+          element={<SizeCreate />}
+        />
+
+        <Route
+          path="/settings/sizes/view/:id"
+          element={<SizeViewDetails />}
+        />
+
+
 
 
         {/* =================================================
@@ -486,9 +505,22 @@ function AppContent() {
         />
 
         <Route
-          path="/settings/units/view/:id"
-          element={<UnitProfileView />}
+          path="/settings/units/create"
+          element={<UnitCreate />}
         />
+
+        <Route
+          path="/settings/units/edit/:id"
+          element={<UnitCreate />}
+        />
+
+        <Route
+          path="/settings/units/view/:id"
+          element={<UnitViewDetails />}
+        />
+
+
+
 
         {/* =================================================
                     SUB CATEGORY
@@ -497,6 +529,22 @@ function AppContent() {
         <Route
           path="/settings/subCategoires"
           element={<SubCategoryDashboard />}
+        />
+
+
+        <Route
+          path="/settings/subCategoires/create"
+          element={<SubCategoryCreate />}
+        />
+
+        <Route
+          path="/settings/subCategoires/edit/:id"
+          element={<SubCategoryCreate />}
+        />
+
+        <Route
+          path="/settings/subCategoires/view/:id"
+          element={<SubCategoryViewDetails />}
         />
 
 
@@ -510,8 +558,19 @@ function AppContent() {
         />
 
         <Route
-          path="/categories/view/:id"
-          element={<CategoryProfileView />}
+          path="/settings/categories/create"
+          element={<CategoryCreateSimple />}
+        />
+
+        <Route
+          path="/settings/categories/edit/:id"
+          element={<CategoryCreateSimple />}
+        />
+
+
+        <Route
+          path="/settings/categories/view/:id"
+          element={<CategoryViewDetails />}
         />
 
         {/* =================================================
@@ -739,20 +798,25 @@ function AppContent() {
 
 
         <Route
-          path="/clearances"
+          path="/parties/clearances"
           element={<ClearanceDashboard />}
 
         />
 
         <Route
-          path="/clearances/newSimple"
+          path="/parties/clearances/create"
           element={<ClearanceCreateSimple />}
 
         />
 
         <Route
-          path="/clearances/editSimple/:id"
+          path="/parties/clearances/edit/:id"
           element={<ClearanceCreateSimple />}
+        />
+
+        <Route
+          path="/parties/clearances/view/:id"
+          element={<ClearanceViewDetails />}
         />
 
 

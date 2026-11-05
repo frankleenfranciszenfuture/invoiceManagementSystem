@@ -66,7 +66,7 @@ import {
 } from "../thunks/invoiceThunks";
 
 import {
-    loadCustomers,
+    fetchAllCustomers,
 } from "../../customer/thunks/customerThunks";
 
 
@@ -704,7 +704,7 @@ export default function ServiceInvoice() {
     ========================================================= */
 
     useEffect(() => {
-        dispatch(loadCustomers());
+        dispatch(fetchAllCustomers());
         dispatch(fetchAllProducts());
         dispatch(fetchAllUnits());
         dispatch(fetchAllSizes());

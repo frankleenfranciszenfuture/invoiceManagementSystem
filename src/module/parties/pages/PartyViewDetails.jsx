@@ -652,7 +652,10 @@ const PartyViewDetails = () => {
                     <button
                         type="button"
                         onClick={() => navigate("/clearances")}
-                        className="group min-w-[190px] rounded-xl border border-amber-200 bg-white px-4 py-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md"
+                        className="group min-w-[190px] rounded-xl border border-amber-200 
+                        bg-white px-4 py-3 text-left shadow-sm transition-all
+                         duration-200 hover:-translate-y-0.5 
+                         hover:border-amber-300 hover:shadow-md"
                         title="View Outstanding Clearance"
                     >
                         <div className="flex items-center justify-between gap-4">

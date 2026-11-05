@@ -10,7 +10,7 @@ const initialState = {
       label: "All Clearances",
       value: "ALL",
     },
-    {
+    { 
       label: "Active Clearances",
       value: "ACTIVE",
     },

@@ -191,6 +191,15 @@ const clearanceSlice = createSlice({
           console.error("Unexpected clearance response:", response);
         }
 
+        // Update pagination from API response
+        state.pagination = {
+          pageNumber: data?.pageNumber ?? 0,
+          pageSize: data?.pageSize ?? 20,
+          totalElements: data?.totalElements ?? 0,
+          totalPages: data?.totalPages ?? 0,
+          last: data?.last ?? true,
+        };
+
         state.message = response?.message || "";
       })
       .addCase(fetchAllClearance.rejected, (state, action) => {
@@ -316,23 +325,23 @@ const clearanceSlice = createSlice({
         state.message = response?.message || "Clearance updated successfully.";
 
         if (
-          updateClearance &&
-          typeof updateClearance === "object" &&
-          updateClearance.id != null
+          updatedClearance &&
+          typeof updatedClearance === "object" &&
+          updatedClearance.id != null
         ) {
           state.clearance = {
             ...emptyClearance,
-            ...updateClearance,
+            ...updatedClearance,
           };
 
-          state.existingClearance = updateClearance;
+          state.existingClearance = updatedClearance;
 
           const index = state.clearances.findIndex(
-            (item) => getClearanceId(item) === getClearanceId(updateClearance),
+            (item) => getClearanceId(item) === getClearanceId(updatedClearance),
           );
 
           if (index !== -1) {
-            state.clearances[index] = updateClearance;
+            state.clearances[index] = updatedClearance;
           }
         }
       })

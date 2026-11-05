@@ -54,7 +54,7 @@ const sizeViewSlice = createSlice({
     ===================================================== */
 
     setSizeStatus(state, action) {
-      state.sizeStatus = action.payload;
+      state.status = action.payload;
     },
 
     /* =====================================================
@@ -63,7 +63,7 @@ const sizeViewSlice = createSlice({
 
     resetSizeView(state) {
       state.selectedSizeView = "All Sizes";
-      state.sizeStatus = "ALL";
+      state.status = "ALL";
       state.search = "";
     },
   },

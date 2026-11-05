@@ -17,7 +17,18 @@ export default function Navbar({ title }) {
         (state) => state.auth.user
     );
 
-    const hiddenPaths = ["/settings", "/items", "/invoices", "/inventory/", "/parties", "/salesPersons"];
+    const hiddenPaths =
+        [
+            "/settings",
+            "/items",
+            "/invoices",
+            "/inventory/",
+            "/parties",
+            "/salesPersons",
+            "/clearances",
+            "/customers",
+
+        ];
 
     const hideNavbar = hiddenPaths.some((path) =>
         location.pathname.startsWith(path)
