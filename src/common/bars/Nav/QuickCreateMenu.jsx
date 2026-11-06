@@ -5,7 +5,10 @@ import { CirclePlus, ShoppingCart, ShoppingBag } from "lucide-react";
 const groups = [
     {
         title: "GENERAL",
-        items: ["Add User", "Item", "Log Time", "Weekly Log"],
+        items: ["Add User",
+            "Item",
+            "Log Time",
+            "Weekly Log"],
         icon: CirclePlus,
     },
     {

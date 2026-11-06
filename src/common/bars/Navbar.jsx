@@ -27,6 +27,7 @@ export default function Navbar({ title }) {
             "/salesPersons",
             "/clearances",
             "/customers",
+            "/reports",
 
         ];
 

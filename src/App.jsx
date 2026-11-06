@@ -181,6 +181,13 @@ import SizeCreate from "./module/sizes/pages/SizeCreate";
 import SizeViewDetails from "./module/sizes/pages/SizeViewDetails";
 import UnitViewDetails from "./module/units/pages/UnitViewDetails";
 import UnitCreate from "./module/units/pages/UnitCreate";
+import InvoicePreviewCard from "./module/invoices/overview/pages/InvoicePreviewCard";
+import ReportDashboard from "./common/reports/pages/ReportDashboard";
+import ReportViewer from "./common/reports/pages/ReportViewer";
+import ReportCreate from "./common/reports/pages/ReportCreate";
+import RegisterCreate from "./common/reports/pages/RegisterCreate";
+import ReportRegisterPage from "./common/reports/pages/ReportRegisterPage";
+import ReportSelectionPage from "./common/reports/pages/ReportSelectionPage";
 
 
 
@@ -703,7 +710,7 @@ function AppContent() {
 
         <Route
           path="/invoices/preview/:id"
-          element={<InvoiceOverViewPreviewDashboard />}
+          element={<InvoicePreviewCard />}
         />
 
         <Route
@@ -1068,7 +1075,29 @@ function AppContent() {
           element={<SettingsDashboard />}
         />
 
+        {/* reports */}
 
+        <Route path="/reports" element={<ReportDashboard />} />
+
+        <Route
+          path="/reports/create"
+          element={<ReportSelectionPage />}
+        />
+
+        <Route
+          path="/reports/register/:module/:reportCode"
+          element={<ReportRegisterPage />}
+        />
+
+        <Route
+          path="/reports/:module/:reportCode"
+          element={<ReportCreate />}
+        />
+
+        <Route
+          path="/reports/:module"
+          element={<ReportViewer />}
+        />
       </Route>
 
     </Routes>

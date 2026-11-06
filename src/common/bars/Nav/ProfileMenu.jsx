@@ -27,6 +27,8 @@ import {
     ChevronRight,
     Wallet,
     Settings,
+    DatabaseSearch,
+    ChartBarIcon,
 } from "lucide-react";
 
 /* =========================================================
@@ -39,6 +41,12 @@ const shortcuts = [
         title: "Inventory",
         sub: "Manage Stock",
         to: "/inventory",
+    },
+    {
+        icon: ChartBarIcon,
+        title: "Reports",
+        sub: "Manage Stock",
+        to: "/reports",
     },
     {
         icon: Wallet,

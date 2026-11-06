@@ -80,6 +80,7 @@ import cashAccountsViewReducer from "../inventoryModule/module/cashAccount/slice
 
 import paginationReducer from "../common/pagination/slices/paginationSlice";
 
+import reportReducer from "../common/reports/slices/reportSlice";
 import menuPermissionReducer from "../module/menuPermission/slices/menuPermissionSlice";
 
 export const store = configureStore({
@@ -201,6 +202,10 @@ export const store = configureStore({
 
     //pagniation
     pagination: paginationReducer,
+
+    //reports
+
+    reports: reportReducer,
 
     //menuPermission
 

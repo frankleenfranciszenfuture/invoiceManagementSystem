@@ -511,17 +511,26 @@ export default function InvoiceViewDetails() {
 
 
     // Preview selected invoice
+    // Preview invoice in a new browser tab
     const handlePreview = () => {
-        if (!invoiceId) {
+        const recordId =
+            invoice?.id ??
+            invoice?.invoiceId ??
+            id;
+
+        if (!recordId) {
             toast.error("Please select an invoice first");
             return;
         }
 
-        if (currentInvoice) {
-            dispatch(setExistingInvoice(currentInvoice));
-        }
+        const previewUrl =
+            `${window.location.origin}/invoices/preview/${recordId}`;
 
-        navigate(`/invoices/preview/${invoiceId}`);
+        window.open(
+            previewUrl,
+            "_blank",
+            "noopener,noreferrer"
+        );
     };
 
     // ========================================================

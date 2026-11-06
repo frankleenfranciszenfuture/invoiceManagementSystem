@@ -24,6 +24,9 @@ import {
     PaintBucket,
     BadgeTurkishLira,
     Box,
+    ChartNoAxesCombined,
+    ShoppingCart,
+    Receipt,
 } from "lucide-react";
 
 // ============================================================
@@ -107,13 +110,19 @@ const NAV = [
         dropdown: true,
     },
     {
+        label: "Expenses",
+        moduleName: "Expenses",
+        icon: Box,
+        to: "/inventory/expenses",
+    },
+
+    {
         label: "Payments",
         moduleName: "Payments",
-        icon: Wallet,
-        to: "/payments",
-        addTo: "/payments/new",
-        dropdown: true,
+        icon: BadgeTurkishLira,
+        to: "/inventory/payments",
     },
+
     {
         label: "Settings",
         moduleName: "Settings",
@@ -128,6 +137,13 @@ const NAV = [
         icon: BoxIcon,
         to: "/inventory",
         dropdown: true,
+    },
+
+    {
+        label: "Reports",
+        moduleName: "Reports",
+        icon: ChartNoAxesCombined,
+        to: "/reports",
     },
 ];
 
@@ -171,6 +187,13 @@ const SETTINGS_NAV = [
         moduleName: "Bank Accounts",
         icon: Wallet,
         to: "/settings/bankAccount",
+    },
+
+    {
+        label: "Cash Accounts",
+        moduleName: "Cash Accounts",
+        icon: BadgeTurkishLira,
+        to: "/inventory/cash-accounts   ",
     },
     {
         label: "Currencies",
@@ -237,12 +260,6 @@ const INVENTORY_NAV = [
         to: "/inventory/warehouses",
     },
 
-    {
-        label: "Expenses",
-        moduleName: "Expenses",
-        icon: Box,
-        to: "/inventory/expenses",
-    },
 
     {
         label: "SaleOrder",
@@ -264,23 +281,32 @@ const INVENTORY_NAV = [
         icon: BadgeTurkishLira,
         to: "/inventory/payments",
     },
-
     {
-        label: "Cash Accounts",
-        moduleName: "Cash Accounts",
-        icon: BadgeTurkishLira,
-        to: "/inventory/cash-accounts   ",
+        label: "General Settings",
+        moduleName: "Settings",
+        icon: Settings,
+        to: "/settings",
     },
 
-    {
-        label: "Items",
-        moduleName: "Items",
-        icon: BadgeTurkishLira,
-        to: "/inventory/items   ",
-    },
+
+
+
 
 ];
 
+// ============================================================
+// REPORTS NAVIGATION
+// ============================================================
+
+const REPORT_NAV = [
+    {
+        label: "Reports Dashboard",
+        moduleName: "Reports",
+        icon: LayoutDashboard,
+        to: "/reports",
+    },
+
+];
 
 const PAYMENT_NAV = [
     {
@@ -377,9 +403,11 @@ const getModuleTitle = ({
     isSettingsArea,
     isInventoryArea,
     isPaymentArea,
+    isReportsArea,
 }) => {
     if (isInventoryArea) return "Inventory";
     if (isPaymentArea) return "Payments";
+    if (isReportsArea) return "Reports";
     if (isSettingsArea) return "Settings";
 
     return "InvoicePro";
@@ -389,9 +417,11 @@ const getModuleIcon = ({
     isSettingsArea,
     isInventoryArea,
     isPaymentArea,
+    isReportsArea,
 }) => {
     if (isInventoryArea) return BoxIcon;
     if (isPaymentArea) return Wallet;
+    if (isReportsArea) return ChartNoAxesCombined;
     if (isSettingsArea) return Settings;
 
     return FileText;
@@ -652,6 +682,10 @@ const Sidebar = ({ onLogout }) => {
         pathname === "/payments" ||
         pathname.startsWith("/payments/");
 
+    const isReportsArea =
+        pathname === "/reports" ||
+        pathname.startsWith("/reports/")
+
     // --------------------------------------------------------
     // ROUTE HELPERS
     // --------------------------------------------------------
@@ -703,12 +737,23 @@ const Sidebar = ({ onLogout }) => {
                 return isActiveRoute(item.to);
             }
 
+            // Reports navigation
+            if (isReportsArea) {
+                if (item.to === "/reports") {
+                    return pathname === "/reports";
+                }
+
+                return isActiveRoute(item.to);
+            }
+
+            // Main navigation
             return isActiveRoute(item.to);
         },
         [
             isSettingsArea,
             isInventoryArea,
             isPaymentArea,
+            isReportsArea,
             isActiveRoute,
             pathname,
         ]
@@ -725,7 +770,10 @@ const Sidebar = ({ onLogout }) => {
                 ? INVENTORY_NAV
                 : isPaymentArea
                     ? PAYMENT_NAV
-                    : NAV;
+                    : isReportsArea
+                        ? REPORT_NAV
+                        : NAV;
+
 
         return sourceNav
             .filter((item) =>
@@ -746,6 +794,7 @@ const Sidebar = ({ onLogout }) => {
         isSettingsArea,
         isInventoryArea,
         isPaymentArea,
+        isReportsArea,
         hasPermission,
     ]);
 
@@ -783,7 +832,7 @@ const Sidebar = ({ onLogout }) => {
             return;
         }
 
-        if (isInventoryArea || isPaymentArea) {
+        if (isInventoryArea || isPaymentArea || isReportsArea) {
             setOpenMenu(null);
             return;
         }
@@ -801,6 +850,7 @@ const Sidebar = ({ onLogout }) => {
         isSettingsArea,
         isInventoryArea,
         isPaymentArea,
+        isReportsArea,
         isActiveRoute,
     ]);
 
@@ -882,12 +932,14 @@ const Sidebar = ({ onLogout }) => {
         isSettingsArea,
         isInventoryArea,
         isPaymentArea,
+        isReportsArea,
     });
 
     const ModuleIcon = getModuleIcon({
         isSettingsArea,
         isInventoryArea,
         isPaymentArea,
+        isReportsArea,
     });
     // --------------------------------------------------------
     // RENDER
@@ -984,7 +1036,7 @@ const Sidebar = ({ onLogout }) => {
 
                         {/* BACK TO MAIN MENU */}
 
-                        {(isSettingsArea) && (
+                        {(isSettingsArea || isInventoryArea || isReportsArea) && (
                             <button
                                 type="button"
                                 onClick={() => goTo("/dashboard")}
