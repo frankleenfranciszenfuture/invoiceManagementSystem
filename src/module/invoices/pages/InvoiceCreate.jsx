@@ -529,27 +529,22 @@ export default function InvoiceCreate() {
 
 
   /* =======================================================
-     CUSTOMER REDUX
-  ======================================================= */
+    CUSTOMER REDUX
+ ======================================================= */
 
   const customerState = useSelector(
-    (state) =>
-      state.customers
+    (state) => state.customer
   );
 
-  const customers =
-    Array.isArray(
-      customerState?.customers
-    )
-      ? customerState.customers
-      : [];
+  const customers = useMemo(() => {
+    return getArray(customerState?.customers);
+  }, [customerState?.customers]);
 
   const customerLoading =
     customerState?.loading ?? false;
 
   const customerError =
     customerState?.error ?? null;
-
 
   /* =======================================================
      SELECTED CUSTOMER

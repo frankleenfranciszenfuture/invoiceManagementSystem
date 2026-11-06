@@ -2036,6 +2036,380 @@ export const reportModuleConfig = {
       },
     },
   },
+
+  INVENTORY: {
+    displayName: "Inventory",
+
+    reports: {
+      // =====================================================
+      // INVENTORY STOCK REGISTER
+      // =====================================================
+
+      INVENTORY_STOCK_REGISTER: {
+        name: "Inventory Stock Register",
+        description:
+          "View current inventory stock across products, warehouses, units and sizes, including available quantity, reserved quantity and stock valuation.",
+
+        defaultSortBy: "productName",
+        defaultSortDirection: "ASC",
+
+        sortFields: [
+          { label: "Product Code", value: "productCode" },
+          { label: "SKU", value: "sku" },
+          { label: "Product Name", value: "productName" },
+          { label: "Warehouse", value: "warehouseName" },
+          { label: "Unit", value: "unitName" },
+          { label: "Size", value: "sizeName" },
+          { label: "Quantity", value: "quantity" },
+          { label: "Reserved Quantity", value: "reservedQuantity" },
+          { label: "Available Quantity", value: "availableQuantity" },
+          { label: "Average Cost", value: "averageCost" },
+        ],
+
+        filters: [
+          {
+            key: "productId",
+            label: "Product",
+            type: "NUMBER",
+            min: 1,
+            step: 1,
+          },
+          {
+            key: "productCode",
+            label: "Product Code",
+            type: "TEXT",
+            placeholder: "Enter product code",
+          },
+          {
+            key: "sku",
+            label: "SKU",
+            type: "TEXT",
+            placeholder: "Enter SKU",
+          },
+          {
+            key: "productName",
+            label: "Product Name",
+            type: "TEXT",
+            placeholder: "Enter product name",
+          },
+          {
+            key: "warehouseId",
+            label: "Warehouse",
+            type: "NUMBER",
+            min: 1,
+            step: 1,
+          },
+          {
+            key: "unitId",
+            label: "Unit",
+            type: "NUMBER",
+            min: 1,
+            step: 1,
+          },
+          {
+            key: "sizeId",
+            label: "Size",
+            type: "NUMBER",
+            min: 1,
+            step: 1,
+          },
+          {
+            key: "minQuantity",
+            label: "Minimum Quantity",
+            type: "NUMBER",
+            min: 0,
+            step: "any",
+          },
+          {
+            key: "maxQuantity",
+            label: "Maximum Quantity",
+            type: "NUMBER",
+            min: 0,
+            step: "any",
+          },
+          {
+            key: "minAvailableQuantity",
+            label: "Minimum Available Quantity",
+            type: "NUMBER",
+            min: 0,
+            step: "any",
+          },
+          {
+            key: "maxAvailableQuantity",
+            label: "Maximum Available Quantity",
+            type: "NUMBER",
+            min: 0,
+            step: "any",
+          },
+        ],
+
+        columns: [
+          { key: "id", label: "Stock ID" },
+          { key: "productId", label: "Product ID" },
+          { key: "productCode", label: "Product Code" },
+          { key: "sku", label: "SKU" },
+          { key: "productName", label: "Product Name" },
+          { key: "warehouseId", label: "Warehouse ID" },
+          { key: "warehouseName", label: "Warehouse" },
+          { key: "unitName", label: "Unit" },
+          { key: "sizeName", label: "Size" },
+          { key: "quantity", label: "Quantity" },
+          { key: "reservedQuantity", label: "Reserved Quantity" },
+          { key: "availableQuantity", label: "Available Quantity" },
+          { key: "averageCost", label: "Average Cost" },
+          { key: "stockValue", label: "Stock Value" },
+        ],
+      },
+
+      // =====================================================
+      // INVENTORY LOW STOCK REPORT
+      // =====================================================
+
+      INVENTORY_LOW_STOCK_REPORT: {
+        name: "Inventory Low Stock Report",
+        description:
+          "Identify products whose available stock is at or below their minimum stock level, helping monitor replenishment requirements.",
+
+        defaultSortBy: "availableQuantity",
+        defaultSortDirection: "ASC",
+
+        sortFields: [
+          { label: "Product Code", value: "productCode" },
+          { label: "SKU", value: "sku" },
+          { label: "Product Name", value: "productName" },
+          { label: "Warehouse", value: "warehouseName" },
+          { label: "Available Quantity", value: "availableQuantity" },
+          { label: "Minimum Stock", value: "minimumStock" },
+        ],
+
+        filters: [
+          {
+            key: "productCode",
+            label: "Product Code",
+            type: "TEXT",
+            placeholder: "Enter product code",
+          },
+          {
+            key: "sku",
+            label: "SKU",
+            type: "TEXT",
+            placeholder: "Enter SKU",
+          },
+          {
+            key: "productName",
+            label: "Product Name",
+            type: "TEXT",
+            placeholder: "Enter product name",
+          },
+          {
+            key: "warehouseId",
+            label: "Warehouse",
+            type: "NUMBER",
+            min: 1,
+            step: 1,
+          },
+          {
+            key: "minAvailableQuantity",
+            label: "Minimum Available Quantity",
+            type: "NUMBER",
+            min: 0,
+            step: "any",
+          },
+          {
+            key: "maxAvailableQuantity",
+            label: "Maximum Available Quantity",
+            type: "NUMBER",
+            min: 0,
+            step: "any",
+          },
+          {
+            key: "minMinimumStock",
+            label: "Minimum Stock Threshold",
+            type: "NUMBER",
+            min: 0,
+            step: "any",
+          },
+          {
+            key: "maxMinimumStock",
+            label: "Maximum Stock Threshold",
+            type: "NUMBER",
+            min: 0,
+            step: "any",
+          },
+        ],
+
+        columns: [
+          { key: "productId", label: "Product ID" },
+          { key: "productCode", label: "Product Code" },
+          { key: "sku", label: "SKU" },
+          { key: "productName", label: "Product Name" },
+          { key: "warehouseId", label: "Warehouse ID" },
+          { key: "warehouseName", label: "Warehouse" },
+          { key: "unitName", label: "Unit" },
+          { key: "sizeName", label: "Size" },
+          { key: "quantity", label: "Total Quantity" },
+          { key: "reservedQuantity", label: "Reserved Quantity" },
+          { key: "availableQuantity", label: "Available Quantity" },
+          { key: "minimumStock", label: "Minimum Stock" },
+          { key: "shortageQuantity", label: "Shortage Quantity" },
+          { key: "averageCost", label: "Average Cost" },
+          { key: "stockValue", label: "Stock Value" },
+        ],
+      },
+
+      // =====================================================
+      // INVENTORY TRANSACTION REPORT
+      // =====================================================
+
+      INVENTORY_TRANSACTION_REPORT: {
+        name: "Inventory Transaction Report",
+        description:
+          "View inventory movements including stock receipts, issues, adjustments and transfers with transaction references, quantities, costs and resulting balances.",
+
+        defaultSortBy: "transactionDate",
+        defaultSortDirection: "DESC",
+
+        sortFields: [
+          { label: "Transaction Number", value: "transactionNo" },
+          { label: "Transaction Date", value: "transactionDate" },
+          { label: "Product Code", value: "productCode" },
+          { label: "Product Name", value: "productName" },
+          { label: "Warehouse", value: "warehouseName" },
+          { label: "Movement Type", value: "movementType" },
+          { label: "Reference Type", value: "referenceType" },
+          { label: "Quantity In", value: "quantityIn" },
+          { label: "Quantity Out", value: "quantityOut" },
+          { label: "Balance After", value: "balanceAfter" },
+          { label: "Unit Cost", value: "unitCost" },
+        ],
+
+        filters: [
+          {
+            key: "transactionNo",
+            label: "Transaction Number",
+            type: "TEXT",
+            placeholder: "Enter transaction number",
+          },
+          {
+            key: "productCode",
+            label: "Product Code",
+            type: "TEXT",
+            placeholder: "Enter product code",
+          },
+          {
+            key: "productName",
+            label: "Product Name",
+            type: "TEXT",
+            placeholder: "Enter product name",
+          },
+          {
+            key: "warehouseId",
+            label: "Warehouse",
+            type: "NUMBER",
+            min: 1,
+            step: 1,
+          },
+          {
+            key: "movementType",
+            label: "Movement Type",
+            type: "SELECT",
+            options: [
+              { label: "Stock In", value: "IN" },
+              { label: "Stock Out", value: "OUT" },
+              { label: "Adjustment", value: "ADJUSTMENT" },
+              { label: "Transfer", value: "TRANSFER" },
+            ],
+          },
+          {
+            key: "referenceType",
+            label: "Reference Type",
+            type: "TEXT",
+            placeholder: "Enter reference type",
+          },
+          {
+            key: "referenceId",
+            label: "Reference ID",
+            type: "NUMBER",
+            min: 1,
+            step: 1,
+          },
+          {
+            key: "unitId",
+            label: "Unit",
+            type: "NUMBER",
+            min: 1,
+            step: 1,
+          },
+          {
+            key: "sizeId",
+            label: "Size",
+            type: "NUMBER",
+            min: 1,
+            step: 1,
+          },
+          {
+            key: "fromDate",
+            label: "From Date",
+            type: "DATE",
+          },
+          {
+            key: "toDate",
+            label: "To Date",
+            type: "DATE",
+          },
+          {
+            key: "minQuantityIn",
+            label: "Minimum Quantity In",
+            type: "NUMBER",
+            min: 0,
+            step: "any",
+          },
+          {
+            key: "maxQuantityIn",
+            label: "Maximum Quantity In",
+            type: "NUMBER",
+            min: 0,
+            step: "any",
+          },
+          {
+            key: "minQuantityOut",
+            label: "Minimum Quantity Out",
+            type: "NUMBER",
+            min: 0,
+            step: "any",
+          },
+          {
+            key: "maxQuantityOut",
+            label: "Maximum Quantity Out",
+            type: "NUMBER",
+            min: 0,
+            step: "any",
+          },
+        ],
+
+        columns: [
+          { key: "id", label: "Transaction ID" },
+          { key: "transactionNo", label: "Transaction Number" },
+          { key: "transactionDate", label: "Transaction Date" },
+          { key: "productId", label: "Product ID" },
+          { key: "productCode", label: "Product Code" },
+          { key: "productName", label: "Product Name" },
+          { key: "warehouseId", label: "Warehouse ID" },
+          { key: "warehouseName", label: "Warehouse" },
+          { key: "unitName", label: "Unit" },
+          { key: "sizeName", label: "Size" },
+          { key: "movementType", label: "Movement Type" },
+          { key: "referenceType", label: "Reference Type" },
+          { key: "referenceId", label: "Reference ID" },
+          { key: "quantityIn", label: "Quantity In" },
+          { key: "quantityOut", label: "Quantity Out" },
+          { key: "balanceAfter", label: "Balance After" },
+          { key: "unitCost", label: "Unit Cost" },
+          { key: "notes", label: "Notes" },
+        ],
+      },
+    },
+  },
 };
 
 /*
@@ -2068,6 +2442,7 @@ export const reportModules = [
   },
   { code: "CREDIT_CLEARANCE", name: "Party Clearances" },
   { code: "WAREHOUSE", name: "Warehouses" },
+  { code: "INVENTORY", name: "Inventory" },
 ];
 
 /*

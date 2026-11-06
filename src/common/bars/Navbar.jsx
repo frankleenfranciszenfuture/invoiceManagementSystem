@@ -22,7 +22,7 @@ export default function Navbar({ title }) {
             "/settings",
             "/items",
             "/invoices",
-            "/inventory/",
+            "/inventory",
             "/parties",
             "/salesPersons",
             "/clearances",
@@ -68,7 +68,7 @@ export default function Navbar({ title }) {
          */
         <header
             className="
-                relative z-20 mr-5 mx-2 mt-3 flex h-[54px] shrink-0
+                relative z-20 mr-5 mx-2 mt-2 flex h-[54px] shrink-0
                 items-center justify-between rounded-md
                 border-l border-b border-[#3F5774]/40 bg-[#FFFFFF] px-3
                 shadow-xl shadow-slate-900/20

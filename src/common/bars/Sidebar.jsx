@@ -77,19 +77,7 @@ const NAV = [
         dropdown: true,
     },
 
-    {
-        label: "Parties",
-        moduleName: "Parties",
-        icon: Package,
-        to: "/parties",
-        dropdown: true,
-        children: [
-            {
-                label: "Oustanding Clearance",
-                to: "/parties/clearances",
-            },
-        ],
-    },
+
     {
         label: "Sales Persons",
         moduleName: "SalesPersons",
@@ -259,7 +247,19 @@ const INVENTORY_NAV = [
         icon: Building2,
         to: "/inventory/warehouses",
     },
-
+    {
+        label: "Parties",
+        moduleName: "Parties",
+        icon: Package,
+        to: "/parties",
+        dropdown: true,
+        children: [
+            {
+                label: "Oustanding Clearance",
+                to: "/parties/clearances",
+            },
+        ],
+    },
 
     {
         label: "SaleOrder",
