@@ -1,14 +1,13 @@
 package com.ims.repository;
 
-
 import com.ims.entity.PurchaseOrderGoodsReceiptEntity;
 
 import jakarta.persistence.LockModeType;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
-
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,7 +15,8 @@ import java.util.Optional;
 
 @Repository
 public interface PurchaseOrderGoodsReceiptRepository
-        extends JpaRepository<PurchaseOrderGoodsReceiptEntity, Long> {
+        extends JpaRepository<PurchaseOrderGoodsReceiptEntity, Long>,
+        JpaSpecificationExecutor<PurchaseOrderGoodsReceiptEntity> {
 
     Optional<PurchaseOrderGoodsReceiptEntity> findByIdAndActiveTrue(
             Long id

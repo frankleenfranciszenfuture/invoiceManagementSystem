@@ -10,6 +10,7 @@ import com.ims.exception.ValidationException;
 import com.ims.mapper.customer.CustomerMapper;
 import com.ims.repository.CustomerRepository;
 import com.ims.service.serviceInterface.customer.CustomerService;
+import com.ims.utils.base.BaseEntityUtil;
 import com.ims.utils.specification.CustomerSpecification;
 import com.ims.utils.validation.CustomerValidation;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +33,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerValidation validation;
 
-
+    private final BaseEntityUtil baseEntityUtil;
     // =====================================================
     // CREATE CUSTOMER
     // =====================================================
@@ -55,6 +56,8 @@ public class CustomerServiceImpl implements CustomerService {
         if (customer.getStatus() == null) {
             customer.setStatus(request.getStatus());
         }
+
+        baseEntityUtil.prepareForCreate(customer);
 
         CustomerEntity savedCustomer =
                 repository.save(customer);
@@ -104,6 +107,8 @@ public class CustomerServiceImpl implements CustomerService {
                     request.getStatus()
             );
         }
+
+        baseEntityUtil.prepareForCreate(customer);
 
         CustomerEntity updatedCustomer =
                 repository.save(customer);

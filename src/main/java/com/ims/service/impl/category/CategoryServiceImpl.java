@@ -211,8 +211,8 @@ public class CategoryServiceImpl implements CategoryService {
 
 
     // =====================================================
-    // GET CATEGORIES BY STATUS
-    // =====================================================
+// GET CATEGORIES BY STATUS
+// =====================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -222,18 +222,10 @@ public class CategoryServiceImpl implements CategoryService {
     ) {
 
         Page<CategoryEntity> categories =
-                categoryRepository
-                        .findByStatusAndActiveTrue(
-                                status,
-                                pageable
-                        );
-
-        if (categories.isEmpty()) {
-            throw new ResourceNotFoundException(
-                    "No categories found with status '"
-                            + status + "'."
-            );
-        }
+                categoryRepository.findByStatusAndActiveTrue(
+                        status,
+                        pageable
+                );
 
         return ApiResponse.success(
                 toPageResponse(categories),

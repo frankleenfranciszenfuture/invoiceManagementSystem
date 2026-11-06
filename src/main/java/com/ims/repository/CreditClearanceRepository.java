@@ -5,6 +5,7 @@ import com.ims.enums.Status;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -13,7 +14,8 @@ import java.util.Optional;
 
 @Repository
 public interface CreditClearanceRepository
-        extends JpaRepository<CreditClearanceEntity, Long> {
+        extends JpaRepository<CreditClearanceEntity, Long>,
+        JpaSpecificationExecutor<CreditClearanceEntity> {
 
     // =====================================================
     // FIND BY CLEARANCE NUMBER
