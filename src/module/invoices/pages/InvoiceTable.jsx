@@ -21,6 +21,8 @@ import {
     Edit,
     Trash2,
     Receipt,
+    CheckCircle2,
+    Send,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -36,7 +38,10 @@ import {
     setInvoiceForEdit,
 } from "../slices/invoiceSlice";
 
+import { submitInvoiceForApproval } from "../../../module/approval/invoiceApproval/thunks/invoiceApprovalThunks"
+
 import Pagination from "../../../common/pagination/table/Pagination";
+import ToolTipText from "../../../common/toolTip/ToolTipText";
 
 /* =========================================================
    CONSTANTS
@@ -311,6 +316,11 @@ export default function InvoiceTable({
         "DELETE"
     );
 
+    const canApproveInvoice = hasPermission(
+        "Invoices",
+        "APPROVE"
+    );
+
     /* =====================================================
        FETCH PARAMS
     ===================================================== */
@@ -327,22 +337,9 @@ export default function InvoiceTable({
     const refreshInvoices = useCallback(
         (page = pageNumber, size = pageSize) => {
             const params = getFetchParams(page, size);
-
-            if (!params.id) {
-                toast.error(
-                    "Branch ID is required to fetch invoices."
-                );
-                return;
-            }
-
             dispatch(fetchInvoices(params));
         },
-        [
-            dispatch,
-            getFetchParams,
-            pageNumber,
-            pageSize,
-        ]
+        [dispatch, getFetchParams, pageNumber, pageSize]
     );
 
     /* =====================================================
@@ -483,6 +480,66 @@ export default function InvoiceTable({
                 (typeof error === "string"
                     ? error
                     : "Failed to load invoice for editing.")
+            );
+        }
+    };
+
+    // =========================================================
+    // SEND INVOICE FOR APPROVAL
+    // =========================================================
+
+    const handleSendForApproval = async (invoice) => {
+        if (!canEditInvoice) {
+            toast.error(
+                "You do not have permission to submit invoices for approval."
+            );
+            return;
+        }
+
+        const invoiceId = invoice?.id ?? invoice?.invoiceId;
+
+        if (!invoiceId) {
+            toast.error("Invoice ID not found.");
+            return;
+        }
+
+        const invoiceStatus = String(
+            invoice?.invoiceStatus || invoice?.status || ""
+        )
+            .trim()
+            .toUpperCase();
+
+        if (invoiceStatus !== "DRAFT") {
+            toast.error("Only draft invoices can be submitted for approval.");
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Are you sure you want to submit invoice ${invoice.invoiceNumber || invoiceId
+            } for approval?`
+        );
+
+        if (!confirmed) return;
+
+        try {
+            await dispatch(
+                submitInvoiceForApproval({
+                    invoiceId,
+                    data: {
+                        comment: "Invoice ready for approval.",
+                    },
+                })
+            ).unwrap();
+
+            toast.success("Invoice submitted for approval successfully.");
+
+            refreshInvoices();
+        } catch (error) {
+            toast.error(
+                typeof error === "string"
+                    ? error
+                    : error?.message ||
+                    "Failed to submit invoice for approval."
             );
         }
     };
@@ -814,8 +871,34 @@ export default function InvoiceTable({
 
                                 <td className="px-4 py-3">
                                     <div className="
-                                        flex items-center justify-end gap-2
+                                        relative flex items-center justify-end gap-2
                                     ">
+
+
+
+                                        {/* SEND FOR APPROVAL */}
+
+                                        {canEditInvoice && invoiceStatus === "DRAFT" && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleSendForApproval(invoice)}
+                                                title="Send for Approval"
+                                                className="
+            group relative flex h-8 w-8
+            items-center justify-center
+            rounded-lg bg-blue-50
+            text-blue-600 transition
+            hover:bg-blue-100
+        "
+                                            >
+                                                <Send size={16} />
+
+                                                <ToolTipText
+                                                    text="Send for Approval"
+                                                    position="bottom"
+                                                />
+                                            </button>
+                                        )}
 
                                         {/* VIEW */}
 

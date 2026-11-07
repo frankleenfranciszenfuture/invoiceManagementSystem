@@ -26,8 +26,10 @@ import productViewReducer from "../module/items/slices/productViewSlice";
 import subCategoryReducer from "../module/subCategory/slices/subCategorySlice";
 import subCategoryViewReducer from "../module/subCategory/slices/subCategoryViewSlice";
 import categoryReducer from "../module/category/slices/categorySlice";
+
 import invoiceReducer from "../module/invoices/slices/invoiceSlice";
 import invoiceViewReducer from "../module/invoices/slices/invoiceViewSlice";
+import invoiceApprovalReducer from "../module/approval/invoiceApproval/slices/invoiceApprovalSlice";
 
 import emailSignatureReducer from "../module/emailSignature/slices/emailSignatureSlice";
 import emailSignatureViewReducer from "../module/emailSignature/slices/emailSignatureViewSlice";
@@ -81,6 +83,8 @@ import cashAccountsViewReducer from "../inventoryModule/module/cashAccount/slice
 import paginationReducer from "../common/pagination/slices/paginationSlice";
 
 import reportReducer from "../common/reports/slices/reportSlice";
+
+import dashboardReducer from "../module/dashboard/slices/dashboardSlice";
 import menuPermissionReducer from "../module/menuPermission/slices/menuPermissionSlice";
 
 export const store = configureStore({
@@ -140,6 +144,7 @@ export const store = configureStore({
 
     invoice: invoiceReducer,
     invoiceView: invoiceViewReducer,
+    invoiceApproval: invoiceApprovalReducer,
 
     //emailSignature
     emailSignatures: emailSignatureReducer,
@@ -206,6 +211,10 @@ export const store = configureStore({
     //reports
 
     reports: reportReducer,
+
+    //dashboard
+
+    dashboard: dashboardReducer,
 
     //menuPermission
 

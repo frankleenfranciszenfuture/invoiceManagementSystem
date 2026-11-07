@@ -191,7 +191,7 @@ export default function CashAccountOverview() {
         );
 
         navigate(
-            `/inventory/cash-accounts?status=${status}`,
+            `/settings/cash-accounts?status=${status}`,
             { replace: false }
         );
     };

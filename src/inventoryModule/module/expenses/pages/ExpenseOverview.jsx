@@ -219,7 +219,7 @@ export default function ExpenseOverview() {
         );
 
         navigate(
-            `/expenses?expenseStatus=${status}`,
+            `/invoice/expenses?expenseStatus=${status}`,
             { replace: false }
         );
     };

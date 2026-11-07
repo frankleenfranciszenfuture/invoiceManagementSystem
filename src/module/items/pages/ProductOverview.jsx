@@ -178,7 +178,7 @@ export default function ProductOverview() {
         );
 
         navigate(
-            `/items?productStatus=${status}`
+            `/invoice/items?productStatus=${status}`
         );
     };
 

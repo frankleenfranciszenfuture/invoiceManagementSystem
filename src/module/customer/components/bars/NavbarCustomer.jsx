@@ -280,7 +280,7 @@ export default function NavbarCustomer() {
         if (!view) return;
 
         dispatch(
-            setSelectedCustomerView(view.label)
+            setSelectedView(view.label)
         );
 
         dispatch(
@@ -288,7 +288,7 @@ export default function NavbarCustomer() {
         );
 
         navigate(
-            `/ customers ? customerStatus = ${view.value} `
+            `/invoice/customers?customerStatus = ${view.value} `
         );
 
     };
@@ -299,7 +299,7 @@ export default function NavbarCustomer() {
 
     const handleCreateCustomer = () => {
 
-        navigate("/customers/create");
+        navigate("/invoice/customers/create");
 
     };
 
@@ -435,8 +435,8 @@ text - gray - 600
                             setFilterOpen((previous) => !previous)
                         }
                         className={`
-                            flex items - center gap - 2 rounded - md
-                            border px - 3 py - 2 text - sm font - medium
+                            flex items-center gap-2 rounded-md
+                            border px-3 py-2 text-sm font-medium
 transition
                             ${filterOpen
                                 ? "border-[#0095FD] bg-[#0095FD] text-white"

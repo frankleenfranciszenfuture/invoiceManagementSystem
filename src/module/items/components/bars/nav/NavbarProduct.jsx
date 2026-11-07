@@ -294,7 +294,7 @@ export default function NavbarProduct() {
         );
 
         navigate(
-            `/products?productStatus=${view.value}`
+            `/invoice/products?productStatus=${view.value}`
         );
     };
 
@@ -303,7 +303,7 @@ export default function NavbarProduct() {
     ===================================================== */
 
     const handleCreateProduct = () => {
-        navigate("/items/create");
+        navigate("/invoice/items/create");
     };
 
     /* =====================================================

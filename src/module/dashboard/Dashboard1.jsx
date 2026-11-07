@@ -448,7 +448,7 @@ const StatusBadge = ({ status }) => {
  * ============================================================
  */
 
-export default function Dashboard() {
+export default function Dashboard1() {
 
     const [dateRange, setDateRange] = useState("Last 30 Days");
 

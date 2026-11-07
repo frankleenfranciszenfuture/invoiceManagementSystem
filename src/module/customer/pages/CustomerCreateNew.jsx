@@ -520,7 +520,7 @@ const CustomerCreateNew = ({ onClose }) => {
             if (onClose) {
                 onClose();
             } else {
-                navigate("/customers");
+                navigate("/invoice/customers");
             }
         });
     };
@@ -933,7 +933,7 @@ const CustomerCreateNew = ({ onClose }) => {
             if (onClose || modalData) {
                 dispatch(closeModal());
             } else {
-                navigate("/customers");
+                navigate("/invoice/customers");
             }
         } catch (submitError) {
             console.error(

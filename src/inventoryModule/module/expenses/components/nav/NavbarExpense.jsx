@@ -282,7 +282,7 @@ export default function NavbarExpense() {
         );
 
         navigate(
-            `/expenses?expenseStatus=${view.value}`
+            `/invoice/expenses?expenseStatus=${view.value}`
         );
     };
 
@@ -291,7 +291,7 @@ export default function NavbarExpense() {
     ===================================================== */
 
     const handleCreateExpense = () => {
-        navigate("/inventory/expenses/create");
+        navigate("/invoice/expenses/create");
     };
 
     /* =====================================================

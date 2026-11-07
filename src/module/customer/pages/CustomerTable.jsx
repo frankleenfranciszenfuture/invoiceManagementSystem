@@ -350,7 +350,7 @@ export default function CustomerTable({
 
         dispatch(setSelectedCustomer(customer));
 
-        navigate(`/customers/view/${customer.id}`);
+        navigate(`/invoice/customers/view/${customer.id}`);
     };
 
     /* =====================================================
@@ -368,7 +368,7 @@ export default function CustomerTable({
 
         dispatch(setSelectedCustomer(customer));
 
-        navigate(`/customers/edit/${customer.id}`);
+        navigate(`/invoice/customers/edit/${customer.id}`);
     };
 
     /* =====================================================

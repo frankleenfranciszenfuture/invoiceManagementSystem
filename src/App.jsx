@@ -17,7 +17,6 @@ import { checkAuthentication } from "./module/auth/thunks/authThunks";
 import LoginPage from "./module/auth/page/LoginPage";
 import ProtectedRoute from "./roots/ProtectedRoute";
 
-import Dashboard from "./module/dashboard/Dashboard";
 import AppLayout from "./common/layout/AppLayout";
 
 // =====================================================
@@ -188,6 +187,9 @@ import ReportCreate from "./common/reports/pages/ReportCreate";
 import RegisterCreate from "./common/reports/pages/RegisterCreate";
 import ReportRegisterPage from "./common/reports/pages/ReportRegisterPage";
 import ReportSelectionPage from "./common/reports/pages/ReportSelectionPage";
+import Dashboard from "./module/dashboard/pages/Dashboard";
+import InvoiceApprovalDashboard from "./module/approval/invoiceApproval/pages/InvoiceApprovalDashboard";
+import InvoiceApprovalView from "./module/approval/invoiceApproval/pages/InvoiceApprovalView";
 
 
 
@@ -367,28 +369,27 @@ function AppContent() {
             ================================================= */}
 
         <Route
-          path="/customers"
+          path="/invoice/customers"
           element={<CustomerDashboard />}
         />
 
         <Route
-          path="/customers/model"
+          path="/invoice/customers/model"
           element={<CustomerCreateModal />}
         />
 
         <Route
-          path="/customers/create"
+          path="/invoice/customers/create"
           element={<CustomerCreateNew />}
         />
 
         <Route
-          path="/customers/edit/:id"
+          path="/invoice/customers/edit/:id"
           element={<CustomerCreateNew />}
         />
 
         <Route
-          path="/customers/view/:id"
-          // element={<CustomerOverViewDashboard />}
+          path="/invoice/customers/view/:id"
           element={<CustomerViewDetails />}
         />
 
@@ -398,44 +399,44 @@ function AppContent() {
             ================================================= */}
 
         <Route
-          path="/items"
+          path="/invoice/items"
           element={<ProductDashboard />}
         />
 
         <Route
-          path="/settings/items"
+          path="/invoice/settings/items"
           element={<ProductDashboard />}
         />
 
 
 
         <Route
-          path="/items/new"
+          path="/invoice/items/new"
           element={<ProductCreate />}
         />
 
         <Route
-          path="/items/create"
+          path="/invoice/items/create"
           element={<ProductCreateNew />}
         />
 
         <Route
-          path="/items/edit/:id"
+          path="/invoice/items/edit/:id"
           element={<ProductCreateNew />}
         />
 
         <Route
-          path="/items/newSimple"
+          path="/invoice/items/newSimple"
           element={<ProductCreateSimple />}
         />
 
         <Route
-          path="/settings/items/newSimple"
+          path="/invoice/settings/items/newSimple"
           element={<ProductCreateSimple />}
         />
 
         <Route
-          path="/items/table"
+          path="/invoice/items/table"
           element={<ProductTable />}
         />
 
@@ -445,7 +446,7 @@ function AppContent() {
         /> */}
 
         <Route
-          path="/items/view/:id"
+          path="/invoice/items/view/:id"
           element={<ProductViewDetails />}
         />
 
@@ -717,6 +718,52 @@ function AppContent() {
           path="/invoices/view/:id"
           element={<InvoiceViewDetails />}
         />
+
+
+        {/* =================================================
+                  invoiceApproval
+            ================================================= */}
+        <Route
+          path="/invoice-approvals"
+          element={<InvoiceApprovalDashboard />}
+        />
+
+
+        <Route
+          path="/invoice-approvals/view/:id"
+          element={<InvoiceApprovalView />}
+        />
+
+        {/* =================================================
+                  Expenses
+            ================================================= */}
+
+        <Route
+          path="/invoice/expenses"
+          element={<ExpenseDashboard />}
+        />
+
+        <Route
+          path="/invoice/expenses/create"
+          element={<ExpenseCreate />}
+        />
+
+        <Route
+          path="/invoice/expenses/edit/:id"
+          element={<ExpenseCreate />}
+        />
+
+        <Route
+          path="/invoice/expenses/view/:id"
+          element={<ExpenseViewDetails />}
+        />
+
+        <Route
+          path="/invoice/expenses-categories/view/:id"
+          element={<ExpenseCategoryViewDetails />}
+        />
+
+
         {/* =================================================
                   EmailSignature
             ================================================= */}
@@ -767,66 +814,6 @@ function AppContent() {
 
 
 
-
-        {/* =================================================
-                    PARTY
-            ================================================= */}
-
-        <Route
-          path="/parties"
-          element={<PartyDashboard />}
-        />
-
-        <Route
-          path="/parties/newSimple"
-          element={<PartyCreateSimple />}
-
-        />
-
-
-        <Route
-          path="/parties/create"
-          element={<PartyCreateNew />}
-
-        />
-
-        <Route
-          path="/parties/edit/:id"
-          element={<PartyCreateNew />}
-        />
-
-        <Route
-          path="/parties/view/:id"
-          element={<PartyViewDetails />}
-        />
-        {/* =================================================
-                    CLEARANCE
-            ================================================= */}
-
-
-        <Route
-          path="/parties/clearances"
-          element={<ClearanceDashboard />}
-
-        />
-
-        <Route
-          path="/parties/clearances/create"
-          element={<ClearanceCreateSimple />}
-
-        />
-
-        <Route
-          path="/parties/clearances/edit/:id"
-          element={<ClearanceCreateSimple />}
-        />
-
-        <Route
-          path="/parties/clearances/view/:id"
-          element={<ClearanceViewDetails />}
-        />
-
-
         {/* =================================================
                     inventory
             ================================================= */}
@@ -869,32 +856,59 @@ function AppContent() {
         />
 
 
-        {/* Expenses */}
+        {/* =================================================
+                    PARTY
+            ================================================= */}
 
         <Route
-          path="/inventory/expenses"
-          element={<ExpenseDashboard />}
+          path="/inventory/parties"
+          element={<PartyDashboard />}
         />
 
         <Route
-          path="/inventory/expenses/create"
-          element={<ExpenseCreate />}
+          path="/inventory/parties/create"
+          element={<PartyCreateNew />}
+
         />
 
         <Route
-          path="/inventory/expenses/edit/:id"
-          element={<ExpenseCreate />}
+          path="/inventory/parties/edit/:id"
+          element={<PartyCreateNew />}
         />
 
         <Route
-          path="/inventory/expenses/view/:id"
-          element={<ExpenseViewDetails />}
+          path="/inventory/parties/view/:id"
+          element={<PartyViewDetails />}
+        />
+
+        {/* =================================================
+                    CLEARANCE
+            ================================================= */}
+
+
+        <Route
+          path="/inventory/parties/clearances"
+          element={<ClearanceDashboard />}
+
         />
 
         <Route
-          path="inventory/expenses-categories/view/:id"
-          element={<ExpenseCategoryViewDetails />}
+          path="/inventory/parties/clearances/create"
+          element={<ClearanceCreateSimple />}
+
         />
+
+        <Route
+          path="/inventory/parties/clearances/edit/:id"
+          element={<ClearanceCreateSimple />}
+        />
+
+        <Route
+          path="/inventory/parties/clearances/view/:id"
+          element={<ClearanceViewDetails />}
+        />
+
+
 
 
         {/* Warehouse */}
@@ -963,45 +977,48 @@ function AppContent() {
           element={<PurchaseOrderViewDetails />}
         />
 
+        {/* =================================================
+                    PAYMENTS
+            ================================================= */}
 
-        {/* Payments */}
         <Route
-          path="/inventory/payments"
+          path="/invoice/payments"
           element={<PaymentDashboard />}
         />
 
         <Route
-          path="/inventory/payments/create"
+          path="/invoice/payments/create"
           element={<PaymentCreate />}
         />
         <Route
-          path="/inventory/payments/edit/:id"
+          path="/invoice/payments/edit/:id"
           element={<PaymentCreate />}
         />
         <Route
-          path="/inventory/payments/view/:id"
+          path="/invoice/payments/view/:id"
           element={<PaymentViewDetails />}
         />
 
-        {/* CashAccount  */}
-
+        {/* =================================================
+                    CASH ACCOUNT
+            ================================================= */}
 
         <Route
-          path="/inventory/cash-accounts"
+          path="/settings/cash-accounts"
           element={<CashAccountDashboard />}
         />
 
         <Route
-          path="/inventory/cash-accounts/create"
+          path="/settings/cash-accounts/create"
           element={<CashAccountCreate />}
         />
 
         <Route
-          path="/inventory/cash-accounts/edit/:id"
+          path="/settings/cash-accounts/edit/:id"
           element={<CashAccountCreate />}
         />
         <Route
-          path="/inventory/cash-accounts/view/:id"
+          path="/settings/cash-accounts/view/:id"
           element={<CashAccountViewDetails />}
         />
 
@@ -1075,9 +1092,19 @@ function AppContent() {
           element={<SettingsDashboard />}
         />
 
-        {/* reports */}
+        <Route
+          path="/inventory/settings"
+          element={<SettingsDashboard />}
+        />
 
-        <Route path="/reports" element={<ReportDashboard />} />
+        {/* =================================================
+                    Reports
+            ================================================= */}
+
+        <Route
+          path="/reports"
+          element={<ReportDashboard />}
+        />
 
         <Route
           path="/reports/create"

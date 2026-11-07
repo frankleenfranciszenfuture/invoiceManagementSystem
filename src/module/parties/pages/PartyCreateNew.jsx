@@ -357,7 +357,7 @@ const PartyCreateNew = ({ onClose }) => {
             if (onClose) {
                 onClose();
             } else {
-                navigate("/parties")
+                navigate("/inventory/parties")
             }
         });
     };

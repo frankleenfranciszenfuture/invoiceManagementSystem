@@ -57,8 +57,14 @@ import {
 } from "../../../../module/bankAccount/thunks/bankAccountThunks";
 
 import {
+    fetchInvoices,
+} from "../../../../module/invoices/thunks/invoiceThunks";
+
+import {
     fetchAllCashAccounts,
 } from "../../cashAccount/thunks/cashAccountThunks";
+import useLeaveConfirmation from "../../../../common/confirmation/useLeaveConfirmation";
+import LeaveConfirmationModal from "../../../../common/confirmation/LeaveConfirmationModal";
 
 /* =========================================================
    DATE HELPER
@@ -533,7 +539,12 @@ const SourcePaymentSummary = ({
                         </h4>
 
                         <p className="text-xs text-gray-400">
-                            {source.orderNo || source.expenseNo || "Selected document"}
+                            {
+                                source.orderNo ||
+                                source.expenseNo ||
+                                source.invoiceNumber ||
+                                "Selected document"
+                            }
                         </p>
                     </div>
                 </div>
@@ -604,7 +615,7 @@ const SourcePaymentSummary = ({
    MAIN COMPONENT
 ========================================================= */
 
-const PaymentCreate = () => {
+const PaymentCreate = ({ onClose }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
@@ -637,6 +648,10 @@ const PaymentCreate = () => {
         (state) => state.expense ?? {}
     );
 
+    const invoiceState = useSelector(
+        (state) => state.invoice ?? {}
+    );
+
     const bankAccountState = useSelector(
         (state) => state.bankAccount ?? {}
     );
@@ -664,6 +679,11 @@ const PaymentCreate = () => {
         [expenseState.expenses]
     );
 
+    const invoices = useMemo(
+        () => getList(invoiceState.invoices),
+        [invoiceState.invoices]
+    );
+
     const bankAccounts = useMemo(
         () => getList(bankAccountState.bankAccounts),
         [bankAccountState.bankAccounts]
@@ -673,6 +693,14 @@ const PaymentCreate = () => {
         () => getList(cashAccountState.cashAccounts),
         [cashAccountState.cashAccounts]
     );
+
+    const {
+        showLeaveConfirmation,
+        confirmLeave,
+        handleStay,
+        handleLeave,
+    } = useLeaveConfirmation();
+
 
     /* =====================================================
        AUTH STATE
@@ -906,6 +934,13 @@ const PaymentCreate = () => {
                     })
                 ).unwrap(),
 
+                dispatch(
+                    fetchInvoices({
+                        page: 0,
+                        size: 100,
+                    })
+                ).unwrap(),
+
                 dispatch(fetchAllBankAccounts()).unwrap(),
 
                 dispatch(
@@ -950,6 +985,10 @@ const PaymentCreate = () => {
         {
             label: "Expense",
             value: "EXPENSE",
+        },
+        {
+            label: "Invoice",
+            value: "INVOICE",
         },
     ], []);
 
@@ -1014,6 +1053,9 @@ const PaymentCreate = () => {
             case "EXPENSE":
                 return "Expense";
 
+            case "INVOICE":
+                return "Invoice";
+
             default:
                 return "Source Document";
         }
@@ -1063,6 +1105,25 @@ const PaymentCreate = () => {
                     value: String(expense.id),
                 }));
 
+
+            case "INVOICE":
+                return invoices
+                    .filter((invoice) =>
+                        ["APPROVED", "SENT", "PARTIAL", "OVERDUE"].includes(
+                            String(invoice.status || invoice.invoiceStatus || "")
+                                .toUpperCase()
+                        )
+                    )
+                    .map((invoice) => ({
+                        label: `${invoice.invoiceNumber || `INV-${invoice.id}`} - ${invoice.customer?.displayName ||
+                            invoice.customer?.name ||
+                            invoice.party?.companyName ||
+                            invoice.party?.name ||
+                            "Customer"
+                            } - ${invoice.currencyCode || "INR"} ${invoice.grandTotal ?? 0}`,
+                        value: String(invoice.id),
+                    }));
+
             default:
                 return [];
         }
@@ -1071,6 +1132,7 @@ const PaymentCreate = () => {
         salesOrders,
         purchaseOrders,
         expenses,
+        invoices,
     ]);
 
     /* =====================================================
@@ -1097,6 +1159,10 @@ const PaymentCreate = () => {
                 sourceList = expenses;
                 break;
 
+            case "INVOICE":
+                sourceList = invoices;
+                break;
+
             default:
                 sourceList = [];
         }
@@ -1110,6 +1176,7 @@ const PaymentCreate = () => {
         salesOrders,
         purchaseOrders,
         expenses,
+        invoices,
     ]);
 
 
@@ -1317,6 +1384,16 @@ const PaymentCreate = () => {
         }));
     };
 
+    const handleClose = () => {
+        confirmLeave(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/invoice/payments");
+            }
+        })
+    };
+
     /* =====================================================
        PAYMENT TYPE CHANGE
     ===================================================== */
@@ -1329,7 +1406,7 @@ const PaymentCreate = () => {
             paymentAmount: "",
 
             paymentMethod:
-                value === "EXPENSE" &&
+                ["EXPENSE", "INVOICE"].includes(value) &&
                     previous.paymentMethod === "PARTY_CREDIT"
                     ? "BANK_TRANSFER"
                     : previous.paymentMethod,
@@ -1344,7 +1421,7 @@ const PaymentCreate = () => {
             previous.map((allocation) => ({
                 ...allocation,
                 paymentMethod:
-                    value === "EXPENSE" &&
+                    ["EXPENSE", "INVOICE"].includes(value) &&
                         allocation.paymentMethod === "PARTY_CREDIT"
                         ? "BANK_TRANSFER"
                         : allocation.paymentMethod,
@@ -1816,7 +1893,7 @@ const PaymentCreate = () => {
 
             dispatch(resetPaymentForm());
 
-            navigate("/inventory/payments");
+            navigate("/invoice/payments");
         } catch (error) {
             console.error("Payment creation error:", error);
 
@@ -2561,7 +2638,7 @@ const PaymentCreate = () => {
                 ">
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         disabled={actionLoading || loading}
                         className="
                             rounded-lg border border-gray-200
@@ -2678,6 +2755,16 @@ const PaymentCreate = () => {
                     </div>
                 </div>
             </form>
+
+            <LeaveConfirmationModal
+                show={showLeaveConfirmation}
+                title="Leave Expense?"
+                message="Are you sure you want to leave this expense page?"
+                stayText="Stay Here"
+                leaveText="Leave"
+                onStay={handleStay}
+                onLeave={handleLeave}
+            />
         </div>
     );
 };

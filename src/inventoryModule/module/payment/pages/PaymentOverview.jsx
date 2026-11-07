@@ -220,7 +220,7 @@ export default function PaymentOverview() {
         );
 
         navigate(
-            `/payments?paymentStatus=${status}`,
+            `/invoice/payments?paymentStatus=${status}`,
             { replace: false }
         );
     };

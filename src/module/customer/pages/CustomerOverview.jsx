@@ -199,7 +199,7 @@ export default function CustomerOverview() {
         );
 
         navigate(
-            `/customers?status=${status}`,
+            `/invoice/customers?status=${status}`,
             { replace: false }
         );
     };

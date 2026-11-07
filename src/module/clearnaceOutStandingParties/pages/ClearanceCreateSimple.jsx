@@ -417,10 +417,10 @@ const ClearanceCreateNew = ({ onClose }) => {
             if (onClose) {
                 onClose();
             } else {
-                navigate("/parties/clearances");
+                navigate("/inventory/parties/clearances");
 
                 if (isEdit) {
-                    navigate("/parties/clearances");
+                    navigate("/inventory/parties/clearances");
                 }
             }
         });

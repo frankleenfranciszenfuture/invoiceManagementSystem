@@ -651,7 +651,7 @@ const PartyViewDetails = () => {
 
                     <button
                         type="button"
-                        onClick={() => navigate("/clearances")}
+                        onClick={() => navigate("/inventory/parties/clearances")}
                         className="group min-w-[190px] rounded-xl border border-amber-200 
                         bg-white px-4 py-3 text-left shadow-sm transition-all
                          duration-200 hover:-translate-y-0.5 

@@ -19,15 +19,18 @@ export default function Navbar({ title }) {
 
     const hiddenPaths =
         [
+            "/invoice/customers",
             "/settings",
-            "/items",
+            "/invoice/items",
+            "/invoice/expenses",
+            "/invoice/payments",
             "/invoices",
             "/inventory",
             "/parties",
             "/salesPersons",
             "/clearances",
-            "/customers",
             "/reports",
+            "/invoice-approvals",
 
         ];
 

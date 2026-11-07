@@ -313,7 +313,7 @@ export default function ExpenseTable({
 
         dispatch(setExistingExpense(expense));
 
-        navigate(`/inventory/expenses/view/${expense.id}`);
+        navigate(`/invoice/expenses/view/${expense.id}`);
     };
 
     /* =====================================================
@@ -330,7 +330,7 @@ export default function ExpenseTable({
 
         dispatch(setExistingExpense(expense));
 
-        navigate(`/inventory/expenses/edit/${expense.id}`);
+        navigate(`/invoice/expenses/edit/${expense.id}`);
     };
 
 

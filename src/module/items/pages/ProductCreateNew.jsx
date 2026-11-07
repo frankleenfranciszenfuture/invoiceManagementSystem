@@ -922,7 +922,7 @@ const ProductCreateNew = ({ onClose }) => {
             if (onClose) {
                 onClose();
             } else {
-                navigate("/items")
+                navigate("/invoice/items")
             }
         });
     };
@@ -1387,7 +1387,7 @@ const ProductCreateNew = ({ onClose }) => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         className="
                             mt-5 rounded-lg bg-blue-600
                             px-5 py-2 text-sm font-medium
@@ -1433,7 +1433,7 @@ const ProductCreateNew = ({ onClose }) => {
                 <div className="flex items-center gap-3">
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         className="
                             flex h-9 w-9 items-center justify-center
                             rounded-lg border border-gray-200

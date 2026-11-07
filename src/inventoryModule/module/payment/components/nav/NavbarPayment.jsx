@@ -35,6 +35,7 @@ import {
 } from "../../thunks/paymentThunks";
 
 import CustomSelect from "../../../../../common/custom/CustomSelect";
+import ToolTipText from "../../../../../common/toolTip/ToolTipText";
 
 /* =========================================================
    CONSTANTS
@@ -280,7 +281,7 @@ export default function NavbarPayment() {
         );
 
         navigate(
-            `/payments?paymentStatus=${view.value}`
+            `/invoice/payments?paymentStatus=${view.value}`
         );
     };
 
@@ -289,7 +290,7 @@ export default function NavbarPayment() {
     ===================================================== */
 
     const handleCreatePayment = () => {
-        navigate("/inventory/payments/create");
+        navigate("/invoice/payments/create");
     };
 
     /* =====================================================
@@ -377,7 +378,7 @@ export default function NavbarPayment() {
 
                 {/* LEFT */}
 
-                <div className="flex items-center gap-2">
+                <div className="relative flex items-center gap-2">
 
                     {/* HOME */}
 
@@ -385,14 +386,15 @@ export default function NavbarPayment() {
                         type="button"
                         onClick={() => navigate("/")}
                         className="
-                            flex items-center justify-center
+                            group relative flex items-center justify-center
                             rounded-md border border-blue-300
                             bg-white p-2 text-[#0095FD]
                             transition hover:bg-[#0095FD]/20
                         "
-                        title="Home"
+
                     >
                         <Home size={18} />
+                        <ToolTipText text="Home" position="bottom" />
                     </button>
 
                     {/* TITLE */}
@@ -475,7 +477,7 @@ export default function NavbarPayment() {
                         type="button"
                         onClick={handleCreatePayment}
                         className="
-                            flex items-center gap-1 rounded-md
+                            group relative flex items-center gap-1 rounded-md
                             bg-[#0095FD] px-3 py-2
                             text-sm font-medium text-white
                             hover:bg-[#0095FD]/90
@@ -485,6 +487,7 @@ export default function NavbarPayment() {
                         <Plus size={14} />
 
                         <span>New</span>
+                        <ToolTipText text="New Payment" position="bottom" />
                     </button>
 
                     {/* SETTINGS */}
@@ -493,13 +496,14 @@ export default function NavbarPayment() {
                         type="button"
                         onClick={() => navigate("/settings")}
                         className="
-                            rounded-md border border-gray-300
+                            group relative rounded-md border border-gray-300
                             p-2 text-[#0095FD]
                             hover:bg-[#0095FD]/20
                         "
                         title="Settings"
                     >
                         <Settings size={18} />
+                        <ToolTipText text="Settings" position="bottom" />
                     </button>
 
                 </div>

@@ -21,12 +21,20 @@ import {
     ArrowLeft,
     ExternalLink,
     DownloadCloudIcon,
+    Mail,
 } from "lucide-react";
+import toast from "react-hot-toast";
+
+
+
 
 import { openModal } from "../../../ui/uiSlice";
-import { fetchInvoiceById } from "../../thunks/invoiceThunks";
+import { fetchInvoiceById, sendInvoiceEmail } from "../../thunks/invoiceThunks";
 import invoiceTemplates from "../template/templateRegistry";
 import { normalizeInvoice } from "../template/invoiceTemplateUtils";
+import {
+    setInvoicePdfGenerator,
+} from "../../utils/invoicePdfGenerator";
 
 export default function InvoicePreviewCard() {
     const dispatch = useDispatch();
@@ -44,6 +52,7 @@ export default function InvoicePreviewCard() {
 
     const TEMPLATE_WIDTH = 794;
     const TEMPLATE_HEIGHT = 1123;
+
 
     /* ============================================================
        REDUX STATE
@@ -294,6 +303,25 @@ export default function InvoicePreviewCard() {
         );
     };
 
+    const handleOpenEmailModal = () => {
+
+        if (!invoice) {
+            toast.error("Invoice information is unavailable.");
+            return;
+        }
+
+        setInvoicePdfGenerator(generateInvoicePdfBlob);
+
+        dispatch(
+            openModal({
+                type: "emailInvoice",
+                data: {
+                    invoice,
+                },
+            })
+        );
+    }
+
     /* ============================================================
        EDIT INVOICE
     ============================================================ */
@@ -377,104 +405,226 @@ export default function InvoicePreviewCard() {
     ============================================================ */
 
 
-    const handleDownload = async () => {
+
+    /* ============================================================
+       GENERATE INVOICE PDF BLOB
+    ============================================================ */
+
+    const generateInvoicePdfBlob = async () => {
         const element = invoiceDownloadRef.current;
 
         if (!element) {
-            console.error("Selected invoice template element not found.");
+            throw new Error("Selected invoice template element not found.");
+        }
+
+        const canvas = await html2canvas(element, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: "#ffffff",
+            logging: false,
+            scrollX: 0,
+            scrollY: 0,
+            width: element.scrollWidth,
+            height: element.scrollHeight,
+            windowWidth: element.scrollWidth,
+            windowHeight: element.scrollHeight,
+        });
+
+        const pdf = new jsPDF({
+            orientation: "portrait",
+            unit: "mm",
+            format: "a4",
+            compress: true,
+        });
+
+        const pageWidth = 210;
+        const pageHeight = 297;
+
+        const pagePixelHeight =
+            (canvas.width * pageHeight) / pageWidth;
+
+        const totalPages = Math.max(
+            1,
+            Math.ceil((canvas.height - 2) / pagePixelHeight)
+        );
+
+        for (let page = 0; page < totalPages; page++) {
+            const startY = Math.round(page * pagePixelHeight);
+
+            const currentHeight = Math.min(
+                Math.round(pagePixelHeight),
+                canvas.height - startY
+            );
+
+            if (currentHeight <= 0) continue;
+
+            const pageCanvas = document.createElement("canvas");
+
+            pageCanvas.width = canvas.width;
+            pageCanvas.height = currentHeight;
+
+            const context = pageCanvas.getContext("2d");
+
+            if (!context) {
+                throw new Error("Unable to create PDF canvas.");
+            }
+
+            context.fillStyle = "#ffffff";
+
+            context.fillRect(
+                0,
+                0,
+                pageCanvas.width,
+                pageCanvas.height
+            );
+
+            context.drawImage(
+                canvas,
+                0,
+                startY,
+                canvas.width,
+                currentHeight,
+                0,
+                0,
+                canvas.width,
+                currentHeight
+            );
+
+            if (page > 0) {
+                pdf.addPage();
+            }
+
+            const image = pageCanvas.toDataURL("image/jpeg", 0.95);
+
+            const renderedHeight =
+                (currentHeight * pageWidth) / canvas.width;
+
+            pdf.addImage(
+                image,
+                "JPEG",
+                0,
+                0,
+                pageWidth,
+                renderedHeight,
+                undefined,
+                "FAST"
+            );
+        }
+
+        return pdf.output("blob");
+    };
+
+
+    /* ============================================================
+       DOWNLOAD INVOICE PDF
+    ============================================================ */
+
+    const handleDownload = async () => {
+        try {
+            setDownloading(true);
+
+            const blob = await generateInvoicePdfBlob();
+
+            const fileName =
+                `${invoice?.invoiceNumber || "Invoice"}.pdf`;
+
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+
+            link.href = url;
+            link.download = fileName;
+
+            document.body.appendChild(link);
+
+            link.click();
+
+            link.remove();
+
+            window.setTimeout(() => {
+                URL.revokeObjectURL(url);
+            }, 1000);
+
+        } catch (error) {
+            console.error("PDF download failed:", error);
+
+            toast.error(
+                error?.message || "Failed to generate invoice PDF."
+            );
+
+        } finally {
+            setDownloading(false);
+        }
+    };
+
+
+    /* ============================================================
+       SEND INVOICE EMAIL
+    ============================================================ */
+
+    const handleSendInvoiceEmail = async ({
+        toEmail,
+        subject,
+        message,
+    }) => {
+        const invoiceId = getInvoiceId(invoice);
+
+        if (!invoiceId) {
+            toast.error("Invoice not found.");
             return;
         }
 
         try {
-            const canvas = await html2canvas(element, {
-                scale: 2,
-                useCORS: true,
-                allowTaint: false,
-                backgroundColor: "#ffffff",
-                logging: false,
-                scrollX: 0,
-                scrollY: 0,
-                width: element.scrollWidth,
-                height: element.scrollHeight,
-                windowWidth: element.scrollWidth,
-                windowHeight: element.scrollHeight,
-            });
+            setEmailSending(true);
 
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "a4",
-                compress: true,
-            });
+            // Generate PDF from the currently selected template
+            const pdfBlob = await generateInvoicePdfBlob();
 
-            const pageWidth = 210;
-            const pageHeight = 297;
+            const safeInvoiceNumber = String(
+                invoice?.invoiceNumber || `Invoice-${invoiceId}`
+            ).replace(/[^a-zA-Z0-9_-]/g, "_");
 
-            // Exact pixel height corresponding to A4 width
-            const pagePixelHeight =
-                (canvas.width * pageHeight) / pageWidth;
+            const fileName = `${safeInvoiceNumber}.pdf`;
 
-            // Ignore insignificant trailing canvas overflow
-            const totalPages = Math.ceil(
-                (canvas.height - 2) / pagePixelHeight
+            // Prepare multipart request
+            const formData = new FormData();
+
+            formData.append("toEmail", toEmail);
+            formData.append("subject", subject || "");
+            formData.append("message", message || "");
+
+            formData.append(
+                "file",
+                pdfBlob,
+                fileName
             );
 
-            for (let page = 0; page < totalPages; page++) {
-                const startY = Math.round(page * pagePixelHeight);
+            // Send through Redux thunk
+            const response = await dispatch(
+                sendInvoiceEmail({
+                    id: invoiceId,
+                    formData,
+                })
+            ).unwrap();
 
-                const currentHeight = Math.min(
-                    Math.round(pagePixelHeight),
-                    canvas.height - startY
-                );
+            toast.success(
+                response?.message || "Invoice email submitted successfully."
+            );
 
-                if (currentHeight <= 0) continue;
-
-                const pageCanvas = document.createElement("canvas");
-                pageCanvas.width = canvas.width;
-                pageCanvas.height = currentHeight;
-
-                const context = pageCanvas.getContext("2d");
-
-                context.fillStyle = "#ffffff";
-                context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-
-                context.drawImage(
-                    canvas,
-                    0,
-                    startY,
-                    canvas.width,
-                    currentHeight,
-                    0,
-                    0,
-                    canvas.width,
-                    currentHeight
-                );
-
-                if (page > 0) {
-                    pdf.addPage();
-                }
-
-                const image = pageCanvas.toDataURL("image/jpeg", 0.95);
-
-                const renderedHeight =
-                    (currentHeight * pageWidth) / canvas.width;
-
-                pdf.addImage(
-                    image,
-                    "JPEG",
-                    0,
-                    0,
-                    pageWidth,
-                    renderedHeight,
-                    undefined,
-                    "FAST"
-                );
-            }
-
-            pdf.save(`${invoice?.invoiceNumber || "Invoice"}.pdf`);
+            setEmailModalOpen(false);
 
         } catch (error) {
-            console.error("PDF download failed:", error);
+            console.error("Invoice email failed:", error);
+
+            toast.error(
+                typeof error === "string"
+                    ? error
+                    : error?.message || "Failed to send invoice email."
+            );
+
+        } finally {
+            setEmailSending(false);
         }
     };
 
@@ -846,6 +996,18 @@ export default function InvoicePreviewCard() {
                         <span>New Tab</span>
                     </button>
 
+                    {/* EMAIL INVOICE */}
+
+                    <button
+                        type="button"
+                        onClick={handleOpenEmailModal}
+                        disabled={downloading}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-blue-200 bg-blue-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        title="Email invoice to customer"
+                    >
+                        <Mail size={15} />
+                        <span>Email Invoice</span>
+                    </button>
                     {/* PDF DOWNLOAD */}
 
                     <button

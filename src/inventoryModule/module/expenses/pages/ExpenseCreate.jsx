@@ -639,7 +639,7 @@ const ExpenseCreate = ({ onClose }) => {
             if (onClose) {
                 onClose();
             } else {
-                navigate("/inventory/expenses");
+                navigate("/invoice/expenses");
             }
         })
     };

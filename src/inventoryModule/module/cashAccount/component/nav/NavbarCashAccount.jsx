@@ -286,7 +286,7 @@ export default function NavbarCashAccount() {
         );
 
         navigate(
-            `/inventory/cash-accounts?status=${view.value}`
+            `/settings/cash-accounts?status=${view.value}`
         );
 
     };
@@ -296,7 +296,7 @@ export default function NavbarCashAccount() {
     ===================================================== */
 
     const handleCreateCashAccount = () => {
-        navigate("/inventory/cash-accounts/create");
+        navigate("/settings/cash-accounts/create");
     };
 
     /* =====================================================

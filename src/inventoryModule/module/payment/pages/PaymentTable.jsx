@@ -24,6 +24,7 @@ import {
 } from "../slices/paymentSlice";
 
 import Pagination from "../../../../common/pagination/table/Pagination";
+import ToolTipText from "../../../../common/toolTip/ToolTipText";
 
 /* =========================================================
    CONSTANTS
@@ -307,7 +308,7 @@ export default function PaymentTable({
 
         dispatch(setExistingPayment(payment));
 
-        navigate(`/inventory/payments/view/${payment.id}`);
+        navigate(`/invoice/payments/view/${payment.id}`);
     };
 
     /* =====================================================
@@ -709,7 +710,7 @@ export default function PaymentTable({
 
                                 <td className="px-4 py-3">
                                     <div className="
-                                        flex items-center justify-end gap-2
+                                        relative flex items-center justify-end gap-2
                                     ">
                                         {canViewPayment && (
                                             <button
@@ -717,8 +718,9 @@ export default function PaymentTable({
                                                 onClick={() =>
                                                     handleView(payment)
                                                 }
-                                                title="View"
+
                                                 className="
+                                                    group relative
                                                     flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-blue-50
@@ -728,6 +730,7 @@ export default function PaymentTable({
                                                 "
                                             >
                                                 <Eye size={16} />
+                                                <ToolTipText text="View" position="bottom" />
                                             </button>
                                         )}
 
@@ -741,6 +744,7 @@ export default function PaymentTable({
                                                     }
                                                     title="Reverse payment"
                                                     className="
+                                                        group relative 
                                                         flex h-8 w-8
                                                         items-center justify-center
                                                         rounded-lg bg-amber-50
@@ -752,6 +756,7 @@ export default function PaymentTable({
                                                     "
                                                 >
                                                     <RotateCcw size={16} />
+                                                    <ToolTipText text="Reverse payment" position="bottom" />
                                                 </button>
                                             )}
                                     </div>

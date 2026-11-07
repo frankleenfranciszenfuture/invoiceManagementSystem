@@ -276,7 +276,7 @@ export default function ProductTable({
 
         dispatch(setExsistingProduct(product));
 
-        navigate(`/items/view/${product.id}`);
+        navigate(`/invoice/items/view/${product.id}`);
     };
 
     /* =====================================================
@@ -293,7 +293,7 @@ export default function ProductTable({
 
         dispatch(setExsistingProduct(product));
 
-        navigate(`/items/edit/${product.id}`);
+        navigate(`/invoice/items/edit/${product.id}`);
     };
 
     /* =====================================================

@@ -649,7 +649,7 @@ const CashAccountCreate = ({ onClose }) => {
 
             dispatch(resetCashAccountForm());
 
-            navigate("/inventory/cash-accounts");
+            navigate("/settings/cash-accounts");
 
         } catch (error) {
 

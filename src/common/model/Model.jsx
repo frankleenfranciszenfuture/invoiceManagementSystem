@@ -29,6 +29,7 @@ import PartyCreate from "../../module/parties/pages/PartyCreate";
 import PartyCreateNew from "../../module/parties/pages/PartyCreateNew";
 import WarehouseCreate from "../../inventoryModule/module/warehouse/pages/WarehouseCreate";
 import CurrencyCreateSimple from "../../module/currency/pages/CurrencyCreateSimple";
+import EmailInvoiceModal from "../../module/invoices/pages/EmailInvoiceModal";
 
 export default function Modal() {
 
@@ -132,6 +133,9 @@ export default function Modal() {
         addWarehouse: WarehouseCreate,
         editWarehouse: WarehouseCreate,
 
+
+        //email
+        emailInvoice: EmailInvoiceModal,
     };
 
 
@@ -295,6 +299,10 @@ export default function Modal() {
         editRolePermission: "w-[800px] max-w-[92vw] max-h-[82vh]",
         addUserPermission: "w-[800px] max-w-[92vw] max-h-[82vh]",
         editUserPermission: "w-[800px] max-w-[92vw] max-h-[82vh]",
+
+        //email
+
+        emailInvoice: "w-[800px] max-w-[92vw] max-h-[82vh]",
 
         // Other
         invoiceNumberSetting: "w-[650px] max-w-[92vw] max-h-[75vh]",

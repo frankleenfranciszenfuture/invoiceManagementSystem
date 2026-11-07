@@ -211,6 +211,25 @@ export const cancelInvoice = createAsyncThunk(
   },
 );
 
+export const approveInvoice = createAsyncThunk(
+  "invoice/approveInvoice",
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await api.patch(`/invoices/${id}/approve`);
+
+      return response.data.data;
+    } catch (error) {
+      console.error("Approve invoice error:", error);
+
+      return rejectWithValue(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Failed to approve invoice.",
+      );
+    }
+  },
+);
+
 /* =========================================================
    DELETE INVOICE
 ========================================================= */
@@ -254,6 +273,31 @@ export const fetchGeneratedInvoiceNumber = createAsyncThunk(
         error?.response?.data?.message ||
           error?.message ||
           "Failed to generate invoice number.",
+      );
+    }
+  },
+);
+
+/* =========================================================
+   SEND INVOICE EMAIL WITH PDF ATTACHMENT
+========================================================= */
+
+export const sendInvoiceEmail = createAsyncThunk(
+  "invoice/sendInvoiceEmail",
+  async ({ id, formData }, { rejectWithValue }) => {
+    try {
+      const res = await api.post(`/invoices/${id}/send-email`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to send invoice email.",
       );
     }
   },

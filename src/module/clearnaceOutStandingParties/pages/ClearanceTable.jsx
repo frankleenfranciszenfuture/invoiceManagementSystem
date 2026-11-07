@@ -365,7 +365,7 @@ export default function ClearanceTable({
         dispatch(setExistingClearance(clearance));
 
         navigate(
-            `/parties/clearances/view/${clearance.id}`
+            `/inventory/parties/clearances/view/${clearance.id}`
         );
     };
 
@@ -385,7 +385,7 @@ export default function ClearanceTable({
         dispatch(setExistingClearance(clearance));
 
         navigate(
-            `/parties/clearances/edit/${clearance.id}`
+            `/inventory/parties/clearances/edit/${clearance.id}`
         );
     };
 

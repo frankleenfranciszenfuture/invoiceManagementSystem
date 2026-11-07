@@ -58,7 +58,7 @@ const NAV = [
         label: "Customers",
         moduleName: "Customers",
         icon: Users,
-        to: "/customers",
+        to: "/invoice/customers",
         dropdown: true,
         // children: [
         //     {
@@ -71,9 +71,9 @@ const NAV = [
         label: "Items",
         moduleName: "Products",
         icon: Package,
-        to: "/items",
-        addTo: "/items/create",
-        basePath: "/items",
+        to: "/invoice/items",
+        addTo: "/invoice/items/create",
+        basePath: "/invoice/items",
         dropdown: true,
     },
 
@@ -98,17 +98,23 @@ const NAV = [
         dropdown: true,
     },
     {
+        label: "InvoiceApprovals",
+        moduleName: "Reports",
+        icon: ChartNoAxesCombined,
+        to: "/invoice-approvals",
+    },
+    {
         label: "Expenses",
         moduleName: "Expenses",
         icon: Box,
-        to: "/inventory/expenses",
+        to: "/invoice/expenses",
     },
 
     {
         label: "Payments",
         moduleName: "Payments",
         icon: BadgeTurkishLira,
-        to: "/inventory/payments",
+        to: "/invoice/payments",
     },
 
     {
@@ -133,6 +139,8 @@ const NAV = [
         icon: ChartNoAxesCombined,
         to: "/reports",
     },
+
+
 ];
 
 // ============================================================
@@ -181,7 +189,7 @@ const SETTINGS_NAV = [
         label: "Cash Accounts",
         moduleName: "Cash Accounts",
         icon: BadgeTurkishLira,
-        to: "/inventory/cash-accounts   ",
+        to: "/settings/cash-accounts   ",
     },
     {
         label: "Currencies",
@@ -251,12 +259,12 @@ const INVENTORY_NAV = [
         label: "Parties",
         moduleName: "Parties",
         icon: Package,
-        to: "/parties",
+        to: "/inventory/parties",
         dropdown: true,
         children: [
             {
                 label: "Oustanding Clearance",
-                to: "/parties/clearances",
+                to: "/inventory/parties/clearances",
             },
         ],
     },
@@ -285,7 +293,7 @@ const INVENTORY_NAV = [
         label: "General Settings",
         moduleName: "Settings",
         icon: Settings,
-        to: "/settings",
+        to: "/inventory/settings",
     },
 
 

@@ -319,7 +319,7 @@ export default function CashAccountTable({
 
         dispatch(setExistingCashAccount(account));
 
-        navigate(`/inventory/cash-accounts/view/${account.id}`);
+        navigate(`/settings/cash-accounts/view/${account.id}`);
     };
 
     /* =====================================================
@@ -337,7 +337,7 @@ export default function CashAccountTable({
 
         dispatch(setExistingCashAccount(account));
 
-        navigate(`/inventory/cash-accounts/edit/${account.id}`);
+        navigate(`/settings/cash-accounts/edit/${account.id}`);
     };
 
     /* =====================================================
