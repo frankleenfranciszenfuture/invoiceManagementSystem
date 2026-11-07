@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -878,7 +879,68 @@ public class InvoiceServiceImpl implements InvoiceService {
         );
     }
 
+// =====================================================
+// APPROVE INVOICE
+// =====================================================
 
+    @Override
+    @Transactional
+    public ApiResponse<InvoiceResponse> approveInvoice(Long id) {
+
+        log.info("Approving Invoice : {}", id);
+
+        // 1. FIND INVOICE
+        InvoiceEntity invoice = invoiceRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Invoice not found with id: " + id
+                        )
+                );
+
+        // 2. CHECK ACTIVE
+        if (!Boolean.TRUE.equals(invoice.getActive())) {
+            throw new ValidationException(
+                    "Cannot approve an inactive invoice."
+            );
+        }
+
+        // 3. CHECK STATUS
+        if (invoice.getStatus() == InvoiceStatus.CANCELLED) {
+            throw new BadRequestException(
+                    "Cancelled invoice cannot be approved."
+            );
+        }
+
+        if (invoice.getStatus() != InvoiceStatus.DRAFT) {
+            throw new BadRequestException(
+                    "Only draft invoices can be approved. Current status: "
+                            + invoice.getStatus()
+            );
+        }
+
+        // 4. APPROVE
+        invoice.setStatus(InvoiceStatus.APPROVED);
+
+        // 5. AUDIT
+        baseEntityUtil.prepareForUpdate(invoice);
+
+        // 6. SAVE
+        InvoiceEntity savedInvoice = invoiceRepository.save(invoice);
+
+        // 7. RESPONSE
+        InvoiceResponse response =
+                toResponseWithFileUrls(savedInvoice);
+
+        log.info(
+                "Invoice {} approved successfully.",
+                savedInvoice.getInvoiceNumber()
+        );
+
+        return ApiResponse.success(
+                response,
+                "Invoice approved successfully."
+        );
+    }
     // =====================================================
     // DELETE / DEACTIVATE
     // =====================================================
@@ -940,6 +1002,68 @@ public class InvoiceServiceImpl implements InvoiceService {
         );
     }
 
+    @Override
+    @Transactional
+    public void markInvoiceAsSent(Long invoiceId) {
+
+        InvoiceEntity invoice = invoiceRepository.findByIdAndActiveTrue(invoiceId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Invoice not found with ID: " + invoiceId
+                        )
+                );
+
+        if (invoice.getStatus() != InvoiceStatus.APPROVED
+                && invoice.getStatus() != InvoiceStatus.SENT
+                && invoice.getStatus() != InvoiceStatus.PARTIAL) {
+
+            throw new IllegalStateException(
+                    "Only approved or previously sent invoices can be emailed."
+            );
+        }
+
+        invoice.setStatus(InvoiceStatus.SENT);
+        invoice.setInvoiceSentAt(LocalDateTime.now());
+        invoiceRepository.save(invoice);
+    }
+
+
+    // =====================================================
+// MARK INVOICE AS PENDING APPROVAL
+// =====================================================
+
+    @Override
+    @Transactional
+    public void markInvoiceAsPendingApproval(Long invoiceId) {
+
+        log.info("Marking invoice as pending approval: {}", invoiceId);
+
+        InvoiceEntity invoice = invoiceRepository
+                .findByIdAndActiveTrue(invoiceId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Invoice not found with ID: " + invoiceId
+                        )
+                );
+
+        if (invoice.getStatus() != InvoiceStatus.DRAFT) {
+            throw new BadRequestException(
+                    "Only draft invoices can be submitted for approval. Current status: "
+                            + invoice.getStatus()
+            );
+        }
+
+        invoice.setStatus(InvoiceStatus.PENDING_APPROVAL);
+
+        baseEntityUtil.prepareForUpdate(invoice);
+
+        invoiceRepository.save(invoice);
+
+        log.info(
+                "Invoice {} submitted for approval successfully.",
+                invoice.getInvoiceNumber()
+        );
+    }
 
     // =====================================================
     // CREATE INVOICE ITEM

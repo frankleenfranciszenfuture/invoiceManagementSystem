@@ -8,6 +8,7 @@ import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -216,7 +217,7 @@ public class InvoiceEntity extends BaseEntity {
     @Builder.Default
     private InvoiceStatus status = InvoiceStatus.DRAFT;
 
-
+    private LocalDateTime invoiceSentAt;
     // =====================================================
     // NOTES
     // =====================================================

@@ -31,7 +31,8 @@ public enum ReportModule {
     PURCHASE_ORDER_GOODS_RECEIPT("Purchase Order Goods Receipt"),
     PARTY_CLEARANCE("Party Clearances"),
     WAREHOUSE("Warehouses"),
-    EXPENSE("Expenses");
+    EXPENSE("Expenses"),
+    INVENTORY("Inventory");
 
     private final String displayName;
 

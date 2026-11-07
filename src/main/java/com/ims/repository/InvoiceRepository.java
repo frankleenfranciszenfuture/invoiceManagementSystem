@@ -1,13 +1,12 @@
  package com.ims.repository;
 
 import com.ims.entity.InvoiceEntity;
+import com.ims.enums.InvoiceStatus;
 import com.ims.enums.InvoiceType;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.data.jpa.repository.EntityGraph;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -173,4 +172,22 @@ public interface InvoiceRepository
             @Param("id") Long id
     );
 
+    @EntityGraph(attributePaths = {"customer"})
+    List<InvoiceEntity> findTop5ByActiveTrueOrderByCreatedAtDesc();
+
+
+    long countByActiveTrue();
+
+    List<InvoiceEntity> findTop10ByActiveTrueAndStatusOrderByCreatedAtDesc(
+            InvoiceStatus status
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+    SELECT i
+    FROM InvoiceEntity i
+    WHERE i.id = :id
+      AND i.active = true
+""")
+    Optional<InvoiceEntity> findByIdForUpdate(@Param("id") Long id);
 }

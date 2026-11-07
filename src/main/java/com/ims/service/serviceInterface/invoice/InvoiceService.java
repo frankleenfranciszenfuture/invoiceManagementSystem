@@ -57,6 +57,7 @@ public interface InvoiceService {
             Long id
     );
 
+    ApiResponse<InvoiceResponse> approveInvoice(Long id);
 
     // =====================================================
     // DELETE
@@ -66,4 +67,6 @@ public interface InvoiceService {
             Long id
     );
 
+    void markInvoiceAsSent(Long invoiceId);
+    void markInvoiceAsPendingApproval(Long invoiceId);
 }

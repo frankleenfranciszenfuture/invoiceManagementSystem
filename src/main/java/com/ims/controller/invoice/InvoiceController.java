@@ -6,13 +6,17 @@ import com.ims.dtos.invoice.InvoiceCreateRequest;
 import com.ims.dtos.invoice.InvoiceResponse;
 import com.ims.dtos.invoice.InvoiceSearchRequest;
 import com.ims.dtos.invoice.InvoiceUpdateRequest;
+import com.ims.service.serviceInterface.email.EmailService;
 import com.ims.service.serviceInterface.invoice.InvoiceNumberService;
 import com.ims.service.serviceInterface.invoice.InvoiceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/invoices")
@@ -21,7 +25,7 @@ public class InvoiceController {
 
     private final InvoiceService invoiceService;
     private final InvoiceNumberService invoiceNumberService;
-
+    private final EmailService emailService;
     // =====================================================
     // GENERATE INVOICE NUMBER
     // =====================================================
@@ -151,6 +155,15 @@ public class InvoiceController {
     }
 
 
+    @PatchMapping("/{id}/approve")
+    public ResponseEntity<ApiResponse<InvoiceResponse>> approveInvoice(
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(
+                invoiceService.approveInvoice(id)
+        );
+    }
+
     // =====================================================
     // DELETE / DEACTIVATE
     // =====================================================
@@ -164,6 +177,61 @@ public class InvoiceController {
 
         return invoiceService.deleteInvoice(
                 id
+        );
+    }
+
+    // =====================================================
+// SEND INVOICE EMAIL WITH PDF ATTACHMENT
+// =====================================================
+
+    @PostMapping(
+            value = "/{id}/send-email",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ApiResponse<Void> sendInvoiceEmail(
+
+            @PathVariable
+            Long id,
+
+            @RequestParam("toEmail")
+            String toEmail,
+
+            @RequestParam(value = "subject", required = false)
+            String subject,
+
+            @RequestParam(value = "message", required = false)
+            String message,
+
+            @RequestParam("file")
+            MultipartFile file
+    ) {
+
+        // Verify invoice exists
+        ApiResponse<InvoiceResponse> response =
+                invoiceService.getInvoiceById(id);
+
+        if (response == null || response.getData() == null) {
+            throw new IllegalArgumentException(
+                    "Invoice not found with ID: " + id
+            );
+        }
+
+        InvoiceResponse invoice = response.getData();
+
+        // Send email with frontend-generated PDF
+        emailService.sendInvoiceEmail(
+                toEmail,
+                subject,
+                message,
+                invoice.getInvoiceNumber(),
+                file
+        );
+        // Update invoice status only after successful email delivery
+        invoiceService.markInvoiceAsSent(id);
+
+        return ApiResponse.success(
+                null,
+                "Invoice email submitted successfully."
         );
     }
 }

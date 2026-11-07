@@ -1,4 +1,3 @@
-
 package com.ims.service.impl.payment;
 
 import com.ims.common.PageResponse;
@@ -15,10 +14,13 @@ import com.ims.service.serviceInterface.payment.PaymentService;
 
 import com.ims.utils.specification.PaymentSpecification;
 import com.ims.utils.validation.PaymentValidation;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,6 +51,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final SaleOrderRepository saleOrderRepository;
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final ExpenseRepository expenseRepository;
+    private final InvoiceRepository invoiceRepository;
 
     private final ExchangeRateService exchangeRateService;
     private final PaymentValidation paymentValidation;
@@ -72,7 +76,6 @@ public class PaymentServiceImpl implements PaymentService {
                 request.getAllocations() != null
                         && !request.getAllocations().isEmpty();
 
-        // Convert a normal payment into a single allocation.
         List<PaymentAllocationRequestDTO> allocations;
 
         if (splitMode) {
@@ -88,7 +91,6 @@ public class PaymentServiceImpl implements PaymentService {
             );
         }
 
-        // Lock source document once for the complete payment operation.
         SourceDetails source = getAndLockSource(
                 request.getPaymentType(),
                 request.getSourceId()
@@ -125,7 +127,6 @@ public class PaymentServiceImpl implements PaymentService {
             );
         }
 
-        // All allocations share the same source currency and payment date.
         BigDecimal exchangeRate = getExchangeRate(
                 sourceCurrency,
                 request.getPaymentDate()
@@ -134,7 +135,7 @@ public class PaymentServiceImpl implements PaymentService {
         BigDecimal totalAllocated = ZERO;
         BigDecimal totalBaseAmount = ZERO;
 
-        List<PaymentResponseDTO> createdPayments = new java.util.ArrayList<>();
+        List<PaymentResponseDTO> createdPayments = new ArrayList<>();
 
         for (PaymentAllocationRequestDTO allocation : allocations) {
 
@@ -162,9 +163,9 @@ public class PaymentServiceImpl implements PaymentService {
                     allocation
             );
 
-            PaymentResponseDTO response = paymentMapper.toResponse(payment);
-
-            createdPayments.add(response);
+            createdPayments.add(
+                    paymentMapper.toResponse(payment)
+            );
 
             remainingDue = remainingDue.subtract(allocationAmount);
             totalAllocated = totalAllocated.add(allocationAmount);
@@ -173,12 +174,10 @@ public class PaymentServiceImpl implements PaymentService {
             );
         }
 
-        // Existing single-payment response remains unchanged.
         if (!splitMode) {
             return createdPayments.get(0);
         }
 
-        // Split-payment response.
         PaymentResponseDTO summary = paymentMapper.toResponse(
                 paymentRepository.findById(
                         createdPayments.get(0).getId()
@@ -339,7 +338,6 @@ public class PaymentServiceImpl implements PaymentService {
         return switch (paymentType) {
 
             case SALES -> {
-
                 SalesOrderEntity order = saleOrderRepository
                         .findActiveByIdForUpdate(sourceId)
                         .orElseThrow(() -> new IllegalArgumentException(
@@ -352,12 +350,12 @@ public class PaymentServiceImpl implements PaymentService {
                         order.getOrderNo(),
                         order.getCustomer(),
                         order.getParty(),
+                        null,
                         null
                 );
             }
 
             case PURCHASE -> {
-
                 PurchaseOrderEntity order = purchaseOrderRepository
                         .findActiveByIdForUpdate(sourceId)
                         .orElseThrow(() -> new IllegalArgumentException(
@@ -370,12 +368,12 @@ public class PaymentServiceImpl implements PaymentService {
                         order.getOrderNo(),
                         null,
                         order.getParty(),
+                        null,
                         null
                 );
             }
 
             case EXPENSE -> {
-
                 ExpenseEntity expense = expenseRepository
                         .findByIdAndActiveTrue(sourceId)
                         .orElseThrow(() -> new IllegalArgumentException(
@@ -393,7 +391,43 @@ public class PaymentServiceImpl implements PaymentService {
                         expense.getExpenseNo(),
                         null,
                         expense.getVendor(),
-                        expense
+                        expense,
+                        null
+                );
+            }
+
+            case INVOICE -> {
+
+                InvoiceEntity invoice = invoiceRepository
+                        .findByIdAndActiveTrue(sourceId)
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                "Invoice not found or inactive"
+                        ));
+
+                entityManager.lock(
+                        invoice,
+                        LockModeType.PESSIMISTIC_WRITE
+                );
+
+                if (invoice.getStatus() != InvoiceStatus.APPROVED
+                        && invoice.getStatus() != InvoiceStatus.SENT
+                        && invoice.getStatus() != InvoiceStatus.PARTIAL
+                        && invoice.getStatus() != InvoiceStatus.OVERDUE) {
+
+                    throw new IllegalStateException(
+                            "Payment is allowed only for approved or sent invoices. "
+                                    + "Current status: " + invoice.getStatus()
+                    );
+                }
+
+                yield new SourceDetails(
+                        invoice.getGrandTotal(),
+                        invoice.getCurrency(),
+                        invoice.getInvoiceNumber(),
+                        invoice.getCustomer(),
+                        null,
+                        null,
+                        invoice
                 );
             }
         };
@@ -405,7 +439,8 @@ public class PaymentServiceImpl implements PaymentService {
             String sourceNumber,
             CustomerEntity customer,
             PartyEntity party,
-            ExpenseEntity expense
+            ExpenseEntity expense,
+            InvoiceEntity invoice
     ) {
     }
 
@@ -417,6 +452,7 @@ public class PaymentServiceImpl implements PaymentService {
             PaymentType paymentType,
             Long sourceId
     ) {
+
         BigDecimal amount =
                 paymentRepository.calculateCompletedPaymentAmount(
                         paymentType,
@@ -424,7 +460,74 @@ public class PaymentServiceImpl implements PaymentService {
                         PaymentStatus.COMPLETED
                 );
 
-        return amount == null ? BigDecimal.ZERO : amount;
+        return amount == null ? ZERO : amount;
+    }
+
+    // =========================================================
+    // INVOICE PAYMENT STATUS
+    // =========================================================
+
+    // =========================================================
+// INVOICE PAYMENT STATUS
+// =========================================================
+
+    private void updateInvoicePaymentStatus(
+            InvoiceEntity invoice,
+            BigDecimal paidAmount
+    ) {
+
+        if (invoice == null) {
+            throw new IllegalStateException(
+                    "Invoice not found while updating payment status"
+            );
+        }
+
+        if (invoice.getStatus() == InvoiceStatus.DRAFT
+                || invoice.getStatus() == InvoiceStatus.CANCELLED
+                || invoice.getStatus() == InvoiceStatus.REJECTED
+                || invoice.getStatus() == InvoiceStatus.PENDING_APPROVAL) {
+
+            return;
+        }
+
+        BigDecimal invoiceTotal = safeAmount(
+                invoice.getGrandTotal()
+        );
+
+        BigDecimal paid = safeAmount(paidAmount)
+                .max(ZERO)
+                .min(invoiceTotal);
+
+        if (invoiceTotal.compareTo(ZERO) <= 0) {
+            throw new IllegalStateException(
+                    "Invoice total must be greater than zero."
+            );
+        }
+
+        if (paid.compareTo(invoiceTotal) >= 0) {
+
+            invoice.setStatus(InvoiceStatus.PAID);
+
+        } else if (paid.compareTo(ZERO) > 0) {
+
+            invoice.setStatus(InvoiceStatus.PARTIAL);
+
+        } else if (invoice.getDueDate() != null
+                && invoice.getDueDate().isBefore(LocalDate.now())
+                && (invoice.getStatus() == InvoiceStatus.SENT
+                || invoice.getStatus() == InvoiceStatus.OVERDUE)) {
+
+            invoice.setStatus(InvoiceStatus.OVERDUE);
+
+        } else if (invoice.getStatus() == InvoiceStatus.PARTIAL
+                || invoice.getStatus() == InvoiceStatus.PAID
+                || invoice.getStatus() == InvoiceStatus.OVERDUE) {
+
+            // Payment reversal: do not mark an unpaid invoice as SENT
+            // unless it was previously sent.
+            invoice.setStatus(InvoiceStatus.SENT);
+
+        }
     }
 
     // =========================================================
@@ -555,6 +658,23 @@ public class PaymentServiceImpl implements PaymentService {
             boolean partyCredit
     ) {
 
+        // INVOICE
+        if (paymentType == PaymentType.INVOICE) {
+
+            BigDecimal completedAmount = getCompletedPaymentAmount(
+                    PaymentType.INVOICE,
+                    source.invoice().getId()
+            );
+
+            updateInvoicePaymentStatus(
+                    source.invoice(),
+                    completedAmount
+            );
+
+            return;
+        }
+
+        // EXPENSE
         if (paymentType == PaymentType.EXPENSE) {
 
             ExpenseEntity expense = source.expense();
@@ -578,6 +698,7 @@ public class PaymentServiceImpl implements PaymentService {
             return;
         }
 
+        // SALES / PURCHASE
         if (source.party() == null) {
             return;
         }
@@ -756,7 +877,7 @@ public class PaymentServiceImpl implements PaymentService {
         boolean partyCredit =
                 payment.getPaymentMethod() == PaymentMethod.PARTY_CREDIT;
 
-// Party credit has no bank or cash ledger transaction.
+        // PARTY CREDIT HAS NO BANK OR CASH LEDGER TRANSACTION.
         if (!partyCredit) {
 
             BankTransactionEntity bankTransaction =
@@ -850,18 +971,22 @@ public class PaymentServiceImpl implements PaymentService {
             }
         }
 
-// Actual payment balance restoration.
-// These methods naturally skip when accounts are null.
+        // RESTORE ACCOUNT BALANCES.
         if (!partyCredit) {
             updateBankAccountBalance(payment, true);
             updateCashAccountBalance(payment, true);
         }
 
-// Restore party / expense balances.
-        restoreSourcePaymentDetails(payment);
-
+        /*
+         * IMPORTANT:
+         * Mark the payment reversed BEFORE recalculating invoice paid amount.
+         * The repository query must no longer count this payment as COMPLETED.
+         */
         payment.setPaymentStatus(PaymentStatus.REVERSED);
         payment.setReversalReason(reason);
+
+        // Restore party, expense or invoice details.
+        restoreSourcePaymentDetails(payment);
 
         return paymentMapper.toResponse(
                 paymentRepository.save(payment)
@@ -874,6 +999,34 @@ public class PaymentServiceImpl implements PaymentService {
 
     private void restoreSourcePaymentDetails(PaymentEntity payment) {
 
+        // INVOICE
+        if (payment.getPaymentType() == PaymentType.INVOICE) {
+
+            InvoiceEntity invoice = invoiceRepository
+                    .findByIdAndActiveTrue(payment.getSourceId())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Invoice not found while reversing payment"
+                    ));
+
+            entityManager.lock(
+                    invoice,
+                    LockModeType.PESSIMISTIC_WRITE
+            );
+
+            BigDecimal completedAmount = getCompletedPaymentAmount(
+                    PaymentType.INVOICE,
+                    invoice.getId()
+            );
+
+            updateInvoicePaymentStatus(
+                    invoice,
+                    completedAmount
+            );
+
+            return;
+        }
+
+        // EXPENSE
         if (payment.getPaymentType() == PaymentType.EXPENSE) {
 
             ExpenseEntity expense = expenseRepository
@@ -907,6 +1060,7 @@ public class PaymentServiceImpl implements PaymentService {
             return;
         }
 
+        // SALES / PURCHASE
         if (payment.getParty() == null) {
             return;
         }
@@ -933,12 +1087,10 @@ public class PaymentServiceImpl implements PaymentService {
             );
 
             if (partyCredit) {
-                // Reverse credit sale: reduce outstanding receivable.
                 outstanding = outstanding
                         .subtract(payment.getBaseAmount())
                         .max(ZERO);
             } else {
-                // Reverse actual received payment: restore receivable.
                 outstanding = outstanding.add(payment.getBaseAmount());
             }
 
@@ -951,12 +1103,10 @@ public class PaymentServiceImpl implements PaymentService {
             );
 
             if (partyCredit) {
-                // Reverse credit purchase: reduce outstanding payable.
                 outstanding = outstanding
                         .subtract(payment.getBaseAmount())
                         .max(ZERO);
             } else {
-                // Reverse actual supplier payment: restore payable.
                 outstanding = outstanding.add(payment.getBaseAmount());
             }
 
@@ -973,7 +1123,6 @@ public class PaymentServiceImpl implements PaymentService {
             boolean reversal
     ) {
 
-        // Cash payments do not have a bank account.
         if (payment.getBankAccount() == null) {
             return;
         }
@@ -988,7 +1137,6 @@ public class PaymentServiceImpl implements PaymentService {
         boolean isCredit =
                 payment.getPaymentDirection() == PaymentDirection.RECEIVED;
 
-        // Reverse the original transaction direction when reversing.
         if (reversal) {
             isCredit = !isCredit;
         }
@@ -1049,6 +1197,10 @@ public class PaymentServiceImpl implements PaymentService {
         );
     }
 
+    // =========================================================
+    // CASH ACCOUNT BALANCE UPDATE
+    // =========================================================
+
     private void updateCashAccountBalance(
             PaymentEntity payment,
             boolean reversal
@@ -1089,21 +1241,30 @@ public class PaymentServiceImpl implements PaymentService {
         boolean received =
                 payment.getPaymentDirection() == PaymentDirection.RECEIVED;
 
-        // Reverse the original direction when reversing a payment.
         if (reversal) {
             received = !received;
         }
 
-        BigDecimal currentBalance = cashAccount.getCurrentBalance();
+        BigDecimal currentBalance = safeAmount(
+                cashAccount.getCurrentBalance()
+        );
 
         if (received) {
-            cashAccount.setCurrentBalance(currentBalance.add(amount));
+            cashAccount.setCurrentBalance(
+                    currentBalance.add(amount)
+            );
         } else {
-            cashAccount.setCurrentBalance(currentBalance.subtract(amount));
+            cashAccount.setCurrentBalance(
+                    currentBalance.subtract(amount)
+            );
         }
 
         cashAccountRepository.save(cashAccount);
     }
+
+    // =========================================================
+    // PARTY CREDIT VALIDATION
+    // =========================================================
 
     private PartyEntity validateAndLockPartyCredit(
             PaymentType paymentType,
@@ -1111,9 +1272,10 @@ public class PaymentServiceImpl implements PaymentService {
             BigDecimal baseAmount
     ) {
 
-        if (paymentType == PaymentType.EXPENSE) {
+        if (paymentType == PaymentType.EXPENSE
+                || paymentType == PaymentType.INVOICE) {
             throw new IllegalArgumentException(
-                    "Party credit is not supported for expenses"
+                    "Party credit is not supported for this payment type"
             );
         }
 
@@ -1135,7 +1297,9 @@ public class PaymentServiceImpl implements PaymentService {
             );
         }
 
-        BigDecimal creditLimit = safeAmount(party.getCreditLimit());
+        BigDecimal creditLimit = safeAmount(
+                party.getCreditLimit()
+        );
 
         if (creditLimit.compareTo(ZERO) <= 0) {
             throw new IllegalArgumentException(
@@ -1153,9 +1317,11 @@ public class PaymentServiceImpl implements PaymentService {
                 );
             }
 
-            outstanding = safeAmount(party.getOutstandingReceivable());
+            outstanding = safeAmount(
+                    party.getOutstandingReceivable()
+            );
 
-        } else {
+        } else if (paymentType == PaymentType.PURCHASE) {
 
             if (party.getPartyType() != PartyType.SUPPLIER) {
                 throw new IllegalArgumentException(
@@ -1163,7 +1329,14 @@ public class PaymentServiceImpl implements PaymentService {
                 );
             }
 
-            outstanding = safeAmount(party.getOutstandingPayable());
+            outstanding = safeAmount(
+                    party.getOutstandingPayable()
+            );
+
+        } else {
+            throw new IllegalArgumentException(
+                    "Party credit is not supported for this payment type"
+            );
         }
 
         BigDecimal availableCredit = creditLimit.subtract(outstanding);
@@ -1177,6 +1350,10 @@ public class PaymentServiceImpl implements PaymentService {
 
         return party;
     }
+
+    // =========================================================
+    // CREATE PAYMENT ALLOCATION
+    // =========================================================
 
     private PaymentEntity createPaymentAllocation(
             PaymentRequestDTO request,
@@ -1198,9 +1375,10 @@ public class PaymentServiceImpl implements PaymentService {
                 .setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
 
         PaymentDirection direction =
-                request.getPaymentType() == PaymentType.SALES
-                        ? PaymentDirection.RECEIVED
-                        : PaymentDirection.PAID;
+                switch (request.getPaymentType()) {
+                    case SALES, INVOICE -> PaymentDirection.RECEIVED;
+                    case PURCHASE, EXPENSE -> PaymentDirection.PAID;
+                };
 
         PartyEntity party = null;
 
@@ -1282,15 +1460,14 @@ public class PaymentServiceImpl implements PaymentService {
 
         payment = paymentRepository.save(payment);
 
-        // Only actual payments create bank/cash transactions.
         if (!partyCredit) {
+
             createLedgerTransaction(payment);
 
             updateBankAccountBalance(payment, false);
             updateCashAccountBalance(payment, false);
         }
 
-        // Preserve the existing source balance logic.
         updateSourcePaymentDetails(
                 request.getPaymentType(),
                 source,
@@ -1301,6 +1478,10 @@ public class PaymentServiceImpl implements PaymentService {
 
         return payment;
     }
+
+    // =========================================================
+    // VALIDATE ALLOCATION
+    // =========================================================
 
     private void validateAllocation(
             PaymentType paymentType,
@@ -1326,14 +1507,16 @@ public class PaymentServiceImpl implements PaymentService {
             );
         }
 
-        if (paymentType == PaymentType.EXPENSE
-                && allocation.getPaymentMethod() == PaymentMethod.PARTY_CREDIT) {
-            throw new IllegalArgumentException(
-                    "Party Credit is not allowed for expense payments"
-            );
+        if (allocation.getPaymentMethod() == PaymentMethod.PARTY_CREDIT) {
+
+            if (paymentType == PaymentType.EXPENSE
+                    || paymentType == PaymentType.INVOICE) {
+                throw new IllegalArgumentException(
+                        "Party Credit is not allowed for this payment type"
+                );
+            }
         }
 
         paymentValidation.validatePaymentAccount(allocation);
     }
-
 }
