@@ -1,16 +1,18 @@
 package com.ims.service.impl.cashAccount;
 
-
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
 import com.ims.dtos.cashAccount.CashAccountRequestDTO;
 import com.ims.dtos.cashAccount.CashAccountResponseDTO;
 import com.ims.entity.CashAccountEntity;
+import com.ims.enums.CashAccountStatus;
 import com.ims.mapper.cashAccount.CashAccountMapper;
 import com.ims.repository.CashAccountRepository;
 import com.ims.service.serviceInterface.cashAccount.CashAccountService;
+import com.ims.utils.base.BaseEntityUtil;
 import com.ims.utils.specification.CashAccountSpecification;
 import com.ims.utils.validation.CashAccountValidation;
+
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.data.domain.Page;
@@ -30,6 +32,7 @@ public class CashAccountServiceImpl implements CashAccountService {
     private final CashAccountRepository cashAccountRepository;
     private final CashAccountMapper cashAccountMapper;
     private final CashAccountValidation cashAccountValidation;
+    private final BaseEntityUtil baseEntityUtil;
 
     @Override
     public ApiResponse<CashAccountResponseDTO> create(
@@ -41,14 +44,25 @@ public class CashAccountServiceImpl implements CashAccountService {
         CashAccountEntity entity = cashAccountMapper.toEntity(request);
 
         entity.setAccountName(request.getAccountName().trim());
-        entity.setAccountCode(request.getAccountCode().trim().toUpperCase(Locale.ROOT));
-        entity.setCurrency(request.getCurrency().trim().toUpperCase(Locale.ROOT));
+
+        entity.setAccountCode(generateCashAccountCode());
+
+        entity.setCurrency(
+                request.getCurrency().trim().toUpperCase(Locale.ROOT)
+        );
 
         BigDecimal openingBalance = request.getOpeningBalance();
 
         entity.setOpeningBalance(openingBalance);
         entity.setCurrentBalance(openingBalance);
+
+        // Status-based account management
+        entity.setStatus(CashAccountStatus.ACTIVE.name());
+
+        // Retain for compatibility with existing active-based code.
         entity.setActive(true);
+
+        baseEntityUtil.prepareForCreate(entity);
 
         CashAccountEntity saved = cashAccountRepository.save(entity);
 
@@ -62,8 +76,16 @@ public class CashAccountServiceImpl implements CashAccountService {
     @Transactional(readOnly = true)
     public ApiResponse<CashAccountResponseDTO> getById(Long id) {
 
-        CashAccountEntity entity =
-                cashAccountValidation.validateAndGet(id);
+        CashAccountEntity entity = cashAccountRepository
+                .findByIdAndStatusNot(id, CashAccountStatus.DELETED.name())
+                .filter(account ->
+                        CashAccountStatus.ACTIVE.name().equalsIgnoreCase(
+                                account.getStatus()
+                        )
+                )
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Active cash account not found.")
+                );
 
         return ApiResponse.success(
                 cashAccountMapper.toResponse(entity),
@@ -81,9 +103,13 @@ public class CashAccountServiceImpl implements CashAccountService {
 
         Specification<CashAccountEntity> specification =
                 Specification
-                        .where(CashAccountSpecification.isActive())
-                        .and(CashAccountSpecification.search(search))
-                        .and(CashAccountSpecification.hasStatus(status));
+                        .where(CashAccountSpecification.search(search))
+                        .and(CashAccountSpecification.hasStatus(
+                                status == null || status.isBlank()
+                                        || CashAccountStatus.ALL.name().equalsIgnoreCase(status.trim())
+                                        ? CashAccountStatus.ACTIVE.name()
+                                        : status
+                        ));
 
         Page<CashAccountEntity> page =
                 cashAccountRepository.findAll(specification, pageable);
@@ -122,14 +148,44 @@ public class CashAccountServiceImpl implements CashAccountService {
 
         BigDecimal existingBalance = entity.getCurrentBalance();
 
+        String existingStatus = entity.getStatus();
+
         cashAccountMapper.updateEntity(request, entity);
 
         entity.setAccountName(request.getAccountName().trim());
-        entity.setAccountCode(request.getAccountCode().trim().toUpperCase(Locale.ROOT));
-        entity.setCurrency(request.getCurrency().trim().toUpperCase(Locale.ROOT));
 
-        // Do not overwrite the live balance during account maintenance.
+        entity.setAccountCode(
+                request.getAccountCode().trim().toUpperCase(Locale.ROOT)
+        );
+
+        entity.setCurrency(
+                request.getCurrency().trim().toUpperCase(Locale.ROOT)
+        );
+
+        // Do not allow normal update to delete an account.
+        if (request.getStatus() != null) {
+
+            if (CashAccountStatus.DELETED.name().equalsIgnoreCase(
+                    request.getStatus()
+            ) || CashAccountStatus.ALL.name().equalsIgnoreCase(
+                    request.getStatus()
+            )) {
+                throw new IllegalArgumentException(
+                        "Invalid cash account status."
+                );
+            }
+
+            entity.setStatus(
+                    request.getStatus().trim().toUpperCase(Locale.ROOT)
+            );
+
+        } else {
+            entity.setStatus(existingStatus);
+        }
+
+        // Preserve the live balance.
         entity.setCurrentBalance(existingBalance);
+        baseEntityUtil.prepareForUpdate(entity);
 
         CashAccountEntity saved = cashAccountRepository.save(entity);
 
@@ -145,15 +201,30 @@ public class CashAccountServiceImpl implements CashAccountService {
         CashAccountEntity entity =
                 cashAccountValidation.validateAndGet(id);
 
-        // Soft delete. Keep the account and its transaction history.
+        // Status-based soft delete.
+        entity.setStatus(CashAccountStatus.DELETED.name());
+
+        // Retain compatibility with existing active-based references.
         entity.setActive(false);
-        entity.setStatus("INACTIVE");
+
+        baseEntityUtil.prepareForUpdate(entity);
 
         cashAccountRepository.save(entity);
 
         return ApiResponse.success(
                 null,
-                "Cash account deactivated successfully."
+                "Cash account deleted successfully."
         );
+    }
+
+    private String generateCashAccountCode() {
+
+        Integer lastSequence =
+                cashAccountRepository.findMaxCashAccountSequence();
+
+        int nextSequence =
+                lastSequence == null ? 1 : lastSequence + 1;
+
+        return String.format("CASH-%03d", nextSequence);
     }
 }

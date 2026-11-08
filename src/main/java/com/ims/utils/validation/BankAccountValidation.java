@@ -1,11 +1,13 @@
 package com.ims.utils.validation;
 
-
 import com.ims.dtos.bankAccount.BankAccountCreateRequest;
 import com.ims.dtos.bankAccount.BankAccountUpdateRequest;
 import com.ims.entity.BankAccount;
+import com.ims.enums.BankAccountStatus;
 import com.ims.repository.BankAccountRepository;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -14,7 +16,6 @@ import org.springframework.util.StringUtils;
 public class BankAccountValidation {
 
     private final BankAccountRepository bankAccountRepository;
-
 
     // =====================================================
     // CREATE
@@ -30,8 +31,9 @@ public class BankAccountValidation {
 
         if (StringUtils.hasText(request.getAccountCode())
                 && bankAccountRepository
-                .existsByAccountCodeIgnoreCaseAndActiveTrue(
-                        request.getAccountCode().trim()
+                .existsByAccountCodeIgnoreCaseAndStatusNot(
+                        request.getAccountCode().trim(),
+                        BankAccountStatus.DELETED
                 )) {
 
             throw new IllegalArgumentException(
@@ -39,22 +41,21 @@ public class BankAccountValidation {
             );
         }
 
-
         // -------------------------------------------------
         // ACCOUNT NUMBER
         // -------------------------------------------------
 
         if (StringUtils.hasText(request.getAccountNumber())
                 && bankAccountRepository
-                .existsByAccountNumberAndActiveTrue(
-                        request.getAccountNumber().trim()
+                .existsByAccountNumberAndStatusNot(
+                        request.getAccountNumber().trim(),
+                        BankAccountStatus.DELETED
                 )) {
 
             throw new IllegalArgumentException(
                     "Account number already exists"
             );
         }
-
 
         // -------------------------------------------------
         // PRIMARY ACCOUNT
@@ -83,6 +84,11 @@ public class BankAccountValidation {
                                 )
                         );
 
+        if (existingAccount.getStatus() == BankAccountStatus.DELETED) {
+            throw new IllegalArgumentException(
+                    "Deleted bank account cannot be updated"
+            );
+        }
 
         // -------------------------------------------------
         // ACCOUNT CODE
@@ -94,8 +100,9 @@ public class BankAccountValidation {
                 request.getAccountCode()
         )
                 && bankAccountRepository
-                .existsByAccountCodeIgnoreCaseAndActiveTrueAndIdNot(
+                .existsByAccountCodeIgnoreCaseAndStatusNotAndIdNot(
                         request.getAccountCode().trim(),
+                        BankAccountStatus.DELETED,
                         id
                 )) {
 
@@ -103,7 +110,6 @@ public class BankAccountValidation {
                     "Account code already exists"
             );
         }
-
 
         // -------------------------------------------------
         // ACCOUNT NUMBER
@@ -115,8 +121,9 @@ public class BankAccountValidation {
                 request.getAccountNumber()
         )
                 && bankAccountRepository
-                .existsByAccountNumberAndActiveTrueAndIdNot(
+                .existsByAccountNumberAndStatusNotAndIdNot(
                         request.getAccountNumber().trim(),
+                        BankAccountStatus.DELETED,
                         id
                 )) {
 
@@ -125,19 +132,17 @@ public class BankAccountValidation {
             );
         }
 
-
         // -------------------------------------------------
         // PRIMARY ACCOUNT
         // -------------------------------------------------
 
-        if (Boolean.TRUE.equals(
-                request.getPrimaryAccount()
-        )
+        if (Boolean.TRUE.equals(request.getPrimaryAccount())
                 && !Boolean.TRUE.equals(
                 existingAccount.getPrimaryAccount()
         )
                 && bankAccountRepository
-                .existsByPrimaryAccountTrueAndActiveTrueAndIdNot(
+                .existsByPrimaryAccountTrueAndStatusNotAndIdNot(
+                        BankAccountStatus.DELETED,
                         id
                 )) {
 
@@ -158,7 +163,9 @@ public class BankAccountValidation {
 
         if (Boolean.TRUE.equals(primaryAccount)
                 && bankAccountRepository
-                .existsByPrimaryAccountTrueAndActiveTrue()) {
+                .existsByPrimaryAccountTrueAndStatusNot(
+                        BankAccountStatus.DELETED
+                )) {
 
             throw new IllegalArgumentException(
                     "Another primary bank account already exists"
@@ -176,23 +183,16 @@ public class BankAccountValidation {
             String requestedValue
     ) {
 
-        if (existingValue == null
-                && requestedValue == null) {
-
+        if (existingValue == null && requestedValue == null) {
             return true;
         }
 
-        if (existingValue == null
-                || requestedValue == null) {
-
+        if (existingValue == null || requestedValue == null) {
             return false;
         }
 
-        return existingValue
-                .trim()
-                .equalsIgnoreCase(
-                        requestedValue.trim()
-                );
+        return existingValue.trim()
+                .equalsIgnoreCase(requestedValue.trim());
     }
 
 
@@ -205,22 +205,15 @@ public class BankAccountValidation {
             String requestedValue
     ) {
 
-        if (existingValue == null
-                && requestedValue == null) {
-
+        if (existingValue == null && requestedValue == null) {
             return true;
         }
 
-        if (existingValue == null
-                || requestedValue == null) {
-
+        if (existingValue == null || requestedValue == null) {
             return false;
         }
 
-        return existingValue
-                .trim()
-                .equals(
-                        requestedValue.trim()
-                );
+        return existingValue.trim()
+                .equals(requestedValue.trim());
     }
 }

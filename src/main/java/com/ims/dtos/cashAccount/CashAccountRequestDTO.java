@@ -15,7 +15,7 @@ public class CashAccountRequestDTO {
     @Size(max = 150, message = "Account name cannot exceed 150 characters")
     private String accountName;
 
-    @NotBlank(message = "Account code is required")
+
     @Size(max = 50, message = "Account code cannot exceed 50 characters")
     private String accountCode;
 

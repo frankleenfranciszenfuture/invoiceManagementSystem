@@ -1,10 +1,15 @@
 package com.ims.repository;
 
-
 import com.ims.entity.BankAccount;
+import com.ims.enums.BankAccountStatus;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
 
 @Repository
 public interface BankAccountRepository
@@ -13,42 +18,63 @@ public interface BankAccountRepository
 
     // =====================================================
     // CREATE
-    // ACTIVE ACCOUNTS ONLY
+    // NON-DELETED ACCOUNTS ONLY
     // =====================================================
 
-    boolean existsByAccountCodeIgnoreCaseAndActiveTrue(
-            String accountCode
+    boolean existsByAccountCodeIgnoreCaseAndStatusNot(
+            String accountCode,
+            BankAccountStatus status
     );
 
-    boolean existsByAccountNumberAndActiveTrue(
-            String accountNumber
+    boolean existsByAccountNumberAndStatusNot(
+            String accountNumber,
+            BankAccountStatus status
     );
-
 
     // =====================================================
     // UPDATE
-    // ACTIVE ACCOUNTS ONLY
+    // EXCLUDE DELETED ACCOUNTS
     // EXCLUDE CURRENT ACCOUNT
     // =====================================================
 
-    boolean existsByAccountCodeIgnoreCaseAndActiveTrueAndIdNot(
+    boolean existsByAccountCodeIgnoreCaseAndStatusNotAndIdNot(
             String accountCode,
+            BankAccountStatus status,
             Long id
     );
 
-    boolean existsByAccountNumberAndActiveTrueAndIdNot(
+    boolean existsByAccountNumberAndStatusNotAndIdNot(
             String accountNumber,
+            BankAccountStatus status,
             Long id
     );
-
 
     // =====================================================
     // PRIMARY ACCOUNT
+    // NON-DELETED ACCOUNTS ONLY
     // =====================================================
 
-    boolean existsByPrimaryAccountTrueAndActiveTrue();
+    boolean existsByPrimaryAccountTrueAndStatusNot(
+            BankAccountStatus status
+    );
 
-    boolean existsByPrimaryAccountTrueAndActiveTrueAndIdNot(
+    boolean existsByPrimaryAccountTrueAndStatusNotAndIdNot(
+            BankAccountStatus status,
             Long id
+    );
+
+    // =====================================================
+    // GET ALL
+    // EXCLUDE DELETED ACCOUNTS
+    // =====================================================
+
+    Page<BankAccount> findByStatusNot(
+            BankAccountStatus status,
+            Pageable pageable
+    );
+
+    Optional<BankAccount> findByIdAndStatusNot(
+            Long id,
+            BankAccountStatus status
     );
 }

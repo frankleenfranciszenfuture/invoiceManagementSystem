@@ -1,6 +1,7 @@
 package com.ims.repository;
 
 import com.ims.entity.CompanyDetails;
+import com.ims.enums.CompanyStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
@@ -78,4 +79,9 @@ public interface CompanyRepository
     );
 
     Optional<CompanyDetails> findFirstByActiveTrueAndIsDefaultTrueOrderByIdAsc();
+
+    Optional<CompanyDetails> findByIdAndStatusNot(
+            Long id,
+            CompanyStatus status
+    );
 }

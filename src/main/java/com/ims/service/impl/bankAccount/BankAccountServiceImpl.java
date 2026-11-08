@@ -7,6 +7,7 @@ import com.ims.dtos.bankAccount.BankAccountResponse;
 import com.ims.dtos.bankAccount.BankAccountSearchRequest;
 import com.ims.dtos.bankAccount.BankAccountUpdateRequest;
 import com.ims.entity.BankAccount;
+import com.ims.enums.BankAccountStatus;
 import com.ims.mapper.bankAccount.BankAccountMapper;
 import com.ims.repository.BankAccountRepository;
 import com.ims.service.serviceInterface.bankAccount.BankAccountService;
@@ -157,8 +158,10 @@ public class BankAccountServiceImpl
                 request.getStatus()
         );
 
-        bankAccount.setActive(
-                true
+        bankAccount.setStatus(
+                request.getStatus() != null
+                        ? request.getStatus()
+                        : BankAccountStatus.ACTIVE
         );
 
         // =================================================
@@ -195,8 +198,8 @@ public class BankAccountServiceImpl
 
 
     // =====================================================
-    // GET BANK ACCOUNT BY ID
-    // =====================================================
+// GET BANK ACCOUNT BY ID
+// =====================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -205,48 +208,43 @@ public class BankAccountServiceImpl
     ) {
 
         BankAccount bankAccount =
-                bankAccountRepository.findById(id)
+                bankAccountRepository.findByIdAndStatusNot(
+                                id,
+                                BankAccountStatus.DELETED
+                        )
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Bank account not found."
                                 )
                         );
 
-        if (!Boolean.TRUE.equals(
-                bankAccount.getActive()
-        )) {
-
-            throw new RuntimeException(
-                    "Bank account is inactive."
-            );
-        }
-
         return ApiResponse.success(
-                mapBankAccountResponse(
-                        bankAccount
-                ),
+                mapBankAccountResponse(bankAccount),
                 "Bank account fetched successfully."
         );
     }
 
 
     // =====================================================
-    // GET ALL BANK ACCOUNTS
-    // =====================================================
+// GET ALL BANK ACCOUNTS
+// =====================================================
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<
-            PageResponse<BankAccountResponse>
-            > getAllBankAccounts(
+    public ApiResponse<PageResponse<BankAccountResponse>>
+    getAllBankAccounts(
             BankAccountSearchRequest request,
             Pageable pageable
     ) {
 
         Specification<BankAccount> specification =
-                BankAccountSpecification.filter(
-                        request
-                );
+                BankAccountSpecification.filter(request)
+                        .and((root, query, cb) ->
+                                cb.notEqual(
+                                        root.get("status"),
+                                        BankAccountStatus.DELETED
+                                )
+                        );
 
         Page<BankAccount> bankAccounts =
                 bankAccountRepository.findAll(
@@ -255,9 +253,7 @@ public class BankAccountServiceImpl
                 );
 
         return ApiResponse.success(
-                toPageResponse(
-                        bankAccounts
-                ),
+                toPageResponse(bankAccounts),
                 "Bank accounts fetched successfully."
         );
     }
@@ -284,7 +280,10 @@ public class BankAccountServiceImpl
         // =================================================
 
         BankAccount bankAccount =
-                bankAccountRepository.findById(id)
+                bankAccountRepository.findByIdAndStatusNot(
+                                id,
+                                BankAccountStatus.DELETED
+                        )
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Bank account not found."
@@ -419,21 +418,15 @@ public class BankAccountServiceImpl
 
         if (request.getStatus() != null) {
 
-            bankAccount.setStatus(
-                    request.getStatus()
-            );
+            if (request.getStatus() == BankAccountStatus.DELETED) {
+                throw new IllegalArgumentException(
+                        "Use the delete API to delete a bank account."
+                );
+            }
+
+            bankAccount.setStatus(request.getStatus());
         }
 
-        // =================================================
-        // 9. ACTIVE
-        // =================================================
-
-        if (request.getActive() != null) {
-
-            bankAccount.setActive(
-                    request.getActive()
-            );
-        }
 
         // =================================================
         // 10. AUDIT
@@ -469,66 +462,38 @@ public class BankAccountServiceImpl
 
 
     // =====================================================
-    // DELETE BANK ACCOUNT
-    // =====================================================
+// DELETE BANK ACCOUNT
+// =====================================================
 
     @Override
     @Transactional
-    public ApiResponse<Void> deleteBankAccount(
-            Long id
-    ) {
+    public ApiResponse<Void> deleteBankAccount(Long id) {
 
-        log.info(
-                "Deleting Bank Account : {}",
-                id
-        );
+        log.info("Deleting Bank Account : {}", id);
 
         BankAccount bankAccount =
-                bankAccountRepository.findById(id)
+                bankAccountRepository.findByIdAndStatusNot(
+                                id,
+                                BankAccountStatus.DELETED
+                        )
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Bank account not found."
                                 )
                         );
 
-        // =================================================
-        // SOFT DELETE
-        // =================================================
+        bankAccount.setStatus(BankAccountStatus.DELETED);
+        bankAccount.setPrimaryAccount(false);
 
-        bankAccount.setActive(
-                false
-        );
+        baseEntityUtil.prepareForUpdate(bankAccount);
 
-        // =================================================
-        // REMOVE PRIMARY FLAG
-        // =================================================
-
-        bankAccount.setPrimaryAccount(
-                false
-        );
-
-        // =================================================
-        // AUDIT
-        // =================================================
-
-        baseEntityUtil.prepareForUpdate(
-                bankAccount
-        );
-
-        // =================================================
-        // SAVE
-        // =================================================
-
-        bankAccountRepository.save(
-                bankAccount
-        );
+        bankAccountRepository.save(bankAccount);
 
         return ApiResponse.success(
                 null,
                 "Bank account deleted successfully."
         );
     }
-
 
     // =====================================================
     // MAP RESPONSE

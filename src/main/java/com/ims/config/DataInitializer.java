@@ -60,29 +60,37 @@ public class DataInitializer implements CommandLineRunner {
 
                 "Customers",
 
-                "BankAccounts",
+                "Items",
 
-                "SalesPersons",
+                "Invoices",
 
-                "Currency Detail",
+                "Invoice Approvals",
 
-                "Email Signature",
+                "Expenses",
 
-                "Staffs",
+                "Payments",
 
-                "Loan",
+                "Settings",
 
-                "Loan Payment",
-
-                "Staff Attendance",
+                "General Settings",
 
                 "Users",
 
                 "Roles",
 
-                "Employee Finance",
+                "MenuPermission",
 
-                "Staff Orders",
+                "Company Profile",
+
+                "Bank Accounts",
+
+                "Cash Accounts",
+
+                "Currencies",
+
+                "Sales Persons",
+
+                "Email Signatures",
 
                 "Categories",
 
@@ -94,73 +102,41 @@ public class DataInitializer implements CommandLineRunner {
 
                 "Products",
 
-                "Parties",
-
-                "Clearances",
-
-                "Warehouse",
+                "Taxes",
 
                 "Inventory",
 
+                "Inventory Dashboard",
+
+                "Open Stock",
+
+                "Adjustment Stock",
+
+                "Parties",
+
+                "Outstanding Clearances",
+
+                "Warehouse",
+
+                "Sale Order",
+
                 "Purchase Order",
 
-                "Package Reception",
+                "Record Payments",
 
-                "Purchase Entry",
+                "General Settings",
 
-                "Sales Order",
+                "Reports Dashboard",
 
-                "Stock Transfer",
+                "Reports Selection",
 
-                "Package Dispatch",
+                "Audit log"
 
-                "Damaged Products",
 
-                "Invoices",
 
-                "Staff Incentive",
 
-                "Stock Transaction",
 
-                "Stock Adjustments",
 
-                "Cash Bank",
-
-                "Cheque",
-
-                "Discount Limit",
-
-                "Discount Request",
-
-                "Settings",
-
-                "Role",
-
-                "Floor Register",
-
-                "Company Detail",
-
-                "Register",
-
-                "Bank Details",
-
-                "Menu Permission",
-
-                "TaxMasters",
-
-                "Points Rule",
-
-                "Incentive",
-
-                "Expenses Category",
-
-                "Report",
-
-                "Order Management",
-
-                "Audit Log",
-
-                "Sales Order Return"
         );
 
         log.info("========== Initializing Modules ==========");
@@ -471,41 +447,146 @@ public class DataInitializer implements CommandLineRunner {
         addModuleAction("Customers", "EDIT");
         addModuleAction("Customers", "DELETE");
 
+        // =====================================================
+        // Items
+        // =====================================================
+
+        addModuleAction("Items", "CREATE");
+        addModuleAction("Items", "VIEW");
+        addModuleAction("Items", "EDIT");
+        addModuleAction("Items", "DELETE");
+
+
+        // =====================================================
+        // INVOICES
+        // =====================================================
+
+        addModuleAction("Invoices", "CREATE");
+        addModuleAction("Invoices", "VIEW");
+        addModuleAction("Invoices", "EDIT");
+        addModuleAction("Invoices", "DELETE");
+
+
+        // =====================================================
+        // INVOICE APPROVAL
+        // =====================================================
+
+        addModuleAction("Invoice Approvals", "CREATE");
+        addModuleAction("Invoice Approvals", "VIEW");
+        addModuleAction("Invoice Approvals", "EDIT");
+        addModuleAction("Invoice Approvals", "DELETE");
+
+        // =====================================================
+        // EXPENSES
+        // =====================================================
+
+        addModuleAction("Expenses", "CREATE");
+        addModuleAction("Expenses", "VIEW");
+        addModuleAction("Expenses", "EDIT");
+        addModuleAction("Expenses", "DELETE");
+
+        // =====================================================
+        // PAYMENTS
+        // =====================================================
+
+        addModuleAction("Payments", "CREATE");
+        addModuleAction("Payments", "VIEW");
+        addModuleAction("Payments", "EDIT");
+        addModuleAction("Payments", "DELETE");
+
+        // =====================================================
+        // SETTINGS
+        // =====================================================
+
+        addModuleAction("Settings", "VIEW");
+
+        // =====================================================
+        // USERS
+        // =====================================================
+
+        addModuleAction("Users", "CREATE");
+        addModuleAction("Users", "VIEW");
+        addModuleAction("Users", "EDIT");
+        addModuleAction("Users", "DELETE");
+
+
+        // =====================================================
+        // ROLES
+        // =====================================================
+
+        addModuleAction("Roles", "CREATE");
+        addModuleAction("Roles", "VIEW");
+        addModuleAction("Roles", "EDIT");
+        addModuleAction("Roles", "DELETE");
+
+
+
+        // =====================================================
+        // MENU PERMISSION
+        // =====================================================
+
+        addModuleAction("MenuPermission", "CREATE");
+        addModuleAction("MenuPermission", "VIEW");
+        addModuleAction("MenuPermission", "EDIT");
+        addModuleAction("MenuPermission", "DELETE");
+
+
+
+        // =====================================================
+        // COMPANY PROFILE
+        // =====================================================
+
+        addModuleAction("Company Profile", "CREATE");
+        addModuleAction("Company Profile", "VIEW");
+        addModuleAction("Company Profile", "EDIT");
+        addModuleAction("Company Profile", "DELETE");
+
 
         // =====================================================
         // BANK ACCOUNTS
         // =====================================================
 
-        addModuleAction("BankAccounts", "CREATE");
-        addModuleAction("BankAccounts", "VIEW");
-        addModuleAction("BankAccounts", "EDIT");
-        addModuleAction("BankAccounts", "DELETE");
+        addModuleAction("Bank Accounts", "CREATE");
+        addModuleAction("Bank Accounts", "VIEW");
+        addModuleAction("Bank Accounts", "EDIT");
+        addModuleAction("Bank Accounts", "DELETE");
 
+
+        // =====================================================
+        // CASH ACCOUNTS
+        // =====================================================
+
+        addModuleAction("Cash Accounts", "CREATE");
+        addModuleAction("Cash Accounts", "VIEW");
+        addModuleAction("Cash Accounts", "EDIT");
+        addModuleAction("Cash Accounts", "DELETE");
 
         // =====================================================
         // SALES PERSON
         // =====================================================
 
-        addModuleAction("SalesPersons", "CREATE");
-        addModuleAction("SalesPersons", "VIEW");
-        addModuleAction("SalesPersons", "EDIT");
-        addModuleAction("SalesPersons", "DELETE");
+        addModuleAction("Sales Persons", "CREATE");
+        addModuleAction("Sales Persons", "VIEW");
+        addModuleAction("Sales Persons", "EDIT");
+        addModuleAction("Sales Persons", "DELETE");
 
 
         // =====================================================
-        // CURRENCY
+        // CURRENCIES
         // =====================================================
 
-        addModuleAction("Currency Detail", "CREATE");
-        addModuleAction("Currency Detail", "VIEW");
-        addModuleAction("Currency Detail", "EDIT");
-        addModuleAction("Currency Detail", "DELETE");
+        addModuleAction("Currencies", "CREATE");
+        addModuleAction("Currencies", "VIEW");
+        addModuleAction("Currencies", "EDIT");
+        addModuleAction("Currencies", "DELETE");
 
 
-        addModuleAction("Email Signature", "CREATE");
-        addModuleAction("Email Signature", "VIEW");
-        addModuleAction("Email Signature", "EDIT");
-        addModuleAction("Email Signature", "DELETE");
+        addModuleAction("Email Signatures", "CREATE");
+        addModuleAction("Email Signatures", "VIEW");
+        addModuleAction("Email Signatures", "EDIT");
+        addModuleAction("Email Signatures", "DELETE");
+
+
         // =====================================================
         // CATEGORY
         // =====================================================
@@ -545,6 +626,15 @@ public class DataInitializer implements CommandLineRunner {
         addModuleAction("Sizes", "DELETE");
 
         // =====================================================
+        // TAXES
+        // =====================================================
+
+        addModuleAction("Taxes", "CREATE");
+        addModuleAction("Taxes", "VIEW");
+        addModuleAction("Taxes", "EDIT");
+        addModuleAction("Taxes", "DELETE");
+
+        // =====================================================
         // PRODUCT ITEMS
         // =====================================================
 
@@ -553,39 +643,23 @@ public class DataInitializer implements CommandLineRunner {
         addModuleAction("Products", "EDIT");
         addModuleAction("Products", "DELETE");
 
+        // =====================================================
+        // INVENTORY
+        // =====================================================
+        addModuleAction("Inventory", "VIEW");
+        addModuleAction("Inventory Dashboard", "VIEW");
 
         // =====================================================
-        // USERS
+        // OPEN STOCK
         // =====================================================
 
-        addModuleAction("Users", "CREATE");
-        addModuleAction("Users", "VIEW");
-        addModuleAction("Users", "EDIT");
-        addModuleAction("Users", "DELETE");
-
+        addModuleAction("Open Stock", "CREATE");
 
         // =====================================================
-        // ROLES
+        // ADJUSTMENT STOCK
         // =====================================================
 
-        addModuleAction("Roles", "CREATE");
-        addModuleAction("Roles", "VIEW");
-        addModuleAction("Roles", "EDIT");
-        addModuleAction("Roles", "DELETE");
-
-        // =====================================================
-        // PARTIES
-        // =====================================================
-
-        addModuleAction("Parties", "CREATE");
-        addModuleAction("Parties", "VIEW");
-        addModuleAction("Parties", "EDIT");
-        addModuleAction("Parties", "DELETE");
-
-        addModuleAction("Clearances", "CREATE");
-        addModuleAction("Clearances", "VIEW");
-        addModuleAction("Clearances", "EDIT");
-        addModuleAction("Clearances", "DELETE");
+        addModuleAction("Adjustment Stock", "CREATE");
 
         // =====================================================
         // WAREHOUSE
@@ -597,10 +671,27 @@ public class DataInitializer implements CommandLineRunner {
         addModuleAction("Warehouse", "DELETE");
 
         // =====================================================
-        // INVENTORY
+        // PARTIES
         // =====================================================
 
-        addModuleAction("Inventory", "VIEW");
+        addModuleAction("Parties", "CREATE");
+        addModuleAction("Parties", "VIEW");
+        addModuleAction("Parties", "EDIT");
+        addModuleAction("Parties", "DELETE");
+
+        addModuleAction("Outstanding Clearances", "CREATE");
+        addModuleAction("Outstanding Clearances", "VIEW");
+        addModuleAction("Outstanding Clearances", "EDIT");
+        addModuleAction("Outstanding Clearances", "DELETE");
+
+        // =====================================================
+        // SALES ORDER
+        // =====================================================
+
+        addModuleAction("Sale Order", "CREATE");
+        addModuleAction("Sale Order", "VIEW");
+        addModuleAction("Sale Order", "EDIT");
+        addModuleAction("Sale Order", "DELETE");
 
         // =====================================================
         // PURCHASE ORDER
@@ -611,232 +702,30 @@ public class DataInitializer implements CommandLineRunner {
         addModuleAction("Purchase Order", "EDIT");
         addModuleAction("Purchase Order", "DELETE");
 
-        // =====================================================
-        // PACKAGE RECEPTION
-        // =====================================================
 
-        addModuleAction("Package Reception", "CREATE");
-        addModuleAction("Package Reception", "VIEW");
-        addModuleAction("Package Reception", "EDIT");
-        addModuleAction("Package Reception", "DELETE");
 
         // =====================================================
-        // PURCHASE ENTRY
+        // RECORD PAYMENTS
         // =====================================================
 
-        addModuleAction("Purchase Entry", "CREATE");
-        addModuleAction("Purchase Entry", "VIEW");
-        addModuleAction("Purchase Entry", "EDIT");
-        addModuleAction("Purchase Entry", "DELETE");
+        addModuleAction("Record Payments", "CREATE");
+        addModuleAction("Record Payments", "VIEW");
+        addModuleAction("Record Payments", "EDIT");
+        addModuleAction("Record Payments", "DELETE");
+
 
         // =====================================================
-        // SALES ORDER
+        // GENERAL SETTINGS
         // =====================================================
 
-        addModuleAction("Sales Order", "CREATE");
-        addModuleAction("Sales Order", "VIEW");
-        addModuleAction("Sales Order", "EDIT");
-        addModuleAction("Sales Order", "DELETE");
+        addModuleAction("General Settings", "VIEW");
 
         // =====================================================
-        // STOCK TRANSFER
+        // REPORTS
         // =====================================================
 
-        addModuleAction("Stock Transfer", "CREATE");
-        addModuleAction("Stock Transfer", "VIEW");
-        addModuleAction("Stock Transfer", "EDIT");
-        addModuleAction("Stock Transfer", "DELETE");
-
-        // =====================================================
-        // PACKAGE DISPATCH
-        // =====================================================
-
-        addModuleAction("Package Dispatch", "CREATE");
-        addModuleAction("Package Dispatch", "VIEW");
-        addModuleAction("Package Dispatch", "EDIT");
-        addModuleAction("Package Dispatch", "DELETE");
-
-        // =====================================================
-        // DAMAGED PRODUCTS
-        // =====================================================
-
-        addModuleAction("Damaged Products", "CREATE");
-        addModuleAction("Damaged Products", "VIEW");
-        addModuleAction("Damaged Products", "EDIT");
-        addModuleAction("Damaged Products", "DELETE");
-
-        // =====================================================
-        // INVOICES
-        // =====================================================
-
-        addModuleAction("Invoices", "CREATE");
-        addModuleAction("Invoices", "VIEW");
-        addModuleAction("Invoices", "EDIT");
-        addModuleAction("Invoices", "DELETE");
-
-        // =====================================================
-        // STAFF INCENTIVE
-        // =====================================================
-
-        addModuleAction("Staff Incentive", "VIEW");
-        addModuleAction("Staff Incentive", "DELETE");
-
-        // =====================================================
-        // STOCK TRANSACTION
-        // =====================================================
-
-        addModuleAction("Stock Transaction", "CREATE");
-        addModuleAction("Stock Transaction", "VIEW");
-
-        // =====================================================
-        // STOCK ADJUSTMENTS
-        // =====================================================
-
-        addModuleAction("Stock Adjustments", "CREATE");
-        addModuleAction("Stock Adjustments", "VIEW");
-        addModuleAction("Stock Adjustments", "EDIT");
-        addModuleAction("Stock Adjustments", "DELETE");
-
-        // =====================================================
-        // CASH BANK
-        // =====================================================
-
-        addModuleAction("Cash Bank", "CREATE");
-        addModuleAction("Cash Bank", "VIEW");
-        addModuleAction("Cash Bank", "EDIT");
-
-        // =====================================================
-        // CHEQUE
-        // =====================================================
-
-        addModuleAction("Cheque", "CREATE");
-        addModuleAction("Cheque", "VIEW");
-        addModuleAction("Cheque", "EDIT");
-        addModuleAction("Cheque", "DELETE");
-
-        // =====================================================
-        // DISCOUNT LIMIT
-        // =====================================================
-
-        addModuleAction("Discount Limit", "CREATE");
-        addModuleAction("Discount Limit", "VIEW");
-        addModuleAction("Discount Limit", "EDIT");
-        addModuleAction("Discount Limit", "DELETE");
-
-        // =====================================================
-        // DISCOUNT REQUEST
-        // =====================================================
-
-        addModuleAction("Discount Request", "VIEW");
-        addModuleAction("Discount Request", "CREATE");
-
-        // =====================================================
-        // SETTINGS
-        // =====================================================
-
-        addModuleAction("Settings", "VIEW");
-
-        // =====================================================
-        // ROLE
-        // =====================================================
-
-        addModuleAction("Role", "CREATE");
-        addModuleAction("Role", "VIEW");
-        addModuleAction("Role", "EDIT");
-        addModuleAction("Role", "DELETE");
-
-        // =====================================================
-        // FLOOR REGISTER
-        // =====================================================
-
-        addModuleAction("Floor Register", "CREATE");
-        addModuleAction("Floor Register", "VIEW");
-        addModuleAction("Floor Register", "EDIT");
-        addModuleAction("Floor Register", "DELETE");
-
-        // =====================================================
-        // COMPANY DETAIL
-        // =====================================================
-
-        addModuleAction("Company Detail", "CREATE");
-        addModuleAction("Company Detail", "VIEW");
-        addModuleAction("Company Detail", "EDIT");
-        addModuleAction("Company Detail", "DELETE");
-
-        // =====================================================
-        // REGISTER
-        // =====================================================
-
-        addModuleAction("Register", "CREATE");
-        addModuleAction("Register", "VIEW");
-        addModuleAction("Register", "EDIT");
-        addModuleAction("Register", "DELETE");
-
-        // =====================================================
-        // BANK DETAILS
-        // =====================================================
-
-        addModuleAction("Bank Details", "CREATE");
-        addModuleAction("Bank Details", "VIEW");
-        addModuleAction("Bank Details", "EDIT");
-        addModuleAction("Bank Details", "DELETE");
-
-        // =====================================================
-        // MENU PERMISSION
-        // =====================================================
-
-        addModuleAction("Menu Permission", "CREATE");
-        addModuleAction("Menu Permission", "VIEW");
-        addModuleAction("Menu Permission", "EDIT");
-        addModuleAction("Menu Permission", "DELETE");
-
-        // =====================================================
-        // TAX
-        // =====================================================
-
-        addModuleAction("TaxMasters", "CREATE");
-        addModuleAction("TaxMasters", "VIEW");
-        addModuleAction("TaxMasters", "EDIT");
-        addModuleAction("TaxMasters", "DELETE");
-
-        // =====================================================
-        // POINTS RULE
-        // =====================================================
-
-        addModuleAction("Points Rule", "CREATE");
-        addModuleAction("Points Rule", "VIEW");
-        addModuleAction("Points Rule", "EDIT");
-        addModuleAction("Points Rule", "DELETE");
-
-        // =====================================================
-        // INCENTIVE
-        // =====================================================
-
-        addModuleAction("Incentive", "CREATE");
-        addModuleAction("Incentive", "VIEW");
-        addModuleAction("Incentive", "EDIT");
-        addModuleAction("Incentive", "DELETE");
-
-        // =====================================================
-        // EXPENSES CATEGORY
-        // =====================================================
-
-        addModuleAction("Expenses Category", "CREATE");
-        addModuleAction("Expenses Category", "VIEW");
-        addModuleAction("Expenses Category", "EDIT");
-        addModuleAction("Expenses Category", "DELETE");
-
-        // =====================================================
-        // REPORT
-        // =====================================================
-
-        addModuleAction("Report", "VIEW");
-
-        // =====================================================
-        // ORDER MANAGEMENT
-        // =====================================================
-
-        addModuleAction("Order Management", "VIEW");
+        addModuleAction("Reports Dashboard", "VIEW");
+        addModuleAction("Reports Selection", "CREATE");
 
         // =====================================================
         // AUDIT LOG
@@ -844,14 +733,6 @@ public class DataInitializer implements CommandLineRunner {
 
         addModuleAction("Audit Log", "VIEW");
 
-        // =====================================================
-        // SALES ORDER RETURN
-        // =====================================================
-
-        addModuleAction("Sales Order Return", "CREATE");
-        addModuleAction("Sales Order Return", "VIEW");
-        addModuleAction("Sales Order Return", "EDIT");
-        addModuleAction("Sales Order Return", "DELETE");
     }
 
     // =========================================================

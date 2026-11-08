@@ -5,5 +5,6 @@ public enum CompanyStatus {
     ALL,
     ACTIVE,
     INACTIVE,
+    DELETED,
 
 }

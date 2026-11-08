@@ -4,6 +4,7 @@ import com.ims.dtos.payment.PaymentAllocationRequestDTO;
 import com.ims.entity.BankAccount;
 import com.ims.entity.CashAccountEntity;
 import com.ims.enums.BankAccountStatus;
+import com.ims.enums.CashAccountStatus;
 import com.ims.enums.PaymentMethod;
 import com.ims.repository.BankAccountRepository;
 import com.ims.repository.CashAccountRepository;
@@ -49,12 +50,15 @@ public class PaymentValidation {
             );
         }
 
-        return cashAccountRepository.findByIdAndActiveTrue(cashAccountId)
+        return cashAccountRepository
+                .findByIdAndStatusNotForUpdate(
+                        cashAccountId,
+                        CashAccountStatus.DELETED.name()
+                )
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Cash account not found or inactive"
                 ));
     }
-
     public void validatePaymentAccount(PaymentRequestDTO request) {
 
         if (request.getPaymentMethod() == null) {

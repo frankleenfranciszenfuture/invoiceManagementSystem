@@ -15,23 +15,38 @@ public interface CashAccountRepository
         extends JpaRepository<CashAccountEntity, Long>,
         JpaSpecificationExecutor<CashAccountEntity> {
 
-    boolean existsByAccountCodeIgnoreCaseAndActiveTrue(String accountCode);
-
-    boolean existsByAccountCodeIgnoreCaseAndActiveTrueAndIdNot(
+    boolean existsByAccountCodeIgnoreCaseAndStatusNot(
             String accountCode,
+            String status
+    );
+
+    boolean existsByAccountCodeIgnoreCaseAndStatusNotAndIdNot(
+            String accountCode,
+            String status,
             Long id
     );
 
-    Optional<CashAccountEntity> findByIdAndActiveTrue(Long id);
+    Optional<CashAccountEntity> findByIdAndStatusNot(
+            Long id,
+            String status
+    );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT c
         FROM CashAccountEntity c
         WHERE c.id = :id
-        AND c.active = true
+        AND c.status <> :status
     """)
-    Optional<CashAccountEntity> findActiveByIdForUpdate(
-            @Param("id") Long id
+    Optional<CashAccountEntity> findByIdAndStatusNotForUpdate(
+            @Param("id") Long id,
+            @Param("status") String status
     );
+
+    @Query("""
+    SELECT MAX(CAST(SUBSTRING(c.accountCode, 6) AS integer))
+    FROM CashAccountEntity c
+    WHERE c.accountCode LIKE 'CASH-%'
+""")
+    Integer findMaxCashAccountSequence();
 }

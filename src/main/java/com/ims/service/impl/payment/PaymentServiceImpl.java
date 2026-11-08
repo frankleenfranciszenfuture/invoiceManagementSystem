@@ -1398,14 +1398,15 @@ public class PaymentServiceImpl implements PaymentService {
             if (paymentMethod == PaymentMethod.CASH) {
 
                 cashAccount = cashAccountRepository
-                        .findActiveByIdForUpdate(
-                                allocation.getCashAccountId()
+                        .findByIdAndStatusNotForUpdate(
+                                allocation.getCashAccountId(),
+                                CashAccountStatus.DELETED.name()
                         )
                         .orElseThrow(() -> new IllegalArgumentException(
                                 "Cash account not found or inactive"
                         ));
-
-            } else {
+            }
+         else {
 
                 bankAccount = bankAccountRepository
                         .findById(allocation.getBankAccountId())

@@ -7,6 +7,7 @@ import com.ims.dtos.company.CompanyResponse;
 import com.ims.dtos.company.CompanySearchRequest;
 import com.ims.dtos.company.CompanyUpdateRequest;
 import com.ims.entity.CompanyDetails;
+import com.ims.enums.CompanyStatus;
 import com.ims.mapper.company.CompanyMapper;
 import com.ims.repository.CompanyRepository;
 import com.ims.service.serviceInterface.company.CompanyService;
@@ -174,11 +175,9 @@ public class CompanyServiceImpl implements CompanyService {
         // =================================================
 
         company.setStatus(
-                request.getStatus()
-        );
-
-        company.setActive(
-                true
+                request.getStatus() != null
+                        ? request.getStatus()
+                        : CompanyStatus.ACTIVE
         );
 
         // =================================================
@@ -237,26 +236,16 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Override
     @Transactional(readOnly = true)
-    public ApiResponse<CompanyResponse> getCompanyById(
-            Long id
-    ) {
+    public ApiResponse<CompanyResponse> getCompanyById(Long id) {
 
         CompanyDetails company =
-                companyRepository.findById(id)
+                companyRepository.findByIdAndStatusNot(
+                                id,
+                                CompanyStatus.DELETED
+                        )
                         .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Company not found."
-                                )
+                                new RuntimeException("Company not found.")
                         );
-
-        if (!Boolean.TRUE.equals(
-                company.getActive()
-        )) {
-
-            throw new RuntimeException(
-                    "Company is inactive."
-            );
-        }
 
         return ApiResponse.success(
                 mapCompanyResponse(company),
@@ -277,9 +266,13 @@ public class CompanyServiceImpl implements CompanyService {
     ) {
 
         Specification<CompanyDetails> specification =
-                CompanySpecification.filter(
-                        request
-                );
+                CompanySpecification.filter(request)
+                        .and((root, query, cb) ->
+                                cb.notEqual(
+                                        root.get("status"),
+                                        CompanyStatus.DELETED
+                                )
+                        );
 
         Page<CompanyDetails> companies =
                 companyRepository.findAll(
@@ -317,11 +310,12 @@ public class CompanyServiceImpl implements CompanyService {
         // =================================================
 
         CompanyDetails company =
-                companyRepository.findById(id)
+                companyRepository.findByIdAndStatusNot(
+                                id,
+                                CompanyStatus.DELETED
+                        )
                         .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Company not found."
-                                )
+                                new RuntimeException("Company not found.")
                         );
 
         // =================================================
@@ -441,10 +435,16 @@ public class CompanyServiceImpl implements CompanyService {
         // 8. STATUS
         // =================================================
 
-        company.setStatus(
-                request.getStatus()
-        );
+        if (request.getStatus() != null) {
 
+            if (request.getStatus() == CompanyStatus.DELETED) {
+                throw new IllegalArgumentException(
+                        "Use the delete API to delete a company."
+                );
+            }
+
+            company.setStatus(request.getStatus());
+        }
 
         // =================================================
         // 9. LOGO
@@ -469,7 +469,7 @@ public class CompanyServiceImpl implements CompanyService {
                 request.getIsDefault()
         );
 
-        baseEntityUtil.prepareForCreate(company);
+        baseEntityUtil.prepareForUpdate(company);
 
         // =================================================
         // 11. SAVE
@@ -502,30 +502,28 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Override
     @Transactional
-    public ApiResponse<Void> deleteCompany(
-            Long id
-    ) {
+    public ApiResponse<Void> deleteCompany(Long id) {
 
-        log.info(
-                "Deleting Company : {}",
-                id
-        );
+        log.info("Deleting Company : {}", id);
 
         CompanyDetails company =
-                companyRepository.findById(id)
+                companyRepository.findByIdAndStatusNot(
+                                id,
+                                CompanyStatus.DELETED
+                        )
                         .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Company not found."
-                                )
+                                new RuntimeException("Company not found.")
                         );
 
-        company.setActive(
-                false
-        );
+        // Soft delete using status
+        company.setStatus(CompanyStatus.DELETED);
 
-        companyRepository.save(
-                company
-        );
+        // Remove default company designation
+        company.setIsDefault(false);
+
+        baseEntityUtil.prepareForUpdate(company);
+
+        companyRepository.save(company);
 
         return ApiResponse.success(
                 null,

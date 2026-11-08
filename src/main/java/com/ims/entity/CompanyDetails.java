@@ -47,6 +47,7 @@ public class CompanyDetails extends BaseEntity {
     private String financialYearStart;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
     private CompanyStatus status;
 
     @Column(name = "is_default", nullable = false)

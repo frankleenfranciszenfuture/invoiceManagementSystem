@@ -4,11 +4,15 @@ package com.ims.mapper.cashAccount;
 import com.ims.dtos.cashAccount.CashAccountRequestDTO;
 import com.ims.dtos.cashAccount.CashAccountResponseDTO;
 import com.ims.entity.CashAccountEntity;
+import com.ims.mapper.audit.AuditMapper;
 import org.mapstruct.*;
 
 @Mapper(
         componentModel = "spring",
-        unmappedTargetPolicy = ReportingPolicy.IGNORE
+        unmappedTargetPolicy = ReportingPolicy.IGNORE,
+        uses = {
+                AuditMapper.class
+        }
 )
 public interface CashAccountMapper {
 
@@ -21,10 +25,10 @@ public interface CashAccountMapper {
     @Mapping(target = "updatedBy", ignore = true)
     CashAccountEntity toEntity(CashAccountRequestDTO request);
 
-    @Mapping(target = "audit.createdAt", source = "createdAt")
-    @Mapping(target = "audit.updatedAt", source = "updatedAt")
-    @Mapping(target = "audit.createdBy", source = "createdBy")
-    @Mapping(target = "audit.updatedBy", source = "updatedBy")
+    @Mapping(
+            target = "audit",
+            source = "."
+    )
     CashAccountResponseDTO toResponse(CashAccountEntity entity);
 
     @Mapping(target = "id", ignore = true)

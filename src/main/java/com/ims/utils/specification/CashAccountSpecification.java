@@ -1,6 +1,8 @@
 package com.ims.utils.specification;
 
 import com.ims.entity.CashAccountEntity;
+import com.ims.enums.CashAccountStatus;
+
 import org.springframework.data.jpa.domain.Specification;
 
 import java.util.Locale;
@@ -9,6 +11,10 @@ public final class CashAccountSpecification {
 
     private CashAccountSpecification() {
     }
+
+    // ==========================================
+    // SEARCH
+    // ==========================================
 
     public static Specification<CashAccountEntity> search(String search) {
 
@@ -29,24 +35,56 @@ public final class CashAccountSpecification {
         };
     }
 
+    // ==========================================
+    // STATUS FILTER
+    // ==========================================
+
     public static Specification<CashAccountEntity> hasStatus(String status) {
 
         return (root, query, cb) -> {
 
-            if (status == null || status.isBlank()) {
-                return cb.conjunction();
+            // Never return deleted accounts.
+            var notDeleted = cb.notEqual(
+                    cb.upper(root.get("status")),
+                    CashAccountStatus.DELETED.name()
+            );
+
+            if (status == null || status.isBlank()
+                    || CashAccountStatus.ALL.name().equalsIgnoreCase(status.trim())) {
+
+                return cb.and(
+                        notDeleted,
+                        cb.equal(
+                                cb.upper(root.get("status")),
+                                CashAccountStatus.ACTIVE.name()
+                        )
+                );
             }
 
-            return cb.equal(
-                    cb.upper(root.get("status")),
-                    status.trim().toUpperCase(Locale.ROOT)
+            if (CashAccountStatus.DELETED.name().equalsIgnoreCase(status.trim())) {
+                return cb.disjunction();
+            }
+
+            return cb.and(
+                    notDeleted,
+                    cb.equal(
+                            cb.upper(root.get("status")),
+                            status.trim().toUpperCase(Locale.ROOT)
+                    )
             );
         };
     }
 
-    public static Specification<CashAccountEntity> isActive() {
+    // ==========================================
+    // EXCLUDE DELETED ACCOUNTS
+    // ==========================================
+
+    public static Specification<CashAccountEntity> isNotDeleted() {
 
         return (root, query, cb) ->
-                cb.isTrue(root.get("active"));
+                cb.notEqual(
+                        cb.upper(root.get("status")),
+                        CashAccountStatus.DELETED.name()
+                );
     }
 }
