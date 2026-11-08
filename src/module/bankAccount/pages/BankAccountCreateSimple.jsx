@@ -49,6 +49,8 @@ const initialFormData = {
     accountCode: "",
     currency: "INR",
 
+    openingBalance: "0.00",
+
     accountNumber: "",
     bankName: "",
     branchName: "",
@@ -424,6 +426,8 @@ const BankAccountCreateSimple = ({ onClose }) => {
             accountCode: bankAccount.accountCode ?? "",
             currency: bankAccount.currency ?? "INR",
 
+            openingBalance: bankAccount.openingBalance ?? "0.00",
+
             accountNumber: bankAccount.accountNumber ?? "",
             bankName: bankAccount.bankName ?? "",
             branchName: bankAccount.branchName ?? "",
@@ -517,6 +521,8 @@ const BankAccountCreateSimple = ({ onClose }) => {
                 accountCode: bankAccount.accountCode ?? "",
                 currency: bankAccount.currency ?? "INR",
 
+                openingBalance: bankAccount.openingBalance ?? "0.00",
+
                 accountNumber: bankAccount.accountNumber ?? "",
                 bankName: bankAccount.bankName ?? "",
                 branchName: bankAccount.branchName ?? "",
@@ -581,6 +587,18 @@ const BankAccountCreateSimple = ({ onClose }) => {
             return false;
         }
 
+        if (
+            !isEditMode &&
+            (
+                formData.openingBalance === "" ||
+                Number.isNaN(Number(formData.openingBalance)) ||
+                Number(formData.openingBalance) < 0
+            )
+        ) {
+            toast.error("Opening balance must be zero or greater");
+            return false;
+        }
+
         if (!formData.accountNumber.trim()) {
             toast.error("Account number is required");
             return false;
@@ -610,7 +628,6 @@ const BankAccountCreateSimple = ({ onClose }) => {
     ===================================================== */
 
     const handleSubmit = async (e) => {
-
         e.preventDefault();
 
         if (loading) {
@@ -634,7 +651,8 @@ const BankAccountCreateSimple = ({ onClose }) => {
 
         if (!hasRequiredPermission) {
             toast.error(
-                `You do not have permission to ${isEditMode ? "edit" : "create"} bank accounts`
+                `You do not have permission to ${isEditMode ? "edit" : "create"
+                } bank accounts`
             );
             return;
         }
@@ -649,6 +667,12 @@ const BankAccountCreateSimple = ({ onClose }) => {
             accountCode: formData.accountCode.trim().toUpperCase(),
             currency: formData.currency,
 
+            // Always send opening balance during creation.
+            // Editing does not modify the opening balance.
+            ...(!isEditMode && {
+                openingBalance: Number(formData.openingBalance || 0),
+            }),
+
             accountNumber: formData.accountNumber.trim(),
             bankName: formData.bankName.trim(),
             branchName: formData.branchName.trim(),
@@ -660,12 +684,10 @@ const BankAccountCreateSimple = ({ onClose }) => {
             description: formData.description.trim() || null,
 
             primaryAccount: formData.primaryAccount,
-
             status: formData.status,
         };
 
         try {
-
             const response = isEditMode
                 ? await dispatch(
                     updateBankAccount({
@@ -679,18 +701,17 @@ const BankAccountCreateSimple = ({ onClose }) => {
 
             toast.success(
                 response?.message ||
-                `Bank account ${isEditMode ? "updated" : "created"} successfully`
+                `Bank account ${isEditMode ? "updated" : "created"
+                } successfully`
             );
 
             if (!isEditMode && saveMode === "new") {
-
-                setFormData({
-                    ...initialFormData,
-                });
+                setFormData({ ...initialFormData });
 
                 dispatch(resetBankAccountForm());
 
                 setSaveMode("close");
+                setShowSaveOptions(false);
 
                 return;
             }
@@ -700,9 +721,9 @@ const BankAccountCreateSimple = ({ onClose }) => {
             navigate("/settings/bankAccount");
 
         } catch (error) {
-
             console.error(
-                `Bank account ${isEditMode ? "update" : "creation"} error:`,
+                `Bank account ${isEditMode ? "update" : "creation"
+                } error:`,
                 error
             );
 
@@ -710,7 +731,8 @@ const BankAccountCreateSimple = ({ onClose }) => {
                 typeof error === "string"
                     ? error
                     : error?.message ||
-                    `Failed to ${isEditMode ? "update" : "create"} bank account`
+                    `Failed to ${isEditMode ? "update" : "create"
+                    } bank account`
             );
         }
     };
@@ -925,7 +947,7 @@ const BankAccountCreateSimple = ({ onClose }) => {
 
                         <div className="
                             grid grid-cols-1 gap-5
-                            md:grid-cols-2 lg:grid-cols-2
+                            md:grid-cols-2 lg:grid-cols-3
                         ">
 
                             <FormField label="Account Type" required>
@@ -939,7 +961,7 @@ const BankAccountCreateSimple = ({ onClose }) => {
                                 />
                             </FormField>
 
-                            <FormField label="Account Name" required>
+                            <FormField label="Account Holder Name" required>
                                 <TextInput
                                     value={formData.accountName}
                                     onChange={(e) =>
@@ -972,6 +994,20 @@ const BankAccountCreateSimple = ({ onClose }) => {
                                 />
                             </FormField>
 
+                            <FormField label="Opening Balance" required>
+                                <TextInput
+                                    type="number"
+                                    value={formData.openingBalance}
+                                    onChange={(e) =>
+                                        handleChange("openingBalance", e.target.value)
+                                    }
+                                    placeholder="Enter opening balance"
+                                    disabled={isEditMode}
+                                />
+                                <p className="text-xs text-gray-400">
+                                    Initial account balance in the selected currency
+                                </p>
+                            </FormField>
                         </div>
 
                     </section>

@@ -35,6 +35,7 @@ import {
 import InvoiceSkeleton from "../../../../common/loader/InvoiceSkeleton";
 
 import CashAccountOverview from "./CashAccountOverview";
+import { useNavigate } from "react-router-dom";
 
 /* =========================================================
    CONSTANTS
@@ -59,7 +60,7 @@ const normalizeAction = (value) =>
 export default function CashAccountDashboard() {
 
     const dispatch = useDispatch();
-
+    const navigate = useNavigate();
     /* =====================================================
        AUTH STATE
     ===================================================== */
@@ -329,11 +330,12 @@ export default function CashAccountDashboard() {
             return;
         }
 
-        dispatch(
-            openModal({
-                type: "addCashAccount",
-            })
-        );
+        // dispatch(
+        //     openModal({
+        //         type: "addCashAccount",
+        //     })
+        // );
+        navigate("/settings/cash-accounts/create");
 
     }, [
         isAuthenticated,
@@ -522,7 +524,7 @@ export default function CashAccountDashboard() {
 
                             <div
                                 className="
-                                    relative mt-30 mb-1
+                                    relative mt-10 mb-1
                                     flex h-24 w-24 shrink-0
                                     items-center justify-center
                                     rounded-full bg-gray-100
@@ -568,16 +570,7 @@ export default function CashAccountDashboard() {
 
                             {/* EMPTY STATE DESCRIPTION */}
 
-                            <p
-                                className="
-                                    max-w-sm text-center
-                                    text-sm text-gray-500
-                                "
-                            >
-                                Create and manage cash accounts,
-                                track opening balances, and monitor
-                                your available cash balance.
-                            </p>
+
 
                             {/* ACTION BUTTONS */}
 
@@ -609,26 +602,7 @@ export default function CashAccountDashboard() {
 
                                 )}
 
-                                {/* IMPORT */}
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        toast(
-                                            "Cash account import is not configured yet."
-                                        );
-                                    }}
-                                    className="
-                                        flex items-center gap-2
-                                        whitespace-nowrap rounded-md
-                                        border border-gray-300 bg-white
-                                        px-4 py-2 text-sm text-gray-700
-                                        transition-colors hover:bg-gray-50
-                                    "
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Import File
-                                </button>
 
                             </div>
 

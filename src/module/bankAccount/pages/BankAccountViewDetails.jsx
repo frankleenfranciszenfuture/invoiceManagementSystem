@@ -237,7 +237,8 @@ const BankAccountViewDetails = () => {
     const audit = data?.audit;
 
     const currencyCode = data?.currency || "INR";
-
+    const openingBalance = data?.openingBalance || "-"
+    const currentBalance = data?.openingBalance || "-"
     // --------------------------------------------------
     // Loading
     // --------------------------------------------------
@@ -536,6 +537,17 @@ const BankAccountViewDetails = () => {
                     <ReadField
                         label="Currency Code"
                         value={currencyCode}
+                    />
+
+                    <ReadField
+                        label="Opening Balance"
+                        value={openingBalance}
+                    />
+
+
+                    <ReadField
+                        label="Current Balance"
+                        value={currentBalance}
                     />
 
                 </div>

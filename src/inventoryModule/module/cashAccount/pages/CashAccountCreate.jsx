@@ -490,7 +490,7 @@ const CashAccountCreate = ({ onClose }) => {
             if (onClose) {
                 onClose();
             } else {
-                navigate("/inventory/cash-accounts")
+                navigate("/settings/cash-accounts")
             }
         });
     };
@@ -540,10 +540,6 @@ const CashAccountCreate = ({ onClose }) => {
             return false;
         }
 
-        if (!formData.accountCode.trim()) {
-            toast.error("Account code is required");
-            return false;
-        }
 
         if (!formData.currency) {
             toast.error("Currency is required");
@@ -887,6 +883,23 @@ const CashAccountCreate = ({ onClose }) => {
                             md:grid-cols-2 lg:grid-cols-3
                         ">
 
+                            <FormField label="Account Code">
+
+                                <TextInput
+                                    value={formData.accountCode}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "accountCode",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Auto generated"
+                                    disabled={!isEditMode}
+                                    maxLength={50}
+                                />
+
+                            </FormField>
+
                             <FormField label="Account Name" required>
                                 <TextInput
                                     value={formData.accountName}
@@ -901,19 +914,21 @@ const CashAccountCreate = ({ onClose }) => {
                                 />
                             </FormField>
 
-                            <FormField label="Account Code" required>
+
+
+                            {/* <FormField label="Account Code" required>
                                 <TextInput
                                     value={formData.accountCode}
                                     onChange={(e) =>
                                         handleChange(
                                             "accountCode",
-                                            e.target.value
+                                            e.target.value.toUpperCase()
                                         )
                                     }
                                     placeholder="Example: CASH-001"
                                     maxLength={50}
                                 />
-                            </FormField>
+                            </FormField> */}
 
                             <FormField label="Currency" required>
                                 <CustomSelect
@@ -1010,13 +1025,10 @@ const CashAccountCreate = ({ onClose }) => {
                         ">
 
                             <FormField label="Description">
-                                <TextInput
+                                <TextAreaField
                                     value={formData.description}
                                     onChange={(e) =>
-                                        handleChange(
-                                            "description",
-                                            e.target.value
-                                        )
+                                        handleChange("description", e.target.value)
                                     }
                                     placeholder="Enter cash account description"
                                     rows={3}

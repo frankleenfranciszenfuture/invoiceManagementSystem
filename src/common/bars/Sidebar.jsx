@@ -98,8 +98,8 @@ const NAV = [
         dropdown: true,
     },
     {
-        label: "InvoiceApprovals",
-        moduleName: "Reports",
+        label: "Invoice Approvals",
+        moduleName: "Invoice Approvals",
         icon: ChartNoAxesCombined,
         to: "/invoice-approvals",
     },
@@ -221,19 +221,23 @@ const SETTINGS_NAV = [
         dropdown: true,
         children: [
             {
-                label: "Category",
+                label: "Categories",
+                moduleName: "Categories",
                 to: "/settings/categories",
             },
             {
-                label: "SubCategory",
+                label: "SubCategories",
+                moduleName: "SubCategories",
                 to: "/settings/subCategoires",
             },
             {
                 label: "Sizes",
+                moduleName: "Sizes",
                 to: "/settings/sizes",
             },
             {
                 label: "Units",
+                moduleName: "Units",
                 to: "/settings/units",
             },
         ],
@@ -244,9 +248,26 @@ const SETTINGS_NAV = [
 const INVENTORY_NAV = [
     {
         label: "Inventory Dashboard",
-        moduleName: "Inventory",
+        moduleName: "Inventory Dashboard",
         icon: LayoutDashboard,
         to: "/inventory",
+
+    },
+
+    {
+        label: "Open Stock",
+        moduleName: "Open Stock",
+        icon: LayoutDashboard,
+        to: "/inventory/openStock",
+
+    },
+
+    {
+        label: "Adjustment Stock",
+        moduleName: "Adjustment Stock",
+        icon: LayoutDashboard,
+        to: "/inventory/adjustmentStock",
+
     },
 
     {
@@ -263,21 +284,22 @@ const INVENTORY_NAV = [
         dropdown: true,
         children: [
             {
-                label: "Oustanding Clearance",
+                label: "Outstanding Clearances",
+                moduleName: "Outstanding Clearances",
                 to: "/inventory/parties/clearances",
             },
         ],
     },
 
     {
-        label: "SaleOrder",
+        label: "Sale Order",
         moduleName: "SaleOrder",
         icon: PaintBucket,
         to: "/inventory/salesOrders",
     },
 
     {
-        label: "PurchaseOrder",
+        label: "Purchase Order",
         moduleName: "PurchaseOrder",
         icon: BadgeTurkishLira,
         to: "/inventory/purchaseOrder",
@@ -285,13 +307,13 @@ const INVENTORY_NAV = [
 
     {
         label: "Record Payments",
-        moduleName: "Payments",
+        moduleName: "Record Payments",
         icon: BadgeTurkishLira,
         to: "/inventory/payments",
     },
     {
         label: "General Settings",
-        moduleName: "Settings",
+        moduleName: "General Settings",
         icon: Settings,
         to: "/inventory/settings",
     },
@@ -309,9 +331,16 @@ const INVENTORY_NAV = [
 const REPORT_NAV = [
     {
         label: "Reports Dashboard",
-        moduleName: "Reports",
+        moduleName: "Reports Dashboard",
         icon: LayoutDashboard,
         to: "/reports",
+    },
+
+    {
+        label: "Reports Selection",
+        moduleName: "Reports Selection",
+        icon: LayoutDashboard,
+        to: "/reports/create",
     },
 
 ];

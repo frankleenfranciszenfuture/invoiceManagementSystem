@@ -21,6 +21,7 @@ const emptyBankAccount = {
   accountName: "",
   accountCode: "",
   currency: "INR",
+  openingBalance: "0.00",
 
   accountNumber: "",
   bankName: "",

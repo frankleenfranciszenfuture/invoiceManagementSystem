@@ -691,12 +691,12 @@ function AppContent() {
 
         <Route
           path="/invoices/service/edit/:id"
-          element={<ServiceInvoice />}
+          element={<InvoiceCreate />}
         />
 
         <Route
           path="/invoices/sale/edit/:id"
-          element={<SaleInvoice />}
+          element={<InvoiceCreate />}
         />
 
         <Route

@@ -14,6 +14,7 @@ import {
     Plus,
     Download,
     Landmark,
+    Building2,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -41,6 +42,7 @@ import {
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
 
 import BankAccountOverview from "../../bankAccount/pages/BankAccountOverview";
+import { useNavigate } from "react-router-dom";
 
 /* =========================================================
    CONSTANTS
@@ -130,7 +132,7 @@ const matchesBankAccountSearch = (
 export default function BankAccountDashboard() {
 
     const dispatch = useDispatch();
-
+    const navigate = useNavigate();
     /* =====================================================
        AUTH STATE
     ===================================================== */
@@ -470,11 +472,13 @@ export default function BankAccountDashboard() {
             return;
         }
 
-        dispatch(
-            openModal({
-                type: "addBankAccount",
-            })
-        );
+        // dispatch(
+        //     openModal({
+        //         type: "addBankAccount",
+        //     })
+        // );
+
+        navigate("/settings/bankAccount/create");
 
     }, [
         isAuthenticated,
@@ -651,60 +655,32 @@ export default function BankAccountDashboard() {
 
                     ) : hasActiveFilters ? (
 
-                        /* FILTERED EMPTY STATE */
 
-                        <div
-                            className="
-                                flex min-h-[300px] flex-col
-                                items-center justify-center
-                                gap-3 px-4
-                            "
-                        >
 
-                            <div
-                                className="
-                                    flex h-20 w-20 items-center
-                                    justify-center rounded-full
-                                    bg-gray-100 text-gray-400
-                                "
-                            >
-                                <Landmark
-                                    size={36}
-                                    strokeWidth={1.7}
-                                />
-                            </div>
+                        // FILTERED EMPTY STATE
+
+                        <div className="
+                            flex min-h-[250px] flex-col
+                            items-center justify-center gap-2
+                            px-4 text-center
+                        ">
+
+                            <Landmark
+                                size={38}
+                                className="text-gray-300"
+                            />
 
                             <p className="
-                                text-center text-base
-                                font-medium text-gray-800
+                                text-sm font-medium text-gray-700
                             ">
-                                No matching bank accounts found
+                                No matching bankAccounts found
                             </p>
 
                             <p className="
-                                max-w-sm text-center
-                                text-sm text-gray-500
+                                text-xs text-gray-400
                             ">
-                                No bank accounts match your current
-                                search or filter. Try changing your
-                                search or selecting another status.
+                                Try changing your search or status filter.
                             </p>
-
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    dispatch(setSearch(""));
-                                    dispatch(setBankAccountStatus("ALL"));
-                                }}
-                                className="
-                                    mt-1 rounded-md bg-blue-500
-                                    px-4 py-2 text-sm font-medium
-                                    text-white transition
-                                    hover:bg-blue-600
-                                "
-                            >
-                                Clear Filters
-                            </button>
 
                         </div>
 
@@ -724,7 +700,7 @@ export default function BankAccountDashboard() {
 
                             <div
                                 className="
-                                    relative mt-30 mb-1
+                                    relative mt-10 mb-1
                                     flex h-24 w-24 shrink-0
                                     items-center justify-center
                                     rounded-full bg-gray-100
@@ -761,24 +737,13 @@ export default function BankAccountDashboard() {
                             <p
                                 className="
                                     text-center text-base
-                                    font-medium text-gray-800
+                                    font-medium text-gray-500
                                 "
                             >
-                                Manage your business bank accounts
-                            </p>
-
-                            {/* EMPTY STATE DESCRIPTION */}
-
-                            <p
-                                className="
-                                    max-w-sm text-center
-                                    text-sm text-gray-500
-                                "
-                            >
-                                Create and manage bank accounts,
-                                organize account details, assign
-                                users, and monitor your business
-                                banking information.
+                                No bankAccount records found
+                                <span className="flex text-gray-600">
+                                    Create and manage your bankAccounts details
+                                </span>
                             </p>
 
                             {/* ACTION BUTTONS */}
@@ -811,26 +776,7 @@ export default function BankAccountDashboard() {
 
                                 )}
 
-                                {/* IMPORT */}
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        toast(
-                                            "Bank account import is not configured yet."
-                                        );
-                                    }}
-                                    className="
-                                        flex items-center gap-2
-                                        whitespace-nowrap rounded-md
-                                        border border-gray-300 bg-white
-                                        px-4 py-2 text-sm text-gray-700
-                                        transition-colors hover:bg-gray-50
-                                    "
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Import File
-                                </button>
 
                             </div>
 

@@ -10,6 +10,8 @@ import {
     useDispatch,
 } from "react-redux";
 
+import { useNavigate } from "react-router-dom";
+
 import {
     Plus,
     Download,
@@ -129,7 +131,7 @@ const matchesCompanySearch = (company, search) => {
 export default function CompanyDashboard() {
 
     const dispatch = useDispatch();
-
+    const navigate = useNavigate();
     // ========================================================
     // AUTH STATE
     // ========================================================
@@ -460,11 +462,7 @@ export default function CompanyDashboard() {
             return;
         }
 
-        dispatch(
-            openModal({
-                type: "addCompany",
-            })
-        );
+        navigate("/settings/companies/create");
 
     }, [
         isAuthenticated,
@@ -669,7 +667,7 @@ export default function CompanyDashboard() {
                             {/* EMPTY STATE ICON */}
 
                             <div className="
-                                relative mt-30 mb-1
+                                relative mt-10 mb-1
                                 flex h-24 w-24 shrink-0
                                 items-center justify-center
                                 rounded-full bg-gray-100
@@ -698,25 +696,17 @@ export default function CompanyDashboard() {
 
                             {/* EMPTY STATE TITLE */}
 
-                            <p className="
-                                text-center text-base
-                                font-medium text-gray-800
-                            ">
-                                Manage your companies
+                            <p
+                                className="
+                                    text-center text-base
+                                    font-medium text-gray-500
+                                "
+                            >
+                                No company records found
+                                <span className="flex text-gray-600">
+                                    Create and manage your company details
+                                </span>
                             </p>
-
-                            {/* EMPTY STATE DESCRIPTION */}
-
-                            <p className="
-                                max-w-sm text-center
-                                text-sm text-gray-500
-                            ">
-                                Create and manage your companies,
-                                organize company information, maintain
-                                contact details, and manage business
-                                profile information.
-                            </p>
-
                             {/* ACTION BUTTONS */}
 
                             <div className="
@@ -745,26 +735,6 @@ export default function CompanyDashboard() {
 
                                 )}
 
-                                {/* IMPORT */}
-
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        toast(
-                                            "Company import is not configured yet."
-                                        );
-                                    }}
-                                    className="
-                                        flex items-center gap-2
-                                        whitespace-nowrap rounded-md
-                                        border border-gray-300 bg-white
-                                        px-4 py-2 text-sm text-gray-700
-                                        transition-colors hover:bg-gray-50
-                                    "
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Import File
-                                </button>
 
                             </div>
 

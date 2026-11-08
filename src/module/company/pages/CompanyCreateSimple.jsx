@@ -492,7 +492,7 @@ const CompanyCreateSimple = ({ onClose }) => {
             if (onClose) {
                 onClose();
             } else {
-                navigate("/settings/companies")
+                navigate("/settings/companies");
             }
         });
     };
@@ -839,7 +839,7 @@ const CompanyCreateSimple = ({ onClose }) => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         className="
                             mt-5 rounded-lg bg-blue-600
                             px-5 py-2 text-sm font-medium
@@ -877,13 +877,13 @@ const CompanyCreateSimple = ({ onClose }) => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         className="
                             flex h-9 w-9 items-center justify-center
                             rounded-lg border border-gray-200
                             text-gray-500 transition hover:bg-gray-100
                         "
-                        title="Go Back"
+
                     >
                         <ArrowLeft size={18} />
                     </button>
@@ -1471,8 +1471,8 @@ const CompanyCreateSimple = ({ onClose }) => {
 
             <LeaveConfirmationModal
                 show={showLeaveConfirmation}
-                title="Leave Expense?"
-                message="Are you sure you want to leave this expense page?"
+                title="Leave Company?"
+                message="Are you sure you want to leave this company page? Any unsaved changes will be lost."
                 stayText="Stay Here"
                 leaveText="Leave"
                 onStay={handleStay}

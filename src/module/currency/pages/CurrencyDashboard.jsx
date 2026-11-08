@@ -41,6 +41,7 @@ import {
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
 
 import CurrencyOverview from "../../currency/pages/CurrencyOverview";
+import { useNavigate } from "react-router-dom";
 
 /* =========================================================
    CONSTANTS
@@ -120,7 +121,7 @@ const matchesCurrencySearch = (currency, search) => {
 
 export default function CurrencyDashboard() {
     const dispatch = useDispatch();
-
+    const navigate = useNavigate();
     /* =====================================================
        AUTH STATE
     ===================================================== */
@@ -437,11 +438,12 @@ export default function CurrencyDashboard() {
             return;
         }
 
-        dispatch(
-            openModal({
-                type: "addCurrency",
-            })
-        );
+        // dispatch(
+        //     openModal({
+        //         type: "addCurrency",
+        //     })
+        // );
+        navigate("/settings/currencies/create");
 
     }, [
         isAuthenticated,
@@ -670,7 +672,7 @@ export default function CurrencyDashboard() {
 
                             <div
                                 className="
-                                    relative mt-30 mb-1
+                                    relative mt-10 mb-1
                                     flex h-24 w-24 shrink-0
                                     items-center justify-center
                                     rounded-full bg-gray-100
@@ -705,26 +707,17 @@ export default function CurrencyDashboard() {
                             <p
                                 className="
                                     text-center text-base
-                                    font-medium text-gray-800
+                                    font-medium text-gray-500
                                 "
                             >
-                                Manage your currencies
+                                No Currencies found
+                                <span className="flex text-gray-600">
+                                    Manage your business currencies</span>
                             </p>
 
                             {/* EMPTY STATE DESCRIPTION */}
 
-                            <p
-                                className="
-                                    max-w-sm text-center
-                                    text-sm text-gray-500
-                                "
-                            >
-                                Create and manage currencies,
-                                configure currency codes and symbols,
-                                set decimal precision, and maintain
-                                currency availability for your invoices
-                                and transactions.
-                            </p>
+
 
                             {/* ACTION BUTTONS */}
 
@@ -753,26 +746,6 @@ export default function CurrencyDashboard() {
                                     </button>
                                 )}
 
-                                {/* IMPORT */}
-
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        toast(
-                                            "Currency import is not configured yet."
-                                        );
-                                    }}
-                                    className="
-                                        flex items-center gap-2
-                                        whitespace-nowrap rounded-md
-                                        border border-gray-300 bg-white
-                                        px-4 py-2 text-sm text-gray-700
-                                        transition-colors hover:bg-gray-50
-                                    "
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Import File
-                                </button>
                             </div>
                         </div>
                     )}

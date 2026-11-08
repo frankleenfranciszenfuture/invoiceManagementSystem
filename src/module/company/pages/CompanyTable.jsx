@@ -806,7 +806,7 @@ export default function CompanyTable({
                                                         e.stopPropagation();
                                                         handleView(company);
                                                     }}
-                                                    title="View"
+
                                                     className="
                                                         group relative flex h-8 w-8 items-center
                                                         justify-center rounded-lg
@@ -831,7 +831,7 @@ export default function CompanyTable({
                                                         e.stopPropagation();
                                                         handleEdit(company);
                                                     }}
-                                                    title="Edit"
+
                                                     className="
                                                         group relative flex h-8 w-8 items-center
                                                         justify-center rounded-lg
@@ -856,7 +856,7 @@ export default function CompanyTable({
                                                         e.stopPropagation();
                                                         handleDelete(company.id);
                                                     }}
-                                                    title="Delete"
+
                                                     className="
                                                         group relative flex h-8 w-8 items-center
                                                         justify-center rounded-lg
