@@ -431,8 +431,14 @@ const WarehouseCreate = ({ onClose }) => {
             //     return;
             // }
 
-            dispatch(closeModal());
+
             dispatch(resetWarehouseForm());
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/inventory/warehouses");
+            }
+
 
         } catch (error) {
             console.error(

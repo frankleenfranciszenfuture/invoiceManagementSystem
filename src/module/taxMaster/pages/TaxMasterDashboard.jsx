@@ -477,11 +477,13 @@ export default function TaxMasterDashboard() {
             return;
         }
 
-        dispatch(
-            openModal({
-                type: "addTaxMaster",
-            })
-        );
+        // dispatch(
+        //     openModal({
+        //         type: "addTaxMaster",
+        //     })
+        // );
+
+        navigate("/settings/taxes/create");
 
     }, [
         isAuthenticated,
@@ -564,6 +566,21 @@ export default function TaxMasterDashboard() {
 
         );
     }
+
+    /* =====================================================
+       EMPTY STATE MESSAGE
+    ===================================================== */
+
+    const emptyStateTitle =
+        taxMasterStatus === "ALL"
+            ? "Every product starts with a tax"
+            : `No ${taxMasterStatus.toLowerCase()} taxes found`;
+
+    const emptyStateDescription =
+        taxMasterStatus === "ALL"
+            ? "Create and organize your product taxes in one place."
+            : `There are currently no ${taxMasterStatus.toLowerCase()} taxes to display.`;
+
 
     /* =====================================================
        PAGE
@@ -707,7 +724,7 @@ export default function TaxMasterDashboard() {
 
                             <div
                                 className="
-                                    relative mt-30 mb-1
+                                    relative mt-10 mb-1
                                     flex h-24 w-24 shrink-0
                                     items-center justify-center
                                     rounded-full bg-gray-100
@@ -745,8 +762,10 @@ export default function TaxMasterDashboard() {
                                     font-medium text-gray-800
                                 "
                             >
-                                Manage your tax masters
+                                {emptyStateTitle}
                             </p>
+
+                            {/* EMPTY STATE DESCRIPTION */}
 
                             <p
                                 className="
@@ -754,11 +773,7 @@ export default function TaxMasterDashboard() {
                                     text-sm text-gray-500
                                 "
                             >
-                                Create and manage tax configurations,
-                                define CGST, SGST and IGST rates,
-                                maintain tax descriptions, and configure
-                                tax availability for your invoices
-                                and transactions.
+                                {emptyStateDescription}
                             </p>
 
                             <div
@@ -787,24 +802,7 @@ export default function TaxMasterDashboard() {
 
                                 )}
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        toast(
-                                            "Tax master import is not configured yet."
-                                        );
-                                    }}
-                                    className="
-                                        flex items-center gap-2
-                                        whitespace-nowrap rounded-md
-                                        border border-gray-300 bg-white
-                                        px-4 py-2 text-sm text-gray-700
-                                        transition-colors hover:bg-gray-50
-                                    "
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Import File
-                                </button>
+
 
                             </div>
 

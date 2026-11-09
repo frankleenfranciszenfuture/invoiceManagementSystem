@@ -21,16 +21,17 @@ const SearchableCreateSelect = ({
         (item) => String(item.value) === String(value)
     );
 
+    const searchText = search.trim().toLowerCase();
+
     const filteredOptions = options.filter((item) =>
         String(item.label || "")
             .toLowerCase()
-            .includes(search.trim().toLowerCase())
+            .includes(searchText)
     );
 
     const exactMatch = options.some(
         (item) =>
-            String(item.label || "").trim().toLowerCase() ===
-            search.trim().toLowerCase()
+            String(item.label || "").trim().toLowerCase() === searchText
     );
 
     useEffect(() => {
@@ -71,6 +72,7 @@ const SearchableCreateSelect = ({
     return (
         <div ref={wrapperRef} className="relative w-full">
 
+            {/* SELECT BUTTON */}
             <button
                 type="button"
                 disabled={disabled}
@@ -95,6 +97,7 @@ const SearchableCreateSelect = ({
                 />
             </button>
 
+            {/* DROPDOWN */}
             {open && !disabled && (
                 <div className="
                     absolute left-0 right-0 top-full z-50 mt-1
@@ -152,14 +155,18 @@ const SearchableCreateSelect = ({
                                     )}
                                 </button>
                             ))
-                        ) : (
+                        ) : searchText ? (
                             <p className="px-3 py-3 text-center text-xs text-gray-400">
                                 No matching records found
+                            </p>
+                        ) : (
+                            <p className="px-3 py-3 text-center text-xs text-gray-400">
+                                No records available
                             </p>
                         )}
 
                         {/* ADD NEW */}
-                        {search.trim() && !exactMatch && onAdd && (
+                        {searchText && !exactMatch && onAdd && (
                             <button
                                 type="button"
                                 onClick={handleAdd}
@@ -168,7 +175,7 @@ const SearchableCreateSelect = ({
                                     rounded-md border-t border-gray-100
                                     px-3 py-3 text-left text-sm
                                     font-medium text-[#408DFB]
-                                    hover:bg-blue-50
+                                    transition hover:bg-blue-50
                                 "
                             >
                                 <Plus size={16} />

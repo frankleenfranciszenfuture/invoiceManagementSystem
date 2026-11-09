@@ -428,7 +428,6 @@ export default function ProductTable({
                             "Product",
                             "Category",
                             "Subcategory",
-                            "HSN Code",
                             "Selling Price",
                             "Purchase Price",
                             "Stock",
@@ -526,13 +525,7 @@ export default function ProductTable({
                                     </p>
                                 </td>
 
-                                {/* HSN CODE */}
 
-                                <td className="px-3 py-3">
-                                    <span className="whitespace-nowrap text-gray-600">
-                                        {product.hsnCode || "—"}
-                                    </span>
-                                </td>
 
                                 {/* SELLING PRICE */}
 
@@ -597,7 +590,7 @@ export default function ProductTable({
                                                 onClick={() =>
                                                     handleView(product)
                                                 }
-                                                title="View product"
+
                                                 className="
                                                     group relative 
                                                     flex h-8 w-8
@@ -618,7 +611,7 @@ export default function ProductTable({
                                                 onClick={() =>
                                                     handleEdit(product)
                                                 }
-                                                title="Edit product"
+
                                                 className="
                                                     group relative flex h-8 w-8
                                                     items-center justify-center
@@ -639,7 +632,7 @@ export default function ProductTable({
                                                 onClick={() =>
                                                     handleDelete(product)
                                                 }
-                                                title="Delete product"
+
                                                 className="
                                                     group relative flex h-8 w-8
                                                     items-center justify-center

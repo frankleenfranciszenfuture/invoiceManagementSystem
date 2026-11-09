@@ -290,6 +290,27 @@ const SubCategoryCreateSimple = ({ onClose }) => {
         };
     }, [dispatch, id, isEdit]);
 
+
+    /* =====================================================
+   PREFILL FORM FROM PRODUCT MODAL
+===================================================== */
+
+    useEffect(() => {
+        if (isEdit || !modalData?.selectAfterCreate) return;
+
+        setFormData((previous) => ({
+            ...previous,
+
+            // Automatically populate typed subcategory name
+            name: modalData.subCategoryName ?? previous.name,
+
+            // Automatically select parent category
+            categoryId: modalData.categoryId != null
+                ? String(modalData.categoryId)
+                : previous.categoryId,
+        }));
+    }, [modalData, isEdit]);
+
     /* =====================================================
        HANDLE FIELD CHANGE
     ===================================================== */
@@ -474,24 +495,48 @@ const SubCategoryCreateSimple = ({ onClose }) => {
                 response;
 
             /* =============================================
-               SELECT CREATED SUBCATEGORY
-            ============================================= */
+     SELECT CREATED SUBCATEGORY
+  ============================================= */
 
             if (modalData?.selectAfterCreate) {
+                const createdSubCategoryId =
+                    createdSubCategory?.id ??
+                    createdSubCategory?.subCategoryId;
+
+                if (createdSubCategoryId == null) {
+                    toast.error(
+                        "Subcategory created, but its ID was not returned."
+                    );
+                    return;
+                }
+
                 dispatch(
                     setCreatedSubCategorySelection({
-                        targetField: modalData.targetField,
-                        entity: createdSubCategory,
+                        id: createdSubCategoryId,
+                        subCategoryId: createdSubCategoryId,
+
+                        name:
+                            createdSubCategory?.name ??
+                            createdSubCategory?.subCategoryName ??
+                            payload.name,
+
+                        categoryId:
+                            createdSubCategory?.categoryId ??
+                            createdSubCategory?.category?.id ??
+                            payload.categoryId,
+
+                        targetField: "subCategoryId",
                     })
                 );
 
+                // Refresh available subcategories
                 dispatch(fetchAllSubCategories());
 
+                // Close modal and return to ProductCreateNew
                 dispatch(closeModal());
 
                 return;
             }
-
             /* =============================================
                SAVE & NEW
             ============================================= */
@@ -680,6 +725,20 @@ const SubCategoryCreateSimple = ({ onClose }) => {
                             grid grid-cols-1 gap-5
                             md:grid-cols-2 lg:grid-cols-3
                         ">
+                            <FormField label="Subcategory Code">
+                                <TextInput
+                                    value={formData.subCategoryCode}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "subCategoryCode",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Auto generated"
+                                    disabled={!isEdit}
+                                    maxLength={50}
+                                />
+                            </FormField>
 
                             <FormField
                                 label="Subcategory Name"
@@ -698,19 +757,7 @@ const SubCategoryCreateSimple = ({ onClose }) => {
                                 />
                             </FormField>
 
-                            <FormField label="Subcategory Code">
-                                <TextInput
-                                    value={formData.subCategoryCode}
-                                    onChange={(e) =>
-                                        handleChange(
-                                            "subCategoryCode",
-                                            e.target.value
-                                        )
-                                    }
-                                    placeholder="Enter subcategory code"
-                                    maxLength={30}
-                                />
-                            </FormField>
+
 
                             <FormField
                                 label="Parent Category"

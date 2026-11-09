@@ -23,7 +23,7 @@ import {
     fetchAllUnits,
 } from "../thunks/unitThunks";
 
-import { resetUnitForm } from "../slices/unitSlice";
+import { resetUnitForm, setCreatedUnitSelection } from "../slices/unitSlice";
 
 import CustomSelect from "../../../common/custom/CustomSelect";
 
@@ -102,7 +102,7 @@ const TextAreaField = ({
         placeholder={placeholder}
         rows={rows}
         className="
-            w-full resize-none rounded-lg border border-gray-200
+            w-full h-[50px] resize-none rounded-lg border border-gray-200
             bg-white px-3 py-2.5 text-sm text-gray-700
             outline-none transition
             placeholder:text-gray-400
@@ -149,8 +149,8 @@ const UnitCreate = ({ onClose }) => {
     // ID exists = Edit mode
     const isEdit = Boolean(id);
 
-    const modalOpen = useSelector(
-        (state) => state.ui.modal?.open
+    const modalData = useSelector(
+        (state) => state.ui.modal?.data
     );
 
     const {
@@ -221,6 +221,20 @@ const UnitCreate = ({ onClose }) => {
             isMounted = false;
         };
     }, [dispatch, id, isEdit]);
+
+
+    /* =====================================================
+   PREFILL UNIT FROM QUICK-CREATE MODAL
+===================================================== */
+
+    useEffect(() => {
+        if (isEdit || !modalData?.selectAfterCreate) return;
+
+        setFormData((previous) => ({
+            ...previous,
+            unitName: modalData.unitName ?? previous.unitName,
+        }));
+    }, [modalData, isEdit]);
 
     /* =====================================================
        HANDLE FIELD CHANGE
@@ -362,7 +376,44 @@ const UnitCreate = ({ onClose }) => {
                 response?.message || "Unit created successfully"
             );
 
-            // Refresh units after creation.
+            const createdUnit =
+                response?.data?.data ??
+                response?.data ??
+                response?.result?.data ??
+                response?.result ??
+                response;
+
+            if (modalData?.selectAfterCreate) {
+                const createdUnitId =
+                    createdUnit?.id ??
+                    createdUnit?.unitId;
+
+                if (createdUnitId == null) {
+                    toast.error(
+                        "Unit created, but unit ID was not returned."
+                    );
+                    return;
+                }
+
+                dispatch(
+                    setCreatedUnitSelection({
+                        id: createdUnitId,
+                        unitId: createdUnitId,
+                        unitName:
+                            createdUnit?.unitName ??
+                            payload.unitName,
+                        targetField:
+                            modalData.targetField ?? "unitId",
+                    })
+                );
+
+                await dispatch(fetchAllUnits()).unwrap();
+
+                dispatch(closeModal());
+                return;
+            }
+
+            // Normal Unit creation
             dispatch(fetchAllUnits());
 
             // Save & New

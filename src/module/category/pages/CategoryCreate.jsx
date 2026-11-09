@@ -10,9 +10,12 @@ import { closeModal } from "../../ui/uiSlice";
 import {
     resetCategoryForm,
     setCategoryField,
-    setCreatedCategorySelection
+
 } from "../slices/categorySlice";
 
+import {
+    setCreatedCategorySelection,
+} from "../../items/slices/productSlice";
 import {
     createCategory,
     updateCategory,
@@ -730,22 +733,34 @@ export default function CategoryCreate() {
                     response?.data ??
                     response;
 
-                // Send the created category to the parent form.
+                // -------------------------------------------------
+                // SELECT CREATED CATEGORY IN PARENT FORM
+                // -------------------------------------------------
+
+                const createdCategoryId =
+                    createdCategory?.id ??
+                    createdCategory?.categoryId;
+
                 if (
                     modal.data?.selectAfterCreate &&
-                    createdCategory?.id
+                    createdCategoryId != null
                 ) {
                     dispatch(
                         setCreatedCategorySelection({
-                            item: createdCategory,
-                            targetField: modal.data.targetField,
+                            id: createdCategoryId,
+                            categoryId: createdCategoryId,
+                            categoryName:
+                                createdCategory.categoryName ??
+                                createdCategory.name ??
+                                payload.categoryName,
+                            targetField:
+                                modal.data.targetField ?? "categoryId",
                         })
                     );
                 }
 
                 toast.success("Category created successfully");
             }
-
             // =================================================
             // CLOSE + RESET
             // =================================================

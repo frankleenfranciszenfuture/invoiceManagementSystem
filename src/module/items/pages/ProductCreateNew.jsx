@@ -30,10 +30,28 @@ import {
 
 import {
     resetProductForm,
-    clearCreatedCategorySelection,
-    clearCreatedSubCategorySelection,
-    clearCreatedTaxMasterSelection,
 } from "../slices/productSlice";
+
+import {
+    clearCreatedSubCategorySelection,
+} from "../../subCategory/slices/subCategorySlice";
+
+import {
+    clearCreatedCategorySelection
+} from "../../category/slices/categorySlice";
+
+import {
+    clearCreatedTaxMasterSelection
+} from "../../taxMaster/slices/taxMasterSlice";
+
+
+import {
+    clearCreatedSizeSelection,
+} from "../../sizes/slices/sizeSlice";
+
+import {
+    clearCreatedUnitSelection,
+} from "../../units/slices/unitSlice";
 
 import {
     getUserPermission,
@@ -122,11 +140,14 @@ const FormField = ({
     className = "",
 }) => (
     <div className={`flex flex-col gap-1.5 ${className}`}>
-        <label className="text-sm font-medium text-gray-700">
+        <label
+            className={`text-sm font-medium ${required ? "text-red-400" : "text-gray-500"
+                }`}
+        >
             {label}
 
             {required && (
-                <span className="ml-1 text-red-500">*</span>
+                <span className="ml-1 text-red-400">*</span>
             )}
         </label>
 
@@ -190,6 +211,18 @@ const SectionHeading = ({
             )}
         </div>
     </div>
+);
+
+export const getLabel = (label) => (
+    <span className="text-red-400">
+        {label} <span>*</span>
+    </span>
+);
+
+export const normalLabel = (label) => (
+    <span className="text-gray-500">
+        {label}
+    </span>
 );
 
 const getProductData = (response) => {
@@ -298,9 +331,6 @@ const ProductCreateNew = ({ onClose }) => {
 
     const {
         loading = false,
-        createdCategorySelection,
-        createdSubCategorySelection,
-        createdTaxMasterSelection,
     } = productState;
 
     /* =====================================================
@@ -351,6 +381,24 @@ const ProductCreateNew = ({ onClose }) => {
         () => getList(taxMasterState.taxMasters),
         [taxMasterState.taxMasters]
     );
+
+    const createdSubCategorySelection =
+        subCategoryState.createdSubCategorySelection;
+
+    const createdCategorySelection =
+        categoryState.createdCategorySelection;
+
+
+    const createdTaxMasterSelection =
+        taxMasterState.createdTaxMasterSelection;
+
+
+    const createdSizeSelection =
+        sizeState.createdSizeSelection;
+
+
+    const createdUnitSelection =
+        unitState.createdUnitSelection;
 
     const {
         showLeaveConfirmation,
@@ -915,7 +963,37 @@ const ProductCreateNew = ({ onClose }) => {
         }));
     };
 
+    /* =====================================================
+      SIZE MODEL
+   ===================================================== */
 
+    const openSizeModal = (sizeName = "") => {
+        dispatch(openModal({
+            type: "addSize",
+            data: {
+                sizeName,
+                targetField: "sizeId",
+                selectAfterCreate: true,
+            },
+        }));
+    };
+
+    /* =====================================================
+      UNITS MODEL
+   ===================================================== */
+
+    const openUnitModal = (unitName = "") => {
+        dispatch(
+            openModal({
+                type: "addUnit",
+                data: {
+                    unitName,
+                    targetField: "unitId",
+                    selectAfterCreate: true,
+                },
+            })
+        );
+    };
 
     const handleClose = () => {
         confirmLeave(() => {
@@ -936,7 +1014,9 @@ const ProductCreateNew = ({ onClose }) => {
 
         const createdId =
             createdCategorySelection.id ??
-            createdCategorySelection.categoryId;
+            createdCategorySelection.categoryId ??
+            createdCategorySelection.entity?.id ??
+            createdCategorySelection.item?.id;
 
         if (createdId == null) return;
 
@@ -947,14 +1027,15 @@ const ProductCreateNew = ({ onClose }) => {
         }));
 
         dispatch(clearCreatedCategorySelection());
+
     }, [
         createdCategorySelection,
         dispatch,
     ]);
 
     /* =====================================================
-       CONSUME CREATED SUBCATEGORY
-    ===================================================== */
+   CONSUME CREATED SUBCATEGORY
+===================================================== */
 
     useEffect(() => {
         if (!createdSubCategorySelection) return;
@@ -966,9 +1047,7 @@ const ProductCreateNew = ({ onClose }) => {
         if (createdId == null) return;
 
         const createdCategoryId =
-            createdSubCategorySelection.categoryId ??
-            createdSubCategorySelection.category?.id ??
-            createdSubCategorySelection.category?.categoryId;
+            createdSubCategorySelection.categoryId;
 
         setFormData((previous) => ({
             ...previous,
@@ -979,11 +1058,11 @@ const ProductCreateNew = ({ onClose }) => {
         }));
 
         dispatch(clearCreatedSubCategorySelection());
+
     }, [
         createdSubCategorySelection,
         dispatch,
     ]);
-
     /* =====================================================
        CONSUME CREATED TAX
     ===================================================== */
@@ -1007,6 +1086,64 @@ const ProductCreateNew = ({ onClose }) => {
         createdTaxMasterSelection,
         dispatch,
     ]);
+
+
+    /* =====================================================
+        CONSUME CREATED SIZE
+     ===================================================== */
+    useEffect(() => {
+        if (!createdSizeSelection) return;
+
+        const createdId =
+            createdSizeSelection.id ??
+            createdSizeSelection.sizeId;
+
+        if (createdId == null) return;
+
+        setFormData((previous) => {
+            const alreadySelected = previous.sizes.some(
+                (id) => Number(id) === Number(createdId)
+            );
+
+            if (alreadySelected) return previous;
+
+            return {
+                ...previous,
+                sizes: [...previous.sizes, Number(createdId)],
+            };
+        });
+
+        dispatch(clearCreatedSizeSelection());
+    }, [createdSizeSelection, dispatch]);
+
+    /* =====================================================
+           CONSUME CREATED UNITS
+        ===================================================== */
+
+    useEffect(() => {
+        if (!createdUnitSelection) return;
+
+        const createdId =
+            createdUnitSelection.id ??
+            createdUnitSelection.unitId;
+
+        if (createdId == null) return;
+
+        setFormData((previous) => {
+            const alreadySelected = previous.units.some(
+                (id) => Number(id) === Number(createdId)
+            );
+
+            if (alreadySelected) return previous;
+
+            return {
+                ...previous,
+                units: [...previous.units, Number(createdId)],
+            };
+        });
+
+        dispatch(clearCreatedUnitSelection());
+    }, [createdUnitSelection, dispatch]);
 
     /* =====================================================
        SIZE OPTIONS
@@ -1292,7 +1429,7 @@ const ProductCreateNew = ({ onClose }) => {
             dispatch(clearCreatedSubCategorySelection());
             dispatch(clearCreatedTaxMasterSelection());
 
-            navigate("/items");
+            navigate("/invoice/items");
 
         } catch (error) {
             console.error(
@@ -1560,7 +1697,7 @@ const ProductCreateNew = ({ onClose }) => {
                                 />
                             </FormField>
 
-                            <FormField label="Tax">
+                            <FormField label="Tax" required>
                                 <SearchableCreateSelect
                                     value={formData.taxId}
                                     onChange={(value) =>
@@ -1589,9 +1726,9 @@ const ProductCreateNew = ({ onClose }) => {
 
                         <div className="
                             grid grid-cols-1 gap-5
-                            md:grid-cols-2 lg:grid-cols-3
+                            md:grid-cols-2 lg:grid-cols-2
                         ">
-                            <FormField label="Selling Price">
+                            <FormField label="Selling Price" required>
                                 <TextInput
                                     type="number"
                                     value={formData.sellingPrice}
@@ -1604,14 +1741,14 @@ const ProductCreateNew = ({ onClose }) => {
                                 />
                             </FormField>
 
-                            <FormField label="Purchasing Price">
+                            <FormField label="Purchasing Price" required>
                                 <TextInput
                                     type="number"
                                     value={formData.purchasingPrice}
                                     onChange={(event) =>
                                         handleChange("purchasingPrice", event.target.value)
                                     }
-                                    placeholder="Enter purchasing price"
+                                    placeholder="Enter purchasing price "
                                     min="0"
                                     step="0.01"
                                 />
@@ -1654,7 +1791,10 @@ const ProductCreateNew = ({ onClose }) => {
                                 />
                             </FormField>
                         </div>
+
+
                     </section>
+
 
                     <div className="my-6 border-t border-gray-100" />
 
@@ -1713,6 +1853,7 @@ const ProductCreateNew = ({ onClose }) => {
                                                 type: "addSize",
                                                 data: {
                                                     sizeName,
+                                                    targetField: "sizes",
                                                     selectAfterCreate: true,
                                                 },
                                             })
@@ -1720,7 +1861,6 @@ const ProductCreateNew = ({ onClose }) => {
                                     }}
                                 />
                             </FormField>
-
                             {/* UNITS */}
 
                             <FormField label="Units">

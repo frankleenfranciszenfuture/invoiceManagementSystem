@@ -54,51 +54,37 @@ export const fetchCompanyById = createAsyncThunk(
 const buildCompanyFormData = (data) => {
   const formData = new FormData();
 
-  /* =======================================================
-     COMPANY JSON
-  ======================================================= */
+  const { logo, signature, ...companyData } = data;
 
   const company = {
+    ...companyData,
+
     companyName: data.companyName?.trim() || "",
-
     displayName: data.displayName?.trim() || "",
-
     legalName: data.legalName?.trim() || "",
-
     companyCode: data.companyCode?.trim() || "",
 
     gstNumber: data.gstNumber?.trim() || "",
-
     panNumber: data.panNumber?.trim() || "",
-
     tanNumber: data.tanNumber?.trim() || "",
 
     email: data.email?.trim() || "",
-
     phone: data.phone?.trim() || "",
-
     alternatePhone: data.alternatePhone?.trim() || "",
 
     website: data.website?.trim() || "",
 
     addressLine1: data.addressLine1?.trim() || "",
-
     addressLine2: data.addressLine2?.trim() || "",
-
     city: data.city?.trim() || "",
-
     state: data.state?.trim() || "",
-
     country: data.country?.trim() || "",
-
     pincode: data.pincode?.trim() || "",
 
     invoicePrefix: data.invoicePrefix?.trim() || "",
 
     invoiceStartNumber:
-      data.invoiceStartNumber !== undefined &&
-      data.invoiceStartNumber !== null &&
-      data.invoiceStartNumber !== ""
+      data.invoiceStartNumber !== "" && data.invoiceStartNumber != null
         ? Number(data.invoiceStartNumber)
         : null,
 
@@ -111,11 +97,6 @@ const buildCompanyFormData = (data) => {
     status: data.status || "ACTIVE",
   };
 
-  /* =======================================================
-     APPEND COMPANY JSON
-     Backend @RequestPart name = "data"
-  ======================================================= */
-
   formData.append(
     "data",
     new Blob([JSON.stringify(company)], {
@@ -123,20 +104,12 @@ const buildCompanyFormData = (data) => {
     }),
   );
 
-  /* =======================================================
-     LOGO
-  ======================================================= */
-
-  if (data.logo instanceof File) {
-    formData.append("logo", data.logo);
+  if (logo instanceof File) {
+    formData.append("logo", logo);
   }
 
-  /* =======================================================
-     SIGNATURE
-  ======================================================= */
-
-  if (data.signature instanceof File) {
-    formData.append("signature", data.signature);
+  if (signature instanceof File) {
+    formData.append("signature", signature);
   }
 
   return formData;

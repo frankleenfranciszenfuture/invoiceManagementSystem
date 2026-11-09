@@ -289,6 +289,19 @@ const TaxCreateSimple = ({ onClose }) => {
     }, [dispatch, id, isEdit]);
 
     /* =====================================================
+   PREFILL FORM FROM PRODUCT MODAL
+===================================================== */
+
+    useEffect(() => {
+        if (isEdit || !modalData?.selectAfterCreate) return;
+
+        setFormData((previous) => ({
+            ...previous,
+            taxName: modalData.taxName ?? previous.taxName,
+        }));
+    }, [modalData, isEdit]);
+
+    /* =====================================================
        HANDLE FIELD CHANGE
     ===================================================== */
 
@@ -492,18 +505,37 @@ const TaxCreateSimple = ({ onClose }) => {
                 response;
 
             /* =============================================
-               SELECT CREATED TAX MASTER
-            ============================================= */
+    SELECT CREATED TAX MASTER
+ ============================================= */
 
             if (modalData?.selectAfterCreate) {
+                const createdTaxMasterId =
+                    createdTaxMaster?.id ??
+                    createdTaxMaster?.taxMasterId;
+
+                if (createdTaxMasterId == null) {
+                    toast.error(
+                        "Tax master created, but tax master ID was not returned."
+                    );
+                    return;
+                }
+
                 dispatch(
                     setCreatedTaxMasterSelection({
-                        targetField: modalData.targetField,
-                        entity: createdTaxMaster,
+                        id: createdTaxMasterId,
+                        taxMasterId: createdTaxMasterId,
+
+                        taxName:
+                            createdTaxMaster?.taxName ??
+                            payload.taxName,
+
+                        targetField:
+                            modalData.targetField ?? "taxMasterId",
                     })
                 );
 
                 dispatch(fetchAllTaxMasters());
+
                 dispatch(closeModal());
 
                 return;

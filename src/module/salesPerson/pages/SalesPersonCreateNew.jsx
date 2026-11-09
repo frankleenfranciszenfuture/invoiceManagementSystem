@@ -16,6 +16,8 @@ import {
     Loader2,
     RotateCcw,
     Hash,
+    Contact2Icon,
+    Contact,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -51,11 +53,14 @@ const FormField = ({
     className = "",
 }) => (
     <div className={`flex flex-col gap-1.5 ${className}`}>
-        <label className="text-sm font-medium text-gray-700">
+        <label
+            className={`text-sm font-medium ${required ? "text-red-400" : "text-gray-500"
+                }`}
+        >
             {label}
 
             {required && (
-                <span className="ml-1 text-red-500">*</span>
+                <span className="ml-1 text-red-400">*</span>
             )}
         </label>
 
@@ -740,12 +745,12 @@ const SalesPersonCreateNew = ({ onClose }) => {
 
                     {/* SALES PERSON DETAILS */}
 
-                    <section className="mb-7">
+                    <section className="mb-6">
 
                         <SectionHeading
                             icon={UserRound}
                             title="Sales Person Information"
-                            description="Enter the sales person type and contact information"
+                            description="Enter the sales person type information"
                         />
 
                         <div className="
@@ -781,7 +786,7 @@ const SalesPersonCreateNew = ({ onClose }) => {
 
                                 <CustomSelect
                                     value={
-                                        salesPerson.salesPersonType || "EMPLOYEE"
+                                        salesPerson.salesPersonType || ""
                                     }
                                     onChange={(value) =>
                                         handleChange(
@@ -815,10 +820,23 @@ const SalesPersonCreateNew = ({ onClose }) => {
                                 />
 
                             </FormField>
+                        </div>
+                    </section>
 
+                    <section className="mb-6">
+                        <SectionHeading
+                            icon={Contact}
+                            title="Sales Person Contact Information"
+                            description="Enter the sales person contact information"
+                        />
+
+                        <div className="
+                            grid grid-cols-1 gap-5
+                            md:grid-cols-2 lg:grid-cols-3
+                        ">
                             {/* EMAIL */}
 
-                            <FormField label="Email">
+                            <FormField label="Email" required>
 
                                 <TextInput
                                     type="email"
@@ -837,7 +855,7 @@ const SalesPersonCreateNew = ({ onClose }) => {
 
                             {/* MOBILE */}
 
-                            <FormField label="Mobile">
+                            <FormField label="Mobile" required>
 
                                 <TextInput
                                     value={salesPerson.mobile}
@@ -875,8 +893,8 @@ const SalesPersonCreateNew = ({ onClose }) => {
 
                         </div>
 
-                    </section>
 
+                    </section>
                 </div>
 
                 {/* FOOTER */}

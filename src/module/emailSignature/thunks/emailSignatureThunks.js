@@ -152,15 +152,27 @@ export const deleteEmailSignature = createAsyncThunk(
   "emailSignatures/deleteEmailSignature",
   async ({ id, userId }, { rejectWithValue }) => {
     try {
+      console.log("DELETE EMAIL SIGNATURE:", {
+        id,
+        userId,
+        url: `/email-signatures/${id}?userId=${userId}`,
+      });
+
       const response = await api.delete(`/email-signatures/${id}`, {
         params: { userId },
       });
 
       return response.data;
     } catch (error) {
+      console.error("DELETE REQUEST ERROR:", {
+        url: error.config?.url,
+        params: error.config?.params,
+        response: error.response?.data,
+      });
+
       return rejectWithValue(
-        error?.response?.data?.message ||
-          error?.message ||
+        error.response?.data?.message ||
+          error.message ||
           "Failed to delete email signature",
       );
     }

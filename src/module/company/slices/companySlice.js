@@ -61,7 +61,8 @@ const emptyCompany = {
 
   status: "ACTIVE",
 
-  image: null,
+  logo: null,
+  signature: null,
 
   isDefault: false,
 };

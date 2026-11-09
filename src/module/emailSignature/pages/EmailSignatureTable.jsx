@@ -220,25 +220,13 @@ export default function EmailSignatureTable({
        FETCH EMAIL SIGNATURES
     ===================================================== */
 
-    const reloadEmailSignatures = useCallback(
-        (
-            page = Number(pageNumber) || 0,
-            size = Number(pageSize) || 10
-        ) => {
-            if (!userId) {
-                return;
-            }
+    const reloadEmailSignatures = useCallback(() => {
+        if (!userId) {
+            return;
+        }
 
-            dispatch(
-                fetchAllEmailSignatures({
-                    userId,
-                    page,
-                    size,
-                })
-            );
-        },
-        [dispatch, userId, pageNumber, pageSize]
-    );
+        dispatch(fetchAllEmailSignatures(userId));
+    }, [dispatch, userId]);
 
     /* =====================================================
        DELETE EMAIL SIGNATURE
@@ -710,16 +698,11 @@ export default function EmailSignatureTable({
                 loading={loading}
                 label="email signatures"
                 onPageChange={(page) => {
-                    reloadEmailSignatures(
-                        page,
-                        pageSize
-                    );
+                    reloadEmailSignatures();
                 }}
+
                 onPageSizeChange={(size) => {
-                    reloadEmailSignatures(
-                        0,
-                        size
-                    );
+                    reloadEmailSignatures();
                 }}
             />
 

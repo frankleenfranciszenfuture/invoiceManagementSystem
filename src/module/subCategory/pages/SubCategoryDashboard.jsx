@@ -34,6 +34,7 @@ import {
 } from "../../../module/menuPermission/thunks/menuPermissionThunks";
 
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
+import { useNavigate } from "react-router-dom";
 
 /* =========================================================
    CONSTANTS
@@ -57,7 +58,7 @@ const normalizeAction = (value) =>
 
 export default function SubCategoryDashboard() {
     const dispatch = useDispatch();
-
+    const navigate = useNavigate();
     /* =====================================================
        AUTH STATE
     ===================================================== */
@@ -311,11 +312,13 @@ export default function SubCategoryDashboard() {
             return;
         }
 
-        dispatch(
-            openModal({
-                type: "addSubCategory",
-            })
-        );
+        // dispatch(
+        //     openModal({
+        //         type: "addSubCategory",
+        //     })
+        // );
+
+        navigate("/settings/subCategoires/create");
 
     }, [
         isAuthenticated,
@@ -419,7 +422,7 @@ export default function SubCategoryDashboard() {
     ===================================================== */
 
     const emptyStateTitle =
-        "Every category needs subcategories";
+        "No subCategories found";
 
     const emptyStateDescription =
         "Create and organize your product subcategories under their respective categories.";
@@ -486,7 +489,7 @@ export default function SubCategoryDashboard() {
 
                             <div
                                 className="
-                                    relative mt-30 mb-1
+                                    relative mt-10 mb-1
                                     flex h-24 w-24 shrink-0
                                     items-center justify-center
                                     rounded-full bg-gray-100
@@ -567,27 +570,7 @@ export default function SubCategoryDashboard() {
                                     </button>
                                 )}
 
-                                {/* IMPORT */}
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        toast(
-                                            "Subcategory import is not configured yet."
-                                        );
-                                    }}
-                                    className="
-                                        flex items-center gap-2
-                                        whitespace-nowrap rounded-md
-                                        border border-gray-300 bg-white
-                                        px-4 py-2 text-sm text-gray-700
-                                        transition-colors hover:bg-gray-50
-                                    "
-                                >
-                                    <Download className="h-4 w-4" />
-
-                                    Import File
-                                </button>
 
                             </div>
                         </div>

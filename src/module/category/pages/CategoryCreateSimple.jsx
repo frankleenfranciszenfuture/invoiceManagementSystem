@@ -88,7 +88,7 @@ const TextInput = ({
         maxLength={maxLength}
         min={min}
         className="
-            h-10 w-full rounded-lg border border-gray-200
+            h-10 w-max-full rounded-lg border border-gray-200
             bg-white px-3 text-sm text-gray-700
             outline-none transition
             placeholder:text-gray-400
@@ -262,6 +262,20 @@ const CategoryCreateSimple = ({ onClose }) => {
     }, [dispatch, id, isEdit]);
 
     /* =====================================================
+   PREFILL FORM FROM PRODUCT MODAL
+===================================================== */
+
+    useEffect(() => {
+        if (isEdit || !modalData?.selectAfterCreate) return;
+
+        setFormData((previous) => ({
+            ...previous,
+            categoryName:
+                modalData.categoryName ?? previous.categoryName,
+        }));
+    }, [modalData, isEdit]);
+
+    /* =====================================================
        HANDLE FIELD CHANGE
     ===================================================== */
 
@@ -432,15 +446,36 @@ const CategoryCreateSimple = ({ onClose }) => {
             ============================================= */
 
             if (modalData?.selectAfterCreate) {
+
+                const createdCategoryId =
+                    createdCategory?.id ??
+                    createdCategory?.categoryId;
+
+                if (createdCategoryId == null) {
+                    toast.error(
+                        "Category created, but category ID was not returned."
+                    );
+                    return;
+                }
+
+                // Store the category for ProductCreateNew.
                 dispatch(
                     setCreatedCategorySelection({
-                        targetField: modalData.targetField,
-                        entity: createdCategory,
+                        id: createdCategoryId,
+                        categoryId: createdCategoryId,
+                        categoryName:
+                            createdCategory?.categoryName ??
+                            createdCategory?.name ??
+                            payload.categoryName,
+                        targetField:
+                            modalData.targetField ?? "categoryId",
                     })
                 );
 
-                dispatch(fetchAllCategories());
+                // Refresh available categories.
+                await dispatch(fetchAllCategories()).unwrap();
 
+                // Close the global modal.
                 dispatch(closeModal());
 
                 return;
@@ -634,6 +669,22 @@ const CategoryCreateSimple = ({ onClose }) => {
                             grid grid-cols-1 gap-5
                             md:grid-cols-2 lg:grid-cols-3
                         ">
+                            <FormField label="Category Code">
+
+                                <TextInput
+                                    value={formData.categoryCode}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "categoryCode",
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Auto generated"
+                                    disabled={!isEdit}
+                                    maxLength={50}
+                                />
+
+                            </FormField>
 
                             <FormField label="Category Name" required>
                                 <TextInput
@@ -649,19 +700,6 @@ const CategoryCreateSimple = ({ onClose }) => {
                                 />
                             </FormField>
 
-                            <FormField label="Category Code">
-                                <TextInput
-                                    value={formData.categoryCode}
-                                    onChange={(e) =>
-                                        handleChange(
-                                            "categoryCode",
-                                            e.target.value
-                                        )
-                                    }
-                                    placeholder="Enter category code"
-                                    maxLength={30}
-                                />
-                            </FormField>
 
                             <FormField label="Status" required>
                                 <CustomSelect

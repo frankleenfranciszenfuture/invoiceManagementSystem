@@ -58,7 +58,13 @@ api.interceptors.request.use(
      * `jwt` cookie because withCredentials = true.
      */
 
-    console.log("➡️ REQUEST:", config.method?.toUpperCase(), config.url);
+    console.log("➡️ REQUEST:", {
+      method: config.method?.toUpperCase(),
+      url: config.url,
+      baseURL: config.baseURL,
+      params: config.params,
+      fullURL: api.getUri(config),
+    });
 
     return config;
   },

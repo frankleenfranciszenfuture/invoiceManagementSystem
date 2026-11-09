@@ -580,6 +580,15 @@ const EmailSignatureCreateSimple = ({ onClose }) => {
     /* =====================================================
        SAVE EMAIL SIGNATURE
     ===================================================== */
+    const closeAfterSubmit = () => {
+        dispatch(resetEmailSignatureForm());
+
+        if (onClose) {
+            onClose();
+        } else {
+            dispatch(closeModal());
+        }
+    };
 
     const handleSubmit = async (e) => {
 
@@ -658,13 +667,14 @@ const EmailSignatureCreateSimple = ({ onClose }) => {
                 dispatch(resetEmailSignatureForm());
 
                 setSaveMode("close");
+                setShowSaveOptions(false);
 
                 return;
+
             }
 
-            dispatch(resetEmailSignatureForm());
+            closeAfterSubmit();
 
-            navigate("/settings/email-signatures");
 
         } catch (error) {
 
@@ -785,7 +795,7 @@ const EmailSignatureCreateSimple = ({ onClose }) => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         className="
                             mt-5 rounded-lg bg-blue-600
                             px-5 py-2 text-sm font-medium
@@ -823,7 +833,7 @@ const EmailSignatureCreateSimple = ({ onClose }) => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         className="
                             flex h-9 w-9 items-center justify-center
                             rounded-lg border border-gray-200

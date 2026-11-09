@@ -19,7 +19,7 @@ import {
     Phone,
     MapPin,
     Receipt,
-    Coins,
+    Image as ImageIcon,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -42,8 +42,6 @@ import CustomSelect from "../../../common/custom/CustomSelect";
 
 import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
 import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
-
-
 
 /* =========================================================
    INITIAL FORM DATA
@@ -70,6 +68,9 @@ const initialFormData = {
     state: "",
     country: "India",
     pincode: "",
+
+    logo: null,
+    signature: null,
 
     invoicePrefix: "",
     invoiceStartNumber: 1,
@@ -224,11 +225,12 @@ const CompanyCreateSimple = ({ onClose }) => {
         ...initialFormData,
     });
 
+    const [logoPreview, setLogoPreview] = useState("");
+    const [signaturePreview, setSignaturePreview] = useState("");
+
     const [saveMode, setSaveMode] = useState("close");
 
     const [showSaveOptions, setShowSaveOptions] = useState(false);
-
-
 
     const {
         showLeaveConfirmation,
@@ -439,6 +441,9 @@ const CompanyCreateSimple = ({ onClose }) => {
             country: company.country ?? "India",
             pincode: company.pincode ?? "",
 
+            logo: company.logo ?? null,
+            signature: company.signature ?? null,
+
             invoicePrefix: company.invoicePrefix ?? "",
             invoiceStartNumber: company.invoiceStartNumber ?? 1,
             currency: company.currency ?? "INR",
@@ -448,9 +453,34 @@ const CompanyCreateSimple = ({ onClose }) => {
             isDefault: company.isDefault ?? false,
         });
 
+        setLogoPreview(company.logo ?? "");
+        setSignaturePreview(company.signature ?? "");
+
     }, [
         isCurrentCompanyLoaded,
         company,
+    ]);
+
+    /* =====================================================
+       PREVIEW URL CLEANUP
+    ===================================================== */
+
+    useEffect(() => {
+
+        return () => {
+
+            if (logoPreview?.startsWith("blob:")) {
+                URL.revokeObjectURL(logoPreview);
+            }
+
+            if (signaturePreview?.startsWith("blob:")) {
+                URL.revokeObjectURL(signaturePreview);
+            }
+        };
+
+    }, [
+        logoPreview,
+        signaturePreview,
     ]);
 
     /* =====================================================
@@ -487,8 +517,47 @@ const CompanyCreateSimple = ({ onClose }) => {
         }));
     };
 
+    /* =====================================================
+       HANDLE IMAGE CHANGE
+    ===================================================== */
+
+    const handleImageChange = (field, file) => {
+
+        if (!file) {
+            return;
+        }
+
+        if (!file.type.startsWith("image/")) {
+            toast.error("Please select a valid image file");
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("Image size must be less than 5 MB");
+            return;
+        }
+
+        const previewUrl = URL.createObjectURL(file);
+
+        if (field === "logo") {
+            setLogoPreview(previewUrl);
+        }
+
+        if (field === "signature") {
+            setSignaturePreview(previewUrl);
+        }
+
+        handleChange(field, file);
+    };
+
+    /* =====================================================
+       HANDLE CLOSE
+    ===================================================== */
+
     const handleClose = () => {
+
         confirmLeave(() => {
+
             if (onClose) {
                 onClose();
             } else {
@@ -496,11 +565,13 @@ const CompanyCreateSimple = ({ onClose }) => {
             }
         });
     };
+
     /* =====================================================
-       RESET FORM
+       GET COMPANY FORM DATA
     ===================================================== */
 
     const getCompanyFormData = () => ({
+
         companyName: company.companyName ?? "",
         displayName: company.displayName ?? "",
         legalName: company.legalName ?? "",
@@ -522,6 +593,9 @@ const CompanyCreateSimple = ({ onClose }) => {
         country: company.country ?? "India",
         pincode: company.pincode ?? "",
 
+        logo: company.logo ?? null,
+        signature: company.signature ?? null,
+
         invoicePrefix: company.invoicePrefix ?? "",
         invoiceStartNumber: company.invoiceStartNumber ?? 1,
         currency: company.currency ?? "INR",
@@ -530,6 +604,10 @@ const CompanyCreateSimple = ({ onClose }) => {
         status: company.status ?? "ACTIVE",
         isDefault: company.isDefault ?? false,
     });
+
+    /* =====================================================
+       RESET FORM
+    ===================================================== */
 
     const handleReset = () => {
 
@@ -541,11 +619,17 @@ const CompanyCreateSimple = ({ onClose }) => {
 
             setFormData(getCompanyFormData());
 
+            setLogoPreview(company.logo ?? "");
+            setSignaturePreview(company.signature ?? "");
+
         } else {
 
             setFormData({
                 ...initialFormData,
             });
+
+            setLogoPreview("");
+            setSignaturePreview("");
         }
 
         setSaveMode("close");
@@ -655,6 +739,7 @@ const CompanyCreateSimple = ({ onClose }) => {
         }
 
         const payload = {
+
             companyName: formData.companyName.trim(),
             displayName: formData.displayName.trim(),
             legalName: formData.legalName.trim(),
@@ -675,6 +760,9 @@ const CompanyCreateSimple = ({ onClose }) => {
             state: formData.state.trim() || null,
             country: formData.country.trim() || null,
             pincode: formData.pincode.trim() || null,
+
+            logo: formData.logo,
+            signature: formData.signature,
 
             invoicePrefix: formData.invoicePrefix.trim().toUpperCase(),
             invoiceStartNumber: Number(formData.invoiceStartNumber),
@@ -709,6 +797,9 @@ const CompanyCreateSimple = ({ onClose }) => {
                     ...initialFormData,
                 });
 
+                setLogoPreview("");
+                setSignaturePreview("");
+
                 dispatch(resetCompanyForm());
 
                 setSaveMode("close");
@@ -718,7 +809,11 @@ const CompanyCreateSimple = ({ onClose }) => {
 
             dispatch(resetCompanyForm());
 
-            navigate("/settings/companies");
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/settings/companies");
+            }
 
         } catch (error) {
 
@@ -883,7 +978,6 @@ const CompanyCreateSimple = ({ onClose }) => {
                             rounded-lg border border-gray-200
                             text-gray-500 transition hover:bg-gray-100
                         "
-
                     >
                         <ArrowLeft size={18} />
                     </button>
@@ -1013,6 +1107,173 @@ const CompanyCreateSimple = ({ onClose }) => {
                                     options={currencyOptions}
                                     placeholder="Select currency"
                                 />
+                            </FormField>
+
+                        </div>
+
+                    </section>
+
+                    <div className="my-6 border-t border-gray-100" />
+
+                    {/* COMPANY LOGO & SIGNATURE */}
+
+                    <section className="mb-7">
+
+                        <SectionHeading
+                            icon={ImageIcon}
+                            title="Company Logo & Signature"
+                            description="Upload your company logo and authorized signature"
+                        />
+
+                        <div className="
+                            grid grid-cols-1 gap-6
+                            md:grid-cols-2
+                        ">
+
+                            {/* COMPANY LOGO */}
+
+                            <FormField label="Company Logo">
+
+                                <div className="flex flex-col gap-3">
+
+                                    <div className="
+                                        flex h-36 w-full items-center
+                                        justify-center overflow-hidden
+                                        rounded-lg border border-dashed
+                                        border-gray-300 bg-gray-50 p-3
+                                    ">
+
+                                        {logoPreview ? (
+
+                                            <img
+                                                src={logoPreview}
+                                                alt="Company Logo Preview"
+                                                className="
+                                                    max-h-full max-w-full
+                                                    object-contain
+                                                "
+                                            />
+
+                                        ) : (
+
+                                            <div className="text-center">
+                                                <ImageIcon
+                                                    size={30}
+                                                    className="mx-auto text-gray-300"
+                                                />
+
+                                                <p className="mt-2 text-xs text-gray-400">
+                                                    No company logo selected
+                                                </p>
+                                            </div>
+
+                                        )}
+
+                                    </div>
+
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        disabled={loading}
+                                        onChange={(e) => {
+                                            handleImageChange(
+                                                "logo",
+                                                e.target.files?.[0]
+                                            );
+
+                                            e.target.value = "";
+                                        }}
+                                        className="
+                                            w-full rounded-lg border
+                                            border-gray-200 bg-white
+                                            px-3 py-2 text-sm text-gray-600
+                                            file:mr-3 file:rounded-md
+                                            file:border-0 file:bg-blue-50
+                                            file:px-3 file:py-1.5
+                                            file:text-sm file:font-medium
+                                            file:text-blue-600
+                                        "
+                                    />
+
+                                    <p className="text-xs text-gray-400">
+                                        Supported image formats. Maximum size: 5 MB.
+                                    </p>
+
+                                </div>
+
+                            </FormField>
+
+                            {/* COMPANY SIGNATURE */}
+
+                            <FormField label="Company Signature">
+
+                                <div className="flex flex-col gap-3">
+
+                                    <div className="
+                                        flex h-36 w-full items-center
+                                        justify-center overflow-hidden
+                                        rounded-lg border border-dashed
+                                        border-gray-300 bg-gray-50 p-3
+                                    ">
+
+                                        {signaturePreview ? (
+
+                                            <img
+                                                src={signaturePreview}
+                                                alt="Company Signature Preview"
+                                                className="
+                                                    max-h-full max-w-full
+                                                    object-contain
+                                                "
+                                            />
+
+                                        ) : (
+
+                                            <div className="text-center">
+                                                <ImageIcon
+                                                    size={30}
+                                                    className="mx-auto text-gray-300"
+                                                />
+
+                                                <p className="mt-2 text-xs text-gray-400">
+                                                    No signature selected
+                                                </p>
+                                            </div>
+
+                                        )}
+
+                                    </div>
+
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        disabled={loading}
+                                        onChange={(e) => {
+                                            handleImageChange(
+                                                "signature",
+                                                e.target.files?.[0]
+                                            );
+
+                                            e.target.value = "";
+                                        }}
+                                        className="
+                                            w-full rounded-lg border
+                                            border-gray-200 bg-white
+                                            px-3 py-2 text-sm text-gray-600
+                                            file:mr-3 file:rounded-md
+                                            file:border-0 file:bg-blue-50
+                                            file:px-3 file:py-1.5
+                                            file:text-sm file:font-medium
+                                            file:text-blue-600
+                                        "
+                                    />
+
+                                    <p className="text-xs text-gray-400">
+                                        Supported image formats. Maximum size: 5 MB.
+                                    </p>
+
+                                </div>
+
                             </FormField>
 
                         </div>
@@ -1469,6 +1730,8 @@ const CompanyCreateSimple = ({ onClose }) => {
 
             </form>
 
+            {/* LEAVE CONFIRMATION */}
+
             <LeaveConfirmationModal
                 show={showLeaveConfirmation}
                 title="Leave Company?"
@@ -1478,6 +1741,7 @@ const CompanyCreateSimple = ({ onClose }) => {
                 onStay={handleStay}
                 onLeave={handleLeave}
             />
+
         </div>
     );
 };

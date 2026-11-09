@@ -522,7 +522,9 @@ const CustomerCreateNew = ({ onClose }) => {
             } else {
                 navigate("/invoice/customers");
             }
+
         });
+        dispatch(closeModal());
     };
 
     /* =====================================================

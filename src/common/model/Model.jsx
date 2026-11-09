@@ -30,6 +30,11 @@ import PartyCreateNew from "../../module/parties/pages/PartyCreateNew";
 import WarehouseCreate from "../../inventoryModule/module/warehouse/pages/WarehouseCreate";
 import CurrencyCreateSimple from "../../module/currency/pages/CurrencyCreateSimple";
 import EmailInvoiceModal from "../../module/invoices/pages/EmailInvoiceModal";
+import CategoryCreateSimple from "../../module/category/pages/CategoryCreateSimple";
+import TaxCreateSimple from "../../module/taxMaster/pages/TaxCreateSimple";
+import CustomerCreateNew from "../../module/customer/pages/CustomerCreateNew";
+import BankAccountCreateSimple from "../../module/bankAccount/pages/BankAccountCreateSimple";
+import EmailSignatureCreateSimple from "../../module/emailSignature/pages/EmailSignatureCreateSimple";
 
 export default function Modal() {
 
@@ -47,8 +52,10 @@ export default function Modal() {
     const modalMap = {
 
         // CUSTOMER
-        addCustomer: CreateCustomer,
-        editCustomer: CreateCustomer,
+        addCustomer: CustomerCreateNew,
+        editCustomer: CustomerCreateNew,
+
+
         addContactPerson: AddContactPerson,
 
         //CURRENCY
@@ -56,8 +63,8 @@ export default function Modal() {
         editCurrency: CurrencyCreateSimple,
 
         // TAX MASTER
-        addTaxMaster: TaxMasterCreate,
-        editTaxMaster: TaxMasterCreate,
+        addTaxMaster: TaxCreateSimple,
+        editTaxMaster: TaxCreateSimple,
 
         // SIZE
         addSize: SizeCreate,
@@ -68,8 +75,8 @@ export default function Modal() {
         editUnit: UnitCreate,
 
         // CATEGORY
-        addCategory: CategoryCreate,
-        editCategory: CategoryCreate,
+        addCategory: CategoryCreateSimple,
+        editCategory: CategoryCreateSimple,
 
         // SUB CATEGORY
         addSubCategory: SubCategoryCreate,
@@ -98,8 +105,8 @@ export default function Modal() {
         editUser: UserCreate,
 
         // bankAccount
-        addBankAccount: BankAccountCreate,
-        editBankAccount: BankAccountCreate,
+        addBankAccount: BankAccountCreateSimple,
+        editBankAccount: BankAccountCreateSimple,
 
         // company
         addCompany: CompanyCreate,
@@ -108,8 +115,8 @@ export default function Modal() {
 
         //EmailSignature
 
-        addEmailSignature: EmailSignatureCreate,
-        editEmailSignature: EmailSignatureCreate,
+        addEmailSignature: EmailSignatureCreateSimple,
+        editEmailSignature: EmailSignatureCreateSimple,
 
 
         //salesPerson
@@ -215,8 +222,8 @@ export default function Modal() {
 
     const modalSizeClass = {
 
-        addCustomer: "w-[1050px] max-w-[92vw] h-[90vh] max-h-[90vh]",
-        editCustomer: "w-[1050px] max-w-[92vw] h-[90vh] max-h-[90vh]",
+        addCustomer: "w-[850px] max-w-[92vw] h-[90vh] max-h-[90vh]",
+        editCustomer: "w-[850px] max-w-[92vw] h-[90vh] max-h-[90vh]",
 
         //Currency
         addCurrency: "w-[950px] max-w-[92vw] max-h-[85vh]",
@@ -240,20 +247,20 @@ export default function Modal() {
         editCategory: "w-[760px] max-w-[92vw] max-h-[80vh]",
 
         // Subcategory
-        addSubCategory: "w-[760px] max-w-[92vw] max-h-[80vh]",
-        editSubCategory: "w-[760px] max-w-[92vw] max-h-[80vh]",
+        addSubCategory: "w-[850px] max-w-[92vw] max-h-[80vh]",
+        editSubCategory: "w-[850px] max-w-[92vw] max-h-[80vh]",
 
         // Size
-        addSize: "w-[650px] max-w-[92vw] max-h-[75vh]",
-        editSize: "w-[650px] max-w-[92vw] max-h-[75vh]",
+        addSize: "w-[750px] max-w-[92vw] max-h-[75vh]",
+        editSize: "w-[750px] max-w-[92vw] max-h-[75vh]",
 
         // Unit
-        addUnit: "w-[650px] max-w-[92vw] max-h-[75vh]",
-        editUnit: "w-[650px] max-w-[92vw] max-h-[75vh]",
+        addUnit: "w-[750px] max-w-[92vw] max-h-[75vh]",
+        editUnit: "w-[750px] max-w-[92vw] max-h-[75vh]",
 
         // Tax
-        addTaxMaster: "w-[700px] max-w-[92vw] max-h-[78vh]",
-        editTaxMaster: "w-[700px] max-w-[92vw] max-h-[78vh]",
+        addTaxMaster: "w-[850px] max-w-[92vw] max-h-[78vh]",
+        editTaxMaster: "w-[850px] max-w-[92vw] max-h-[78vh]",
 
         // Bank Account
         addBankAccount: "w-[950px] max-w-[92vw] max-h-[82vh]",
@@ -497,7 +504,7 @@ export default function Modal() {
         bg-white
         shadow-2xl
         left-20
-        top-2
+        bottom-3
         max-h-[calc(100vh-2rem)]
 
         ${modalSizeClass[type] || "w-[700px] max-w-[80vw] max-h-[75vh]"}
@@ -568,7 +575,10 @@ export default function Modal() {
                             }
     `}
                     >
-                        <ModalComponent data={data} />
+                        <ModalComponent
+                            data={data}
+                            onClose={() => dispatch(closeModal())}
+                        />
 
                     </div>
                 </div>

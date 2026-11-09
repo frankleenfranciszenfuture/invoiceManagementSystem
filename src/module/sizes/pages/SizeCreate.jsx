@@ -22,7 +22,7 @@ import {
     fetchAllSizes,
 } from "../thunks/sizeThunks";
 
-import { resetSizeForm } from "../slices/sizeSlice";
+import { resetSizeForm, setCreatedSizeSelection } from "../slices/sizeSlice";
 
 import CustomSelect from "../../../common/custom/CustomSelect";
 
@@ -102,7 +102,7 @@ const TextAreaField = ({
         placeholder={placeholder}
         rows={rows}
         className="
-            w-full resize-none rounded-lg border border-gray-200
+            w-full h-[50px] resize-none rounded-lg border border-gray-200
             bg-white px-3 py-2.5 text-sm text-gray-700
             outline-none transition
             placeholder:text-gray-400
@@ -225,6 +225,20 @@ const SizeCreate = ({ onClose }) => {
             isMounted = false;
         };
     }, [dispatch, id, isEdit]);
+
+
+    /* =====================================================
+   PREFILL SIZE FROM QUICK-CREATE MODAL
+===================================================== */
+
+    useEffect(() => {
+        if (isEdit || !modalData?.selectAfterCreate) return;
+
+        setFormData((previous) => ({
+            ...previous,
+            sizeName: modalData.sizeName ?? previous.sizeName,
+        }));
+    }, [modalData, isEdit]);
 
     /* =====================================================
        HANDLE FIELD CHANGE
@@ -365,7 +379,44 @@ const SizeCreate = ({ onClose }) => {
                 response?.message || "Size created successfully"
             );
 
-            // Refresh size data after creation.
+            const createdSize =
+                response?.data?.data ??
+                response?.data ??
+                response?.result?.data ??
+                response?.result ??
+                response;
+
+            if (modalData?.selectAfterCreate) {
+                const createdSizeId =
+                    createdSize?.id ??
+                    createdSize?.sizeId;
+
+                if (createdSizeId == null) {
+                    toast.error(
+                        "Size created, but size ID was not returned."
+                    );
+                    return;
+                }
+
+                dispatch(
+                    setCreatedSizeSelection({
+                        id: createdSizeId,
+                        sizeId: createdSizeId,
+                        sizeName:
+                            createdSize?.sizeName ??
+                            payload.sizeName,
+                        targetField:
+                            modalData.targetField ?? "sizeId",
+                    })
+                );
+
+                await dispatch(fetchAllSizes()).unwrap();
+
+                dispatch(closeModal());
+                return;
+            }
+
+            // Normal Size creation
             dispatch(fetchAllSizes());
 
             // Save & New keeps the form open and clears its values.

@@ -243,7 +243,7 @@ export default function SearchMultiSelect({
                                     px-2.5
                                     py-1
                                     rounded-full
-                                    bg-[#0095FD]
+                                    bg-blue-500
                                     border
                                     border-[#0095FD]
                                     text-xs
@@ -476,8 +476,9 @@ export default function SearchMultiSelect({
                                                 gap-2
                                                 text-left
                                                 text-sm
-                                                text-[#0F4659]
-                                                hover:bg-[#0F4659]/20
+                                                text-gray-500
+                                                hover:bg-[#408DFB]
+                                                hover:text-gray-100
                                             "
                                         >
 

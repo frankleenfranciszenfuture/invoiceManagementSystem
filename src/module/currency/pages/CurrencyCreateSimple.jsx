@@ -431,6 +431,30 @@ const CurrencyCreateSimple = ({ onClose }) => {
     ], []);
 
     /* =====================================================
+      CURRENCY SYMBOL OPTIONS
+   ===================================================== */
+
+    const currencySymbolOptions = useMemo(() => [
+        { label: "₹", value: "₹" },
+        { label: "$", value: "$" },
+        { label: "€", value: "€" },
+        { label: "AED", value: "AED" },
+    ], []);
+
+
+    /* =====================================================
+     CURRENCY SYMBOL OPTIONS
+  ===================================================== */
+
+    const currencyCodeOptions = useMemo(() => [
+        { label: "INR", value: "INR" },
+        { label: "USD", value: "USD" },
+        { label: "EURO", value: "EUR" },
+        { label: "AED", value: "AED" },
+    ], []);
+
+
+    /* =====================================================
        DECIMAL PLACE OPTIONS
     ===================================================== */
 
@@ -624,7 +648,7 @@ const CurrencyCreateSimple = ({ onClose }) => {
             );
 
             // Automatically select newly created party in Expense Vendor
-            if (!isEdit && modalData?.selectAfterCreate) {
+            if (!isEditMode && modalData?.selectAfterCreate) {
                 const CreatedCurrency =
                     response?.data?.data ??
                     response?.data ??
@@ -646,7 +670,11 @@ const CurrencyCreateSimple = ({ onClose }) => {
 
             dispatch(closeModal());
             dispatch(resetCurrencyForm());
-
+            if (onClose || modalData) {
+                dispatch(closeModal());
+            } else {
+                navigate("/settings/currencies");
+            }
 
         } catch (error) {
 
@@ -767,7 +795,7 @@ const CurrencyCreateSimple = ({ onClose }) => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         className="
                             mt-5 rounded-lg bg-blue-600
                             px-5 py-2 text-sm font-medium
@@ -805,7 +833,7 @@ const CurrencyCreateSimple = ({ onClose }) => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         className="
                             flex h-9 w-9 items-center justify-center
                             rounded-lg border border-gray-200
@@ -872,18 +900,19 @@ const CurrencyCreateSimple = ({ onClose }) => {
 
                         <div className="
                             grid grid-cols-1 gap-5
-                            md:grid-cols-2 lg:grid-cols-3
+                            md:grid-cols-2 lg:grid-cols-2
                         ">
 
                             <FormField label="Currency Code" required>
-                                <TextInput
+                                <CustomSelect
                                     value={formData.currencyCode}
-                                    onChange={(e) =>
+                                    onChange={(value) =>
                                         handleChange(
                                             "currencyCode",
-                                            e.target.value.toUpperCase()
+                                            value
                                         )
                                     }
+                                    options={currencyCodeOptions}
                                     placeholder="Example: INR"
                                     maxLength={3}
                                 />
@@ -904,14 +933,12 @@ const CurrencyCreateSimple = ({ onClose }) => {
                             </FormField>
 
                             <FormField label="Currency Symbol" required>
-                                <TextInput
+                                <CustomSelect
                                     value={formData.symbol}
-                                    onChange={(e) =>
-                                        handleChange(
-                                            "symbol",
-                                            e.target.value
-                                        )
+                                    onChange={(value) =>
+                                        handleChange("symbol", value)
                                     }
+                                    options={currencySymbolOptions}
                                     placeholder="Example: ₹"
                                     maxLength={10}
                                 />

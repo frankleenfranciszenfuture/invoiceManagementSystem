@@ -507,19 +507,19 @@ export default function SubCategoryTable({
                                                 flex h-9 w-9 min-w-[36px]
                                                 items-center justify-center
                                                 rounded-full text-sm font-bold
-                                                ${getAvatarColor(subCategory.subCategoryName)}
+                                                ${getAvatarColor(subCategory.name)}
                                             `}
                                         >
-                                            {initials(subCategory.subCategoryName)}
+                                            {initials(subCategory.name)}
                                         </div>
 
                                         <div className="min-w-0">
 
                                             <p
                                                 className="truncate font-medium text-gray-800"
-                                                title={subCategory.subCategoryName || ""}
+                                                title={subCategory.name || ""}
                                             >
-                                                {subCategory.subCategoryName || "—"}
+                                                {subCategory.name || "—"}
                                             </p>
 
                                             <p className="text-xs text-gray-500">

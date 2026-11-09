@@ -42,6 +42,7 @@ import {
     setSelectedEmailSignatureView,
     setSearch,
 } from "../slices/emailSignatureViewSlice";
+import { useNavigate } from "react-router-dom";
 
 /* =========================================================
    CONSTANTS
@@ -105,7 +106,7 @@ const matchesEmailSignatureSearch = (
 
 export default function EmailSignatureDashboard() {
     const dispatch = useDispatch();
-
+    const navigate = useNavigate();
     /* =====================================================
        AUTH STATE
     ===================================================== */
@@ -471,11 +472,13 @@ export default function EmailSignatureDashboard() {
             return;
         }
 
-        dispatch(
-            openModal({
-                type: "addEmailSignature",
-            })
-        );
+        // dispatch(
+        //     openModal({
+        //         type: "addEmailSignature",
+        //     })
+        // );
+
+        navigate("/settings/emailSignatures/create");
     }, [
         isAuthenticated,
         userId,
@@ -570,6 +573,21 @@ export default function EmailSignatureDashboard() {
             </div>
         );
     }
+
+    /* =====================================================
+       EMPTY STATE MESSAGE
+    ===================================================== */
+
+    const emptyStateTitle =
+        emailSignatureStatus === "ALL"
+            ? "Every invoice starts with a EmailSignatures"
+            : `No ${emailSignatureStatus.toLowerCase()} emailSignatures found`;
+
+    const emptyStateDescription =
+        emailSignatureStatus === "ALL"
+            ? "Create and organize your invoice emailSignatures in one place."
+            : `There are currently no ${emailSignatureStatus.toLowerCase()} emailSignatures to display.`;
+
 
     /* =====================================================
        PAGE
@@ -694,7 +712,7 @@ export default function EmailSignatureDashboard() {
                         >
                             <div
                                 className="
-                                    relative mt-30 mb-1
+                                    relative mt-10 mb-1
                                     flex h-24 w-24 shrink-0
                                     items-center justify-center
                                     rounded-full bg-gray-100
@@ -730,8 +748,10 @@ export default function EmailSignatureDashboard() {
                                     font-medium text-gray-800
                                 "
                             >
-                                Manage your email signatures
+                                {emptyStateTitle}
                             </p>
+
+                            {/* EMPTY STATE DESCRIPTION */}
 
                             <p
                                 className="
@@ -739,11 +759,9 @@ export default function EmailSignatureDashboard() {
                                     text-sm text-gray-500
                                 "
                             >
-                                Create and manage your email signatures,
-                                customize signature content, configure
-                                defaults for new messages and replies,
-                                and maintain your professional email identity.
+                                {emptyStateDescription}
                             </p>
+
 
                             <div
                                 className="
@@ -768,24 +786,6 @@ export default function EmailSignatureDashboard() {
                                     </button>
                                 )}
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        toast(
-                                            "Email signature import is not configured yet."
-                                        );
-                                    }}
-                                    className="
-                                        flex items-center gap-2
-                                        whitespace-nowrap rounded-md
-                                        border border-gray-300 bg-white
-                                        px-4 py-2 text-sm text-gray-700
-                                        transition-colors hover:bg-gray-50
-                                    "
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Import File
-                                </button>
                             </div>
                         </div>
                     )}

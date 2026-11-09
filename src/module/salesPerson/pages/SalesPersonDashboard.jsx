@@ -500,6 +500,21 @@ export default function SalesPersonDashboard() {
     }
 
     /* =====================================================
+      EMPTY STATE MESSAGE
+   ===================================================== */
+
+    const emptyStateTitle =
+        salesPersonStatus === "ALL"
+            ? "Every invocie starts with a salesPersons"
+            : `No ${salesPersonStatus.toLowerCase()} salesPersons found`;
+
+    const emptyStateDescription =
+        salesPersonStatus === "ALL"
+            ? "Create and organize your product salesPersons in one place."
+            : `There are currently no ${salesPersonStatus.toLowerCase()} salesPersons to display.`;
+
+
+    /* =====================================================
        PAGE
     ===================================================== */
 
@@ -587,7 +602,7 @@ export default function SalesPersonDashboard() {
 
                             <div
                                 className="
-                                    relative mt-30 mb-1
+                                    relative mt-10 mb-1
                                     flex h-24 w-24 shrink-0
                                     items-center justify-center
                                     rounded-full bg-gray-100
@@ -627,8 +642,9 @@ export default function SalesPersonDashboard() {
                                     font-medium text-gray-800
                                 "
                             >
-                                Manage your sales persons
+                                {emptyStateTitle}
                             </p>
+
 
                             {/* EMPTY STATE DESCRIPTION */}
 
@@ -638,10 +654,8 @@ export default function SalesPersonDashboard() {
                                     text-sm text-gray-500
                                 "
                             >
-                                Add and manage your sales persons
-                                in one place to organize your sales team.
+                                {emptyStateDescription}
                             </p>
-
                             {/* ACTION BUTTONS */}
 
                             <div
@@ -672,26 +686,7 @@ export default function SalesPersonDashboard() {
 
                                 )}
 
-                                {/* IMPORT */}
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        toast(
-                                            "Sales person import is not configured yet."
-                                        );
-                                    }}
-                                    className="
-                                        flex items-center gap-2
-                                        whitespace-nowrap rounded-md
-                                        border border-gray-300 bg-white
-                                        px-4 py-2 text-sm text-gray-700
-                                        transition-colors hover:bg-gray-50
-                                    "
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Import File
-                                </button>
 
                             </div>
 

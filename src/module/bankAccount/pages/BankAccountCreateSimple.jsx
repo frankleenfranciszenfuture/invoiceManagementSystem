@@ -38,6 +38,7 @@ import {
 import CustomSelect from "../../../common/custom/CustomSelect";
 import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
 import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
+import { closeModal } from "../../ui/uiSlice";
 
 /* =========================================================
    INITIAL FORM DATA
@@ -556,10 +557,12 @@ const BankAccountCreateSimple = ({ onClose }) => {
             if (onClose) {
                 onClose();
             } else {
-                navigate("/settings/bankAccount")
+                navigate("/settings/bankAccount");
             }
         });
+
     };
+
 
     /* =====================================================
        VALIDATION
@@ -577,10 +580,10 @@ const BankAccountCreateSimple = ({ onClose }) => {
             return false;
         }
 
-        if (!formData.accountCode.trim()) {
-            toast.error("Account code is required");
-            return false;
-        }
+        // if (!formData.accountCode.trim()) {
+        //     toast.error("Account code is required");
+        //     return false;
+        // }
 
         if (!formData.currency) {
             toast.error("Currency is required");
@@ -626,6 +629,15 @@ const BankAccountCreateSimple = ({ onClose }) => {
     /* =====================================================
        SAVE BANK ACCOUNT
     ===================================================== */
+    const closeAfterSubmit = () => {
+        dispatch(resetBankAccountForm());
+
+        if (onClose) {
+            onClose();
+        } else {
+            dispatch(closeModal());
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -716,9 +728,10 @@ const BankAccountCreateSimple = ({ onClose }) => {
                 return;
             }
 
-            dispatch(resetBankAccountForm());
+            closeAfterSubmit();
 
-            navigate("/settings/bankAccount");
+
+
 
         } catch (error) {
             console.error(
@@ -840,7 +853,7 @@ const BankAccountCreateSimple = ({ onClose }) => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         className="
                             mt-5 rounded-lg bg-blue-600
                             px-5 py-2 text-sm font-medium
@@ -878,12 +891,12 @@ const BankAccountCreateSimple = ({ onClose }) => {
 
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={handleClose}
                         className="
-                            flex h-9 w-9 items-center justify-center
-                            rounded-lg border border-gray-200
-                            text-gray-500 transition hover:bg-gray-100
-                        "
+                    flex h-9 w-9 items-center justify-center
+                    rounded-lg border border-gray-200
+                    text-gray-500 transition hover:bg-gray-100
+                    "
                         title="Go Back"
                     >
                         <ArrowLeft size={18} />
@@ -947,7 +960,7 @@ const BankAccountCreateSimple = ({ onClose }) => {
 
                         <div className="
                             grid grid-cols-1 gap-5
-                            md:grid-cols-2 lg:grid-cols-3
+                            md:grid-cols-2 lg:grid-cols-2
                         ">
 
                             <FormField label="Account Type" required>
@@ -972,7 +985,7 @@ const BankAccountCreateSimple = ({ onClose }) => {
                                 />
                             </FormField>
 
-                            <FormField label="Account Code" required>
+                            {/* <FormField label="Account Code" required>
                                 <TextInput
                                     value={formData.accountCode}
                                     onChange={(e) =>
@@ -981,7 +994,7 @@ const BankAccountCreateSimple = ({ onClose }) => {
                                     placeholder="Example: BANK-001"
                                     maxLength={50}
                                 />
-                            </FormField>
+                            </FormField> */}
 
                             <FormField label="Currency" required>
                                 <CustomSelect
