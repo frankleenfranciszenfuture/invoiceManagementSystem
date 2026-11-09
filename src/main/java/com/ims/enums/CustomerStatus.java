@@ -11,6 +11,7 @@ public enum CustomerStatus {
     CRM,
     PORTAL_ENABLED,
     PORTAL_DISABLED,
-    DUPLICATE
+    DUPLICATE,
+    DELETED
 
 }

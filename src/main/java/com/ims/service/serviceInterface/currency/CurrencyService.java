@@ -23,4 +23,6 @@ public interface CurrencyService {
     );
 
     ApiResponse<Void> delete(Long id);
+
+    ApiResponse<Void> restoreCurrency(Long id);
 }

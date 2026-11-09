@@ -23,7 +23,7 @@ public class BankAccountCreateRequest {
     @Size(max = 150, message = "Account name must not exceed 150 characters")
     private String accountName;
 
-    @NotBlank(message = "Account code is required")
+//    @NotBlank(message = "Account code is required")
     @Size(max = 50, message = "Account code must not exceed 50 characters")
     private String accountCode;
 

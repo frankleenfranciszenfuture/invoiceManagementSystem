@@ -542,41 +542,26 @@ public class CompanyServiceImpl implements CompanyService {
     ) {
 
         if (logo == null || logo.isEmpty()) {
-
-            log.warn(
-                    "No company logo received."
-            );
-
             return;
         }
 
-        log.info(
-                "Company logo received: name={}, size={}, contentType={}",
-                logo.getOriginalFilename(),
-                logo.getSize(),
-                logo.getContentType()
+        String uploadedLogoPath = fileStorageService.upload(
+                logo,
+                "companies/logo"
         );
 
-        if (company.getLogo() != null
-                && !company.getLogo().isBlank()) {
+        String oldLogoPath = company.getLogo();
 
-            fileStorageService.delete(
-                    company.getLogo()
-            );
+        company.setLogo(uploadedLogoPath);
+
+        if (oldLogoPath != null && !oldLogoPath.isBlank()) {
+            try {
+                fileStorageService.delete(oldLogoPath);
+            } catch (Exception e) {
+                log.error("Failed to delete old company logo: {}", oldLogoPath, e);
+            }
         }
-
-        String uploadedLogoPath =
-                fileStorageService.upload(
-                        logo,
-                        "companies/logo"
-                );
-
-        company.setLogo(
-                uploadedLogoPath
-        );
     }
-
-
     // =====================================================
     // UPLOAD SIGNATURE
     // =====================================================
@@ -587,38 +572,29 @@ public class CompanyServiceImpl implements CompanyService {
     ) {
 
         if (signature == null || signature.isEmpty()) {
-
-            log.warn(
-                    "No company signature received."
-            );
-
             return;
         }
 
-        log.info(
-                "Company signature received: name={}, size={}, contentType={}",
-                signature.getOriginalFilename(),
-                signature.getSize(),
-                signature.getContentType()
+        String uploadedSignaturePath = fileStorageService.upload(
+                signature,
+                "companies/signature"
         );
 
-        if (company.getSignature() != null
-                && !company.getSignature().isBlank()) {
+        String oldSignaturePath = company.getSignature();
 
-            fileStorageService.delete(
-                    company.getSignature()
-            );
-        }
+        company.setSignature(uploadedSignaturePath);
 
-        String uploadedSignaturePath =
-                fileStorageService.upload(
-                        signature,
-                        "companies/signature"
+        if (oldSignaturePath != null && !oldSignaturePath.isBlank()) {
+            try {
+                fileStorageService.delete(oldSignaturePath);
+            } catch (Exception e) {
+                log.error(
+                        "Failed to delete old company signature: {}",
+                        oldSignaturePath,
+                        e
                 );
-
-        company.setSignature(
-                uploadedSignaturePath
-        );
+            }
+        }
     }
 
 
@@ -676,13 +652,12 @@ public class CompanyServiceImpl implements CompanyService {
             CompanyDetails company,
             Boolean makeDefault
     ) {
-        boolean shouldBeDefault =
-                Boolean.TRUE.equals(makeDefault);
+
+        boolean shouldBeDefault = Boolean.TRUE.equals(makeDefault);
 
         if (shouldBeDefault) {
-            // Unset the previous default, if any.
             companyRepository.clearDefaultCompany(
-                    company.getId()
+                    company.getId() != null ? company.getId() : -1L
             );
         }
 

@@ -65,4 +65,15 @@ public class CurrencyController {
                 )
         );
     }
+
+    @PatchMapping("/{id}/restore")
+    public ResponseEntity<ApiResponse<Void>> restoreCurrency(
+            @PathVariable Long id
+    ) {
+
+        ApiResponse<Void> response =
+                currencyService.restoreCurrency(id);
+
+        return ResponseEntity.ok(response);
+    }
 }

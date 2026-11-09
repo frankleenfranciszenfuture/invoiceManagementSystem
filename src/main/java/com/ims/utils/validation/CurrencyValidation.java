@@ -1,6 +1,8 @@
 package com.ims.utils.validation;
 
 import com.ims.entity.Currency;
+import com.ims.enums.CurrencyStatus;
+import com.ims.exception.ResourceNotFoundException;
 import com.ims.repository.CurrencyRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -14,16 +16,21 @@ public class CurrencyValidation {
     private final CurrencyRepository currencyRepository;
 
     public Currency validateExists(Long id) {
-        if (id == null) {
-            throw new IllegalArgumentException(
-                    "Currency ID is required"
+
+        Currency currency = currencyRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Currency not found."
+                        )
+                );
+
+        if (currency.getStatus() == CurrencyStatus.DELETED) {
+            throw new ResourceNotFoundException(
+                    "Currency not found."
             );
         }
 
-        return currencyRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Currency not found: " + id
-                ));
+        return currency;
     }
 
     public String normalizeCode(String code) {
@@ -58,5 +65,14 @@ public class CurrencyValidation {
                     "Currency code already exists: " + currencyCode
             );
         }
+    }
+
+    public Currency findDeletedByCode(String currencyCode) {
+        return currencyRepository
+                .findByCurrencyCodeIgnoreCaseAndStatus(
+                        currencyCode,
+                        CurrencyStatus.DELETED
+                )
+                .orElse(null);
     }
 }

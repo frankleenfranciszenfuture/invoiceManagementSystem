@@ -3,6 +3,7 @@ package com.ims.utils.specification;
 
 
 import com.ims.entity.Currency;
+import com.ims.enums.CurrencyStatus;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.util.Locale;
@@ -51,5 +52,14 @@ public final class CurrencySpecification {
 
             return predicates;
         };
+    }
+
+    public static Specification<Currency> isNotDeleted() {
+
+        return (root, query, cb) ->
+                cb.notEqual(
+                        root.get("status"),
+                        CurrencyStatus.DELETED
+                );
     }
 }

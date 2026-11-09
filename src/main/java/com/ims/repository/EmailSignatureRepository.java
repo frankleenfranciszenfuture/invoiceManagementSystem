@@ -43,4 +43,11 @@ public interface EmailSignatureRepository
             Long userId,
             String status
     );
+
+    Optional<EmailSignatureEntity>
+    findByUserIdAndSignatureNameIgnoreCaseAndStatus(
+            Long userId,
+            String signatureName,
+            String status
+    );
 }

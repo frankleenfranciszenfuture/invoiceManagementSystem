@@ -7,6 +7,8 @@ import com.ims.exception.DuplicateResourceException;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.exception.ValidationException;
 import com.ims.repository.CustomerRepository;
+import com.ims.repository.InvoiceRepository;
+import com.ims.repository.SaleOrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -16,7 +18,8 @@ public class CustomerValidation {
 
     private final CustomerRepository customerRepository;
 
-
+    private final InvoiceRepository invoiceRepository;
+    private final SaleOrderRepository salesOrderRepository;
     // =====================================================
     // VALIDATE CUSTOMER REQUEST
     // =====================================================
@@ -228,5 +231,20 @@ public class CustomerValidation {
 
         return value == null
                 || value.trim().isEmpty();
+    }
+
+    public void validateCanDelete(Long customerId) {
+
+        if (invoiceRepository.existsByCustomerId(customerId)) {
+            throw new ValidationException(
+                    "Cannot delete customer. This customer is already used in invoices."
+            );
+        }
+
+        if (salesOrderRepository.existsByCustomerId(customerId)) {
+            throw new ValidationException(
+                    "Cannot delete customer. This customer is already used in sales orders."
+            );
+        }
     }
 }

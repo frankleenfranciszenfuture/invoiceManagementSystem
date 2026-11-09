@@ -2,6 +2,7 @@ package com.ims.service.serviceInterface.customer;
 
 
 
+import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
 import com.ims.dtos.customer.CustomerRequest;
 import com.ims.dtos.customer.CustomerResponse;
@@ -11,29 +12,27 @@ import java.util.List;
 
 public interface CustomerService {
 
-    CustomerResponse createCustomer(CustomerRequest request);
+    ApiResponse<CustomerResponse> createCustomer(CustomerRequest request);
 
-    CustomerResponse updateCustomer(Long id, CustomerRequest request);
+    ApiResponse<CustomerResponse> updateCustomer(
+            Long id,
+            CustomerRequest request
+    );
 
-    CustomerResponse getCustomerById(Long id);
+    ApiResponse<CustomerResponse> getCustomerById(Long id);
 
-    PageResponse<CustomerResponse> getCustomers(
+    ApiResponse<PageResponse<CustomerResponse>> getCustomers(
             String search,
             int page,
             int size,
             String sortBy,
             String direction,
-            CustomerStatus status);
+            CustomerStatus status
+    );
 
-    void deleteCustomer(Long id);
+    ApiResponse<Void> deleteCustomer(Long id);
 
-    void restoreCustomer(Long id);
+    ApiResponse<Void> restoreCustomer(Long id);
 
-//    List<CustomerDropdown> getCustomerDropdown();
-
-//    Long getCustomerCount();
-
-//    CustomerDashboardDTO getDashboard();
-
-    Boolean checkEmailExists(String email);
+    ApiResponse<Boolean> checkEmailExists(String email);
 }

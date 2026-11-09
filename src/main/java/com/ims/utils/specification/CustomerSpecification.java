@@ -78,28 +78,28 @@ public class CustomerSpecification {
     // =====================================================
 
     public static Specification<CustomerEntity> hasStatus(
-            CustomerStatus status) {
+            CustomerStatus status
+    ) {
 
         return (root, query, cb) -> {
 
             if (status == null || status == CustomerStatus.ALL) {
-                return null;
+                return cb.conjunction();
             }
 
-            return cb.equal(root.get("status"), status);
+            return cb.equal(
+                    root.get("status"),
+                    status
+            );
         };
     }
 
+    public static Specification<CustomerEntity> isNotDeleted() {
 
-    // =====================================================
-    // ACTIVE / NOT DELETED
-    // =====================================================
-
-//    public static Specification<CustomerEntity> isActive() {
-//
-//        return (root, query, cb) ->
-//                cb.isFalse(
-//                        root.get("isDeleted")
-//                );
-//    }
+        return (root, query, cb) ->
+                cb.notEqual(
+                        root.get("status"),
+                        CustomerStatus.DELETED
+                );
+    }
 }

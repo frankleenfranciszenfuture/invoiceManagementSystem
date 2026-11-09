@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -77,4 +78,13 @@ public interface BankAccountRepository
             Long id,
             BankAccountStatus status
     );
+
+    @Query("""
+    SELECT b.accountCode
+    FROM BankAccount b
+    WHERE b.accountCode LIKE 'BANK-%'
+    ORDER BY b.id DESC
+    LIMIT 1
+""")
+    String findLastAccountCode();
 }

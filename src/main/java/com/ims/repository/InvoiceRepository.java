@@ -190,4 +190,7 @@ public interface InvoiceRepository
       AND i.active = true
 """)
     Optional<InvoiceEntity> findByIdForUpdate(@Param("id") Long id);
+
+
+    boolean existsByCustomerId(Long customerId);
 }

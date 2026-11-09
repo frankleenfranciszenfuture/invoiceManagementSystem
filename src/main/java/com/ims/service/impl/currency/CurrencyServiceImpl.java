@@ -6,6 +6,8 @@ import com.ims.dtos.currency.CurrencyRequestDTO;
 import com.ims.dtos.currency.CurrencyResponseDTO;
 import com.ims.entity.Currency;
 import com.ims.enums.CurrencyStatus;
+import com.ims.exception.ResourceNotFoundException;
+import com.ims.exception.ValidationException;
 import com.ims.repository.CurrencyRepository;
 import com.ims.service.serviceInterface.currency.CurrencyService;
 import com.ims.utils.specification.CurrencySpecification;
@@ -33,14 +35,53 @@ public class CurrencyServiceImpl implements CurrencyService {
 
         String code = validation.normalizeCode(dto.getCurrencyCode());
 
-        validation.validateUniqueCode(code, null);
+        // Check whether this currency was previously deleted
+        Currency existingCurrency = currencyRepository
+                .findByCurrencyCodeIgnoreCase(code)
+                .orElse(null);
 
+        if (existingCurrency != null) {
+
+            // Reactivate previously deleted currency
+            if (existingCurrency.getStatus() == CurrencyStatus.DELETED) {
+
+                existingCurrency.setCurrencyName(dto.getCurrencyName().trim());
+                existingCurrency.setSymbol(dto.getSymbol().trim());
+                existingCurrency.setDecimalPlaces(dto.getDecimalPlaces());
+                existingCurrency.setStatus(
+                        dto.getStatus() != null
+                                ? dto.getStatus()
+                                : CurrencyStatus.ACTIVE
+                );
+                existingCurrency.setActive(
+                        dto.getActive() == null || dto.getActive()
+                );
+
+                Currency restored = currencyRepository.save(existingCurrency);
+
+                return ApiResponse.success(
+                        toResponse(restored),
+                        "Previously deleted currency reactivated successfully"
+                );
+            }
+
+            // Currency already exists
+            throw new IllegalArgumentException(
+                    "Currency code already exists: " + code
+            );
+        }
+
+        // Normal creation
         Currency currency = Currency.builder()
                 .currencyCode(code)
                 .currencyName(dto.getCurrencyName().trim())
                 .symbol(dto.getSymbol().trim())
                 .decimalPlaces(dto.getDecimalPlaces())
-                .status(dto.getStatus())
+                .status(
+                        dto.getStatus() != null
+                                ? dto.getStatus()
+                                : CurrencyStatus.ACTIVE
+                )
                 .active(dto.getActive() == null || dto.getActive())
                 .build();
 
@@ -100,7 +141,8 @@ public class CurrencyServiceImpl implements CurrencyService {
             Pageable pageable) {
 
         Specification<Currency> spec =
-                CurrencySpecification.filter(search, active);
+                CurrencySpecification.filter(search, active)
+                        .and(CurrencySpecification.isNotDeleted());
 
         Page<Currency> page =
                 currencyRepository.findAll(spec, pageable);
@@ -119,14 +161,47 @@ public class CurrencyServiceImpl implements CurrencyService {
 
         Currency currency = validation.validateExists(id);
 
-        // Deactivate instead of deleting to preserve historical references.
+        if (currency.getStatus() == CurrencyStatus.DELETED) {
+            throw new ValidationException(
+                    "Currency is already deleted."
+            );
+        }
+
+        currency.setStatus(CurrencyStatus.DELETED);
         currency.setActive(false);
 
         currencyRepository.save(currency);
 
         return ApiResponse.success(
                 null,
-                "Currency deactivated successfully"
+                "Currency deleted successfully."
+        );
+    }
+
+    @Override
+    public ApiResponse<Void> restoreCurrency(Long id) {
+
+        Currency currency = currencyRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Currency not found."
+                        )
+                );
+
+        if (currency.getStatus() != CurrencyStatus.DELETED) {
+            throw new ValidationException(
+                    "Only deleted currencies can be restored."
+            );
+        }
+
+        currency.setStatus(CurrencyStatus.ACTIVE);
+        currency.setActive(true);
+
+        currencyRepository.save(currency);
+
+        return ApiResponse.success(
+                null,
+                "Currency restored successfully."
         );
     }
 

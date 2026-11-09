@@ -1,8 +1,10 @@
+
 package com.ims.service.impl.customer;
 
+import com.ims.common.ApiResponse;
+import com.ims.common.PageResponse;
 import com.ims.dtos.customer.CustomerRequest;
 import com.ims.dtos.customer.CustomerResponse;
-import com.ims.common.PageResponse;
 import com.ims.entity.CustomerEntity;
 import com.ims.enums.CustomerStatus;
 import com.ims.exception.ResourceNotFoundException;
@@ -13,67 +15,81 @@ import com.ims.service.serviceInterface.customer.CustomerService;
 import com.ims.utils.base.BaseEntityUtil;
 import com.ims.utils.specification.CustomerSpecification;
 import com.ims.utils.validation.CustomerValidation;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository repository;
-
     private final CustomerMapper mapper;
-
     private final CustomerValidation validation;
-
     private final BaseEntityUtil baseEntityUtil;
+
     // =====================================================
     // CREATE CUSTOMER
     // =====================================================
 
     @Override
-    public CustomerResponse createCustomer(
-            CustomerRequest request) {
+    public ApiResponse<CustomerResponse> createCustomer(
+            CustomerRequest request
+    ) {
 
-        // Validate request
         validation.validateCustomer(request);
 
-        // Validate duplicate email
         validation.validateDuplicateEmail(
                 request.getEmail()
         );
 
-        CustomerEntity customer =
-                mapper.toEntity(request);
+        CustomerEntity customer = mapper.toEntity(request);
 
-        if (customer.getStatus() == null) {
-            customer.setStatus(request.getStatus());
+        // Default status = ACTIVE
+        if (request.getStatus() == null) {
+            customer.setStatus(CustomerStatus.ACTIVE);
+        } else {
+            if (request.getStatus() == CustomerStatus.DELETED) {
+                throw new ValidationException(
+                        "Customer cannot be created with DELETED status."
+                );
+            }
+
+            customer.setStatus(CustomerStatus.ACTIVE);
         }
 
+        // Prepare audit fields
         baseEntityUtil.prepareForCreate(customer);
 
         CustomerEntity savedCustomer =
                 repository.save(customer);
 
-        return mapper.toDTO(savedCustomer);
+        return ApiResponse.success(
+                mapper.toDTO(savedCustomer),
+                "Customer created successfully."
+        );
     }
-
 
     // =====================================================
     // UPDATE CUSTOMER
     // =====================================================
 
     @Override
-    public CustomerResponse updateCustomer(
+    public ApiResponse<CustomerResponse> updateCustomer(
             Long id,
-            CustomerRequest request) {
+            CustomerRequest request
+    ) {
 
         if (request == null) {
             throw new ValidationException(
@@ -81,7 +97,7 @@ public class CustomerServiceImpl implements CustomerService {
             );
         }
 
-        // Find existing active customer
+        // Find existing non-deleted customer
         CustomerEntity customer =
                 validation.validateCustomerId(id);
 
@@ -95,49 +111,65 @@ public class CustomerServiceImpl implements CustomerService {
             );
         }
 
-        // Update customer
-        mapper.updateEntity(
-                request,
-                customer
-        );
+        // Preserve existing status before mapper update
+        CustomerStatus existingStatus = customer.getStatus();
+
+        // Update customer fields
+        mapper.updateEntity(request, customer);
 
         // Update status only when supplied
         if (request.getStatus() != null) {
-            customer.setStatus(
-                    request.getStatus()
-            );
+
+            if (request.getStatus() == CustomerStatus.DELETED) {
+                throw new ValidationException(
+                        "Use the delete operation to delete a customer."
+                );
+            }
+
+            customer.setStatus(request.getStatus());
+
+        } else {
+            customer.setStatus(existingStatus);
         }
 
-        baseEntityUtil.prepareForCreate(customer);
+        // Prepare update audit fields
+        baseEntityUtil.prepareForUpdate(customer);
 
         CustomerEntity updatedCustomer =
                 repository.save(customer);
 
-        return mapper.toDTO(updatedCustomer);
+        return ApiResponse.success(
+                mapper.toDTO(updatedCustomer),
+                "Customer updated successfully."
+        );
     }
-
 
     // =====================================================
     // GET CUSTOMER BY ID
     // =====================================================
 
     @Override
-    public CustomerResponse getCustomerById(
-            Long id) {
+    @Transactional(readOnly = true)
+    public ApiResponse<CustomerResponse> getCustomerById(
+            Long id
+    ) {
 
         CustomerEntity customer =
                 validation.validateCustomerId(id);
 
-        return mapper.toDTO(customer);
+        return ApiResponse.success(
+                mapper.toDTO(customer),
+                "Customer fetched successfully."
+        );
     }
-
 
     // =====================================================
     // GET CUSTOMERS
     // =====================================================
 
     @Override
-    public PageResponse<CustomerResponse> getCustomers(
+    @Transactional(readOnly = true)
+    public ApiResponse<PageResponse<CustomerResponse>> getCustomers(
             String search,
             int page,
             int size,
@@ -146,9 +178,9 @@ public class CustomerServiceImpl implements CustomerService {
             CustomerStatus status
     ) {
 
-        // =====================================================
+        // =================================================
         // DEFAULT PAGINATION
-        // =====================================================
+        // =================================================
 
         if (page < 0) {
             page = 0;
@@ -158,10 +190,9 @@ public class CustomerServiceImpl implements CustomerService {
             size = 10;
         }
 
-
-        // =====================================================
+        // =================================================
         // DEFAULT SORT
-        // =====================================================
+        // =================================================
 
         if (sortBy == null || sortBy.isBlank()) {
             sortBy = "id";
@@ -171,46 +202,41 @@ public class CustomerServiceImpl implements CustomerService {
             direction = "desc";
         }
 
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
 
-        Sort sort =
-                direction.equalsIgnoreCase("desc")
-                        ? Sort.by(sortBy).descending()
-                        : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                sort
+        );
 
-        Pageable pageable =
-                PageRequest.of(
-                        page,
-                        size,
-                        sort
-                );
-
-
-        // =====================================================
+        // =================================================
         // BUILD SPECIFICATION
-        // =====================================================
+        // =================================================
 
         // Default status = ACTIVE
         CustomerStatus effectiveStatus =
                 status == null
-                        ? CustomerStatus.ACTIVE
+                        ? CustomerStatus.ALL
                         : status;
 
         Specification<CustomerEntity> specification =
                 Specification
-                        .where(
-                                CustomerSpecification.containsKeyword(
-                                        search
-                                )
-                        )
-                        .and(
-                                CustomerSpecification.hasStatus(
-                                        effectiveStatus
-                                )
-                        );
+                        .where(CustomerSpecification.isNotDeleted())
+                        .and(CustomerSpecification.containsKeyword(search));
 
-        // =====================================================
+        // ALL means ACTIVE + INACTIVE, but never DELETED.
+        if (effectiveStatus != CustomerStatus.ALL) {
+            specification = specification.and(
+                    CustomerSpecification.hasStatus(effectiveStatus)
+            );
+        }
+
+        // =================================================
         // FETCH CUSTOMERS
-        // =====================================================
+        // =================================================
 
         Page<CustomerEntity> customerPage =
                 repository.findAll(
@@ -218,56 +244,69 @@ public class CustomerServiceImpl implements CustomerService {
                         pageable
                 );
 
-
-        // =====================================================
+        // =================================================
         // MAP RESPONSE
-        // =====================================================
+        // =================================================
 
         List<CustomerResponse> content =
-                customerPage
+                customerPage.getContent()
                         .stream()
                         .map(mapper::toDTO)
                         .toList();
 
-
-        // =====================================================
+        // =================================================
         // PAGE RESPONSE
-        // =====================================================
+        // =================================================
 
-        return PageResponse
-                .<CustomerResponse>builder()
-                .content(content)
-                .pageNumber(customerPage.getNumber())
-                .pageSize(customerPage.getSize())
-                .totalElements(customerPage.getTotalElements())
-                .totalPages(customerPage.getTotalPages())
-                .last(customerPage.isLast())
-                .build();
+        PageResponse<CustomerResponse> pageResponse =
+                PageResponse.<CustomerResponse>builder()
+                        .content(content)
+                        .pageNumber(customerPage.getNumber())
+                        .pageSize(customerPage.getSize())
+                        .totalElements(customerPage.getTotalElements())
+                        .totalPages(customerPage.getTotalPages())
+                        .last(customerPage.isLast())
+                        .build();
+
+        return ApiResponse.success(
+                pageResponse,
+                "Customers fetched successfully."
+        );
     }
-
 
     // =====================================================
     // DELETE CUSTOMER
     // =====================================================
 
     @Override
-    public void deleteCustomer(Long id) {
+    public ApiResponse<Void> deleteCustomer(Long id) {
 
         CustomerEntity customer =
                 validation.validateCustomerId(id);
 
-        customer.setStatus(CustomerStatus.INACTIVE);
+        // Prevent deletion if customer is already referenced
+        // by invoices, sales orders, or other transactions.
+        validation.validateCanDelete(id);
+
+        customer.setStatus(CustomerStatus.DELETED);
+
+        // Update audit fields
+        baseEntityUtil.prepareForUpdate(customer);
 
         repository.save(customer);
-    }
 
+        return ApiResponse.success(
+                null,
+                "Customer deleted successfully."
+        );
+    }
 
     // =====================================================
     // RESTORE CUSTOMER
     // =====================================================
 
     @Override
-    public void restoreCustomer(Long id) {
+    public ApiResponse<Void> restoreCustomer(Long id) {
 
         if (id == null) {
             throw new ResourceNotFoundException(
@@ -283,97 +322,48 @@ public class CustomerServiceImpl implements CustomerService {
                                 )
                         );
 
+        if (customer.getStatus() != CustomerStatus.DELETED) {
+            throw new ValidationException(
+                    "Only deleted customers can be restored."
+            );
+        }
+
         customer.setStatus(CustomerStatus.ACTIVE);
 
+        baseEntityUtil.prepareForUpdate(customer);
+
         repository.save(customer);
+
+        return ApiResponse.success(
+                null,
+                "Customer restored successfully."
+        );
     }
-
-
-    // =====================================================
-    // CUSTOMER DROPDOWN
-    // =====================================================
-
-//    @Override
-//    public List<CustomerDropdown>
-//    getCustomerDropdown() {
-//
-//        return repository
-//                .findByIsDeletedFalseOrderByDisplayNameAsc()
-//                .stream()
-//                .map(customer ->
-//                        CustomerDropdownDTO
-//                                .builder()
-//                                .id(customer.getId())
-//                                .displayName(
-//                                        customer.getDisplayName()
-//                                )
-//                                .build()
-//                )
-//                .toList();
-//    }
-
-
-    // =====================================================
-    // CUSTOMER COUNT
-    // =====================================================
-
-//    @Override
-//    public Long getCustomerCount() {
-//
-//        return repository
-//                .countByIsDeletedFalse();
-//    }
-
-
-    // =====================================================
-    // CUSTOMER DASHBOARD
-    // =====================================================
-
-//    @Override
-//    public CustomerDashboardDTO getDashboard() {
-//
-//        long total =
-//                repository.countByIsDeletedFalse();
-//
-//        long business =
-//                repository
-//                        .countByCustomerTypeAndIsDeletedFalse(
-//                                "Business"
-//                        );
-//
-//        long individual =
-//                repository
-//                        .countByCustomerTypeAndIsDeletedFalse(
-//                                "Individual"
-//                        );
-//
-//        return CustomerDashboardDTO
-//                .builder()
-//                .totalCustomers(total)
-//                .businessCustomers(business)
-//                .individualCustomers(individual)
-//                .activeCustomers(total)
-//                .build();
-//    }
-
 
     // =====================================================
     // CHECK EMAIL EXISTS
     // =====================================================
 
     @Override
-    public Boolean checkEmailExists(
-            String email) {
+    @Transactional(readOnly = true)
+    public ApiResponse<Boolean> checkEmailExists(
+            String email
+    ) {
 
-        if (email == null
-                || email.trim().isEmpty()) {
-
-            return false;
+        if (email == null || email.trim().isEmpty()) {
+            return ApiResponse.success(
+                    false,
+                    "Email is required."
+            );
         }
 
-        return repository
-                .existsByEmail(
-                        email.trim()
-                );
+        boolean exists = repository.existsByEmail(
+                email.trim()
+        );
+
+        return ApiResponse.success(
+                exists,
+                "Email availability checked successfully."
+        );
     }
 }

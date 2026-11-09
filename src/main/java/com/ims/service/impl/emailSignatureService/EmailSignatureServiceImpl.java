@@ -33,6 +33,50 @@ public class EmailSignatureServiceImpl implements EmailSignatureService {
             Long userId,
             EmailSignatureCreateRequest request
     ) {
+        String signatureName = request.getSignatureName().trim();
+
+        // Check whether a deleted signature already exists
+        EmailSignatureEntity existing = repository
+                .findByUserIdAndSignatureNameIgnoreCaseAndStatus(
+                        userId,
+                        signatureName,
+                        "INACTIVE"
+                )
+                .orElse(null);
+
+        if (existing != null) {
+
+            boolean defaultNew = Boolean.TRUE.equals(
+                    request.getDefaultForNewMessages()
+            );
+
+            boolean defaultReplies = Boolean.TRUE.equals(
+                    request.getDefaultForReplies()
+            );
+
+            if (defaultNew) {
+                clearDefaultForNewMessages(userId);
+            }
+
+            if (defaultReplies) {
+                clearDefaultForReplies(userId);
+            }
+
+            existing.setSignatureName(signatureName);
+            existing.setSignatureContent(request.getSignatureContent());
+            existing.setDefaultForNewMessages(defaultNew);
+            existing.setDefaultForReplies(defaultReplies);
+            existing.setStatus("ACTIVE");
+
+            EmailSignatureEntity restored = repository.save(existing);
+
+            return ApiResponse.success(
+                    toResponse(restored),
+                    "Previously deleted email signature reactivated successfully"
+            );
+        }
+
+        // Normal validation
         validation.validateCreate(userId, request);
 
         boolean defaultNew = Boolean.TRUE.equals(
@@ -53,7 +97,7 @@ public class EmailSignatureServiceImpl implements EmailSignatureService {
 
         EmailSignatureEntity entity = EmailSignatureEntity.builder()
                 .userId(userId)
-                .signatureName(request.getSignatureName().trim())
+                .signatureName(signatureName)
                 .signatureContent(request.getSignatureContent())
                 .defaultForNewMessages(defaultNew)
                 .defaultForReplies(defaultReplies)
@@ -67,7 +111,6 @@ public class EmailSignatureServiceImpl implements EmailSignatureService {
                 "Email signature created successfully"
         );
     }
-
     // =====================================================
     // UPDATE SIGNATURE
     // =====================================================

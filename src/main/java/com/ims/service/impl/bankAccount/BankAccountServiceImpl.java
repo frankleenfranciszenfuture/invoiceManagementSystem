@@ -83,7 +83,7 @@ public class BankAccountServiceImpl
         );
 
         bankAccount.setAccountCode(
-                request.getAccountCode()
+                generateAccountCode()
         );
 
         bankAccount.setCurrency(
@@ -327,7 +327,6 @@ public class BankAccountServiceImpl
         }
 
         if (request.getAccountCode() != null) {
-
             bankAccount.setAccountCode(
                     request.getAccountCode()
             );
@@ -424,7 +423,11 @@ public class BankAccountServiceImpl
                 );
             }
 
-            bankAccount.setStatus(request.getStatus());
+            bankAccount.setStatus(
+                    request.getStatus() != null
+                            ? request.getStatus()
+                            : BankAccountStatus.ACTIVE
+            );
         }
 
 
@@ -543,5 +546,24 @@ public class BankAccountServiceImpl
                         page.isLast()
                 )
                 .build();
+    }
+
+    private String generateAccountCode() {
+
+        String prefix = "BANK-";
+
+        String lastAccountCode =
+                bankAccountRepository.findLastAccountCode();
+
+        if (lastAccountCode == null) {
+            return prefix + "0001";
+        }
+
+        String numberPart =
+                lastAccountCode.substring(prefix.length());
+
+        long nextNumber = Long.parseLong(numberPart) + 1;
+
+        return prefix + String.format("%04d", nextNumber);
     }
 }

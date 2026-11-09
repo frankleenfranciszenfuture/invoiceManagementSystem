@@ -180,4 +180,6 @@ public interface SaleOrderRepository extends
             LocalDate toDate,
             Pageable pageable
     );
+
+    boolean existsByCustomerId(Long customerId);
 }
