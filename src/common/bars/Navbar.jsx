@@ -31,6 +31,7 @@ export default function Navbar({ title }) {
             "/clearances",
             "/reports",
             "/invoice-approvals",
+            "/audit-logs"
 
         ];
 

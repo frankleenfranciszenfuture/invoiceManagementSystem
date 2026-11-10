@@ -87,6 +87,9 @@ import reportReducer from "../common/reports/slices/reportSlice";
 import dashboardReducer from "../module/dashboard/slices/dashboardSlice";
 import menuPermissionReducer from "../module/menuPermission/slices/menuPermissionSlice";
 
+//auditLogs
+import auditLogReducer from "../module/audit/slices/auditLogSlice";
+
 export const store = configureStore({
   reducer: {
     // Auth
@@ -219,6 +222,9 @@ export const store = configureStore({
     //menuPermission
 
     menuPermission: menuPermissionReducer,
+
+    //auditLogs
+    auditLogs: auditLogReducer,
   },
 });
 

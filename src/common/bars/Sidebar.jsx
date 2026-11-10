@@ -140,6 +140,12 @@ const NAV = [
         to: "/reports",
     },
 
+    {
+        label: "Audit Logs",
+        moduleName: "Audit Logs",
+        icon: ChartNoAxesCombined,
+        to: "/audit-logs",
+    },
 
 ];
 

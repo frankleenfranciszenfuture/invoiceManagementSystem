@@ -275,7 +275,7 @@ export default function RoleTable({
         }
 
         const isSystemUser =
-            String(selectedUser?.role || "")
+            String(setExsistingRole?.role || "")
                 .trim()
                 .toUpperCase() === "SUPER_ADMIN";
 

@@ -190,6 +190,8 @@ import ReportSelectionPage from "./common/reports/pages/ReportSelectionPage";
 import Dashboard from "./module/dashboard/pages/Dashboard";
 import InvoiceApprovalDashboard from "./module/approval/invoiceApproval/pages/InvoiceApprovalDashboard";
 import InvoiceApprovalView from "./module/approval/invoiceApproval/pages/InvoiceApprovalView";
+import AuditLogDashboard from "./module/audit/pages/AuditLogDashboard";
+import AuditLogDetails from "./module/audit/pages/AuditLogDetails";
 
 
 
@@ -1124,6 +1126,20 @@ function AppContent() {
         <Route
           path="/reports/:module"
           element={<ReportViewer />}
+        />
+
+
+        {/* =================================================
+                    Audit logs
+            ================================================= */}
+        <Route
+          path="/audit-logs"
+          element={<AuditLogDashboard />}
+        />
+
+        <Route
+          path="/audit-logs/view/:id"
+          element={<AuditLogDetails />}
         />
       </Route>
 
