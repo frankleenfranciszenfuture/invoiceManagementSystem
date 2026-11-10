@@ -92,17 +92,21 @@ const FormField = ({
     className = "",
 }) => (
     <div className={`flex flex-col gap-1.5 ${className}`}>
-        <label className="text-sm font-medium text-gray-700">
+        <label
+            className={`text-sm font-medium ${required ? "text-red-400" : "text-gray-500"
+                }`}
+        >
             {label}
 
             {required && (
-                <span className="ml-1 text-red-500">*</span>
+                <span className="ml-1 text-red-400">*</span>
             )}
         </label>
 
         {children}
     </div>
 );
+
 
 const TextInput = ({
     value,
@@ -679,10 +683,10 @@ const CompanyCreateSimple = ({ onClose }) => {
             return false;
         }
 
-        if (!formData.invoicePrefix.trim()) {
-            toast.error("Invoice prefix is required");
-            return false;
-        }
+        // if (!formData.invoicePrefix.trim()) {
+        //     toast.error("Invoice prefix is required");
+        //     return false;
+        // }
 
         if (
             formData.invoiceStartNumber === "" ||
@@ -1113,6 +1117,227 @@ const CompanyCreateSimple = ({ onClose }) => {
 
                     </section>
 
+                    {/* CONTACT INFORMATION */}
+
+                    <section className="mb-7">
+
+                        <SectionHeading
+                            icon={Phone}
+                            title="Contact Information"
+                            description="Enter company contact and communication details"
+                        />
+
+                        <div className="
+                            grid grid-cols-1 gap-5
+                            md:grid-cols-2 lg:grid-cols-2
+                        ">
+
+                            <FormField label="Email" required>
+                                <TextInput
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) =>
+                                        handleChange("email", e.target.value)
+                                    }
+                                    placeholder="Enter company email"
+                                    maxLength={150}
+                                />
+                            </FormField>
+
+                            <FormField label="Phone" required>
+                                <TextInput
+                                    type="tel"
+                                    value={formData.phone}
+                                    onChange={(e) =>
+                                        handleChange("phone", e.target.value)
+                                    }
+                                    placeholder="Enter phone number"
+                                    maxLength={20}
+                                />
+                            </FormField>
+
+                            <FormField label="Alternate Phone">
+                                <TextInput
+                                    type="tel"
+                                    value={formData.alternatePhone}
+                                    onChange={(e) =>
+                                        handleChange("alternatePhone", e.target.value)
+                                    }
+                                    placeholder="Enter alternate phone"
+                                    maxLength={20}
+                                />
+                            </FormField>
+
+                            <FormField label="Website">
+                                <TextInput
+                                    value={formData.website}
+                                    onChange={(e) =>
+                                        handleChange("website", e.target.value)
+                                    }
+                                    placeholder="https://example.com"
+                                    maxLength={200}
+                                />
+                            </FormField>
+
+                        </div>
+
+                    </section>
+
+
+
+                    <div className="my-6 border-t border-gray-100" />
+
+                    {/* TAX INFORMATION */}
+
+                    <section className="mb-7">
+
+                        <SectionHeading
+                            icon={FileText}
+                            title="Tax Information"
+                            description="Enter your company tax registration details"
+                        />
+
+                        <div className="
+                            grid grid-cols-1 gap-5
+                            md:grid-cols-2 lg:grid-cols-3
+                        ">
+
+                            <FormField label="GST Number">
+                                <TextInput
+                                    value={formData.gstNumber}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "gstNumber",
+                                            e.target.value.toUpperCase()
+                                        )
+                                    }
+                                    placeholder="Enter GST number"
+                                    maxLength={15}
+                                />
+                            </FormField>
+
+                            <FormField label="PAN Number">
+                                <TextInput
+                                    value={formData.panNumber}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "panNumber",
+                                            e.target.value.toUpperCase()
+                                        )
+                                    }
+                                    placeholder="Enter PAN number"
+                                    maxLength={10}
+                                />
+                            </FormField>
+
+                            <FormField label="TAN Number">
+                                <TextInput
+                                    value={formData.tanNumber}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            "tanNumber",
+                                            e.target.value.toUpperCase()
+                                        )
+                                    }
+                                    placeholder="Enter TAN number"
+                                    maxLength={10}
+                                />
+                            </FormField>
+
+                        </div>
+
+                    </section>
+
+                    <div className="my-6 border-t border-gray-100" />
+
+
+                    <div className="my-6 border-t border-gray-100" />
+
+                    {/* ADDRESS INFORMATION */}
+
+                    <section className="mb-7">
+
+                        <SectionHeading
+                            icon={MapPin}
+                            title="Address Information"
+                            description="Enter your registered company address"
+                        />
+
+                        <div className="
+                            grid grid-cols-1 gap-5
+                            md:grid-cols-2 lg:grid-cols-3
+                        ">
+
+                            <FormField label="Address Line 1">
+                                <TextInput
+                                    value={formData.addressLine1}
+                                    onChange={(e) =>
+                                        handleChange("addressLine1", e.target.value)
+                                    }
+                                    placeholder="Enter address line 1"
+                                    maxLength={200}
+                                />
+                            </FormField>
+
+                            <FormField label="Address Line 2">
+                                <TextInput
+                                    value={formData.addressLine2}
+                                    onChange={(e) =>
+                                        handleChange("addressLine2", e.target.value)
+                                    }
+                                    placeholder="Enter address line 2"
+                                    maxLength={200}
+                                />
+                            </FormField>
+
+                            <FormField label="City">
+                                <TextInput
+                                    value={formData.city}
+                                    onChange={(e) =>
+                                        handleChange("city", e.target.value)
+                                    }
+                                    placeholder="Enter city"
+                                    maxLength={100}
+                                />
+                            </FormField>
+
+                            <FormField label="State">
+                                <TextInput
+                                    value={formData.state}
+                                    onChange={(e) =>
+                                        handleChange("state", e.target.value)
+                                    }
+                                    placeholder="Enter state"
+                                    maxLength={100}
+                                />
+                            </FormField>
+
+                            <FormField label="Country">
+                                <TextInput
+                                    value={formData.country}
+                                    onChange={(e) =>
+                                        handleChange("country", e.target.value)
+                                    }
+                                    placeholder="Enter country"
+                                    maxLength={100}
+                                />
+                            </FormField>
+
+                            <FormField label="Pincode">
+                                <TextInput
+                                    value={formData.pincode}
+                                    onChange={(e) =>
+                                        handleChange("pincode", e.target.value)
+                                    }
+                                    placeholder="Enter pincode"
+                                    maxLength={10}
+                                />
+                            </FormField>
+
+                        </div>
+
+                    </section>
+
                     <div className="my-6 border-t border-gray-100" />
 
                     {/* COMPANY LOGO & SIGNATURE */}
@@ -1282,224 +1507,6 @@ const CompanyCreateSimple = ({ onClose }) => {
 
                     <div className="my-6 border-t border-gray-100" />
 
-                    {/* TAX INFORMATION */}
-
-                    <section className="mb-7">
-
-                        <SectionHeading
-                            icon={FileText}
-                            title="Tax Information"
-                            description="Enter your company tax registration details"
-                        />
-
-                        <div className="
-                            grid grid-cols-1 gap-5
-                            md:grid-cols-2 lg:grid-cols-3
-                        ">
-
-                            <FormField label="GST Number">
-                                <TextInput
-                                    value={formData.gstNumber}
-                                    onChange={(e) =>
-                                        handleChange(
-                                            "gstNumber",
-                                            e.target.value.toUpperCase()
-                                        )
-                                    }
-                                    placeholder="Enter GST number"
-                                    maxLength={15}
-                                />
-                            </FormField>
-
-                            <FormField label="PAN Number">
-                                <TextInput
-                                    value={formData.panNumber}
-                                    onChange={(e) =>
-                                        handleChange(
-                                            "panNumber",
-                                            e.target.value.toUpperCase()
-                                        )
-                                    }
-                                    placeholder="Enter PAN number"
-                                    maxLength={10}
-                                />
-                            </FormField>
-
-                            <FormField label="TAN Number">
-                                <TextInput
-                                    value={formData.tanNumber}
-                                    onChange={(e) =>
-                                        handleChange(
-                                            "tanNumber",
-                                            e.target.value.toUpperCase()
-                                        )
-                                    }
-                                    placeholder="Enter TAN number"
-                                    maxLength={10}
-                                />
-                            </FormField>
-
-                        </div>
-
-                    </section>
-
-                    <div className="my-6 border-t border-gray-100" />
-
-                    {/* CONTACT INFORMATION */}
-
-                    <section className="mb-7">
-
-                        <SectionHeading
-                            icon={Phone}
-                            title="Contact Information"
-                            description="Enter company contact and communication details"
-                        />
-
-                        <div className="
-                            grid grid-cols-1 gap-5
-                            md:grid-cols-2 lg:grid-cols-3
-                        ">
-
-                            <FormField label="Email" required>
-                                <TextInput
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={(e) =>
-                                        handleChange("email", e.target.value)
-                                    }
-                                    placeholder="Enter company email"
-                                    maxLength={150}
-                                />
-                            </FormField>
-
-                            <FormField label="Phone" required>
-                                <TextInput
-                                    type="tel"
-                                    value={formData.phone}
-                                    onChange={(e) =>
-                                        handleChange("phone", e.target.value)
-                                    }
-                                    placeholder="Enter phone number"
-                                    maxLength={20}
-                                />
-                            </FormField>
-
-                            <FormField label="Alternate Phone">
-                                <TextInput
-                                    type="tel"
-                                    value={formData.alternatePhone}
-                                    onChange={(e) =>
-                                        handleChange("alternatePhone", e.target.value)
-                                    }
-                                    placeholder="Enter alternate phone"
-                                    maxLength={20}
-                                />
-                            </FormField>
-
-                            <FormField label="Website">
-                                <TextInput
-                                    value={formData.website}
-                                    onChange={(e) =>
-                                        handleChange("website", e.target.value)
-                                    }
-                                    placeholder="https://example.com"
-                                    maxLength={200}
-                                />
-                            </FormField>
-
-                        </div>
-
-                    </section>
-
-                    <div className="my-6 border-t border-gray-100" />
-
-                    {/* ADDRESS INFORMATION */}
-
-                    <section className="mb-7">
-
-                        <SectionHeading
-                            icon={MapPin}
-                            title="Address Information"
-                            description="Enter your registered company address"
-                        />
-
-                        <div className="
-                            grid grid-cols-1 gap-5
-                            md:grid-cols-2 lg:grid-cols-3
-                        ">
-
-                            <FormField label="Address Line 1">
-                                <TextInput
-                                    value={formData.addressLine1}
-                                    onChange={(e) =>
-                                        handleChange("addressLine1", e.target.value)
-                                    }
-                                    placeholder="Enter address line 1"
-                                    maxLength={200}
-                                />
-                            </FormField>
-
-                            <FormField label="Address Line 2">
-                                <TextInput
-                                    value={formData.addressLine2}
-                                    onChange={(e) =>
-                                        handleChange("addressLine2", e.target.value)
-                                    }
-                                    placeholder="Enter address line 2"
-                                    maxLength={200}
-                                />
-                            </FormField>
-
-                            <FormField label="City">
-                                <TextInput
-                                    value={formData.city}
-                                    onChange={(e) =>
-                                        handleChange("city", e.target.value)
-                                    }
-                                    placeholder="Enter city"
-                                    maxLength={100}
-                                />
-                            </FormField>
-
-                            <FormField label="State">
-                                <TextInput
-                                    value={formData.state}
-                                    onChange={(e) =>
-                                        handleChange("state", e.target.value)
-                                    }
-                                    placeholder="Enter state"
-                                    maxLength={100}
-                                />
-                            </FormField>
-
-                            <FormField label="Country">
-                                <TextInput
-                                    value={formData.country}
-                                    onChange={(e) =>
-                                        handleChange("country", e.target.value)
-                                    }
-                                    placeholder="Enter country"
-                                    maxLength={100}
-                                />
-                            </FormField>
-
-                            <FormField label="Pincode">
-                                <TextInput
-                                    value={formData.pincode}
-                                    onChange={(e) =>
-                                        handleChange("pincode", e.target.value)
-                                    }
-                                    placeholder="Enter pincode"
-                                    maxLength={10}
-                                />
-                            </FormField>
-
-                        </div>
-
-                    </section>
-
-                    <div className="my-6 border-t border-gray-100" />
-
                     {/* INVOICE SETTINGS */}
 
                     <section>
@@ -1515,7 +1522,7 @@ const CompanyCreateSimple = ({ onClose }) => {
                             md:grid-cols-2 lg:grid-cols-3
                         ">
 
-                            <FormField label="Invoice Prefix" required>
+                            <FormField label="Invoice Prefix" >
                                 <TextInput
                                     value={formData.invoicePrefix}
                                     onChange={(e) =>

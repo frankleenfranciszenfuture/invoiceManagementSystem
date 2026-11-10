@@ -146,6 +146,7 @@ const createInitialForm = () => ({
     currencyCode: "INR",
     discountType: "AMOUNT",
     discountValue: 0,
+    shippingAmount: 0,
     notes: "",
     items: [createEmptyItem()],
 });
@@ -194,7 +195,7 @@ export default function SalesOrderCreate({ onClose }) {
         salesOrderState.loading || salesOrderState.actionLoading;
 
     const customers = getArray(
-        useSelector((state) => state.customers?.customers)
+        useSelector((state) => state.customer?.customers)
     );
 
     const partiesState = useSelector((state) => state.party || state.parties || {});
@@ -414,6 +415,7 @@ export default function SalesOrderCreate({ onClose }) {
                         "INR",
                     discountType: order?.discountType || "AMOUNT",
                     discountValue: Number(order?.discountValue || 0),
+                    shippingAmount: Number(order?.shippingAmount || 0),
                     notes: order?.notes || "",
                     items: orderItems.length
                         ? orderItems.map((item) => ({
@@ -921,6 +923,11 @@ export default function SalesOrderCreate({ onClose }) {
             productDiscount + commonDiscount
         );
 
+        const shippingAmount = Math.max(
+            0,
+            Number(formData.shippingAmount || 0)
+        );
+
         const taxableAmount = Math.max(0, subtotal - discount);
 
         const tax = formData.items.reduce(
@@ -933,11 +940,20 @@ export default function SalesOrderCreate({ onClose }) {
             productDiscount: roundMoney(productDiscount),
             commonDiscount: roundMoney(commonDiscount),
             discount: roundMoney(discount),
+            shippingAmount: roundMoney(shippingAmount),
             taxableAmount: roundMoney(taxableAmount),
             tax: roundMoney(tax),
-            grandTotal: roundMoney(taxableAmount + tax),
+            grandTotal: roundMoney(
+                taxableAmount + tax + shippingAmount
+            ),
         };
-    }, [formData.items, formData.discountValue, discountMode, taxMasters]);
+    }, [
+        formData.items,
+        formData.discountValue,
+        formData.shippingAmount,
+        discountMode,
+        taxMasters,
+    ]);
 
     // ---------------------------------------------------------
     // CURRENCY DISPLAY
@@ -1041,6 +1057,7 @@ export default function SalesOrderCreate({ onClose }) {
                         ? Number(item.discountValue || 0)
                         : 0,
 
+
                 taxMasterId: item.taxMasterId
                     ? Number(item.taxMasterId)
                     : null,
@@ -1064,6 +1081,7 @@ export default function SalesOrderCreate({ onClose }) {
                 : null,
             discountType: formData.discountType,
             discountValue: Number(formData.discountValue || 0),
+            shippingAmount: Number(formData.shippingAmount || 0),
             notes: formData.notes || "",
             items,
         };
@@ -1166,8 +1184,8 @@ export default function SalesOrderCreate({ onClose }) {
 
 
     /* =========================================================
-   RENDER
-========================================================= */
+    RENDER
+    ========================================================= */
 
     return (
         <div className="flex h-full min-h-0 flex-col bg-gray-50 px-3.5 py-2">
@@ -2173,6 +2191,30 @@ export default function SalesOrderCreate({ onClose }) {
                                         </span>
                                     </div>
 
+
+                                    {/* SHIPPING AMOUNT */}
+                                    <div className="flex items-center justify-between">
+                                        <span>Shipping Amount ({currencyCode})</span>
+
+                                        <div className="flex items-center gap-1">
+                                            <span>{currencySymbol}</span>
+
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                value={formData.shippingAmount ?? ""}
+                                                onChange={(event) =>
+                                                    handleChange(
+                                                        "shippingAmount",
+                                                        event.target.value
+                                                    )
+                                                }
+                                                placeholder="0.00"
+                                                className="w-24 rounded-md border border-gray-300 px-2 py-1 text-right focus:border-blue-400 focus:outline-none"
+                                            />
+                                        </div>
+                                    </div>
                                     {/* GRAND TOTAL */}
                                     <div className="flex justify-between border-t pt-2 font-semibold text-gray-800">
                                         <span>

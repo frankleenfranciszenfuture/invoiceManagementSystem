@@ -568,22 +568,19 @@ export default function CashAccountTable({
 
                                             <p
                                                 className="
-                                                    truncate font-medium
-                                                    text-gray-800
-                                                "
+                                                        whitespace-normal break-words
+                                                        font-medium text-gray-800
+                                                    "
                                                 title={account.accountName || ""}
                                             >
                                                 {account.accountName || "—"}
                                             </p>
 
-                                            <p className="
-                                                mt-0.5 text-xs text-gray-500
-                                            ">
+                                            <p className="mt-0.5 text-xs text-gray-500">
                                                 ID: {account.id}
                                             </p>
 
                                         </div>
-
                                     </div>
 
                                 </td>

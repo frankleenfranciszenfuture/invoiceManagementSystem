@@ -66,15 +66,21 @@ const FormField = ({
     className = "",
 }) => (
     <div className={`flex flex-col gap-1.5 ${className}`}>
-        <label className="text-sm font-medium text-gray-700">
+        <label
+            className={`text-sm font-medium ${required ? "text-red-400" : "text-gray-500"
+                }`}
+        >
             {label}
+
             {required && (
-                <span className="ml-1 text-red-500">*</span>
+                <span className="ml-1 text-red-400">*</span>
             )}
         </label>
+
         {children}
     </div>
 );
+
 
 /* =========================================================
    TEXT INPUT
@@ -730,6 +736,7 @@ const PartyCreateNew = ({ onClose }) => {
 
             dispatch(closeModal());
             dispatch(resetPartyForm());
+            navigate("/inventory/parties");
 
         } catch (error) {
             console.error(
@@ -953,7 +960,7 @@ const PartyCreateNew = ({ onClose }) => {
                                 />
                             </FormField>
 
-                            <FormField label="Email">
+                            <FormField label="Email" required>
                                 <TextInput
                                     type="email"
                                     value={party.email}
@@ -965,7 +972,7 @@ const PartyCreateNew = ({ onClose }) => {
                                 />
                             </FormField>
 
-                            <FormField label="Mobile">
+                            <FormField label="Mobile" required>
                                 <TextInput
                                     value={party.mobile}
                                     onChange={(e) =>

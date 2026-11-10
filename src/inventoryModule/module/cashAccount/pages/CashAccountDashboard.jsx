@@ -13,6 +13,7 @@ import {
     Plus,
     Download,
     Wallet,
+    Building2,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -510,47 +511,70 @@ export default function CashAccountDashboard() {
                             cashAccounts={filteredCashAccounts}
                         />
 
+                    ) : cashAccounts.length > 0 ? (
+
+                        // FILTERED EMPTY STATE
+
+                        <div className="
+                            flex min-h-[250px] flex-col
+                            items-center justify-center gap-2
+                            px-4 text-center
+                        ">
+
+                            <Building2
+                                size={38}
+                                className="text-gray-300"
+                            />
+
+                            <p className="
+                                text-sm font-medium text-gray-700
+                            ">
+                                No matching companies found
+                            </p>
+
+                            <p className="
+                                text-xs text-gray-400
+                            ">
+                                Try changing your search or status filter.
+                            </p>
+
+                        </div>
+
                     ) : (
 
-                        <div
-                            className="
-                                flex min-h-full flex-col
-                                items-center justify-center
-                                gap-3 px-4
-                            "
-                        >
+                        // NO COMPANIES
+
+                        <div className="
+                            flex min-h-full flex-col
+                            items-center justify-center
+                            gap-3 px-4
+                        ">
 
                             {/* EMPTY STATE ICON */}
 
-                            <div
-                                className="
-                                    relative mt-10 mb-1
-                                    flex h-24 w-24 shrink-0
-                                    items-center justify-center
-                                    rounded-full bg-gray-100
-                                "
-                            >
+                            <div className="
+                                relative mt-10 mb-1
+                                flex h-24 w-24 shrink-0
+                                items-center justify-center
+                                rounded-full bg-gray-100
+                            ">
 
-                                <div
-                                    className="
-                                        flex items-center justify-center
-                                        text-gray-400
-                                    "
-                                >
-                                    <Wallet
+                                <div className="
+                                    flex items-center justify-center
+                                    text-gray-400
+                                ">
+                                    <Building2
                                         size={42}
                                         strokeWidth={1.7}
                                     />
                                 </div>
 
-                                <div
-                                    className="
-                                        absolute bottom-1 right-1
-                                        flex h-7 w-7 items-center
-                                        justify-center rounded-full
-                                        bg-blue-500 text-white
-                                    "
-                                >
+                                <div className="
+                                    absolute bottom-1 right-1
+                                    flex h-7 w-7 items-center
+                                    justify-center rounded-full
+                                    bg-blue-500 text-white
+                                ">
                                     <Plus className="h-4 w-4" />
                                 </div>
 
@@ -564,24 +588,19 @@ export default function CashAccountDashboard() {
                                     font-medium text-gray-500
                                 "
                             >
-                                No Cash accounts found
-                                <span className="flex text-gray-600"> Manage your business cash accounts</span>
+                                No cashAccount records found
+                                <span className="flex text-gray-600">
+                                    Create and manage your cashAccounts details
+                                </span>
                             </p>
-
-                            {/* EMPTY STATE DESCRIPTION */}
-
-
-
                             {/* ACTION BUTTONS */}
 
-                            <div
-                                className="
-                                    mt-1 flex flex-wrap
-                                    items-center justify-center gap-2.5
-                                "
-                            >
+                            <div className="
+                                mt-1 flex flex-wrap
+                                items-center justify-center gap-2.5
+                            ">
 
-                                {/* CREATE CASH ACCOUNT */}
+                                {/* CREATE COMPANY */}
 
                                 {canCreateCashAccount && (
 
@@ -601,7 +620,6 @@ export default function CashAccountDashboard() {
                                     </button>
 
                                 )}
-
 
 
                             </div>

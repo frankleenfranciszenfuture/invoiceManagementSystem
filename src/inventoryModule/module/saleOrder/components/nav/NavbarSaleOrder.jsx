@@ -3,6 +3,7 @@ import React, {
     useState,
     useEffect,
     useRef,
+    useCallback,
 } from "react";
 
 import {
@@ -30,6 +31,8 @@ import {
     setSalesOrderStatus,
     setSelectedSalesOrderView,
 } from "../../slices/saleOrderViewSlice";
+
+import toast from "react-hot-toast";
 
 import {
     fetchAllSalesOrders,
@@ -130,38 +133,51 @@ export default function NavbarSaleOrder() {
     // FETCH SALES ORDERS
     // ============================================================
 
-    const loadSalesOrders = (filterValues, status) => {
+    const loadSalesOrders = useCallback(
+        (filterValues = appliedFilters, status = salesOrderStatus) => {
 
-        dispatch(
-            fetchAllSalesOrders({
-                ...filterValues,
+            const params = new URLSearchParams(window.location.search);
 
-                orderNo: filterValues.orderNo || undefined,
-                partyType: filterValues.partyType || undefined,
+            const page = Number(params.get("page") || 0);
+            const size = Number(params.get("size") || 10);
 
-                customerId: filterValues.customerId
-                    ? Number(filterValues.customerId)
-                    : undefined,
+            dispatch(
+                fetchAllSalesOrders({
 
-                partyId: filterValues.partyId
-                    ? Number(filterValues.partyId)
-                    : undefined,
+                    orderNo: filterValues.orderNo || undefined,
 
-                warehouseId: filterValues.warehouseId
-                    ? Number(filterValues.warehouseId)
-                    : undefined,
+                    partyType: filterValues.partyType || undefined,
 
-                salesOrderStatus:
-                    status === "ALL" ? undefined : status,
+                    customerId: filterValues.customerId
+                        ? Number(filterValues.customerId)
+                        : undefined,
 
-                fromDate: filterValues.fromDate || undefined,
-                toDate: filterValues.toDate || undefined,
+                    partyId: filterValues.partyId
+                        ? Number(filterValues.partyId)
+                        : undefined,
 
-                page: 0,
-                size: 10,
-            })
-        );
-    };
+                    warehouseId: filterValues.warehouseId
+                        ? Number(filterValues.warehouseId)
+                        : undefined,
+
+                    fromDate: filterValues.fromDate || undefined,
+
+                    toDate: filterValues.toDate || undefined,
+
+                    salesOrderStatus:
+                        status === "ALL" ? undefined : status,
+
+                    page,
+                    size,
+                })
+            );
+        },
+        [
+            dispatch,
+            appliedFilters,
+            salesOrderStatus,
+        ]
+    );
 
     // ============================================================
     // FETCH WHEN STATUS CHANGES
@@ -171,7 +187,11 @@ export default function NavbarSaleOrder() {
 
         loadSalesOrders(appliedFilters, salesOrderStatus);
 
-    }, [salesOrderStatus, appliedFilters]);
+    }, [
+        loadSalesOrders,
+        appliedFilters,
+        salesOrderStatus,
+    ]);
 
     // ============================================================
     // CLICK OUTSIDE
@@ -225,9 +245,36 @@ export default function NavbarSaleOrder() {
 
     const handleApplyFilters = () => {
 
-        setAppliedFilters({ ...filters });
-        setFilterOpen(false);
+        if (
+            filters.fromDate &&
+            filters.toDate &&
+            filters.fromDate > filters.toDate
+        ) {
+            toast.error("From date cannot be after To date.");
+            return;
+        }
 
+        const params = new URLSearchParams(searchParams);
+
+        params.set("page", "0");
+
+        Object.entries(filters).forEach(([key, value]) => {
+
+            if (value) {
+                params.set(key, value);
+            } else {
+                params.delete(key);
+            }
+
+        });
+
+        navigate(
+            `/inventory/salesOrders?${params.toString()}`
+        );
+
+        setAppliedFilters({ ...filters });
+
+        setFilterOpen(false);
     };
 
     // ============================================================
@@ -236,9 +283,29 @@ export default function NavbarSaleOrder() {
 
     const handleResetFilters = () => {
 
+        const params = new URLSearchParams(searchParams);
+
+        [
+            "orderNo",
+            "partyType",
+            "customerId",
+            "partyId",
+            "warehouseId",
+            "fromDate",
+            "toDate",
+            "page",
+        ].forEach((key) => params.delete(key));
+
+        params.set("page", "0");
+
+        navigate(
+            `/inventory/salesOrders?${params.toString()}`
+        );
+
         setFilters(initialFilters);
         setAppliedFilters(initialFilters);
 
+        setFilterOpen(false);
     };
 
     // ============================================================
@@ -266,7 +333,9 @@ export default function NavbarSaleOrder() {
     };
 
     const handleRefresh = () => {
+
         loadSalesOrders(appliedFilters, selectedStatus);
+
     };
 
 

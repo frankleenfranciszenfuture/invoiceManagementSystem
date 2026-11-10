@@ -57,16 +57,21 @@ const FormField = ({
     className = "",
 }) => (
     <div className={`flex flex-col gap-1.5 ${className}`}>
-        <label className="text-sm font-medium text-gray-700">
+        <label
+            className={`text-sm font-medium ${required ? "text-red-400" : "text-gray-500"
+                }`}
+        >
             {label}
+
             {required && (
-                <span className="ml-1 text-red-500">*</span>
+                <span className="ml-1 text-red-400">*</span>
             )}
         </label>
 
         {children}
     </div>
 );
+
 
 /* =========================================================
    TEXT INPUT

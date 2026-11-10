@@ -44,10 +44,55 @@ import LeaveConfirmationModal from "../../../../common/confirmation/LeaveConfirm
 import useLeaveConfirmation from "../.../../../../../common/confirmation/useLeaveConfirmation";
 
 const getArray = (value) => {
-    if (Array.isArray(value)) return value;
-    if (Array.isArray(value?.content)) return value.content;
-    if (Array.isArray(value?.data?.content)) return value.data.content;
-    if (Array.isArray(value?.data)) return value.data;
+    if (!value) return [];
+
+    if (Array.isArray(value)) {
+        return value;
+    }
+
+    if (typeof value !== "object") {
+        return [];
+    }
+
+    // Common API response structures
+    const possibleArrays = [
+        value.content,
+        value.data,
+        value.parties,
+        value.party,
+        value.partyList,
+        value.partyData,
+        value.records,
+        value.results,
+    ];
+
+    for (const candidate of possibleArrays) {
+        if (Array.isArray(candidate)) {
+            return candidate;
+        }
+    }
+
+    // Nested response structures
+    if (value.data && typeof value.data === "object") {
+        const nested = getArray(value.data);
+
+        if (nested.length) {
+            return nested;
+        }
+    }
+
+    // Single party response
+    if (
+        value.id != null &&
+        (
+            value.partyCode ||
+            value.companyName ||
+            value.partyType
+        )
+    ) {
+        return [value];
+    }
+
     return [];
 };
 
@@ -133,6 +178,7 @@ const createInitialForm = () => ({
     currencyCode: "INR",
     discountType: "AMOUNT",
     discountValue: 0,
+    shippingAmount: 0,
     notes: "",
     items: [createEmptyItem()],
 });
@@ -179,12 +225,32 @@ export default function PurchaseOrderCreate({ onClose }) {
     const purchaseOrderLoading =
         purchaseOrderState.loading || purchaseOrderState.actionLoading;
 
-    const partiesState = useSelector((state) => state.party || state.parties || {});
-    const parties = getArray(
-        partiesState.parties ||
-        partiesState.user ||
-        partiesState.partyList
+    const partiesState = useSelector(
+        (state) => state.party || state.parties || {}
     );
+
+    const parties = useMemo(() => {
+        const possiblePartySources = [
+            partiesState.parties,
+            partiesState.partyList,
+            partiesState.partyData,
+            partiesState.party,
+            partiesState.data,
+            partiesState,
+        ];
+
+        for (const source of possiblePartySources) {
+            const result = getArray(source);
+
+            if (result.length > 0) {
+                return result;
+            }
+        }
+
+        return [];
+    }, [partiesState]);
+
+
 
     const warehouses = getArray(
         useSelector((state) => state.warehouse?.warehouses)
@@ -386,6 +452,7 @@ export default function PurchaseOrderCreate({ onClose }) {
                         "INR",
                     discountType: order?.discountType || "AMOUNT",
                     discountValue: Number(order?.discountValue || 0),
+                    shippingAmount: Number(order?.shippingAmount || 0),
                     notes: order?.notes || "",
                     items: orderItems.length
                         ? orderItems.map((item) => ({
@@ -443,27 +510,55 @@ export default function PurchaseOrderCreate({ onClose }) {
         [formData.partyId, parties]
     );
 
+
     const filteredParties = useMemo(() => {
-        const suppliers = parties.filter((item) => {
-            const type = String(
-                item?.partyType || item?.type || item?.partyCategory || ""
-            ).toUpperCase();
-            return type === "SUPPLIER" || type === "BOTH";
-        });
+        const search = String(partySearch || "")
+            .trim()
+            .toLowerCase();
 
-        const search = partySearch.trim().toLowerCase();
-        if (!search) return suppliers;
+        const allowedTypes = [
+            "SUPPLIER",
+            "BOTH",
+            "CUSTOMER",
+        ];
 
-        return suppliers.filter((item) => {
-            const name = getName(item).toLowerCase();
-            const email = String(item?.email || "").toLowerCase();
-            const phone = String(
-                item?.mobile || item?.phoneNumber || item?.mobileNumber || ""
-            ).toLowerCase();
+        return parties.filter((party) => {
+            const partyType = String(
+                party?.partyType ??
+                party?.type ??
+                ""
+            )
+                .trim()
+                .toUpperCase();
 
-            return name.includes(search) || email.includes(search) || phone.includes(search);
+            // Include SUPPLIER, BOTH and CUSTOMER
+            if (!allowedTypes.includes(partyType)) {
+                return false;
+            }
+
+            if (!search) {
+                return true;
+            }
+
+            const searchableText = [
+                getName(party),
+                party?.partyCode,
+                party?.partyType,
+                party?.contactPerson,
+                party?.email,
+                party?.mobile,
+                party?.alternateMobile,
+                party?.gstNumber,
+                party?.panNumber,
+            ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase();
+
+            return searchableText.includes(search);
         });
     }, [parties, partySearch]);
+
 
     const filteredWarehouses = useMemo(() => {
         const search = warehouseSearch.trim().toLowerCase();
@@ -507,7 +602,16 @@ export default function PurchaseOrderCreate({ onClose }) {
         const selectedId = party?.id ?? party?.partyId;
 
         if (!selectedId) {
-            toast.error("Selected supplier does not have a valid ID");
+            toast.error("Selected party does not have a valid ID");
+            return;
+        }
+
+        const partyType = String(
+            party?.partyType || party?.type || ""
+        ).toUpperCase();
+
+        if (!["SUPPLIER", "BOTH", "CUSTOMER"].includes(partyType)) {
+            toast.error("Invalid party type");
             return;
         }
 
@@ -847,6 +951,11 @@ export default function PurchaseOrderCreate({ onClose }) {
             productDiscount + commonDiscount
         );
 
+        const shippingAmount = Math.max(
+            0,
+            Number(formData.shippingAmount || 0)
+        );
+
         const taxableAmount = Math.max(0, subtotal - discount);
 
         const tax = formData.items.reduce(
@@ -859,6 +968,7 @@ export default function PurchaseOrderCreate({ onClose }) {
             productDiscount: roundMoney(productDiscount),
             commonDiscount: roundMoney(commonDiscount),
             discount: roundMoney(discount),
+            shippingAmount: roundMoney(shippingAmount),
             taxableAmount: roundMoney(taxableAmount),
             tax: roundMoney(tax),
             grandTotal: roundMoney(taxableAmount + tax),
@@ -1154,28 +1264,30 @@ export default function PurchaseOrderCreate({ onClose }) {
                                         <div className="max-h-60 overflow-y-auto">
                                             {filteredParties.length === 0 ? (
                                                 <div className="px-4 py-5 text-center text-sm text-gray-400">
-                                                    No suppliers found
+                                                    No parties found
                                                 </div>
                                             ) : (
                                                 filteredParties.map((party) => {
                                                     const name = getName(party);
 
+                                                    const partyType = String(
+                                                        party?.partyType || party?.type || ""
+                                                    ).toUpperCase();
+
                                                     return (
                                                         <button
                                                             type="button"
-                                                            key={party.id}
-                                                            onClick={() =>
-                                                                handlePartySelect(party)
-                                                            }
-                                                            className="flex w-full items-center gap-3 rounded px-4 py-3 text-left hover:bg-blue-500 hover:text-white"
+                                                            key={party.id ?? party.partyId}
+                                                            onClick={() => handlePartySelect(party)}
+                                                            className="flex w-full items-center gap-3 rounded px-4 py-3 text-left text-gray-700 hover:bg-blue-500 hover:text-white"
                                                         >
                                                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-200 font-medium text-gray-700">
                                                                 {name.charAt(0).toUpperCase()}
                                                             </div>
 
-                                                            <div className="min-w-0">
+                                                            <div className="min-w-0 flex-1">
                                                                 <p className="truncate font-medium">
-                                                                    {name}
+                                                                    {name || "Unnamed Party"}
                                                                 </p>
 
                                                                 <p className="truncate text-xs opacity-70">
@@ -1185,6 +1297,10 @@ export default function PurchaseOrderCreate({ onClose }) {
                                                                         ""}
                                                                 </p>
                                                             </div>
+
+                                                            <span className="shrink-0 rounded bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-600">
+                                                                {partyType}
+                                                            </span>
                                                         </button>
                                                     );
                                                 })
@@ -2033,6 +2149,30 @@ export default function PurchaseOrderCreate({ onClose }) {
                                         <span>
                                             {formatCurrency(totals.tax)}
                                         </span>
+                                    </div>
+
+                                    {/* SHIPPING AMOUNT */}
+                                    <div className="flex items-center justify-between">
+                                        <span>Shipping Amount ({currencyCode})</span>
+
+                                        <div className="flex items-center gap-1">
+                                            <span>{currencySymbol}</span>
+
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                value={formData.shippingAmount ?? ""}
+                                                onChange={(event) =>
+                                                    handleChange(
+                                                        "shippingAmount",
+                                                        event.target.value
+                                                    )
+                                                }
+                                                placeholder="0.00"
+                                                className="w-24 rounded-md border border-gray-300 px-2 py-1 text-right focus:border-blue-400 focus:outline-none"
+                                            />
+                                        </div>
                                     </div>
 
                                     {/* GRAND TOTAL */}

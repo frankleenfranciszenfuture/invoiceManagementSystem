@@ -85,6 +85,25 @@ const formatDate = (date) => {
     });
 };
 
+const formatDateTime = (date) => {
+    if (!date) return "—";
+
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return date;
+    }
+
+    return parsedDate.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
+
+
 const formatQuantity = (value) =>
     number(value).toLocaleString("en-IN", {
         maximumFractionDigits: 4,
@@ -327,7 +346,7 @@ export default function InvoiceViewDetails() {
     const loading = previewLoading;
     const error = previewError;
 
-
+    const data = loaded ? invoice : null;
     // ========================================================
     // FETCH INVOICE DETAILS
     // ========================================================
@@ -1760,6 +1779,39 @@ export default function InvoiceViewDetails() {
 
                 </div>
 
+            </SectionCard>
+
+            {/* Audit Information */}
+            <SectionCard
+                title="Audit Information"
+                icon={CalendarDays}
+            >
+                <div className="
+        grid grid-cols-1 gap-5
+        sm:grid-cols-2 lg:grid-cols-4
+    ">
+
+                    <ReadField
+                        label="Created At"
+                        value={formatDateTime(data?.audit?.createdAt)}
+                    />
+
+                    <ReadField
+                        label="Updated At"
+                        value={formatDateTime(data?.audit?.updatedAt)}
+                    />
+
+                    <ReadField
+                        label="Created By"
+                        value={data?.audit?.createdBy ?? "-"}
+                    />
+
+                    <ReadField
+                        label="Updated By"
+                        value={data?.audit?.updatedBy ?? "-"}
+                    />
+
+                </div>
             </SectionCard>
 
         </div>

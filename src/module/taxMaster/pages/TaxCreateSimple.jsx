@@ -612,6 +612,10 @@ const TaxCreateSimple = ({ onClose }) => {
 
     const taxTypeOptions = [
         {
+            label: "GST",
+            value: "GST",
+        },
+        {
             label: "CGST + SGST",
             value: "CGST_SGST",
         },

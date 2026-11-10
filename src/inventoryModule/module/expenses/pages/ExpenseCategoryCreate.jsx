@@ -1087,7 +1087,7 @@ export default function ExpenseCategoryCreate() {
                                         }
                                         placeholder="Enter category description"
                                         className="
-                                            w-full h-[90px] px-3 py-3
+                                            w-full h-[50px] px-3 py-3
                                             border border-gray-300 rounded-md
                                             text-sm text-gray-700 bg-white
                                             outline-none resize-none transition

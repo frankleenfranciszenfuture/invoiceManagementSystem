@@ -524,7 +524,7 @@ export default function ExpenseDashboard() {
 
                             <div
                                 className="
-                                    relative mt-30 mb-1
+                                    relative mt-10 mb-1
                                     flex h-24 w-24 shrink-0
                                     items-center justify-center
                                     rounded-full bg-gray-100
@@ -562,7 +562,7 @@ export default function ExpenseDashboard() {
                                     font-medium text-gray-800
                                 "
                             >
-                                Keep track of your business expenses
+                                No Expense Records found
                             </p>
 
                             {/* EMPTY STATE DESCRIPTION */}
@@ -604,26 +604,7 @@ export default function ExpenseDashboard() {
                                     </button>
                                 )}
 
-                                {/* IMPORT */}
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        toast(
-                                            "Expense import is not configured yet."
-                                        );
-                                    }}
-                                    className="
-                                        flex items-center gap-2
-                                        whitespace-nowrap rounded-md
-                                        border border-gray-300 bg-white
-                                        px-4 py-2 text-sm text-gray-700
-                                        transition-colors hover:bg-gray-50
-                                    "
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Import File
-                                </button>
                             </div>
                         </div>
                     )}

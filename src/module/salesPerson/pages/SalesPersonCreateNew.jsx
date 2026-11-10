@@ -755,12 +755,12 @@ const SalesPersonCreateNew = ({ onClose }) => {
 
                         <div className="
                             grid grid-cols-1 gap-5
-                            md:grid-cols-2 lg:grid-cols-3
+                            md:grid-cols-2 lg:grid-cols-2
                         ">
 
                             {/* SALES PERSON CODE */}
 
-                            <FormField label="Sales Person Code">
+                            {/* <FormField label="Sales Person Code">
 
                                 <TextInput
                                     value={salesPerson.salesPersonCode}
@@ -775,7 +775,7 @@ const SalesPersonCreateNew = ({ onClose }) => {
                                     maxLength={50}
                                 />
 
-                            </FormField>
+                            </FormField> */}
 
                             {/* SALES PERSON TYPE */}
 

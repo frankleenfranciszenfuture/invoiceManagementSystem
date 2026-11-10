@@ -2877,16 +2877,16 @@ BANKACCOUNT NAME
       }
 
 
-      if (
-        currencyCode === "INR" &&
-        !item.taxMasterId
-      ) {
-        toast.error(
-          `Please select tax for item ${index + 1}`
-        );
+      // if (
+      //   currencyCode === "INR" &&
+      //   !item.taxMasterId
+      // ) {
+      //   toast.error(
+      //     `Please select tax for item ${index + 1}`
+      //   );
 
-        return false;
-      }
+      //   return false;
+      // }
     }
 
 

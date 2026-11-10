@@ -62,11 +62,14 @@ const FormField = ({
     className = "",
 }) => (
     <div className={`flex flex-col gap-1.5 ${className}`}>
-        <label className="text-sm font-medium text-gray-700">
+        <label
+            className={`text-sm font-medium ${required ? "text-red-400" : "text-gray-500"
+                }`}
+        >
             {label}
 
             {required && (
-                <span className="ml-1 text-red-500">*</span>
+                <span className="ml-1 text-red-400">*</span>
             )}
         </label>
 
@@ -725,7 +728,7 @@ const SubCategoryCreateSimple = ({ onClose }) => {
                             grid grid-cols-1 gap-5
                             md:grid-cols-2 lg:grid-cols-3
                         ">
-                            <FormField label="Subcategory Code">
+                            {/* <FormField label="Subcategory Code">
                                 <TextInput
                                     value={formData.subCategoryCode}
                                     onChange={(e) =>
@@ -738,7 +741,7 @@ const SubCategoryCreateSimple = ({ onClose }) => {
                                     disabled={!isEdit}
                                     maxLength={50}
                                 />
-                            </FormField>
+                            </FormField> */}
 
                             <FormField
                                 label="Subcategory Name"

@@ -167,9 +167,7 @@ api.interceptors.response.use(
        ===================================================== */
 
     if (status === 403) {
-      console.warn("🚫 403 Forbidden → logout");
-
-      logoutUser();
+      console.warn("🚫 403 Forbidden → Access denied");
 
       return Promise.reject(error);
     }

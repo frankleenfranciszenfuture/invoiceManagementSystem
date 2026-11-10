@@ -39,6 +39,7 @@ import CustomSelect from "../../../common/custom/CustomSelect";
 import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
 import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
 
+import { closeModal } from "../../ui/uiSlice";
 /* =========================================================
    INITIAL FORM DATA
 ========================================================= */
@@ -194,7 +195,7 @@ const CheckboxField = ({
    MAIN COMPONENT
 ========================================================= */
 
-const EmailSignatureCreateSimple = ({ onClose }) => {
+const EmailSignatureCreateSimple = ({ isModal = false, onClose }) => {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -674,6 +675,16 @@ const EmailSignatureCreateSimple = ({ onClose }) => {
             }
 
             closeAfterSubmit();
+            // Save & Close
+            if (onClose) {
+                onClose();
+            } else if (isModal) {
+                dispatch(closeModal());
+            } else {
+                navigate("/settings/emailSignatures");
+            }
+
+            dispatch(resetEmailSignatureForm());
 
 
         } catch (error) {

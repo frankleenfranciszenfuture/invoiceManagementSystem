@@ -486,7 +486,7 @@ export default function ExpenseTable({
             overflow-x-auto overflow-y-visible
             rounded-xl border border-gray-200 bg-white
         ">
-            <table className="w-full">
+            <table className="w-full min-w-[950px]">
 
                 {/* TABLE HEADER */}
 
@@ -501,8 +501,8 @@ export default function ExpenseTable({
                             "Expense Date",
                             "Vendor",
                             "Total Amount",
-                            "Expense Status",
-                            "Payment Status",
+                            "Ex-Status",
+                            "Pay-Status",
                             "Actions",
                         ].map((header) => (
                             <th
@@ -564,6 +564,7 @@ export default function ExpenseTable({
                                                 className="
                                                     truncate font-medium
                                                     text-gray-800
+                                                    whitespace-nowrap
                                                 "
                                                 title={expense.expenseNo || ""}
                                             >
@@ -586,6 +587,7 @@ export default function ExpenseTable({
                                         className="
                                             max-w-[180px] truncate
                                             font-medium text-gray-700
+                                            
                                         "
                                         title={expense.categoryName}
                                     >
@@ -625,8 +627,10 @@ export default function ExpenseTable({
                                             size={14}
                                             className="shrink-0 text-gray-400"
                                         />
-
-                                        <p
+                                        <span className="flex ">
+                                            {expense.vendorName}
+                                        </span>
+                                        {/* <p
                                             className="
                                                 max-w-[160px] truncate
                                                 font-medium text-gray-700
@@ -634,7 +638,7 @@ export default function ExpenseTable({
                                             title={expense.vendorName}
                                         >
                                             {expense.vendorName}
-                                        </p>
+                                        </p> */}
                                     </div>
                                 </td>
 
@@ -768,22 +772,22 @@ export default function ExpenseTable({
                                                 type="button"
                                                 onClick={() => handleRejectExpense(expense)}
                                                 className="
-            group relative
-            flex h-8 w-8
-            items-center justify-center
-            rounded-lg
-            bg-red-50 text-red-600
-            transition
-            hover:bg-red-100
-            hover:text-red-700
-        "
+                                                group relative
+                                                flex h-8 w-8
+                                                items-center justify-center
+                                                rounded-lg
+                                                bg-red-50 text-red-600
+                                                transition
+                                                hover:bg-red-100
+                                                hover:text-red-700
+                                            "
                                             >
                                                 <X size={16} />
                                                 <ToolTipText text="Reject Expense" position="bottom" />
                                             </button>
                                         )}
 
-                                        {canEditExpense && (
+                                        {canEditExpense && isDraft && (
                                             <button
                                                 type="button"
                                                 onClick={() =>

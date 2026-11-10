@@ -884,12 +884,12 @@ export default function InvoiceTable({
                                                 onClick={() => handleSendForApproval(invoice)}
                                                 title="Send for Approval"
                                                 className="
-            group relative flex h-8 w-8
-            items-center justify-center
-            rounded-lg bg-blue-50
-            text-blue-600 transition
-            hover:bg-blue-100
-        "
+                                                        group relative flex h-8 w-8
+                                                        items-center justify-center
+                                                        rounded-lg bg-blue-50
+                                                        text-blue-600 transition
+                                                        hover:bg-blue-100
+                                                    "
                                             >
                                                 <Send size={16} />
 
@@ -910,7 +910,7 @@ export default function InvoiceTable({
                                                 }
                                                 title="View"
                                                 className="
-                                                    flex h-8 w-8
+                                                    group relative flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-blue-50
                                                     text-blue-600 transition
@@ -919,6 +919,10 @@ export default function InvoiceTable({
                                                 "
                                             >
                                                 <Eye size={16} />
+                                                <ToolTipText
+                                                    text="View"
+                                                    position="bottom"
+                                                />
                                             </button>
                                         )}
 
@@ -935,7 +939,7 @@ export default function InvoiceTable({
                                                 }
                                                 title="Edit"
                                                 className="
-                                                    flex h-8 w-8
+                                                    group relative flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-green-50
                                                     text-green-600 transition
@@ -946,6 +950,10 @@ export default function InvoiceTable({
                                                 "
                                             >
                                                 <Edit size={16} />
+                                                <ToolTipText
+                                                    text="Edit"
+                                                    position="bottom"
+                                                />
                                             </button>
                                         )}
 
@@ -959,7 +967,7 @@ export default function InvoiceTable({
                                                 }
                                                 title="Delete"
                                                 className="
-                                                    flex h-8 w-8
+                                                    group relative flex h-8 w-8
                                                     items-center justify-center
                                                     rounded-lg bg-red-50
                                                     text-red-600 transition
@@ -968,6 +976,10 @@ export default function InvoiceTable({
                                                 "
                                             >
                                                 <Trash2 size={16} />
+                                                <ToolTipText
+                                                    text="Delete"
+                                                    position="bottom"
+                                                />
                                             </button>
                                         )}
                                     </div>

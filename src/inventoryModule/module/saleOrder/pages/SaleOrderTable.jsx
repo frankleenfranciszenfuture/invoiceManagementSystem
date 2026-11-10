@@ -30,7 +30,9 @@ import toast from "react-hot-toast";
 import Pagination from "../../../../common/pagination/table/Pagination";
 import ToolTipText from "../../../../common/toolTip/ToolTipText";
 
-export default function SaleOrderTable({ salesOrders = [] }) {
+export default function SaleOrderTable({ salesOrders = [],
+    appliedFilters = {},
+    selectedStatus = "ALL", }) {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
@@ -310,8 +312,13 @@ export default function SaleOrderTable({ salesOrders = [] }) {
     const refreshSalesOrders = (page = pageNumber, size = pageSize) => {
         dispatch(
             fetchAllSalesOrders({
+                ...appliedFilters,
                 page: Number(page) || 0,
                 size: Number(size) || 10,
+                salesOrderStatus:
+                    selectedStatus === "ALL"
+                        ? undefined
+                        : selectedStatus,
             })
         );
     };

@@ -41,6 +41,7 @@ const initialPurchaseOrderCreate = {
   currencyId: "",
   discountType: "PERCENTAGE",
   discountValue: 0,
+  shippingAmount: 0,
   notes: "",
   items: [{ ...emptyPurchaseOrderItem }],
 };

@@ -1,43 +1,25 @@
 
-import React, { useEffect, useMemo } from "react";
-
+import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-
-import {
-    Plus,
-    Download,
-    ShoppingCart,
-} from "lucide-react";
-
+import { Plus, Download, ShoppingCart } from "lucide-react";
 import toast from "react-hot-toast";
 
 import SaleOrderTable from "../pages/SaleOrderTable";
 import NavbarSaleOrder from "../components/nav/NavbarSaleOrder";
 
-import {
-    setSalesOrderStatus,
-    setSelectedSalesOrderView,
-} from "../slices/saleOrderViewSlice";
-
+import { setSalesOrderStatus, setSelectedSalesOrderView } from "../slices/saleOrderViewSlice";
 import { clearSalesOrderError } from "../slices/salesOrderSlice";
 
 import { openModal } from "../../../../module/ui/uiSlice";
-
-import {
-    getUserPermission,
-} from "../../../../module/menuPermission/thunks/menuPermissionThunks";
+import { getUserPermission } from "../../../../module/menuPermission/thunks/menuPermissionThunks";
 
 import InvoiceSkeleton from "../../../../common/loader/InvoiceSkeleton";
 import SalesOrderOverview from "./SalesOrderOverview";
 
-
 export default function SaleOrderDashboard() {
     const dispatch = useDispatch();
 
-    // ============================================================
     // AUTH STATE
-    // ============================================================
-
     const user = useSelector((state) => state.auth?.user);
 
     const isAuthenticated = useSelector(
@@ -48,10 +30,7 @@ export default function SaleOrderDashboard() {
         (state) => state.auth?.authChecking === true
     );
 
-    // ============================================================
     // PERMISSION STATE
-    // ============================================================
-
     const permissions = useSelector((state) =>
         Array.isArray(state.menuPermission?.userPermissions)
             ? state.menuPermission.userPermissions
@@ -68,20 +47,14 @@ export default function SaleOrderDashboard() {
             state.menuPermission?.userPermissionsLoaded === true
     );
 
-    // ============================================================
     // NORMALIZE HELPERS
-    // ============================================================
-
     const normalizeModule = (value) =>
         String(value ?? "").trim().toLowerCase();
 
     const normalizeAction = (value) =>
         String(value ?? "").trim().toUpperCase();
 
-    // ============================================================
     // ROLE
-    // ============================================================
-
     const roleName =
         user?.roleName ||
         user?.role?.roleName ||
@@ -97,14 +70,9 @@ export default function SaleOrderDashboard() {
 
     const hasFullAccess = isSuperAdmin || isAdmin;
 
-    // ============================================================
     // HAS PERMISSION
-    // ============================================================
-
     const hasPermission = (moduleName, actionName) => {
-        if (hasFullAccess) {
-            return true;
-        }
+        if (hasFullAccess) return true;
 
         const requestedModule = normalizeModule(moduleName);
         const requestedAction = normalizeAction(actionName);
@@ -117,9 +85,7 @@ export default function SaleOrderDashboard() {
                 ""
             );
 
-            if (permissionModule !== requestedModule) {
-                return false;
-            }
+            if (permissionModule !== requestedModule) return false;
 
             if (
                 permission?.active === false ||
@@ -178,18 +144,11 @@ export default function SaleOrderDashboard() {
         });
     };
 
-    // ============================================================
     // SALES ORDER PERMISSIONS
-    // ============================================================
-
     const canViewSalesOrder = hasPermission("Sales Orders", "VIEW");
     const canCreateSalesOrder = hasPermission("Sales Orders", "CREATE");
 
-    // ============================================================
     // SALES ORDER REDUX STATE
-    // Supports either state.saleOrder or state.salesOrder.
-    // ============================================================
-
     const salesOrders = useSelector(
         (state) => state.salesOrder?.salesOrders || []
     );
@@ -202,27 +161,15 @@ export default function SaleOrderDashboard() {
         (state) => state.salesOrder?.error || null
     );
 
-
-    // ============================================================
-    // SALES ORDER FILTER STATE
-    // ============================================================
-
-    const salesOrderStatus = useSelector(
-        (state) => state.saleOrderView?.salesOrderStatus || "ALL"
+    const pagination = useSelector(
+        (state) => state.salesOrder?.pagination || {}
     );
 
-    // ============================================================
     // LOAD USER PERMISSIONS
-    // ============================================================
-
     useEffect(() => {
-        if (authChecking || !isAuthenticated || hasFullAccess) {
-            return;
-        }
+        if (authChecking || !isAuthenticated || hasFullAccess) return;
 
-        if (permissionsLoaded || permissionLoading) {
-            return;
-        }
+        if (permissionsLoaded || permissionLoading) return;
 
         dispatch(getUserPermission());
     }, [
@@ -234,48 +181,9 @@ export default function SaleOrderDashboard() {
         dispatch,
     ]);
 
-
-
-    // ============================================================
-    // URL STATUS → REDUX
-    // ============================================================
-
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const urlStatus = params.get("salesOrderStatus");
-
-        if (!urlStatus) {
-            return;
-        }
-
-        const normalizedStatus = urlStatus.trim().toUpperCase();
-
-        const statusLabels = {
-            ALL: "All Sales Orders",
-            DRAFT: "Draft Sales Orders",
-            CONFIRMED: "Confirmed Sales Orders",
-            DISPATCHED: "Dispatched Sales Orders",
-            CANCELLED: "Cancelled Sales Orders",
-        };
-
-        if (!statusLabels[normalizedStatus]) {
-            return;
-        }
-
-        dispatch(setSalesOrderStatus(normalizedStatus));
-        dispatch(
-            setSelectedSalesOrderView(statusLabels[normalizedStatus])
-        );
-    }, [dispatch]);
-
-    // ============================================================
     // CLEAR ERROR
-    // ============================================================
-
     useEffect(() => {
-        if (!error) {
-            return;
-        }
+        if (!error) return;
 
         const timer = setTimeout(() => {
             dispatch(clearSalesOrderError());
@@ -284,39 +192,9 @@ export default function SaleOrderDashboard() {
         return () => clearTimeout(timer);
     }, [error, dispatch]);
 
-    // ============================================================
-    // FILTER SALES ORDERS
-    // API RESPONSE USES "status", SO SUPPORT BOTH FIELD NAMES.
-    // ============================================================
-
-    const filteredSalesOrders = useMemo(() => {
-        const selectedStatus = String(salesOrderStatus || "ALL")
-            .trim()
-            .toUpperCase();
-
-        if (selectedStatus === "ALL") {
-            return salesOrders;
-        }
-
-        return salesOrders.filter((order) => {
-            const orderStatus = String(
-                order?.status || order?.salesOrderStatus || ""
-            )
-                .trim()
-                .toUpperCase();
-
-            return orderStatus === selectedStatus;
-        });
-    }, [salesOrders, salesOrderStatus]);
-
-    // ============================================================
     // CREATE SALES ORDER
-    // ============================================================
-
     const handleCreateSalesOrder = () => {
-        if (!isAuthenticated) {
-            return;
-        }
+        if (!isAuthenticated) return;
 
         if (
             !hasFullAccess &&
@@ -335,10 +213,7 @@ export default function SaleOrderDashboard() {
         dispatch(openModal({ type: "addSaleOrder" }));
     };
 
-    // ============================================================
     // AUTH CHECKING
-    // ============================================================
-
     if (authChecking) {
         return <InvoiceSkeleton />;
     }
@@ -347,10 +222,7 @@ export default function SaleOrderDashboard() {
         return null;
     }
 
-    // ============================================================
     // PERMISSION LOADING
-    // ============================================================
-
     if (
         !hasFullAccess &&
         (permissionLoading || !permissionsLoaded)
@@ -358,10 +230,7 @@ export default function SaleOrderDashboard() {
         return <InvoiceSkeleton />;
     }
 
-    // ============================================================
     // VIEW PERMISSION DENIED
-    // ============================================================
-
     if (!canViewSalesOrder) {
         return (
             <div className="flex h-screen items-center justify-center bg-gray-50 font-sans">
@@ -382,20 +251,48 @@ export default function SaleOrderDashboard() {
         );
     }
 
-    // ============================================================
     // INITIAL SALES ORDER LOADING
-    // ============================================================
 
-    if (loading && salesOrders.length === 0) {
-        return <InvoiceSkeleton />;
-    }
+    <div className="mt-2">
+        {loading ? (
+            <InvoiceSkeleton />
+        ) : salesOrders.length > 0 ? (
+            <SaleOrderTable
+                salesOrders={salesOrders}
+            />
+        ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+                    <ShoppingCart
+                        size={28}
+                        className="text-blue-500"
+                    />
+                </div>
 
-    // ============================================================
+                <h3 className="text-base font-semibold text-gray-800">
+                    No Sales Orders Found
+                </h3>
+
+                <p className="mt-1 max-w-sm text-sm text-gray-500">
+                    No sales orders are available for the selected filters.
+                </p>
+
+                {canCreateSalesOrder && (
+                    <button
+                        type="button"
+                        onClick={handleCreateSalesOrder}
+                        className="mt-5 inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                    >
+                        <Plus size={16} />
+                        Create Sales Order
+                    </button>
+                )}
+            </div>
+        )}
+    </div>
+
+
     // PAGE
-    // ============================================================
-
-    {/* PAGE */ }
-
     return (
         <div className="flex h-screen overflow-hidden bg-gray-50 font-sans text-[13px]">
             <div className="min-h-0 flex-1 overflow-y-auto bg-white">
@@ -403,31 +300,54 @@ export default function SaleOrderDashboard() {
 
                     <NavbarSaleOrder />
 
-                    {/* SALES ORDER OVERVIEW */}
                     <SalesOrderOverview
-                        canViewSalesOrder={canViewSalesOrder}
-                        isAuthenticated={isAuthenticated}
-                        authChecking={authChecking}
+                        salesOrders={salesOrders}
+                        pagination={pagination}
+                        loading={loading}
                     />
 
                     {error && (
                         <div className="mx-2 mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
                             {typeof error === "string"
                                 ? error
-                                : error?.message || "Unable to load sales orders."}
+                                : error?.message ||
+                                "Unable to load sales orders."}
                         </div>
                     )}
 
-                    {/* EXISTING TABLE / EMPTY STATE */}
                     <div className="mt-2">
-                        {filteredSalesOrders.length > 0 ? (
+                        {salesOrders.length > 0 ? (
                             <SaleOrderTable
-                                salesOrders={filteredSalesOrders}
+                                salesOrders={salesOrders}
                             />
                         ) : (
-                            // Keep your existing empty state here
-                            <div>
-                                {/* Your existing empty state JSX */}
+                            <div className="flex flex-col items-center justify-center py-16 text-center">
+                                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+                                    <ShoppingCart
+                                        size={28}
+                                        className="text-blue-500"
+                                    />
+                                </div>
+
+                                <h3 className="text-base font-semibold text-gray-800">
+                                    No Sales Orders Found
+                                </h3>
+
+                                <p className="mt-1 max-w-sm text-sm text-gray-500">
+                                    No sales orders are available for the
+                                    selected filters.
+                                </p>
+
+                                {canCreateSalesOrder && (
+                                    <button
+                                        type="button"
+                                        onClick={handleCreateSalesOrder}
+                                        className="mt-5 inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                                    >
+                                        <Plus size={16} />
+                                        Create Sales Order
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

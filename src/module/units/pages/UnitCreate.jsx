@@ -27,7 +27,7 @@ import { resetUnitForm, setCreatedUnitSelection } from "../slices/unitSlice";
 
 import CustomSelect from "../../../common/custom/CustomSelect";
 
-import { closeModal } from "../../../module/ui/uiSlice";
+import { openModal, closeModal } from "../../../module/ui/uiSlice";
 
 import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
 import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
@@ -54,14 +54,21 @@ const FormField = ({
     className = "",
 }) => (
     <div className={`flex flex-col gap-1.5 ${className}`}>
-        <label className="text-sm font-medium text-gray-700">
+        <label
+            className={`text-sm font-medium ${required ? "text-red-400" : "text-gray-500"
+                }`}
+        >
             {label}
-            {required && <span className="ml-1 text-red-500">*</span>}
+
+            {required && (
+                <span className="ml-1 text-red-400">*</span>
+            )}
         </label>
 
         {children}
     </div>
 );
+
 
 const TextInput = ({
     value,
@@ -140,7 +147,7 @@ const SectionHeading = ({
    MAIN COMPONENT
 ========================================================= */
 
-const UnitCreate = ({ onClose }) => {
+const UnitCreate = ({ isModal = false, onClose }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
@@ -258,7 +265,7 @@ const UnitCreate = ({ onClose }) => {
                 return;
             }
 
-            if (modalOpen) {
+            if (isModal) {
                 dispatch(closeModal());
                 return;
             }
@@ -427,7 +434,7 @@ const UnitCreate = ({ onClose }) => {
             // Save & Close
             if (onClose) {
                 onClose();
-            } else if (modalOpen) {
+            } else if (isModal) {
                 dispatch(closeModal());
             } else {
                 navigate("/settings/units");

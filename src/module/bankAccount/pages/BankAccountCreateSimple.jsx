@@ -78,17 +78,21 @@ const FormField = ({
     className = "",
 }) => (
     <div className={`flex flex-col gap-1.5 ${className}`}>
-        <label className="text-sm font-medium text-gray-700">
+        <label
+            className={`text-sm font-medium ${required ? "text-red-400" : "text-gray-500"
+                }`}
+        >
             {label}
 
             {required && (
-                <span className="ml-1 text-red-500">*</span>
+                <span className="ml-1 text-red-400">*</span>
             )}
         </label>
 
         {children}
     </div>
 );
+
 
 const TextInput = ({
     value,
@@ -129,7 +133,7 @@ const TextAreaField = ({
         placeholder={placeholder}
         rows={rows}
         className="
-            w-full resize-none rounded-lg border border-gray-200
+            w-full h-[50px] resize-none rounded-lg border border-gray-200
             bg-white px-3 py-2.5 text-sm text-gray-700
             outline-none transition
             placeholder:text-gray-400
@@ -728,6 +732,7 @@ const BankAccountCreateSimple = ({ onClose }) => {
                 return;
             }
 
+            navigate("/settings/bankAccount");
             closeAfterSubmit();
 
 

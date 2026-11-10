@@ -1,32 +1,18 @@
-
-import React, { useEffect, useState, useCallback } from "react";
+import React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
-    Search,
     ShoppingCart,
     FileText,
     CheckCircle,
-    Truck,
     XCircle,
-    Calendar,
-    RotateCcw,
-    Filter,
 } from "lucide-react";
-
-import toast from "react-hot-toast";
-
-import { fetchAllSalesOrders } from "../thunks/salesOrderThunks";
 
 import {
     setSalesOrderStatus,
     setSelectedSalesOrderView,
 } from "../slices/saleOrderViewSlice";
-
-/* ============================================================
-   STATUS CARDS
-============================================================ */
 
 const STATUS_CARDS = [
     {
@@ -47,7 +33,6 @@ const STATUS_CARDS = [
         icon: CheckCircle,
         color: "green",
     },
-
     {
         label: "Cancelled Orders",
         value: "CANCELLED",
@@ -56,35 +41,13 @@ const STATUS_CARDS = [
     },
 ];
 
-/* ============================================================
-   STATUS LABELS
-============================================================ */
-
 const STATUS_LABELS = {
     ALL: "All Sales Orders",
     DRAFT: "Draft Sales Orders",
     CONFIRMED: "Confirmed Sales Orders",
-
+    DISPATCHED: "Dispatched Sales Orders",
     CANCELLED: "Cancelled Sales Orders",
 };
-
-/* ============================================================
-   INITIAL FILTERS
-============================================================ */
-
-const INITIAL_FILTERS = {
-    orderNo: "",
-    partyType: "",
-    warehouseId: "",
-    fromDate: "",
-    toDate: "",
-    page: 0,
-    size: 10,
-};
-
-/* ============================================================
-   CARD STYLES
-============================================================ */
 
 const CARD_STYLES = {
     blue: {
@@ -102,11 +65,6 @@ const CARD_STYLES = {
         active: "border-green-500 ring-2 ring-green-100",
         hover: "hover:border-green-400",
     },
-    purple: {
-        icon: "bg-purple-50 text-purple-600",
-        active: "border-purple-500 ring-2 ring-purple-100",
-        hover: "hover:border-purple-400",
-    },
     red: {
         icon: "bg-red-50 text-red-500",
         active: "border-red-500 ring-2 ring-red-100",
@@ -114,241 +72,82 @@ const CARD_STYLES = {
     },
 };
 
-/* ============================================================
-   COMPONENT
-============================================================ */
-
 export default function SalesOrderOverview({
-    canViewSalesOrder,
-    isAuthenticated,
-    authChecking,
+    salesOrders = [],
+    pagination = {},
+    loading = false,
 }) {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-
-    /* ========================================================
-       REDUX STATE
-    ======================================================== */
-
-    // IMPORTANT: Store key is salesOrder, not saleOrder.
-    const salesOrders = useSelector(
-        (state) => state.salesOrder?.salesOrders || []
-    );
-
-    const loading = useSelector(
-        (state) => state.salesOrder?.loading || false
-    );
-
-    const pagination = useSelector(
-        (state) => state.salesOrder?.pagination || {}
-    );
+    const [searchParams] = useSearchParams();
 
     const selectedStatus = useSelector(
         (state) => state.saleOrderView?.salesOrderStatus || "ALL"
     );
 
-    /* ========================================================
-       FILTER STATE
-    ======================================================== */
-
-    const [filters, setFilters] = useState(INITIAL_FILTERS);
-
-    // Filters that have actually been applied.
-    const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTERS);
-
-    /* ========================================================
-       LOAD SALES ORDERS
-    ======================================================== */
-
-    const loadSalesOrders = useCallback(
-        (filterValues = appliedFilters, status = selectedStatus) => {
-            if (
-                authChecking ||
-                !isAuthenticated ||
-                !canViewSalesOrder
-            ) {
-                return;
-            }
-
-            dispatch(
-                fetchAllSalesOrders({
-                    ...filterValues,
-
-                    warehouseId: filterValues.warehouseId
-                        ? Number(filterValues.warehouseId)
-                        : undefined,
-
-                    salesOrderStatus:
-                        status === "ALL" ? undefined : status,
-                })
-            );
-        },
-        [
-            dispatch,
-            appliedFilters,
-            selectedStatus,
-            authChecking,
-            isAuthenticated,
-            canViewSalesOrder,
-        ]
-    );
-
-    /* ========================================================
-       INITIAL FETCH + STATUS CHANGE FETCH
-    ======================================================== */
-
-    useEffect(() => {
-        if (
-            authChecking ||
-            !isAuthenticated ||
-            !canViewSalesOrder
-        ) {
-            return;
-        }
-
-        loadSalesOrders(appliedFilters, selectedStatus);
-    }, [
-        authChecking,
-        isAuthenticated,
-        canViewSalesOrder,
-        selectedStatus,
-        appliedFilters,
-    ]);
-
-    /* ========================================================
-       ORDER STATUS
-    ======================================================== */
-
     const getOrderStatus = (order) =>
-        String(order?.salesOrderStatus || "").toUpperCase();
+        String(
+            order?.status ||
+            order?.salesOrderStatus ||
+            ""
+        ).trim().toUpperCase();
 
-    /* ========================================================
-       STATISTICS
-    ======================================================== */
-
+    /*
+     * Prefer server-provided status counts if available.
+     * Otherwise, status counts represent the currently loaded page.
+     */
     const statistics = {
         ALL: pagination.totalElements ?? salesOrders.length,
 
-        DRAFT: salesOrders.filter(
-            (order) => getOrderStatus(order) === "DRAFT"
-        ).length,
+        DRAFT:
+            pagination.statusCounts?.DRAFT ??
+            pagination.draftCount ??
+            salesOrders.filter(
+                (order) => getOrderStatus(order) === "DRAFT"
+            ).length,
 
-        CONFIRMED: salesOrders.filter(
-            (order) => getOrderStatus(order) === "CONFIRMED"
-        ).length,
+        CONFIRMED:
+            pagination.statusCounts?.CONFIRMED ??
+            pagination.confirmedCount ??
+            salesOrders.filter(
+                (order) => getOrderStatus(order) === "CONFIRMED"
+            ).length,
 
-        // DISPATCHED: salesOrders.filter(
-        //     (order) => getOrderStatus(order) === "DISPATCHED"
-        // ).length,
-
-        CANCELLED: salesOrders.filter(
-            (order) => getOrderStatus(order) === "CANCELLED"
-        ).length,
+        CANCELLED:
+            pagination.statusCounts?.CANCELLED ??
+            pagination.cancelledCount ??
+            salesOrders.filter(
+                (order) => getOrderStatus(order) === "CANCELLED"
+            ).length,
     };
-
-    /* ========================================================
-       STATUS CARD CLICK
-    ======================================================== */
 
     const handleStatusChange = (status) => {
-        const label = STATUS_LABELS[status];
-
-        if (!label || status === selectedStatus) return;
-
-        dispatch(setSalesOrderStatus(status));
-        dispatch(setSelectedSalesOrderView(label));
-
-        // Reset pagination when changing status.
-        const updatedFilters = {
-            ...appliedFilters,
-            page: 0,
-        };
-
-        setFilters(updatedFilters);
-        setAppliedFilters(updatedFilters);
-
-        // Update URL.
-        navigate(
-            `/inventory/salesOrders?salesOrderStatus=${status}`,
-            { replace: false }
-        );
-
-        // The useEffect fetches when selectedStatus changes.
-    };
-
-    /* ========================================================
-       FILTER INPUT CHANGE
-    ======================================================== */
-
-    const handleFilterChange = (event) => {
-        const { name, value } = event.target;
-
-        setFilters((previous) => ({
-            ...previous,
-            [name]: value,
-            page: 0,
-        }));
-    };
-
-    /* ========================================================
-       APPLY FILTERS
-    ======================================================== */
-
-    const handleApplyFilters = () => {
         if (
-            filters.fromDate &&
-            filters.toDate &&
-            filters.fromDate > filters.toDate
+            !STATUS_LABELS[status] ||
+            status === selectedStatus ||
+            loading
         ) {
-            toast.error("From date cannot be after To date.");
             return;
         }
 
-        const updatedFilters = {
-            ...filters,
-            page: 0,
-        };
+        dispatch(setSalesOrderStatus(status));
+        dispatch(
+            setSelectedSalesOrderView(STATUS_LABELS[status])
+        );
 
-        setAppliedFilters(updatedFilters);
+        const params = new URLSearchParams(searchParams);
 
-        // Fetch is triggered by appliedFilters change.
+        params.set("salesOrderStatus", status);
+        params.delete("page");
+
+        navigate(
+            `/inventory/salesOrders?${params.toString()}`,
+            { replace: false }
+        );
     };
-
-    /* ========================================================
-       RESET FILTERS
-    ======================================================== */
-
-    const handleResetFilters = () => {
-        const resetFilters = {
-            ...INITIAL_FILTERS,
-        };
-
-        setFilters(resetFilters);
-        setAppliedFilters(resetFilters);
-
-        // Fetch is triggered by appliedFilters change.
-    };
-
-    /* ========================================================
-       REFRESH
-    ======================================================== */
-
-    const handleRefresh = () => {
-        loadSalesOrders(appliedFilters, selectedStatus);
-    };
-
-    /* ========================================================
-       RENDER
-    ======================================================== */
 
     return (
         <div className="space-y-5">
-
-            {/* HEADER */}
-
-            <div className="flex flex-wrap items-center justify-between gap-3">
-
-            </div>
 
             {/* STATUS CARDS */}
 
@@ -370,12 +169,13 @@ export default function SalesOrderOverview({
                                 bg-white p-4 text-left shadow-sm
                                 transition-all duration-300
                                 hover:-translate-y-1 hover:shadow-lg
-                                disabled:cursor-wait
+                                disabled:cursor-wait disabled:opacity-60
                                 ${active ? style.active : "border-gray-100"}
                                 ${style.hover}
                             `}
                         >
                             <div className="flex items-center justify-between">
+
                                 <div>
                                     <p className="text-sm font-medium text-gray-500">
                                         {card.label}
@@ -391,7 +191,6 @@ export default function SalesOrderOverview({
                                         flex h-12 w-12 items-center justify-center
                                         rounded-xl transition-all duration-300
                                         group-hover:scale-110
-                                        group-hover:rotate-6
                                         ${style.icon}
                                     `}
                                 >
@@ -400,13 +199,14 @@ export default function SalesOrderOverview({
                             </div>
 
                             <div className="mt-4 flex items-center justify-between">
+
                                 <span className="text-xs text-gray-400">
                                     {active
                                         ? "Currently selected"
                                         : "View orders"}
                                 </span>
 
-                                <span className="text-xs font-semibold text-blue-500 transition-transform group-hover:translate-x-1">
+                                <span className="text-xs font-semibold text-blue-500">
                                     View →
                                 </span>
                             </div>
@@ -416,13 +216,10 @@ export default function SalesOrderOverview({
 
             </div>
 
-            {/* FILTER SECTION */}
-
-
-
             {/* SELECTED STATUS */}
 
             <div className="flex flex-wrap items-center justify-between gap-2">
+
                 <p className="text-sm text-gray-500">
                     Showing:{" "}
                     <span className="font-semibold text-gray-800">
@@ -433,6 +230,7 @@ export default function SalesOrderOverview({
                 <p className="text-xs text-gray-400">
                     {pagination.totalElements ?? salesOrders.length} total records
                 </p>
+
             </div>
 
         </div>
