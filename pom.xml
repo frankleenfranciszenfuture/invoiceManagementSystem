@@ -154,6 +154,20 @@
 			<version>${pdfbox.version}</version>
 		</dependency>
 
+		<!-- Spring AOP -->
+		<!-- Spring AOP -->
+		<!-- Spring Boot 4 AspectJ / AOP -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aspectj</artifactId>
+		</dependency>
+
+		<!-- Jackson 2 Compatibility for Spring Boot 4 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-jackson2</artifactId>
+		</dependency>
+
 	</dependencies>
 
 	<build>

@@ -1,10 +1,12 @@
 package com.ims.service.impl.user;
 
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.user.UserRequest;
 import com.ims.dtos.user.UserResponse;
 import com.ims.entity.RoleEntity;
 import com.ims.entity.UserEntity;
+import com.ims.enums.audit.AuditAction;
 import com.ims.mapper.user.UserMapper;
 import com.ims.repository.UserRepository;
 import com.ims.service.impl.common.CurrentUserService;
@@ -40,6 +42,11 @@ public class UserServiceImpl implements UserService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "USER",
+            description = "User created"
+    )
     public UserResponse createUser(UserRequest request) {
 
         UserEntity currentUser =
@@ -137,6 +144,12 @@ public class UserServiceImpl implements UserService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "USER",
+            recordId = "#p0",
+            description = "User updated"
+    )
     public UserResponse updateUser(
             Long id,
             UserRequest request) {
@@ -194,6 +207,12 @@ public class UserServiceImpl implements UserService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "USER",
+            recordId = "#p0",
+            description = "User deleted"
+    )
     public void deleteUser(Long id) {
 
         userRepository.delete(

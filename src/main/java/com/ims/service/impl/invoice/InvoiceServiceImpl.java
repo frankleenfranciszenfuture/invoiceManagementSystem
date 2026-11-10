@@ -2,6 +2,7 @@ package com.ims.service.impl.invoice;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.exchange.ExchangeRateResponseDTO;
 import com.ims.dtos.invoice.InvoiceCreateRequest;
 import com.ims.dtos.invoice.InvoiceItemRequest;
@@ -10,6 +11,7 @@ import com.ims.dtos.invoice.InvoiceSearchRequest;
 import com.ims.dtos.invoice.InvoiceUpdateRequest;
 import com.ims.entity.*;
 import com.ims.enums.InvoiceStatus;
+import com.ims.enums.audit.AuditAction;
 import com.ims.exception.BadRequestException;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.exception.ValidationException;
@@ -83,6 +85,11 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "INVOICE",
+            description = "Invoice created"
+    )
     public ApiResponse<InvoiceResponse> createInvoice(
             InvoiceCreateRequest request
     ) {
@@ -503,6 +510,12 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "INVOICE",
+            recordId = "#request.id",
+            description = "Invoice updated"
+    )
     public ApiResponse<InvoiceResponse> updateInvoice(
             Long id,
             InvoiceUpdateRequest request
@@ -794,6 +807,12 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.CANCEL,
+            entity = "INVOICE",
+            recordId = "#id",
+            description = "Invoice canceled"
+    )
     public ApiResponse<InvoiceResponse> cancelInvoice(
             Long id
     ) {
@@ -885,6 +904,12 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.APPROVE,
+            entity = "INVOICE",
+            recordId = "#id",
+            description = "Invoice deleted"
+    )
     public ApiResponse<InvoiceResponse> approveInvoice(Long id) {
 
         log.info("Approving Invoice : {}", id);
@@ -947,6 +972,12 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "INVOICE",
+            recordId = "#id",
+            description = "Invoice deleted"
+    )
     public ApiResponse<Void> deleteInvoice(
             Long id
     ) {
