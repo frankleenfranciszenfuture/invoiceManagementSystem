@@ -5,6 +5,7 @@ import com.ims.enums.SaleOrderPartyType;
 import com.ims.enums.SaleOrderStatus;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -85,6 +86,15 @@ public class SalesOrderEntity extends BaseEntity {
 
     @Column(name = "discount_value", precision = 19, scale = 4)
     private BigDecimal discountValue = BigDecimal.ZERO;
+
+
+    @Column(
+            name = "shipping_amount",
+            precision = 19,
+            scale = 2,
+            nullable = false
+    )
+    private BigDecimal shippingAmount = BigDecimal.ZERO;
 
     // Financial summary
 

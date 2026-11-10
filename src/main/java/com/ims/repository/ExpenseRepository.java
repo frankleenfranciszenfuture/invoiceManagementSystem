@@ -25,6 +25,8 @@ public interface ExpenseRepository
 
     boolean existsByExpenseCategoryId(Long categoryId);
 
+    Optional<ExpenseEntity> findTopByOrderByIdDesc();
+
     long countByExpenseCategoryIdAndExpenseStatusNot(
             Long categoryId,
             ExpenseStatus expenseStatus

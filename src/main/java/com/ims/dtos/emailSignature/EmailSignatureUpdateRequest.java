@@ -19,4 +19,8 @@ public class EmailSignatureUpdateRequest {
     @NotBlank(message = "Signature content is required")
     private String signatureContent;
 
+    private Boolean defaultForNewMessages;
+
+    private Boolean defaultForReplies;
+
 }

@@ -109,7 +109,10 @@ public class SaleOrderServiceImpl implements SaleOrderService {
         salesOrder.setDiscountValue(
                 zeroIfNull(request.getDiscountValue())
         );
-
+        salesOrder.setShippingAmount(
+                zeroIfNull(request.getShippingAmount())
+                        .setScale(2, RoundingMode.HALF_UP)
+        );
         salesOrder.setActive(true);
 
         for (SalesOrderItemRequest itemRequest : request.getItems()) {
@@ -264,6 +267,11 @@ public class SaleOrderServiceImpl implements SaleOrderService {
         salesOrder.setDiscountType(request.getDiscountType());
         salesOrder.setDiscountValue(
                 zeroIfNull(request.getDiscountValue())
+        );
+
+        salesOrder.setShippingAmount(
+                zeroIfNull(request.getShippingAmount())
+                        .setScale(2, RoundingMode.HALF_UP)
         );
 
         // Do not update status from the request.
@@ -1001,6 +1009,7 @@ public class SaleOrderServiceImpl implements SaleOrderService {
             totalSgstAmount = totalSgstAmount.add(sgstAmount);
             totalIgstAmount = totalIgstAmount.add(igstAmount);
             totalTaxAmount = totalTaxAmount.add(itemTaxAmount);
+
             grandTotal = grandTotal.add(itemTotalAmount);
         }
 
@@ -1008,8 +1017,14 @@ public class SaleOrderServiceImpl implements SaleOrderService {
         totalSgstAmount = money(totalSgstAmount);
         totalIgstAmount = money(totalIgstAmount);
         totalTaxAmount = money(totalTaxAmount);
-        grandTotal = money(grandTotal);
-
+        // Normalize shipping amount
+        BigDecimal shippingAmount = money(
+                salesOrder.getShippingAmount()
+        );
+        // Include shipping in grand total
+        grandTotal = money(
+                grandTotal.add(shippingAmount)
+        );
         BigDecimal exchangeRate = salesOrder.getExchangeRate();
 
         // Selected currency financial summary

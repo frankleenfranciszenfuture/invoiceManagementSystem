@@ -9,6 +9,7 @@ import com.ims.entity.CustomerEntity;
 import com.ims.enums.CustomerStatus;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.exception.ValidationException;
+import com.ims.mapper.address.AddressMapper;
 import com.ims.mapper.customer.CustomerMapper;
 import com.ims.repository.CustomerRepository;
 import com.ims.service.serviceInterface.customer.CustomerService;
@@ -38,7 +39,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final CustomerMapper mapper;
     private final CustomerValidation validation;
     private final BaseEntityUtil baseEntityUtil;
-
+    private final AddressMapper addressMapper;
     // =====================================================
     // CREATE CUSTOMER
     // =====================================================
@@ -115,7 +116,48 @@ public class CustomerServiceImpl implements CustomerService {
         CustomerStatus existingStatus = customer.getStatus();
 
         // Update customer fields
+        // Update customer fields without replacing address entities
         mapper.updateEntity(request, customer);
+
+// Update billing address
+        if (request.getBillingAddress() != null) {
+
+            if (customer.getBillingAddress() == null) {
+
+                customer.setBillingAddress(
+                        addressMapper.toEntity(
+                                request.getBillingAddress()
+                        )
+                );
+
+            } else {
+
+                addressMapper.updateEntity(
+                        request.getBillingAddress(),
+                        customer.getBillingAddress()
+                );
+            }
+        }
+
+// Update shipping address
+        if (request.getShippingAddress() != null) {
+
+            if (customer.getShippingAddress() == null) {
+
+                customer.setShippingAddress(
+                        addressMapper.toEntity(
+                                request.getShippingAddress()
+                        )
+                );
+
+            } else {
+
+                addressMapper.updateEntity(
+                        request.getShippingAddress(),
+                        customer.getShippingAddress()
+                );
+            }
+        }
 
         // Update status only when supplied
         if (request.getStatus() != null) {

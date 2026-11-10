@@ -7,10 +7,8 @@ import com.ims.enums.SaleOrderStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -20,6 +18,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@SuperBuilder
 public class SalesOrderRequest {
 
     private String orderNo;
@@ -49,6 +48,13 @@ public class SalesOrderRequest {
     private SaleOrderDiscountType discountType;
 
     private BigDecimal discountValue = BigDecimal.ZERO;
+
+    // =====================================================
+    // SHIPPING
+    // =====================================================
+    @DecimalMin(value = "0.00", message = "ShippingAmount value cannot be negative.")
+    @Builder.Default
+    private BigDecimal shippingAmount = BigDecimal.ZERO;
 
     @NotEmpty(message = "At least one sales order item is required")
     @Valid

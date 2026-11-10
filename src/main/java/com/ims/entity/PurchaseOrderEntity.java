@@ -122,6 +122,15 @@ public class PurchaseOrderEntity extends BaseEntity {
     @Builder.Default
     private BigDecimal discountValue = BigDecimal.ZERO;
 
+    @Column(
+            name = "shipping_amount",
+            precision = 19,
+            scale = 2,
+            nullable = false
+    )
+    @Builder.Default
+    private BigDecimal shippingAmount = BigDecimal.ZERO;
+
     // =====================================================
     // SELECTED CURRENCY TOTALS
     // =====================================================

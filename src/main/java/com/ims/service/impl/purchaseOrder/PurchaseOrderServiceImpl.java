@@ -151,6 +151,10 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 zeroIfNull(request.getDiscountValue())
         );
 
+        purchaseOrder.setShippingAmount(
+                zeroIfNull(request.getShippingAmount())
+                        .setScale(2, RoundingMode.HALF_UP)
+        );
         purchaseOrder.setActive(true);
 
         for (PurchaseOrderItemRequest itemRequest : request.getItems()) {
@@ -288,7 +292,10 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         purchaseOrder.setDiscountValue(
                 zeroIfNull(request.getDiscountValue())
         );
-
+        purchaseOrder.setShippingAmount(
+                zeroIfNull(request.getShippingAmount())
+                        .setScale(2, RoundingMode.HALF_UP)
+        );
         /*
          * DRAFT orders cannot have goods receipts.
          * Replace the existing items.
@@ -995,9 +1002,40 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                         purchaseOrder.getParty()
                 );
 
+        // Calculate subtotal, discounts and taxes.
         calculationService.calculate(
                 purchaseOrder,
                 taxType
+        );
+
+        // Normalize shipping amount.
+        BigDecimal shippingAmount = money(
+                purchaseOrder.getShippingAmount()
+        );
+
+        purchaseOrder.setShippingAmount(shippingAmount);
+
+        // Include shipping in selected currency grand total.
+        BigDecimal grandTotal = money(
+                zeroIfNull(purchaseOrder.getGrandTotal())
+                        .add(shippingAmount)
+        );
+
+        purchaseOrder.setGrandTotal(grandTotal);
+
+        // Include shipping in INR grand total.
+        BigDecimal exchangeRate = purchaseOrder.getExchangeRate();
+
+        if (exchangeRate == null || exchangeRate.signum() <= 0) {
+            throw new BadRequestException(
+                    "Exchange rate must be greater than zero."
+            );
+        }
+
+        purchaseOrder.setBaseGrandTotal(
+                money(
+                        grandTotal.multiply(exchangeRate)
+                )
         );
     }
 

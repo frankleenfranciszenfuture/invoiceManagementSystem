@@ -112,8 +112,8 @@ public class EmailSignatureServiceImpl implements EmailSignatureService {
         );
     }
     // =====================================================
-    // UPDATE SIGNATURE
-    // =====================================================
+// UPDATE SIGNATURE
+// =====================================================
 
     @Override
     public ApiResponse<EmailSignatureResponse> update(
@@ -126,8 +126,31 @@ public class EmailSignatureServiceImpl implements EmailSignatureService {
 
         validation.validateUpdate(userId, signatureId, request);
 
+        boolean defaultNew = Boolean.TRUE.equals(
+                request.getDefaultForNewMessages()
+        );
+
+        boolean defaultReplies = Boolean.TRUE.equals(
+                request.getDefaultForReplies()
+        );
+
+        // Clear previous default for new messages
+        if (defaultNew) {
+            clearDefaultForNewMessages(userId);
+        }
+
+        // Clear previous default for replies
+        if (defaultReplies) {
+            clearDefaultForReplies(userId);
+        }
+
+        // Update signature information
         entity.setSignatureName(request.getSignatureName().trim());
         entity.setSignatureContent(request.getSignatureContent());
+
+        // Update default checkbox values
+        entity.setDefaultForNewMessages(defaultNew);
+        entity.setDefaultForReplies(defaultReplies);
 
         EmailSignatureEntity saved = repository.save(entity);
 

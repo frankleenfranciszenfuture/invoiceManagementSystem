@@ -109,16 +109,20 @@ public class TaxMasterValidation {
             );
         }
 
-        // Allow 0% tax, but reject negative rates.
         if (request.getTaxRate().compareTo(BigDecimal.ZERO) < 0) {
             throw new ValidationException(
                     "Tax rate cannot be negative."
             );
         }
 
+        // Allow 0% GST without requiring CGST, SGST or IGST.
+        if (request.getTaxRate().compareTo(BigDecimal.ZERO) == 0) {
+            return;
+        }
+
         switch (request.getTaxType()) {
 
-           case IGST -> validateIgstRates(request);
+            case GST, IGST -> validateIgstRates(request);
 
             case CGST_SGST -> validateCgstSgstRates(request);
 

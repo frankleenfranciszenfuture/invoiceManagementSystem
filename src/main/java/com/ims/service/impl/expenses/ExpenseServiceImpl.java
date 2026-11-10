@@ -29,11 +29,13 @@ import com.ims.repository.TaxMasterRepository;
 import com.ims.service.serviceInterface.currency.ExchangeRateService;
 import com.ims.service.serviceInterface.expenses.ExpenseService;
 
+import com.ims.utils.base.BaseEntityUtil;
 import com.ims.utils.specification.ExpenseSpecification;
 import com.ims.utils.validation.ExpenseValidation;
 
 import lombok.RequiredArgsConstructor;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -44,11 +46,13 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Year;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class ExpenseServiceImpl implements ExpenseService {
 
     private final ExpenseRepository expenseRepository;
@@ -61,7 +65,7 @@ public class ExpenseServiceImpl implements ExpenseService {
 
     private final PartyRepository partyRepository;
     private final TaxMasterRepository taxMasterRepository;
-
+    private final BaseEntityUtil baseEntityUtil;
 
     // =========================================================
     // CREATE EXPENSE
@@ -96,6 +100,9 @@ public class ExpenseServiceImpl implements ExpenseService {
 
         expense.setPaidAmount(BigDecimal.ZERO);
         expense.setDueAmount(expense.getTotalAmount());
+
+
+        baseEntityUtil.prepareForCreate(expense);
 
         ExpenseEntity savedExpense = expenseRepository.save(expense);
 
@@ -151,6 +158,8 @@ public class ExpenseServiceImpl implements ExpenseService {
         expense.setDueAmount(
                 money(expense.getTotalAmount().subtract(paidAmount))
         );
+
+        baseEntityUtil.prepareForUpdate(expense);
 
         ExpenseEntity updatedExpense = expenseRepository.save(expense);
 
@@ -609,7 +618,7 @@ public class ExpenseServiceImpl implements ExpenseService {
                         )
                 );
 
-        if (party.getPartyType() != PartyType.SUPPLIER) {
+        if (party.getPartyType() != PartyType.BOTH) {
             throw new BadRequestException(
                     "Selected party must be a supplier."
             );
@@ -703,14 +712,51 @@ public class ExpenseServiceImpl implements ExpenseService {
 
     private String generateExpenseNo() {
 
-        String year = String.valueOf(Year.now().getValue());
+        int currentYear = Year.now().getValue();
 
-        String uniquePart = UUID.randomUUID()
-                .toString()
-                .replace("-", "")
-                .substring(0, 8)
-                .toUpperCase();
+        Optional<ExpenseEntity> lastExpense =
+                expenseRepository.findTopByOrderByIdDesc();
 
-        return "EXP-" + year + "-" + uniquePart;
+        int nextNumber = 1;
+
+        if (lastExpense.isPresent()) {
+
+            String lastExpenseNo =
+                    lastExpense.get().getExpenseNo();
+
+            if (lastExpenseNo != null &&
+                    !lastExpenseNo.isBlank()) {
+
+                String[] parts = lastExpenseNo.split("-");
+
+                // EXP-2026-0001
+                if (parts.length == 3) {
+
+                    String yearPart = parts[1];
+
+                    try {
+
+                        if (Integer.parseInt(yearPart) == currentYear) {
+
+                            nextNumber =
+                                    Integer.parseInt(parts[2]) + 1;
+                        }
+
+                    } catch (NumberFormatException ex) {
+
+                        log.warn(
+                                "Unable to parse expense number: {}",
+                                lastExpenseNo
+                        );
+                    }
+                }
+            }
+        }
+
+        return String.format(
+                "EXP-%d-%04d",
+                currentYear,
+                nextNumber
+        );
     }
 }

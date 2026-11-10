@@ -31,7 +31,14 @@ public interface SaleOrderMapper {
     @Mapping(target = "currencySymbol", source = "currency.symbol")
 
     @Mapping(target = "items", source = "items")
-
+    @Mapping(
+            target = "shippingAmount",
+            expression = """
+        java(entity.getShippingAmount() != null
+            ? entity.getShippingAmount()
+            : java.math.BigDecimal.ZERO)
+        """
+    )
     SalesOrderResponse toResponse(SalesOrderEntity entity);
 
     List<SalesOrderResponse> toResponseList(

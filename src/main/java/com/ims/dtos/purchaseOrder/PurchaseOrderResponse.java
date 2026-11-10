@@ -46,7 +46,7 @@ public class PurchaseOrderResponse {
     // Discount
     private PurchaseOrderDiscountType discountType;
     private BigDecimal discountValue;
-
+    private BigDecimal shippingAmount;
     // Selected currency totals
     private BigDecimal subtotal;
     private BigDecimal discountAmount;

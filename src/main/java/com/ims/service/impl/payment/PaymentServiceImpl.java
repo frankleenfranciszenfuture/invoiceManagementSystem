@@ -1405,8 +1405,7 @@ public class PaymentServiceImpl implements PaymentService {
                         .orElseThrow(() -> new IllegalArgumentException(
                                 "Cash account not found or inactive"
                         ));
-            }
-         else {
+            } else {
 
                 bankAccount = bankAccountRepository
                         .findById(allocation.getBankAccountId())
@@ -1414,6 +1413,7 @@ public class PaymentServiceImpl implements PaymentService {
                                 "Bank account not found"
                         ));
 
+                // Lock account to prevent concurrent payments
                 entityManager.lock(
                         bankAccount,
                         LockModeType.PESSIMISTIC_WRITE
@@ -1423,6 +1423,18 @@ public class PaymentServiceImpl implements PaymentService {
                         || bankAccount.getStatus() != BankAccountStatus.ACTIVE) {
                     throw new IllegalArgumentException(
                             "Selected bank account is inactive"
+                    );
+                }
+
+                // Validate balance for outgoing payments only.
+                // Applies to BANK_TRANSFER, UPI, CARD and CHEQUE.
+                if (direction == PaymentDirection.PAID) {
+
+                    validateSufficientBankBalance(
+                            bankAccount,
+                            paymentAmount,
+                            baseAmount,
+                            sourceCurrency.getCurrencyCode()
                     );
                 }
             }
@@ -1519,5 +1531,71 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         paymentValidation.validatePaymentAccount(allocation);
+    }
+
+    // =========================================================
+// VALIDATE SUFFICIENT BANK ACCOUNT BALANCE
+// =========================================================
+
+    private void validateSufficientBankBalance(
+            BankAccount bankAccount,
+            BigDecimal paymentAmount,
+            BigDecimal baseAmount,
+            String paymentCurrency
+    ) {
+
+        if (bankAccount == null) {
+            throw new IllegalArgumentException(
+                    "Bank account is required for this payment"
+            );
+        }
+
+        String accountCurrency = bankAccount.getCurrency();
+
+        if (accountCurrency == null || accountCurrency.isBlank()) {
+            throw new IllegalStateException(
+                    "Bank account currency is not configured"
+            );
+        }
+
+        if (paymentCurrency == null || paymentCurrency.isBlank()) {
+            throw new IllegalStateException(
+                    "Payment currency is not configured"
+            );
+        }
+
+        BigDecimal requiredAmount;
+
+        if (accountCurrency.equalsIgnoreCase(paymentCurrency)) {
+
+            requiredAmount = paymentAmount;
+
+        } else if ("INR".equalsIgnoreCase(accountCurrency)) {
+
+            requiredAmount = baseAmount;
+
+        } else {
+
+            throw new IllegalArgumentException(
+                    "Payment currency does not match bank account currency. "
+                            + "Bank account currency: " + accountCurrency
+                            + ", payment currency: " + paymentCurrency
+            );
+        }
+
+        BigDecimal availableBalance = safeAmount(
+                bankAccount.getCurrentBalance()
+        );
+
+        if (availableBalance.compareTo(requiredAmount) < 0) {
+
+            throw new IllegalArgumentException(
+                    "Insufficient bank account balance. "
+                            + "Available balance: " + availableBalance
+                            + " " + accountCurrency
+                            + ", Required amount: " + requiredAmount
+                            + " " + accountCurrency
+            );
+        }
     }
 }

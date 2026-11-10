@@ -39,6 +39,10 @@ public class PurchaseOrderRequest {
     @Builder.Default
     private BigDecimal discountValue = BigDecimal.ZERO;
 
+    @DecimalMin(value = "0.00", message = "ShippingAmount value cannot be negative.")
+    @Builder.Default
+    private BigDecimal shippingAmount = BigDecimal.ZERO;
+
     @NotEmpty(message = "At least one purchase order item is required.")
     @Valid
     private List<PurchaseOrderItemRequest> items;

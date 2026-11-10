@@ -53,6 +53,7 @@ public class SalesOrderResponse {
     // Financial summary in selected currency
     private BigDecimal subtotal;
     private BigDecimal discountAmount;
+    private BigDecimal shippingAmount;
     private BigDecimal taxableAmount;
 
     private BigDecimal cgstAmount;

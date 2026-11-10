@@ -38,6 +38,12 @@ public interface PurchaseOrderMapper {
 
     @Mapping(target = "items", source = "items")
 
+    @Mapping(
+            target = "shippingAmount",
+            expression = "java(source.getShippingAmount() != null " +
+                    "? source.getShippingAmount() " +
+                    ": java.math.BigDecimal.ZERO)"
+    )
     PurchaseOrderResponse toResponse(
             PurchaseOrderEntity source
     );

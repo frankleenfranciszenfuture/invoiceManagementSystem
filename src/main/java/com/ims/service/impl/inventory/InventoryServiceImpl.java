@@ -1157,11 +1157,55 @@ public class InventoryServiceImpl implements InventoryService {
 
             stock.setAvailableQuantity(newAvailableQuantity);
 
+            // ================================================
+// UPDATE INVENTORY STOCK
+// ================================================
+
+            stock.setQuantity(newQuantity);
+
+            stock.setReservedQuantity(
+                    scale(oldReservedQuantity)
+            );
+
+            stock.setAvailableQuantity(newAvailableQuantity);
+
             stock.setAverageCost(newAverageCost);
 
             baseEntityUtil.prepareForUpdate(stock);
 
             stockRepository.save(stock);
+
+
+// ================================================
+// UPDATE PRODUCT PURCHASING PRICE
+// ================================================
+
+            /*
+             * Product purchasingPrice represents the latest
+             * actual purchase cost in INR.
+             *
+             * InventoryStock.averageCost continues to maintain
+             * weighted average cost separately.
+             *
+             * Product is already managed by the current
+             * Purchase Order / Goods Receipt transaction.
+             * Hibernate dirty checking persists this update.
+             */
+
+            BigDecimal latestPurchasingPrice = receivedUnitCost.setScale(
+                    2,
+                    RoundingMode.HALF_UP
+            );
+
+            if (product.getPurchasingPrice() == null
+                    || product.getPurchasingPrice().compareTo(
+                    latestPurchasingPrice
+            ) != 0) {
+
+                product.setPurchasingPrice(latestPurchasingPrice);
+
+                baseEntityUtil.prepareForUpdate(product);
+            }
 
             /*
              * Create inventory transaction.
