@@ -442,7 +442,7 @@ const WarehouseCreate = ({ onClose }) => {
 
         } catch (error) {
             console.error(
-                isEditMode ? "Warehouse update error:" : "Warehouse creation error:",
+                isEdit ? "Warehouse update error:" : "Warehouse creation error:",
                 error
             );
 
@@ -450,7 +450,7 @@ const WarehouseCreate = ({ onClose }) => {
                 typeof error === "string"
                     ? error
                     : error?.message ||
-                    (isEditMode
+                    (isEdit
                         ? "Failed to update warehouse"
                         : "Failed to create warehouse")
             );

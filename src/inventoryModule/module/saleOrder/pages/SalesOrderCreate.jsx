@@ -355,7 +355,12 @@ export default function SalesOrderCreate({ onClose }) {
 
                 const order = result?.data || result;
 
-                const partyType = order?.partyType || "CUSTOMER";
+                const rawPartyType = String(order?.partyType || "CUSTOMER").toUpperCase();
+
+                const partyType =
+                    rawPartyType === "PARTY" || rawPartyType === "BOTH"
+                        ? "PARTY"
+                        : "CUSTOMER";
                 const selectedCustomer = order?.customer;
                 const selectedParty = order?.party;
                 const selectedWarehouse = order?.warehouse;
@@ -370,24 +375,37 @@ export default function SalesOrderCreate({ onClose }) {
                 setFormData({
                     ...createInitialForm(),
                     partyType,
+
                     customerId:
-                        order?.customerId ??
-                        selectedCustomer?.id ??
-                        "",
+                        partyType === "CUSTOMER"
+                            ? order?.customerId ??
+                            selectedCustomer?.id ??
+                            ""
+                            : "",
+
                     customerName:
-                        selectedCustomer?.customerName ||
-                        selectedCustomer?.name ||
-                        order?.customerName ||
-                        "",
+                        partyType === "CUSTOMER"
+                            ? selectedCustomer?.customerName ||
+                            selectedCustomer?.name ||
+                            order?.customerName ||
+                            ""
+                            : "",
+
                     partyId:
-                        order?.partyId ??
-                        selectedParty?.id ??
-                        "",
+                        partyType === "PARTY"
+                            ? order?.partyId ??
+                            selectedParty?.id ??
+                            ""
+                            : "",
+
                     partyName:
-                        selectedParty?.partyName ||
-                        selectedParty?.name ||
-                        order?.partyName ||
-                        "",
+                        partyType === "PARTY"
+                            ? selectedParty?.partyName ||
+                            selectedParty?.companyName ||
+                            selectedParty?.name ||
+                            order?.partyName ||
+                            ""
+                            : "",
                     warehouseId:
                         order?.warehouseId ??
                         selectedWarehouse?.id ??
@@ -462,7 +480,7 @@ export default function SalesOrderCreate({ onClose }) {
     }, [dispatch, id]);
 
     // ---------------------------------------------------------
-    // SELECTED PARTY
+    // SELECTED CUSTOMER / PARTY
     // ---------------------------------------------------------
 
     const selectedParty = useMemo(() => {
@@ -483,9 +501,31 @@ export default function SalesOrderCreate({ onClose }) {
         parties,
     ]);
 
+    // ---------------------------------------------------------
+    // FILTERED CUSTOMER / PARTY LIST
+    // ---------------------------------------------------------
+
     const filteredParties = useMemo(() => {
-        const source =
-            formData.partyType === "CUSTOMER" ? customers : parties;
+        let source = [];
+
+        if (formData.partyType === "CUSTOMER") {
+            // Customer master list
+            source = customers;
+        } else {
+            // Include PARTY and BOTH from the Party master list
+            source = parties.filter((item) => {
+                const type = String(item?.partyType || "").toUpperCase();
+
+                return type === "PARTY" || type === "BOTH";
+            });
+        }
+
+        // Only show active records when status is available
+        source = source.filter((item) => {
+            if (!item?.status) return true;
+
+            return String(item.status).toUpperCase() === "ACTIVE";
+        });
 
         const search = partySearch.trim().toLowerCase();
 
@@ -494,6 +534,7 @@ export default function SalesOrderCreate({ onClose }) {
         return source.filter((item) => {
             const name = getName(item).toLowerCase();
             const email = String(item?.email || "").toLowerCase();
+
             const phone = String(
                 item?.mobile ||
                 item?.phoneNumber ||
@@ -565,7 +606,10 @@ export default function SalesOrderCreate({ onClose }) {
     const handlePartySelect = (party) => {
         console.log("Selected customer/party:", party);
 
-        const selectedId = party?.id ?? party?.customerId ?? party?.partyId;
+        const selectedId =
+            party?.id ??
+            party?.customerId ??
+            party?.partyId;
 
         if (!selectedId) {
             console.error("Selected customer/party has no ID:", party);
