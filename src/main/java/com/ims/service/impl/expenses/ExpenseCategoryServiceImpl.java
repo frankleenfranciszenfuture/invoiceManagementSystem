@@ -2,12 +2,14 @@ package com.ims.service.impl.expenses;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.expenses.ExpenseCategoryRequestDTO;
 import com.ims.dtos.expenses.ExpenseCategoryResponseDTO;
 import com.ims.entity.ExpenseCategoryEntity;
 import com.ims.enums.ExpenseCategoryStatus;
 import com.ims.enums.ExpenseType;
 
+import com.ims.enums.audit.AuditAction;
 import com.ims.mapper.expenses.ExpenseCategoryMapper;
 import com.ims.repository.ExpenseCategoryRepository;
 import com.ims.repository.ExpenseRepository;
@@ -43,6 +45,11 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
     // ---------------------------------------------------------
 
     @Override
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "EXPENSE_CATEGORY",
+            description = "Expense category created"
+    )
     public ApiResponse<ExpenseCategoryResponseDTO> create(
             ExpenseCategoryRequestDTO dto
     ) {
@@ -74,6 +81,12 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
     // ---------------------------------------------------------
 
     @Override
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "EXPENSE_CATEGORY",
+            recordId = "#p0",
+            description = "Expense category updated"
+    )
     public ApiResponse<ExpenseCategoryResponseDTO> update(
             Long id,
             ExpenseCategoryRequestDTO dto
@@ -166,6 +179,12 @@ public class ExpenseCategoryServiceImpl implements ExpenseCategoryService {
     // ---------------------------------------------------------
 
     @Override
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "EXPENSE_CATEGORY",
+            recordId = "#p0",
+            description = "Expense category deleted"
+    )
     public ApiResponse<Void> delete(Long id) {
 
         ExpenseCategoryEntity entity = getCategory(id);

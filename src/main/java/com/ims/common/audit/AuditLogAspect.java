@@ -5,9 +5,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 
-
+import com.ims.common.ApiResponse;
 import com.ims.dtos.audit.AuditLogCreateRequest;
 
+import com.ims.dtos.inventory.InventoryStockResponse;
 import com.ims.enums.audit.AuditAction;
 
 import com.ims.service.impl.common.CurrentUserService;
@@ -61,35 +62,55 @@ public class AuditLogAspect {
     private final SpelExpressionParser parser =
             new SpelExpressionParser();
 
-    @Around("@annotation(com.ims.common.audit.Auditable)")
-    public Object audit(ProceedingJoinPoint joinPoint)
-            throws Throwable {
+
+    @Around("execution(public * com.ims.service..*(..))")
+    public Object audit(ProceedingJoinPoint joinPoint) throws Throwable {
 
         MethodSignature signature =
                 (MethodSignature) joinPoint.getSignature();
 
-        Method method = AopUtils.getMostSpecificMethod(
+        Method implementationMethod = AopUtils.getMostSpecificMethod(
                 signature.getMethod(),
                 joinPoint.getTarget().getClass()
         );
 
-        Auditable auditable =
-                AnnotatedElementUtils.findMergedAnnotation(
-                        method,
-                        Auditable.class
-                );
+        Auditable auditable = AnnotatedElementUtils.findMergedAnnotation(
+                implementationMethod,
+                Auditable.class
+        );
+
+
+        // Also check the interface method if the implementation has no annotation.
+        if (auditable == null) {
+            log.info(
+                    "AUDIT SKIPPED | Method: {} | Implementation: {}",
+                    signature.getMethod().getName(),
+                    implementationMethod.getName()
+            );
+
+            auditable = AnnotatedElementUtils.findMergedAnnotation(
+                    signature.getMethod(),
+                    Auditable.class
+            );
+        }
 
         if (auditable == null) {
             return joinPoint.proceed();
         }
 
         AuditAction action = auditable.action();
-
         String entityName = auditable.entity();
+
+        log.info(
+                "AUDIT INTERCEPTED | Method: {} | Entity: {} | Action: {}",
+                implementationMethod.getName(),
+                entityName,
+                action
+        );
 
         String entityId = resolveRecordId(
                 auditable.recordId(),
-                method,
+                implementationMethod,
                 joinPoint.getArgs()
         );
 
@@ -98,44 +119,70 @@ public class AuditLogAspect {
         boolean captureOld =
                 action == AuditAction.UPDATE
                         || action == AuditAction.DELETE
-                        || action == AuditAction.STATUS_CHANGE;
+                        || action == AuditAction.STATUS_CHANGE
+                        || action == AuditAction.SENT
+                        || action == AuditAction.CANCEL
+                        || action == AuditAction.APPROVE
+                        || action == AuditAction.REJECT;
 
         if (captureOld && entityId != null) {
+
+            log.info(
+                    "AUDIT OLD SNAPSHOT START | Entity: {} | ID: {} | Action: {}",
+                    entityName,
+                    entityId,
+                    action
+            );
 
             Object oldEntity = entityResolver.findEntity(
                     entityName,
                     entityId
             );
 
-            oldValue = serializeSnapshot(
+            log.info(
+                    "AUDIT OLD ENTITY FOUND: {}",
+                    oldEntity != null
+            );
+
+            oldValue = serializeSnapshot(entityName, oldEntity);
+
+            log.info(
+                    "AUDIT OLD SNAPSHOT COMPLETED | Entity: {} | ID: {}",
                     entityName,
-                    oldEntity
+                    entityId
             );
         }
 
-        // Execute original business operation.
         Object result = joinPoint.proceed();
 
-        // Extract generated ID from CREATE response.
         if (entityId == null) {
             entityId = extractId(result);
         }
 
         String newValue = null;
 
-        if (action != AuditAction.DELETE
-                && entityId != null) {
+        if (action != AuditAction.DELETE) {
 
-            Object newEntity = entityResolver.findEntity(
-                    entityName,
-                    entityId
-            );
+            Object newEntity = entityId != null
+                    ? entityResolver.findEntity(entityName, entityId)
+                    : null;
 
-            newValue = serializeSnapshot(
-                    entityName,
-                    newEntity
-            );
+            if (newEntity != null) {
+                newValue = serializeSnapshot(entityName, newEntity);
+
+            } else if (result != null) {
+                newValue = objectMapper.writeValueAsString(
+                        unwrapResponse(result)
+                );
+            }
         }
+
+        log.info(
+                "AUDIT BEFORE SAVE | Entity: {} | ID: {} | Action: {}",
+                entityName,
+                entityId,
+                action
+        );
 
         saveAudit(
                 auditable,
@@ -143,6 +190,15 @@ public class AuditLogAspect {
                 oldValue,
                 newValue
         );
+
+        return result;
+    }
+
+    private Object unwrapResponse(Object result) {
+
+        if (result instanceof ApiResponse<?> response) {
+            return unwrapResponse(response.getData());
+        }
 
         return result;
     }
@@ -187,14 +243,32 @@ public class AuditLogAspect {
             return null;
         }
 
-        JsonNode node = objectMapper.valueToTree(result);
-
-        if (node.hasNonNull("id")) {
-            return node.get("id").asText();
+        // Unwrap ApiResponse<T>
+        if (result instanceof ApiResponse<?> response) {
+            return extractId(response.getData());
         }
 
-        if (node.has("data")) {
-            return extractId(node.get("data"));
+        try {
+            Method getIdMethod = result.getClass().getMethod("getId");
+
+            Object id = getIdMethod.invoke(result);
+
+            return id != null ? id.toString() : null;
+
+        } catch (NoSuchMethodException exception) {
+
+            log.debug(
+                    "No getId() method found on audit response: {}",
+                    result.getClass().getSimpleName()
+            );
+
+        } catch (Exception exception) {
+
+            log.warn(
+                    "Unable to extract audit entity ID from {}: {}",
+                    result.getClass().getSimpleName(),
+                    exception.getMessage()
+            );
         }
 
         return null;
@@ -327,5 +401,31 @@ public class AuditLogAspect {
                 attributes.getRequest();
 
         return request.getRemoteAddr();
+    }
+
+    private String resolveEntityId(
+            String entityName,
+            String expression,
+            Method method,
+            Object[] args
+    ) {
+
+        String entityId = resolveRecordId(
+                expression,
+                method,
+                args
+        );
+
+        if (entityId != null) {
+            return entityId;
+        }
+
+        // Resolve inventory stock using its composite key.
+        if ("INVENTORY_STOCK".equalsIgnoreCase(entityName)) {
+            // Resolve using productId, warehouseId, unitId and sizeId.
+            // Return the existing InventoryStockEntity ID.
+        }
+
+        return null;
     }
 }

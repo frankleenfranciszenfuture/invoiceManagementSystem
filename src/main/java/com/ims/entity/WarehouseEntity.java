@@ -10,14 +10,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(
-        name = "warehouse",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = {
-                        "warehouse_name"
-                })
-        }
-)
+@Table(name = "warehouse")
 @Getter
 @Setter
 @NoArgsConstructor

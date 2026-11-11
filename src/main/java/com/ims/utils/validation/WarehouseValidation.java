@@ -2,11 +2,11 @@
 package com.ims.utils.validation;
 
 import com.ims.entity.WarehouseEntity;
-import com.ims.exception.BadRequestException;
 import com.ims.exception.DuplicateResourceException;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.repository.WarehouseRepository;
 import com.ims.utils.apiConstants.WarehouseConstants;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -22,12 +22,21 @@ public class WarehouseValidation {
 
     public WarehouseEntity validateWarehouse(Long id) {
 
-        return warehouseRepository
+        WarehouseEntity warehouse = warehouseRepository
                 .findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 WarehouseConstants.NOT_FOUND
-                        ));
+                        )
+                );
+
+        if (Boolean.FALSE.equals(warehouse.getActive())) {
+            throw new ResourceNotFoundException(
+                    WarehouseConstants.NOT_FOUND
+            );
+        }
+
+        return warehouse;
     }
 
     // =====================================================
@@ -36,60 +45,40 @@ public class WarehouseValidation {
 
     public void validateCreate(String warehouseName) {
 
-        validateWarehouseName(warehouseName);
-
-        validateDuplicateName(warehouseName.trim());
+        validateDuplicateName(warehouseName, null);
     }
 
     // =====================================================
     // VALIDATE UPDATE
     // =====================================================
 
-    public void validateUpdate(
-            Long id,
-            String warehouseName) {
+    public void validateUpdate(Long id, String warehouseName) {
 
-        validateWarehouseName(warehouseName);
-
-        if (warehouseRepository
-                .existsByWarehouseNameIgnoreCaseAndIdNot(
-                        warehouseName.trim(),
-                        id
-                )) {
-
-            throw new DuplicateResourceException(
-                    WarehouseConstants.DUPLICATE_NAME
-            );
-        }
+        validateDuplicateName(warehouseName, id);
     }
 
     // =====================================================
     // DUPLICATE VALIDATION
     // =====================================================
 
-    public void validateDuplicateName(String warehouseName) {
+    private void validateDuplicateName(String warehouseName, Long id) {
 
-        if (warehouseRepository
-                .existsByWarehouseNameIgnoreCase(
-                        warehouseName.trim()
-                )) {
+        String normalizedName = warehouseName.trim();
 
+        boolean exists = id == null
+                ? warehouseRepository
+                .existsByWarehouseNameIgnoreCaseAndActiveTrue(
+                        normalizedName
+                )
+                : warehouseRepository
+                .existsByWarehouseNameIgnoreCaseAndActiveTrueAndIdNot(
+                        normalizedName,
+                        id
+                );
+
+        if (exists) {
             throw new DuplicateResourceException(
                     WarehouseConstants.DUPLICATE_NAME
-            );
-        }
-    }
-
-    // =====================================================
-    // WAREHOUSE NAME VALIDATION
-    // =====================================================
-
-    private void validateWarehouseName(String warehouseName) {
-
-        if (warehouseName == null || warehouseName.trim().isEmpty()) {
-
-            throw new BadRequestException(
-                    "Warehouse name is required."
             );
         }
     }

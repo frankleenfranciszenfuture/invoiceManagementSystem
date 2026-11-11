@@ -2,10 +2,12 @@ package com.ims.service.impl.cashAccount;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.cashAccount.CashAccountRequestDTO;
 import com.ims.dtos.cashAccount.CashAccountResponseDTO;
 import com.ims.entity.CashAccountEntity;
 import com.ims.enums.CashAccountStatus;
+import com.ims.enums.audit.AuditAction;
 import com.ims.mapper.cashAccount.CashAccountMapper;
 import com.ims.repository.CashAccountRepository;
 import com.ims.service.serviceInterface.cashAccount.CashAccountService;
@@ -35,6 +37,11 @@ public class CashAccountServiceImpl implements CashAccountService {
     private final BaseEntityUtil baseEntityUtil;
 
     @Override
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "CASH_ACCOUNT",
+            description = "Cash account created"
+    )
     public ApiResponse<CashAccountResponseDTO> create(
             CashAccountRequestDTO request
     ) {
@@ -136,6 +143,12 @@ public class CashAccountServiceImpl implements CashAccountService {
     }
 
     @Override
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "CASH_ACCOUNT",
+            recordId = "#p0",
+            description = "Cash account updated"
+    )
     public ApiResponse<CashAccountResponseDTO> update(
             Long id,
             CashAccountRequestDTO request
@@ -196,6 +209,12 @@ public class CashAccountServiceImpl implements CashAccountService {
     }
 
     @Override
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "CASH_ACCOUNT",
+            recordId = "#p0",
+            description = "Cash account deleted"
+    )
     public ApiResponse<Void> delete(Long id) {
 
         CashAccountEntity entity =

@@ -4,7 +4,7 @@ package com.ims.service.impl.audit;
 
 import com.ims.common.PageResponse;
 import com.ims.common.PageUtil;
-
+import org.springframework.transaction.annotation.Propagation;
 
 import com.ims.dtos.audit.AuditLogCreateRequest;
 import com.ims.dtos.audit.AuditLogResponse;
@@ -52,9 +52,8 @@ public class AuditLogServiceImpl implements AuditLogService {
             );
 
     @Override
-    @Transactional
-    public void createAuditLog(
-            AuditLogCreateRequest request) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createAuditLog(AuditLogCreateRequest request) {
 
         AuditLogEntity entity = AuditLogEntity.builder()
                 .entityName(request.getEntityName())
@@ -70,7 +69,7 @@ public class AuditLogServiceImpl implements AuditLogService {
                 .moduleName(request.getModuleName())
                 .build();
 
-        auditLogRepository.save(entity);
+        auditLogRepository.saveAndFlush(entity);
     }
 
     @Override

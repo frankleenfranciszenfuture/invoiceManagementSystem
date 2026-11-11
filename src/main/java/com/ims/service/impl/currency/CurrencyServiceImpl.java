@@ -2,10 +2,12 @@ package com.ims.service.impl.currency;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.currency.CurrencyRequestDTO;
 import com.ims.dtos.currency.CurrencyResponseDTO;
 import com.ims.entity.Currency;
 import com.ims.enums.CurrencyStatus;
+import com.ims.enums.audit.AuditAction;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.exception.ValidationException;
 import com.ims.repository.CurrencyRepository;
@@ -30,6 +32,11 @@ public class CurrencyServiceImpl implements CurrencyService {
     private final CurrencyValidation validation;
 
     @Override
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "CURRENCY",
+            description = "Currency created"
+    )
     public ApiResponse<CurrencyResponseDTO> create(
             CurrencyRequestDTO dto) {
 
@@ -94,6 +101,12 @@ public class CurrencyServiceImpl implements CurrencyService {
     }
 
     @Override
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "CURRENCY",
+            recordId = "#p0",
+            description = "Currency updated"
+    )
     public ApiResponse<CurrencyResponseDTO> update(
             Long id,
             CurrencyRequestDTO dto) {
@@ -157,6 +170,12 @@ public class CurrencyServiceImpl implements CurrencyService {
     }
 
     @Override
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "CURRENCY",
+            recordId = "#p0",
+            description = "Currency deleted"
+    )
     public ApiResponse<Void> delete(Long id) {
 
         Currency currency = validation.validateExists(id);

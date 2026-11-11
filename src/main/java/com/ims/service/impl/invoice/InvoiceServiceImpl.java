@@ -513,7 +513,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Auditable(
             action = AuditAction.UPDATE,
             entity = "INVOICE",
-            recordId = "#request.id",
+            recordId = "#p0",
             description = "Invoice updated"
     )
     public ApiResponse<InvoiceResponse> updateInvoice(
@@ -810,8 +810,8 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Auditable(
             action = AuditAction.CANCEL,
             entity = "INVOICE",
-            recordId = "#id",
-            description = "Invoice canceled"
+            recordId = "#p0",
+            description = "Invoice cancelled"
     )
     public ApiResponse<InvoiceResponse> cancelInvoice(
             Long id
@@ -907,8 +907,8 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Auditable(
             action = AuditAction.APPROVE,
             entity = "INVOICE",
-            recordId = "#id",
-            description = "Invoice deleted"
+            recordId = "#p0",
+            description = "Invoice approved"
     )
     public ApiResponse<InvoiceResponse> approveInvoice(Long id) {
 
@@ -975,7 +975,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Auditable(
             action = AuditAction.DELETE,
             entity = "INVOICE",
-            recordId = "#id",
+            recordId = "#p0",
             description = "Invoice deleted"
     )
     public ApiResponse<Void> deleteInvoice(
@@ -1035,6 +1035,12 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.STATUS_CHANGE,
+            entity = "INVOICE",
+            recordId = "#p0",
+            description = "Invoice marked as sent"
+    )
     public void markInvoiceAsSent(Long invoiceId) {
 
         InvoiceEntity invoice = invoiceRepository.findByIdAndActiveTrue(invoiceId)
@@ -1065,6 +1071,12 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.STATUS_CHANGE,
+            entity = "INVOICE",
+            recordId = "#p0",
+            description = "Invoice submitted for approval"
+    )
     public void markInvoiceAsPendingApproval(Long invoiceId) {
 
         log.info("Marking invoice as pending approval: {}", invoiceId);

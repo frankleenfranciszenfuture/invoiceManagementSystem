@@ -2,10 +2,12 @@ package com.ims.service.impl.category;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.category.CategoryRequest;
 import com.ims.dtos.category.CategoryResponse;
 import com.ims.entity.CategoryEntity;
 import com.ims.enums.Status;
+import com.ims.enums.audit.AuditAction;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.mapper.category.CategoryMapper;
 import com.ims.repository.CategoryRepository;
@@ -46,6 +48,11 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "CATEGORY",
+            description = "Category created"
+    )
     public ApiResponse<CategoryResponse> createCategory(
             CategoryRequest request
     ) {
@@ -77,6 +84,12 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "CATEGORY",
+            recordId = "#p0",
+            description = "Category updated"
+    )
     public ApiResponse<CategoryResponse> updateCategory(
             Long id,
             CategoryRequest request
@@ -158,6 +171,12 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "CATEGORY",
+            recordId = "#p0",
+            description = "Category deleted"
+    )
     public ApiResponse<Void> deleteCategory(
             Long id
     ) {

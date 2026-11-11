@@ -2,6 +2,7 @@ package com.ims.service.impl.party;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.party.PartyBankAccountRequest;
 import com.ims.dtos.party.PartyRequest;
 import com.ims.dtos.party.PartyResponse;
@@ -10,6 +11,7 @@ import com.ims.entity.PartyBankAccountEntity;
 import com.ims.entity.PartyEntity;
 import com.ims.enums.PartyType;
 import com.ims.enums.Status;
+import com.ims.enums.audit.AuditAction;
 import com.ims.exception.DuplicateResourceException;
 import com.ims.exception.ValidationException;
 import com.ims.mapper.party.PartyBankAccountMapper;
@@ -57,6 +59,11 @@ public class PartyServiceImpl implements PartyService {
     //=====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "PARTY",
+            description = "Party created"
+    )
     public ApiResponse<PartyResponse> createParty(
             PartyRequest request) {
 
@@ -204,6 +211,12 @@ public class PartyServiceImpl implements PartyService {
     //=====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "PARTY",
+            recordId = "#p0",
+            description = "Party updated"
+    )
     public ApiResponse<PartyResponse> updateParty(
             Long id,
             PartyRequest request) {
@@ -419,6 +432,12 @@ public class PartyServiceImpl implements PartyService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "PARTY",
+            recordId = "#p0",
+            description = "Party deleted"
+    )
     public ApiResponse<Void> deleteParty(
             Long id) {
 
@@ -525,6 +544,12 @@ public class PartyServiceImpl implements PartyService {
     }
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "PARTY",
+            recordId = "#p0.id",
+            description = "Party credit reversed"
+    )
     public void reversePartyCredit(
             PartyEntity party,
             BigDecimal creditAmount) {

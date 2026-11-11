@@ -10,20 +10,7 @@ import lombok.Setter;
 import java.math.BigDecimal;
 
 @Entity
-@Table(
-        name = "sales_order_items",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_so_product_size_unit",
-                        columnNames = {
-                                "sales_order_id",
-                                "product_id",
-                                "size_id",
-                                "unit_id"
-                        }
-                )
-        }
-)
+@Table(name = "sales_order_items")
 @Getter
 @Setter
 public class SalesOrderItemEntity extends BaseEntity {

@@ -3,6 +3,7 @@ package com.ims.service.impl.subcategory;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.subCategory.CreateSubCategoryRequest;
 import com.ims.dtos.subCategory.SubCategoryDropdownResponse;
 import com.ims.dtos.subCategory.SubCategoryResponse;
@@ -10,6 +11,7 @@ import com.ims.dtos.subCategory.UpdateSubCategoryRequest;
 import com.ims.entity.CategoryEntity;
 import com.ims.entity.SubCategoryEntity;
 import com.ims.enums.Status;
+import com.ims.enums.audit.AuditAction;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.mapper.subCategory.SubCategoryMapper;
 import com.ims.repository.SubCategoryRepository;
@@ -52,6 +54,11 @@ public class SubCategoryServiceImpl implements SubCategoryService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "SUB_CATEGORY",
+            description = "Subcategory created"
+    )
     public ApiResponse<SubCategoryResponse> createSubCategory(
             CreateSubCategoryRequest request
     ) {
@@ -99,6 +106,12 @@ public class SubCategoryServiceImpl implements SubCategoryService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "SUB_CATEGORY",
+            recordId = "#p0",
+            description = "Subcategory updated"
+    )
     public SubCategoryResponse updateSubCategory(
             Long id,
             UpdateSubCategoryRequest request
@@ -190,6 +203,12 @@ public class SubCategoryServiceImpl implements SubCategoryService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "SUB_CATEGORY",
+            recordId = "#p0",
+            description = "Subcategory deleted"
+    )
     public void deleteSubCategory(
             Long id
     ) {
@@ -222,6 +241,12 @@ public class SubCategoryServiceImpl implements SubCategoryService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.STATUS_CHANGE,
+            entity = "SUB_CATEGORY",
+            recordId = "#p0",
+            description = "Subcategory status changed"
+    )
     public SubCategoryResponse updateStatus(
             Long id,
             Status status

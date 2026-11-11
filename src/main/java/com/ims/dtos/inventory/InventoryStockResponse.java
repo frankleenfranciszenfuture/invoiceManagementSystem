@@ -21,6 +21,7 @@ public class InventoryStockResponse extends BaseResponse {
 
     private Long warehouseId;
     private String warehouseName;
+    private String warehouseCode;
 
     private Long unitId;
     private String unitName;
@@ -32,11 +33,5 @@ public class InventoryStockResponse extends BaseResponse {
     private BigDecimal quantity;
     private BigDecimal reservedQuantity;
     private BigDecimal availableQuantity;
-
     private BigDecimal averageCost;
-
-    public void calculateAvailableQuantity() {
-        this.availableQuantity = quantity
-                .subtract(reservedQuantity);
-    }
 }

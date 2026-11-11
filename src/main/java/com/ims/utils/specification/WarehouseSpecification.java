@@ -3,7 +3,14 @@ package com.ims.utils.specification;
 
 import com.ims.entity.WarehouseEntity;
 import com.ims.enums.Status;
+import com.ims.enums.reports.WarehouseStatus;
+
+import jakarta.persistence.criteria.Predicate;
+
 import org.springframework.data.jpa.domain.Specification;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class WarehouseSpecification {
 
@@ -37,7 +44,7 @@ public class WarehouseSpecification {
     }
 
     // =====================================================
-    // STATUS
+    // BUSINESS STATUS
     // =====================================================
 
     public static Specification<WarehouseEntity> hasStatus(
@@ -49,10 +56,7 @@ public class WarehouseSpecification {
                 return null;
             }
 
-            return cb.equal(
-                    root.get("status"),
-                    status
-            );
+            return cb.equal(root.get("status"), status);
         };
     }
 
@@ -79,12 +83,33 @@ public class WarehouseSpecification {
 
     public static Specification<WarehouseEntity> filter(
             String search,
-            Status status,
-            Boolean active) {
+            WarehouseStatus status) {
 
-        return Specification
-                .where(hasKeyword(search))
-                .and(hasStatus(status))
-                .and(hasActive(active));
+        WarehouseStatus selectedStatus =
+                status != null ? status : WarehouseStatus.ACTIVE;
+
+        Specification<WarehouseEntity> specification =
+                Specification.where(hasKeyword(search));
+
+        switch (selectedStatus) {
+
+            case ALL -> specification =
+                    specification.and(hasActive(true));
+
+            case ACTIVE -> specification =
+                    specification
+                            .and(hasActive(true))
+                            .and(hasStatus(Status.ACTIVE));
+
+            case INACTIVE -> specification =
+                    specification
+                            .and(hasActive(true))
+                            .and(hasStatus(Status.INACTIVE));
+
+            case DELETED -> specification =
+                    specification.and(hasActive(false));
+        }
+
+        return specification;
     }
 }

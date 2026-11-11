@@ -48,11 +48,23 @@ public class DefaultAuditSnapshotMapper implements AuditSnapshotMapper {
             return null;
         }
 
-        JsonNode snapshot = objectMapper.valueToTree(entity);
+        try {
+            JsonNode snapshot = objectMapper.valueToTree(entity);
 
-        removeSensitiveFields(snapshot);
+            removeSensitiveFields(snapshot);
 
-        return snapshot;
+            return snapshot;
+
+        } catch (Exception exception) {
+
+            throw new IllegalStateException(
+                    "Unable to create default audit snapshot for entity: "
+                            + entity.getClass().getName()
+                            + ". Create a dedicated AuditSnapshotMapper "
+                            + "for this entity.",
+                    exception
+            );
+        }
     }
 
     private void removeSensitiveFields(JsonNode node) {

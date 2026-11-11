@@ -2,11 +2,13 @@ package com.ims.service.impl.emailSignatureService;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.emailSignature.EmailSignatureCreateRequest;
 import com.ims.dtos.emailSignature.EmailSignatureResponse;
 import com.ims.dtos.emailSignature.EmailSignatureUpdateRequest;
 import com.ims.entity.EmailSignatureEntity;
 import com.ims.enums.EmailSignatureStatus;
+import com.ims.enums.audit.AuditAction;
 import com.ims.repository.EmailSignatureRepository;
 import com.ims.service.serviceInterface.emailSignatureService.EmailSignatureService;
 import com.ims.utils.validation.EmailSignatureValidation;
@@ -29,6 +31,11 @@ public class EmailSignatureServiceImpl implements EmailSignatureService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "EMAIL_SIGNATURE",
+            description = "Email signature created"
+    )
     public ApiResponse<EmailSignatureResponse> create(
             Long userId,
             EmailSignatureCreateRequest request
@@ -116,6 +123,12 @@ public class EmailSignatureServiceImpl implements EmailSignatureService {
 // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "EMAIL_SIGNATURE",
+            recordId = "#p0",
+            description = "Email signature updated"
+    )
     public ApiResponse<EmailSignatureResponse> update(
             Long userId,
             Long signatureId,
@@ -276,6 +289,12 @@ public class EmailSignatureServiceImpl implements EmailSignatureService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "EMAIL_SIGNATURE",
+            recordId = "#p0",
+            description = "Email signature deleted"
+    )
     public ApiResponse<Void> delete(
             Long userId,
             Long signatureId

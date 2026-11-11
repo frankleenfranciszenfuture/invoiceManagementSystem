@@ -1,4 +1,7 @@
+
 package com.ims.common.audit;
+
+import com.ims.entity.CompanyDetails;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -7,6 +10,9 @@ import jakarta.persistence.metamodel.EntityType;
 
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Component
 public class DefaultAuditEntityResolver
         implements AuditEntityResolver {
@@ -14,15 +20,43 @@ public class DefaultAuditEntityResolver
     @PersistenceContext
     private EntityManager entityManager;
 
+    private final Map<String, Class<?>> entityAliases =
+            new HashMap<>();
+
+    public DefaultAuditEntityResolver() {
+
+        // Company aliases
+        registerAlias("COMPANY", CompanyDetails.class);
+        registerAlias("COMPANY_DETAILS", CompanyDetails.class);
+    }
+
+    private void registerAlias(
+            String alias,
+            Class<?> entityClass
+    ) {
+        entityAliases.put(normalize(alias), entityClass);
+    }
+
     @Override
     public Object findEntity(
             String entityName,
-            String entityId) {
+            String entityId
+    ) {
 
         if (entityName == null || entityId == null) {
             return null;
         }
 
+        String normalizedName = normalize(entityName);
+
+        // 1. Check explicit aliases first.
+        Class<?> aliasedClass = entityAliases.get(normalizedName);
+
+        if (aliasedClass != null) {
+            return findByClass(aliasedClass, entityName, entityId);
+        }
+
+        // 2. Otherwise resolve dynamically through JPA metamodel.
         for (EntityType<?> entityType :
                 entityManager.getMetamodel().getEntities()) {
 
@@ -37,20 +71,11 @@ public class DefaultAuditEntityResolver
                 continue;
             }
 
-            Object id = convertId(
-                    entityId,
-                    entityType.getIdType().getJavaType()
+            return findByClass(
+                    javaType,
+                    entityName,
+                    entityId
             );
-
-            Object entity = entityManager.find(javaType, id);
-
-            if (entity == null) {
-                throw new EntityNotFoundException(
-                        entityName + " not found: " + entityId
-                );
-            }
-
-            return entity;
         }
 
         throw new IllegalArgumentException(
@@ -58,14 +83,37 @@ public class DefaultAuditEntityResolver
         );
     }
 
+    private Object findByClass(
+            Class<?> entityClass,
+            String entityName,
+            String entityId
+    ) {
+
+        EntityType<?> entityType =
+                entityManager.getMetamodel().entity(entityClass);
+
+        Object id = convertId(
+                entityId,
+                entityType.getIdType().getJavaType()
+        );
+
+        Object entity = entityManager.find(entityClass, id);
+
+        if (entity == null) {
+            throw new EntityNotFoundException(
+                    entityName + " not found: " + entityId
+            );
+        }
+
+        return entity;
+    }
+
     private boolean matches(
             String requested,
-            String actual) {
+            String actual
+    ) {
 
-        String first = normalize(requested);
-        String second = normalize(actual);
-
-        return first.equals(second);
+        return normalize(requested).equals(normalize(actual));
     }
 
     private String normalize(String value) {
@@ -78,7 +126,8 @@ public class DefaultAuditEntityResolver
 
     private Object convertId(
             String value,
-            Class<?> idType) {
+            Class<?> idType
+    ) {
 
         if (idType == Long.class || idType == long.class) {
             return Long.valueOf(value);
@@ -101,4 +150,3 @@ public class DefaultAuditEntityResolver
         );
     }
 }
-

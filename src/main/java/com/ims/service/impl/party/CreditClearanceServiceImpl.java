@@ -3,6 +3,7 @@ package com.ims.service.impl.party;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.party.clearance.CreditClearanceRequest;
 import com.ims.dtos.party.clearance.CreditClearanceResponse;
 import com.ims.entity.CreditClearanceEntity;
@@ -10,6 +11,7 @@ import com.ims.entity.PartyEntity;
 import com.ims.enums.PartyType;
 import com.ims.enums.PaymentMethod;
 import com.ims.enums.Status;
+import com.ims.enums.audit.AuditAction;
 import com.ims.exception.ValidationException;
 import com.ims.mapper.party.CreditClearanceMapper;
 import com.ims.repository.CreditClearanceRepository;
@@ -51,6 +53,11 @@ public class CreditClearanceServiceImpl implements CreditClearanceService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "CREDIT_CLEARANCE",
+            description = "Party credit clearance created"
+    )
     public ApiResponse<CreditClearanceResponse> create(
             CreditClearanceRequest request) {
 
@@ -192,6 +199,12 @@ public class CreditClearanceServiceImpl implements CreditClearanceService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "CREDIT_CLEARANCE",
+            recordId = "#p0",
+            description = "Party credit clearance updated"
+    )
     public ApiResponse<CreditClearanceResponse> update(
             Long id,
             CreditClearanceRequest request) {
@@ -549,6 +562,12 @@ public class CreditClearanceServiceImpl implements CreditClearanceService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "CREDIT_CLEARANCE",
+            recordId = "#p0",
+            description = "Party credit clearance deleted"
+    )
     public ApiResponse<Void> delete(Long id) {
 
         // 1. VALIDATE CLEARANCE

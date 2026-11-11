@@ -13,6 +13,8 @@ import java.util.List;
 @Builder
 public class PurchaseOrderGoodsReceiptResponse {
 
+    private Long id;
+
     private Long purchaseOrderId;
 
     private String orderNo;

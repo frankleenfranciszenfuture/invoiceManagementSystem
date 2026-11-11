@@ -2,6 +2,7 @@ package com.ims.service.impl.permission.invoiceApproval;
 
 
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.common.AuditResponse;
 import com.ims.dtos.invoiceApproval.InvoiceApprovalDecisionRequest;
 import com.ims.dtos.invoiceApproval.InvoiceApprovalResponse;
@@ -12,6 +13,7 @@ import com.ims.entity.UserEntity;
 import com.ims.enums.InvoiceApprovalStatus;
 import com.ims.enums.InvoiceStatus;
 
+import com.ims.enums.audit.AuditAction;
 import com.ims.enums.notification.NotificationPriority;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.exception.ValidationException;
@@ -51,6 +53,12 @@ public class InvoiceApprovalServiceImpl implements InvoiceApprovalService {
     // =========================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.SUBMITTED,
+            entity = "INVOICE_APPROVAL",
+            recordId = "",
+            description = "Invoice approval submitted"
+    )
     public InvoiceApprovalResponse submitForApproval(
             Long invoiceId,
             InvoiceApprovalDecisionRequest request
@@ -220,6 +228,12 @@ public class InvoiceApprovalServiceImpl implements InvoiceApprovalService {
     // =========================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.APPROVE,
+            entity = "INVOICE_APPROVAL",
+            recordId = "#p0",
+            description = "Invoice approval approved"
+    )
     public InvoiceApprovalResponse approve(
             Long approvalId,
             InvoiceApprovalDecisionRequest request
@@ -286,6 +300,12 @@ public class InvoiceApprovalServiceImpl implements InvoiceApprovalService {
     // =========================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.REJECT,
+            entity = "INVOICE_APPROVAL",
+            recordId = "#p0",
+            description = "Invoice approval rejected"
+    )
     public InvoiceApprovalResponse reject(
             Long approvalId,
             InvoiceApprovalDecisionRequest request
@@ -345,6 +365,12 @@ public class InvoiceApprovalServiceImpl implements InvoiceApprovalService {
     // =========================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.CANCEL,
+            entity = "INVOICE_APPROVAL",
+            recordId = "#p0",
+            description = "Invoice approval canceled"
+    )
     public InvoiceApprovalResponse cancel(Long approvalId) {
 
         UserEntity currentUser = currentUserService.getCurrentUser();

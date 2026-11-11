@@ -3,10 +3,12 @@ package com.ims.service.impl.units;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.units.UnitRequest;
 import com.ims.dtos.units.UnitResponse;
 import com.ims.entity.UnitEntity;
 import com.ims.enums.Status;
+import com.ims.enums.audit.AuditAction;
 import com.ims.mapper.units.UnitMapper;
 import com.ims.repository.UnitRepository;
 import com.ims.service.serviceInterface.units.UnitCodeGeneratorService;
@@ -41,6 +43,11 @@ public class UnitServiceImpl implements UnitService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "UNIT",
+            description = "Unit created"
+    )
     public ApiResponse<UnitResponse> create(
             UnitRequest request) {
 
@@ -119,6 +126,12 @@ public class UnitServiceImpl implements UnitService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "UNIT",
+            recordId = "#p0",
+            description = "Unit updated"
+    )
     public ApiResponse<UnitResponse> update(
             Long id,
             UnitRequest request) {
@@ -267,6 +280,12 @@ public class UnitServiceImpl implements UnitService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "UNIT",
+            recordId = "#p0",
+            description = "Unit deleted"
+    )
     public ApiResponse<Void> delete(
             Long id) {
 

@@ -2,10 +2,12 @@ package com.ims.service.impl.sizes;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.sizes.SizeRequest;
 import com.ims.dtos.sizes.SizeResponse;
 import com.ims.entity.SizeEntity;
 import com.ims.enums.Status;
+import com.ims.enums.audit.AuditAction;
 import com.ims.mapper.sizes.SizeMapper;
 import com.ims.repository.SizeRepository;
 import com.ims.service.serviceInterface.sizes.SizeCodeGeneratorService;
@@ -44,6 +46,11 @@ public class SizeServiceImpl implements SizeService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "SIZE",
+            description = "Size created"
+    )
     public ApiResponse<SizeResponse> create(
             SizeRequest request) {
 
@@ -137,6 +144,12 @@ public class SizeServiceImpl implements SizeService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "SIZE",
+            recordId = "#p0",
+            description = "Size updated"
+    )
     public ApiResponse<SizeResponse> update(
             Long id,
             SizeRequest request) {
@@ -295,6 +308,12 @@ public class SizeServiceImpl implements SizeService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "SIZE",
+            recordId = "#p0",
+            description = "Size deleted"
+    )
     public ApiResponse<Void> delete(
             Long id) {
 

@@ -2,11 +2,15 @@ package com.ims.service.impl.warehouse;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.common.AuditResponse;
 import com.ims.dtos.warehouse.WarehouseRequest;
 import com.ims.dtos.warehouse.WarehouseResponse;
 import com.ims.entity.WarehouseEntity;
 import com.ims.enums.Status;
+import com.ims.enums.audit.AuditAction;
+import com.ims.enums.reports.WarehouseStatus;
+import com.ims.exception.ResourceNotFoundException;
 import com.ims.repository.WarehouseRepository;
 import com.ims.service.serviceInterface.warehouse.WarehouseService;
 import com.ims.utils.base.BaseEntityUtil;
@@ -35,6 +39,11 @@ public class WarehouseServiceImpl implements WarehouseService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "WAREHOUSE",
+            description = "Warehouse created"
+    )
     public ApiResponse<WarehouseResponse> create(WarehouseRequest dto) {
 
         validateRequest(dto);
@@ -74,6 +83,12 @@ public class WarehouseServiceImpl implements WarehouseService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "WAREHOUSE",
+            recordId = "#p0",
+            description = "Warehouse updated"
+    )
     public ApiResponse<WarehouseResponse> update(
             Long id,
             WarehouseRequest dto) {
@@ -119,7 +134,14 @@ public class WarehouseServiceImpl implements WarehouseService {
     @Transactional(readOnly = true)
     public ApiResponse<WarehouseResponse> getById(Long id) {
 
-        WarehouseEntity warehouse = validation.validateWarehouse(id);
+        WarehouseEntity warehouse =
+                validation.validateWarehouse(id);
+
+        if (Boolean.FALSE.equals(warehouse.getActive())) {
+            throw new ResourceNotFoundException(
+                    "Warehouse not found with id: " + id
+            );
+        }
 
         return ApiResponse.success(
                 toResponse(warehouse),
@@ -135,21 +157,17 @@ public class WarehouseServiceImpl implements WarehouseService {
     @Transactional(readOnly = true)
     public ApiResponse<PageResponse<WarehouseResponse>> getAll(
             String search,
-            Status status,
-            Boolean active,
+            WarehouseStatus status,
             Pageable pageable) {
 
         Specification<WarehouseEntity> spec =
-                WarehouseSpecification.filter(search, status, active);
+                WarehouseSpecification.filter(search, status);
 
         Page<WarehouseEntity> page =
                 warehouseRepository.findAll(spec, pageable);
 
-        PageResponse<WarehouseResponse> pageResponse =
-                toPageResponse(page);
-
         return ApiResponse.success(
-                pageResponse,
+                toPageResponse(page),
                 "Warehouses fetched successfully"
         );
     }
@@ -159,24 +177,33 @@ public class WarehouseServiceImpl implements WarehouseService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "WAREHOUSE",
+            recordId = "#p0",
+            description = "Warehouse deleted"
+    )
     public ApiResponse<Void> delete(Long id) {
 
-        WarehouseEntity warehouse = validation.validateWarehouse(id);
+        WarehouseEntity warehouse =
+                validation.validateWarehouse(id);
 
         if (Boolean.FALSE.equals(warehouse.getActive())) {
             return ApiResponse.success(
                     null,
-                    "Warehouse is already deactivated"
+                    "Warehouse is already deleted"
             );
         }
 
         warehouse.setActive(false);
 
+        baseEntityUtil.prepareForUpdate(warehouse);
+
         warehouseRepository.save(warehouse);
 
         return ApiResponse.success(
                 null,
-                "Warehouse deactivated successfully"
+                "Warehouse deleted successfully"
         );
     }
 

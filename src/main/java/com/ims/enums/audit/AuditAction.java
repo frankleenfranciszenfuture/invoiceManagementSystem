@@ -17,5 +17,8 @@ public enum AuditAction {
     REJECT,
 
     CANCEL,
-    REVERSE
+    REVERSE,
+    RESTORED,
+    SENT,
+    SUBMITTED
 }

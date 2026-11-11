@@ -4,6 +4,7 @@ package com.ims.service.impl.expenses;
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
 
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.expenses.ExpenseRequestDTO;
 import com.ims.dtos.expenses.ExpenseResponseDTO;
 
@@ -15,6 +16,7 @@ import com.ims.entity.TaxMasterEntity;
 
 import com.ims.enums.*;
 
+import com.ims.enums.audit.AuditAction;
 import com.ims.exception.BadRequestException;
 import com.ims.exception.ResourceNotFoundException;
 
@@ -72,6 +74,11 @@ public class ExpenseServiceImpl implements ExpenseService {
     // =========================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "EXPENSE",
+            description = "Expense created"
+    )
     public ApiResponse<ExpenseResponseDTO> create(ExpenseRequestDTO dto) {
 
         expenseValidation.validateCreate(dto);
@@ -118,6 +125,12 @@ public class ExpenseServiceImpl implements ExpenseService {
     // =========================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "EXPENSE",
+            recordId = "#p0",
+            description = "Expense updated"
+    )
     public ApiResponse<ExpenseResponseDTO> update(
             Long id,
             ExpenseRequestDTO dto
@@ -260,6 +273,12 @@ public class ExpenseServiceImpl implements ExpenseService {
     // =========================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.APPROVE,
+            entity = "EXPENSE",
+            recordId = "#p0",
+            description = "Expense approved"
+    )
     public ApiResponse<ExpenseResponseDTO> approve(Long id) {
 
         ExpenseEntity expense = getExpense(id);
@@ -285,6 +304,12 @@ public class ExpenseServiceImpl implements ExpenseService {
     // =========================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.REJECT,
+            entity = "EXPENSE",
+            recordId = "#p0",
+            description = "Expense rejected"
+    )
     public ApiResponse<ExpenseResponseDTO> reject(
             Long id,
             String reason
@@ -320,6 +345,12 @@ public class ExpenseServiceImpl implements ExpenseService {
     // =========================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.CANCEL,
+            entity = "EXPENSE",
+            recordId = "#p0",
+            description = "Expense canceled"
+    )
     public ApiResponse<ExpenseResponseDTO> cancel(Long id) {
 
         ExpenseEntity expense = getExpense(id);

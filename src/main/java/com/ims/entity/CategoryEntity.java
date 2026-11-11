@@ -2,6 +2,7 @@ package com.ims.entity;
 
 
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.ims.enums.Status;
 import jakarta.persistence.*;
 import lombok.*;
@@ -75,6 +76,7 @@ public class CategoryEntity extends BaseEntity {
             fetch = FetchType.LAZY
     )
     @Builder.Default
+    @JsonManagedReference
     private List<SubCategoryEntity> subCategories =
             new ArrayList<>();
 

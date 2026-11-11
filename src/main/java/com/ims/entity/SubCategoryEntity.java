@@ -1,6 +1,7 @@
 package com.ims.entity;
 
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.ims.enums.Status;
 import jakarta.persistence.*;
 import lombok.*;
@@ -79,6 +80,7 @@ public class SubCategoryEntity extends BaseEntity {
             name = "category_id",
             nullable = false
     )
+    @JsonBackReference
     private CategoryEntity category;
 
 

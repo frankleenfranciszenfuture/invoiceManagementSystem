@@ -81,4 +81,22 @@ public interface WarehouseRepository extends
     Optional<WarehouseEntity> findByIdForAudit(
             @Param("id") Long id
     );
+
+    // =====================================================
+// DUPLICATE VALIDATION
+// =====================================================
+
+    // Check duplicate name during CREATE (active warehouses only)
+    boolean existsByWarehouseNameIgnoreCaseAndActiveTrue(
+            String warehouseName
+    );
+
+    // Check duplicate name during UPDATE (exclude current warehouse)
+    boolean existsByWarehouseNameIgnoreCaseAndActiveTrueAndIdNot(
+            String warehouseName,
+            Long id
+    );
+
+    // Warehouse code must remain unique, including deleted records
+    boolean existsByWarehouseCodeIgnoreCase(String warehouseCode);
 }

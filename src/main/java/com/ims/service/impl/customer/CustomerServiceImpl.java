@@ -3,10 +3,12 @@ package com.ims.service.impl.customer;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.customer.CustomerRequest;
 import com.ims.dtos.customer.CustomerResponse;
 import com.ims.entity.CustomerEntity;
 import com.ims.enums.CustomerStatus;
+import com.ims.enums.audit.AuditAction;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.exception.ValidationException;
 import com.ims.mapper.address.AddressMapper;
@@ -45,6 +47,11 @@ public class CustomerServiceImpl implements CustomerService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "CUSTOMER",
+            description = "Customer created"
+    )
     public ApiResponse<CustomerResponse> createCustomer(
             CustomerRequest request
     ) {
@@ -87,6 +94,12 @@ public class CustomerServiceImpl implements CustomerService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "CUSTOMER",
+            recordId = "#p0",
+            description = "Customer updated"
+    )
     public ApiResponse<CustomerResponse> updateCustomer(
             Long id,
             CustomerRequest request
@@ -321,6 +334,12 @@ public class CustomerServiceImpl implements CustomerService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "CUSTOMER",
+            recordId = "#p0",
+            description = "Customer deleted"
+    )
     public ApiResponse<Void> deleteCustomer(Long id) {
 
         CustomerEntity customer =
@@ -348,6 +367,12 @@ public class CustomerServiceImpl implements CustomerService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.RESTORED,
+            entity = "CUSTOMER",
+            recordId = "#p0",
+            description = "Customer restored"
+    )
     public ApiResponse<Void> restoreCustomer(Long id) {
 
         if (id == null) {

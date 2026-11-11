@@ -2,6 +2,7 @@ package com.ims.service.impl.product;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.product.ProductRequest;
 import com.ims.dtos.product.ProductResponse;
 import com.ims.entity.CategoryEntity;
@@ -11,6 +12,7 @@ import com.ims.entity.SubCategoryEntity;
 import com.ims.entity.TaxMasterEntity;
 import com.ims.entity.UnitEntity;
 import com.ims.enums.Status;
+import com.ims.enums.audit.AuditAction;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.exception.ValidationException;
 import com.ims.mapper.product.ProductMapper;
@@ -55,6 +57,11 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "PRODUCT",
+            description = "Product created"
+    )
     public ApiResponse<ProductResponse> createProduct(
             ProductRequest request,
             MultipartFile image) {
@@ -236,6 +243,12 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "PRODUCT",
+            recordId = "#p0",
+            description = "Product updated"
+    )
     public ApiResponse<ProductResponse> updateProduct(
             Long id,
             ProductRequest request,
@@ -848,6 +861,12 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "PRODUCT",
+            recordId = "#p0",
+            description = "Product deleted"
+    )
     public ApiResponse<Void> deleteProduct(
             Long productId) {
 

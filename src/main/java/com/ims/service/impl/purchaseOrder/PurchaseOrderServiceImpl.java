@@ -1,5 +1,6 @@
 package com.ims.service.impl.purchaseOrder;
 
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.purchaseOrder.PurchaseOrderGoodsReceiptItemRequest;
 import com.ims.dtos.purchaseOrder.PurchaseOrderGoodsReceiptRequest;
 import com.ims.dtos.purchaseOrder.PurchaseOrderGoodsReceiptResponse;
@@ -23,6 +24,7 @@ import com.ims.entity.WarehouseEntity;
 import com.ims.enums.PurchaseOrderStatus;
 import com.ims.enums.PurchaseOrderTaxType;
 
+import com.ims.enums.audit.AuditAction;
 import com.ims.exception.BadRequestException;
 import com.ims.exception.ResourceNotFoundException;
 
@@ -106,6 +108,11 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "PURCHASE_ORDER",
+            description = "Purchase Order created"
+    )
     public PurchaseOrderResponse createPurchaseOrder(
             PurchaseOrderRequest request
     ) {
@@ -233,6 +240,12 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "PURCHASE_ORDER",
+            recordId = "#p0",
+            description = "Purchase Order updated"
+    )
     public PurchaseOrderResponse updatePurchaseOrder(
             Long id,
             PurchaseOrderRequest request
@@ -300,16 +313,79 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
          * DRAFT orders cannot have goods receipts.
          * Replace the existing items.
          */
-        purchaseOrder.getItems().clear();
+        /*
+         * Reconcile existing items instead of clearing and recreating them.
+         * This preserves item IDs and avoids unique constraint violations.
+         */
+        List<PurchaseOrderItemEntity> unmatchedItems =
+                new java.util.ArrayList<>(purchaseOrder.getItems());
+
+        Set<PurchaseOrderItemKey> processedKeys = new HashSet<>();
 
         for (PurchaseOrderItemRequest itemRequest : request.getItems()) {
 
-            PurchaseOrderItemEntity item =
-                    createPurchaseOrderItem(itemRequest);
+            if (itemRequest == null) {
+                throw new BadRequestException(
+                        "Purchase Order item is required."
+                );
+            }
 
-            purchaseOrder.addItem(item);
+            PurchaseOrderItemKey key = new PurchaseOrderItemKey(
+                    itemRequest.getProductId(),
+                    itemRequest.getSizeId(),
+                    itemRequest.getUnitId()
+            );
 
-            baseEntityUtil.prepareForCreate(item);
+            // Prevent duplicate combinations in the incoming request itself.
+            if (!processedKeys.add(key)) {
+                throw new BadRequestException(
+                        "Duplicate product, size and unit combination in Purchase Order items."
+                );
+            }
+
+            // Find an existing item with the same unique combination.
+            PurchaseOrderItemEntity existingItem = unmatchedItems.stream()
+                    .filter(item ->
+                            java.util.Objects.equals(
+                                    item.getProduct().getId(),
+                                    key.productId()
+                            )
+                                    && java.util.Objects.equals(
+                                    item.getSize() != null ? item.getSize().getId() : null,
+                                    key.sizeId()
+                            )
+                                    && java.util.Objects.equals(
+                                    item.getUnit().getId(),
+                                    key.unitId()
+                            )
+                    )
+                    .findFirst()
+                    .orElse(null);
+
+            if (existingItem != null) {
+
+                // Update the existing database entity.
+                updatePurchaseOrderItem(existingItem, itemRequest);
+
+                baseEntityUtil.prepareForUpdate(existingItem);
+
+                unmatchedItems.remove(existingItem);
+
+            } else {
+
+                // Only create an entity when this combination is genuinely new.
+                PurchaseOrderItemEntity newItem =
+                        createPurchaseOrderItem(itemRequest);
+
+                purchaseOrder.addItem(newItem);
+
+                baseEntityUtil.prepareForCreate(newItem);
+            }
+        }
+
+        // Remove items that were not included in the update request.
+        for (PurchaseOrderItemEntity removedItem : unmatchedItems) {
+            purchaseOrder.removeItem(removedItem);
         }
 
         calculatePurchaseOrder(purchaseOrder);
@@ -333,6 +409,12 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.STATUS_CHANGE,
+            entity = "PURCHASE_ORDER",
+            recordId = "#p0",
+            description = "Purchase Order confirmed"
+    )
     public PurchaseOrderResponse confirmPurchaseOrder(Long id) {
 
         log.info("Confirming Purchase Order: {}", id);
@@ -394,6 +476,12 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.CANCEL,
+            entity = "PURCHASE_ORDER",
+            recordId = "#p0",
+            description = "Purchase Order cancelled"
+    )
     public PurchaseOrderResponse cancelPurchaseOrder(Long id) {
 
         PurchaseOrderEntity purchaseOrder =
@@ -441,6 +529,12 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "PURCHASE_ORDER",
+            recordId = "#p0",
+            description = "Purchase Order deleted"
+    )
     public void deletePurchaseOrder(Long id) {
 
         PurchaseOrderEntity purchaseOrder =
@@ -484,6 +578,11 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "PURCHASE_ORDER_GOODS_RECEIPT",
+            description = "Purchase Order goods receipt created"
+    )
     public PurchaseOrderGoodsReceiptResponse createGoodsReceipt(
             PurchaseOrderGoodsReceiptRequest request
     ) {
@@ -721,6 +820,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         PurchaseOrderGoodsReceiptResponse response =
                 new PurchaseOrderGoodsReceiptResponse();
 
+        response.setId(savedReceipt.getId());
         response.setPurchaseOrderId(purchaseOrder.getId());
         response.setOrderNo(purchaseOrder.getOrderNo());
         response.setReceiptDate(savedReceipt.getReceiptDate());
@@ -766,6 +866,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         PurchaseOrderGoodsReceiptResponse response =
                 new PurchaseOrderGoodsReceiptResponse();
 
+        response.setId(receipt.getId());
         response.setPurchaseOrderId(purchaseOrder.getId());
         response.setOrderNo(purchaseOrder.getOrderNo());
         response.setReceiptDate(receipt.getReceiptDate());
@@ -822,7 +923,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
                     PurchaseOrderGoodsReceiptResponse response =
                             new PurchaseOrderGoodsReceiptResponse();
-
+                    response.setId(receipt.getId());
                     response.setPurchaseOrderId(purchaseOrder.getId());
                     response.setOrderNo(purchaseOrder.getOrderNo());
                     response.setReceiptDate(receipt.getReceiptDate());
@@ -1193,5 +1294,89 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     private BigDecimal zeroIfNull(BigDecimal value) {
 
         return value != null ? value : ZERO;
+    }
+    private void updatePurchaseOrderItem(
+            PurchaseOrderItemEntity item,
+            PurchaseOrderItemRequest request
+    ) {
+
+        if (request == null) {
+            throw new BadRequestException(
+                    "Purchase Order item is required."
+            );
+        }
+
+        ProductEntity product =
+                purchaseOrderValidation.validateProduct(
+                        request.getProductId()
+                );
+
+        UnitEntity unit =
+                purchaseOrderValidation.validateUnit(
+                        request.getUnitId(),
+                        request.getProductId()
+                );
+
+        SizeEntity size = request.getSizeId() != null
+                ? purchaseOrderValidation.validateSize(
+                request.getSizeId(),
+                request.getProductId()
+        )
+                : null;
+
+        TaxMasterEntity taxMaster =
+                request.getTaxMasterId() != null
+                        ? purchaseOrderValidation.validateTaxMaster(
+                        request.getTaxMasterId()
+                )
+                        : null;
+
+        BigDecimal quantity = request.getQuantity();
+
+        if (quantity == null || quantity.signum() <= 0) {
+            throw new BadRequestException(
+                    "Purchase Order item quantity must be greater than zero."
+            );
+        }
+
+        BigDecimal baseUnitPrice = request.getBaseUnitPrice();
+
+        if (baseUnitPrice == null || baseUnitPrice.signum() < 0) {
+            throw new BadRequestException(
+                    "Base unit price in INR is required and cannot be negative."
+            );
+        }
+
+        item.setProduct(product);
+        item.setDescription(request.getDescription());
+
+        item.setUnit(unit);
+        item.setSize(size);
+
+        item.setQuantity(quantity);
+
+        item.setBaseUnitPrice(
+                baseUnitPrice.setScale(
+                        PRICE_SCALE,
+                        RoundingMode.HALF_UP
+                )
+        );
+
+        item.setDiscountType(request.getDiscountType());
+
+        item.setDiscountValue(
+                zeroIfNull(request.getDiscountValue())
+        );
+
+        item.setTaxMaster(taxMaster);
+
+        item.setActive(true);
+    }
+
+    private record PurchaseOrderItemKey(
+            Long productId,
+            Long sizeId,
+            Long unitId
+    ) {
     }
 }

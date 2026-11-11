@@ -1,6 +1,7 @@
 package com.ims.service.impl.inventory;
 
 
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.inventory.*;
 
 import com.ims.entity.*;
@@ -8,6 +9,7 @@ import com.ims.entity.*;
 import com.ims.enums.InventoryMovementType;
 import com.ims.enums.InventoryReferenceType;
 
+import com.ims.enums.audit.AuditAction;
 import com.ims.exception.BadRequestException;
 import com.ims.mapper.inventory.InventoryStockMapper;
 import com.ims.mapper.inventory.InventoryTransactionMapper;
@@ -61,6 +63,11 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "INVENTORY_STOCK",
+            description = "Inventory opening stock created"
+    )
     public InventoryStockResponse createOpeningStock(
             InventoryOpeningStockRequest request) {
 
@@ -126,6 +133,11 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "INVENTORY_STOCK",
+            description = "Inventory stock adjusted"
+    )
     public InventoryStockResponse adjustStock(
             InventoryAdjustmentRequest request) {
 
@@ -473,6 +485,11 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "INVENTORY_STOCK",
+            description = "Inventory stock adjusted"
+    )
     public void dispatchSalesOrder(
             SalesOrderEntity salesOrder
     ) {

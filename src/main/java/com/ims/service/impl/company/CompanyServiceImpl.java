@@ -2,12 +2,14 @@ package com.ims.service.impl.company;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.company.CompanyCreateRequest;
 import com.ims.dtos.company.CompanyResponse;
 import com.ims.dtos.company.CompanySearchRequest;
 import com.ims.dtos.company.CompanyUpdateRequest;
 import com.ims.entity.CompanyDetails;
 import com.ims.enums.CompanyStatus;
+import com.ims.enums.audit.AuditAction;
 import com.ims.mapper.company.CompanyMapper;
 import com.ims.repository.CompanyRepository;
 import com.ims.service.serviceInterface.company.CompanyService;
@@ -42,6 +44,11 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "COMPANY",
+            description = "Company created"
+    )
     public ApiResponse<CompanyResponse> createCompany(
             CompanyCreateRequest request,
             MultipartFile logo,
@@ -293,6 +300,12 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "COMPANY",
+            recordId = "#p0",
+            description = "Company updated"
+    )
     public ApiResponse<CompanyResponse> updateCompany(
             Long id,
             CompanyUpdateRequest request,
@@ -502,6 +515,12 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "COMPANY",
+            recordId = "#p0",
+            description = "Company deleted"
+    )
     public ApiResponse<Void> deleteCompany(Long id) {
 
         log.info("Deleting Company : {}", id);

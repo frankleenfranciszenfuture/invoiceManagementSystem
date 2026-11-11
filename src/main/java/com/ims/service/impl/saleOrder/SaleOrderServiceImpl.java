@@ -3,6 +3,7 @@ package com.ims.service.impl.saleOrder;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.exchange.ExchangeRateResponseDTO;
 import com.ims.dtos.saleOrder.SalesOrderItemRequest;
 import com.ims.dtos.saleOrder.SalesOrderRequest;
@@ -10,6 +11,7 @@ import com.ims.dtos.saleOrder.SalesOrderResponse;
 import com.ims.dtos.saleOrder.SalesOrderSearchRequest;
 import com.ims.entity.*;
 import com.ims.enums.*;
+import com.ims.enums.audit.AuditAction;
 import com.ims.exception.BadRequestException;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.exception.ValidationException;
@@ -64,6 +66,11 @@ public class SaleOrderServiceImpl implements SaleOrderService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "SALES_ORDER",
+            description = "Sales order created"
+    )
     public ApiResponse<SalesOrderResponse> createSalesOrder(
             SalesOrderRequest request
     ) {
@@ -206,6 +213,12 @@ public class SaleOrderServiceImpl implements SaleOrderService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "SALES_ORDER",
+            recordId = "#p0",
+            description = "Sales order updated"
+    )
     public ApiResponse<SalesOrderResponse> updateSalesOrder(
             Long id,
             SalesOrderRequest request
@@ -282,6 +295,9 @@ public class SaleOrderServiceImpl implements SaleOrderService {
         // before using orphanRemoval for replacement.
         salesOrder.getItems().clear();
 
+// Execute orphan deletions before inserting replacement items.
+        salesOrderRepository.flush();
+
         for (SalesOrderItemRequest itemRequest : request.getItems()) {
 
             SalesOrderItemEntity item =
@@ -323,6 +339,12 @@ public class SaleOrderServiceImpl implements SaleOrderService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.STATUS_CHANGE,
+            entity = "SALES_ORDER",
+            recordId = "#p0",
+            description = "Sales order confirmed"
+    )
     public ApiResponse<SalesOrderResponse> confirmSalesOrder(Long id) {
 
         log.info("Confirming Sales Order: {}", id);
@@ -396,6 +418,12 @@ public class SaleOrderServiceImpl implements SaleOrderService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.STATUS_CHANGE,
+            entity = "SALES_ORDER",
+            recordId = "#p0",
+            description = "Sales order dispatched"
+    )
     public ApiResponse<SalesOrderResponse> dispatchSalesOrder(Long id) {
 
         log.info("Dispatching Sales Order: {}", id);
@@ -413,7 +441,7 @@ public class SaleOrderServiceImpl implements SaleOrderService {
                 SaleOrderStatus.DRAFT) {
 
             throw new BadRequestException(
-                    "Cannot dispatch a cancelled Sales Order."
+                    "Cannot dispatch a DRAFT Sales Order. Confirm it first."
             );
         }
 
@@ -473,6 +501,12 @@ public class SaleOrderServiceImpl implements SaleOrderService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.STATUS_CHANGE,
+            entity = "SALES_ORDER",
+            recordId = "#p0",
+            description = "Sales order cancelled"
+    )
     public ApiResponse<SalesOrderResponse> cancelSalesOrder(Long id) {
 
         SalesOrderEntity salesOrder =
@@ -521,6 +555,12 @@ public class SaleOrderServiceImpl implements SaleOrderService {
     // =====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "SALES_ORDER",
+            recordId = "#p0",
+            description = "Sales order deleted"
+    )
     public ApiResponse<Void> deleteSalesOrder(Long id) {
 
         SalesOrderEntity salesOrder =

@@ -6,6 +6,7 @@ import com.ims.common.PageResponse;
 import com.ims.dtos.warehouse.WarehouseRequest;
 import com.ims.dtos.warehouse.WarehouseResponse;
 import com.ims.enums.Status;
+import com.ims.enums.reports.WarehouseStatus;
 import com.ims.service.serviceInterface.warehouse.WarehouseService;
 
 import jakarta.validation.Valid;
@@ -72,7 +73,7 @@ public class WarehouseController {
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<WarehouseResponse>>> getAll(
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) Status status,
+            @RequestParam(required = false) WarehouseStatus status,
             @RequestParam(required = false) Boolean active,
 
             @PageableDefault(size = 20, sort = "warehouseName")
@@ -82,7 +83,6 @@ public class WarehouseController {
                 warehouseService.getAll(
                         search,
                         status,
-                        active,
                         pageable
                 )
         );

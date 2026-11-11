@@ -3,6 +3,7 @@ package com.ims.service.impl.salesPerson;
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
 
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.party.PartyResponse;
 import com.ims.dtos.salesPerson.SalesPersonRequest;
 import com.ims.dtos.salesPerson.SalesPersonResponse;
@@ -12,6 +13,7 @@ import com.ims.entity.SalesPersonEntity;
 
 import com.ims.enums.SalesPersonType;
 import com.ims.enums.Status;
+import com.ims.enums.audit.AuditAction;
 import com.ims.mapper.salesPerson.SalesPersonMapper;
 
 import com.ims.repository.SalesPersonRepository;
@@ -50,6 +52,11 @@ public class SalesPersonServiceImpl implements SalesPersonService {
     //=====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "SALES_PERSON",
+            description = "Sales person created"
+    )
     public ApiResponse<SalesPersonResponse> createSalesPerson(
             SalesPersonRequest request) {
 
@@ -121,6 +128,12 @@ public class SalesPersonServiceImpl implements SalesPersonService {
     //=====================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "SALES_PERSON",
+            recordId = "#p0",
+            description = "Sales person updated"
+    )
     public ApiResponse<SalesPersonResponse> updateSalesPerson(
             Long id,
             SalesPersonRequest request) {
@@ -263,6 +276,12 @@ public class SalesPersonServiceImpl implements SalesPersonService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "SALES_PERSON",
+            recordId = "#p0",
+            description = "Sales person deleted"
+    )
     public ApiResponse<Void> deleteSalesPerson(
             Long id) {
 

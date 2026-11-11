@@ -2,12 +2,14 @@ package com.ims.service.impl.bankAccount;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.bankAccount.BankAccountCreateRequest;
 import com.ims.dtos.bankAccount.BankAccountResponse;
 import com.ims.dtos.bankAccount.BankAccountSearchRequest;
 import com.ims.dtos.bankAccount.BankAccountUpdateRequest;
 import com.ims.entity.BankAccount;
 import com.ims.enums.BankAccountStatus;
+import com.ims.enums.audit.AuditAction;
 import com.ims.mapper.bankAccount.BankAccountMapper;
 import com.ims.repository.BankAccountRepository;
 import com.ims.service.serviceInterface.bankAccount.BankAccountService;
@@ -46,6 +48,11 @@ public class BankAccountServiceImpl
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "BANK_ACCOUNT",
+            description = "Bank account created"
+    )
     public ApiResponse<BankAccountResponse> createBankAccount(
             BankAccountCreateRequest request
     ) {
@@ -265,6 +272,12 @@ public class BankAccountServiceImpl
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "BANK_ACCOUNT",
+            recordId = "#p0",
+            description = "Bank account updated"
+    )
     public ApiResponse<BankAccountResponse> updateBankAccount(
             Long id,
             BankAccountUpdateRequest request
@@ -470,6 +483,12 @@ public class BankAccountServiceImpl
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "BANK_ACCOUNT",
+            recordId = "#p0",
+            description = "Bank account deleted"
+    )
     public ApiResponse<Void> deleteBankAccount(Long id) {
 
         log.info("Deleting Bank Account : {}", id);

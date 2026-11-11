@@ -2,11 +2,13 @@ package com.ims.service.impl.taxMaster;
 
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.taxMaster.TaxMasterRequest;
 import com.ims.dtos.taxMaster.TaxMasterResponse;
 import com.ims.entity.TaxMasterEntity;
 import com.ims.enums.Status;
 import com.ims.enums.TaxType;
+import com.ims.enums.audit.AuditAction;
 import com.ims.mapper.taxMaster.TaxMasterMapper;
 import com.ims.repository.TaxMasterRepository;
 import com.ims.service.serviceInterface.taxMaster.TaxMasterService;
@@ -40,6 +42,11 @@ public class TaxMasterServiceImpl implements TaxMasterService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "TAX_MASTER",
+            description = "Tax master created"
+    )
     public ApiResponse<TaxMasterResponse> create(
             TaxMasterRequest request) {
 
@@ -86,6 +93,12 @@ public class TaxMasterServiceImpl implements TaxMasterService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.UPDATE,
+            entity = "TAX_MASTER",
+            recordId = "#p0",
+            description = "Tax master updated"
+    )
     public ApiResponse<TaxMasterResponse> update(
             Long id,
             TaxMasterRequest request) {
@@ -218,6 +231,12 @@ public class TaxMasterServiceImpl implements TaxMasterService {
 
     @Override
     @Transactional
+    @Auditable(
+            action = AuditAction.DELETE,
+            entity = "TAX_MASTER",
+            recordId = "#p0",
+            description = "Tax master deleted"
+    )
     public ApiResponse<Void> delete(
             Long id) {
 

@@ -1,12 +1,14 @@
 package com.ims.service.impl.payment;
 
 import com.ims.common.PageResponse;
+import com.ims.common.audit.Auditable;
 import com.ims.dtos.payment.PaymentAllocationRequestDTO;
 import com.ims.dtos.payment.PaymentRequestDTO;
 import com.ims.dtos.payment.PaymentResponseDTO;
 import com.ims.entity.*;
 import com.ims.enums.*;
 
+import com.ims.enums.audit.AuditAction;
 import com.ims.mapper.payment.PaymentMapper;
 import com.ims.repository.*;
 import com.ims.service.serviceInterface.currency.ExchangeRateService;
@@ -68,6 +70,11 @@ public class PaymentServiceImpl implements PaymentService {
     // =========================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.CREATE,
+            entity = "PAYMENT",
+            description = "Payment created"
+    )
     public PaymentResponseDTO createPayment(PaymentRequestDTO request) {
 
         validateRequest(request);
@@ -842,6 +849,12 @@ public class PaymentServiceImpl implements PaymentService {
     // =========================================================
 
     @Override
+    @Auditable(
+            action = AuditAction.STATUS_CHANGE,
+            entity = "PAYMENT",
+            recordId = "#p0",
+            description = "Payment reversed"
+    )
     public PaymentResponseDTO reversePayment(Long id, String reason) {
 
         PaymentEntity payment = paymentRepository
