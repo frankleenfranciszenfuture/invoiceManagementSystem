@@ -45,4 +45,26 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
             """)
     Optional<UserEntity> findByIdWithRole(
             @Param("id") Long id);
+
+    @Query("""
+    SELECT u.id
+    FROM UserEntity u
+    JOIN u.role r
+    WHERE UPPER(r.roleName) = UPPER(:roleName)
+      AND u.active = true
+""")
+    java.util.Set<Long> findActiveUserIdsByRoleName(
+            @Param("roleName") String roleName
+    );
+
+    @Query("""
+    SELECT u.id
+    FROM UserEntity u
+    JOIN u.role r
+    WHERE UPPER(r.roleName) IN :roleNames
+      AND u.active = true
+""")
+    java.util.Set<Long> findActiveUserIdsByRoleNames(
+            @Param("roleNames") java.util.Collection<String> roleNames
+    );
 }

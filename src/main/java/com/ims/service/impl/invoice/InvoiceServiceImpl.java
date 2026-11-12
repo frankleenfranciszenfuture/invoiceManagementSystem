@@ -38,6 +38,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.ims.common.notification.Notify;
+import com.ims.enums.notification.NotificationAction;
+import com.ims.enums.notification.NotificationModule;
+import com.ims.enums.notification.NotificationPriority;
+import com.ims.enums.notification.NotificationType;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -85,6 +91,17 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
+    @Notify(
+            module = NotificationModule.INVOICES,
+            action = NotificationAction.CREATED,
+            title = "New invoice created",
+            message = "'Invoice ' + #result.data.invoiceNumber + ' was created successfully.'",
+            entityName = "INVOICE",
+            entityId = "#result.data.id",
+            actionUrl = "'/invoices/view/' + #result.data.id",
+            notificationType = NotificationType.SUCCESS,
+            priority = NotificationPriority.NORMAL
+    )
     @Auditable(
             action = AuditAction.CREATE,
             entity = "INVOICE",
@@ -510,6 +527,17 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
+    @Notify(
+            module = NotificationModule.INVOICES,
+            action = NotificationAction.UPDATED,
+            title = "Invoice updated",
+            message = "'Invoice ' + #result.data.invoiceNumber + ' was updated successfully.'",
+            entityName = "INVOICE",
+            entityId = "#result.data.id",
+            actionUrl = "'/invoices/view/' + #result.data.id",
+            notificationType = NotificationType.INFO,
+            priority = NotificationPriority.NORMAL
+    )
     @Auditable(
             action = AuditAction.UPDATE,
             entity = "INVOICE",
@@ -807,6 +835,17 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
+    @Notify(
+            module = NotificationModule.INVOICES,
+            action = NotificationAction.CANCELLED,
+            title = "Invoice cancelled",
+            message = "'Invoice ' + #result.data.invoiceNumber + ' was cancelled.'",
+            entityName = "INVOICE",
+            entityId = "#result.data.id",
+            actionUrl = "'/invoices/view/' + #result.data.id",
+            notificationType = NotificationType.WARNING,
+            priority = NotificationPriority.HIGH
+    )
     @Auditable(
             action = AuditAction.CANCEL,
             entity = "INVOICE",
@@ -904,6 +943,17 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
+    @Notify(
+            module = NotificationModule.INVOICES,
+            action = NotificationAction.APPROVED,
+            title = "Invoice approved",
+            message = "'Invoice ' + #result.data.invoiceNumber + ' has been approved.'",
+            entityName = "INVOICE",
+            entityId = "#result.data.id",
+            actionUrl = "'/invoices/view/' + #result.data.id",
+            notificationType = NotificationType.SUCCESS,
+            priority = NotificationPriority.HIGH
+    )
     @Auditable(
             action = AuditAction.APPROVE,
             entity = "INVOICE",
@@ -972,6 +1022,17 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
+    @Notify(
+            module = NotificationModule.INVOICES,
+            action = NotificationAction.DELETED,
+            title = "Invoice deleted",
+            message = "'Invoice with ID ' + #p0 + ' was deleted.'",
+            entityName = "INVOICE",
+            entityId = "#p0",
+            actionUrl = "'/invoices'",
+            notificationType = NotificationType.WARNING,
+            priority = NotificationPriority.HIGH
+    )
     @Auditable(
             action = AuditAction.DELETE,
             entity = "INVOICE",
@@ -1035,6 +1096,17 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
+    @Notify(
+            module = NotificationModule.INVOICES,
+            action = NotificationAction.STATUS_CHANGED,
+            title = "Invoice sent",
+            message = "'Invoice with ID ' + #p0 + ' has been sent successfully.'",
+            entityName = "INVOICE",
+            entityId = "#p0",
+            actionUrl = "'/invoices/view/' + #p0",
+            notificationType = NotificationType.SUCCESS,
+            priority = NotificationPriority.NORMAL
+    )
     @Auditable(
             action = AuditAction.STATUS_CHANGE,
             entity = "INVOICE",
@@ -1071,6 +1143,17 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
+    @Notify(
+            module = NotificationModule.INVOICES,
+            action = NotificationAction.SUBMITTED,
+            title = "Invoice submitted for approval",
+            message = "'Invoice with ID ' + #p0 + ' was submitted for approval.'",
+            entityName = "INVOICE",
+            entityId = "#p0",
+            actionUrl = "'/invoices/view/' + #p0",
+            notificationType = NotificationType.INFO,
+            priority = NotificationPriority.HIGH
+    )
     @Auditable(
             action = AuditAction.STATUS_CHANGE,
             entity = "INVOICE",

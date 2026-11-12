@@ -62,7 +62,7 @@ public class SecurityConfig {
                                 HttpMethod.OPTIONS,
                                 "/**"
                         ).permitAll()
-
+                        .requestMatchers("/ws/**").authenticated()
                         .anyRequest().authenticated()
                 )
 

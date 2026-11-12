@@ -14,13 +14,11 @@ import com.ims.enums.InvoiceApprovalStatus;
 import com.ims.enums.InvoiceStatus;
 
 import com.ims.enums.audit.AuditAction;
-import com.ims.enums.notification.NotificationPriority;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.exception.ValidationException;
 import com.ims.repository.InvoiceRepository;
 import com.ims.repository.invoiceApproval.InvoiceApprovalRepository;
 import com.ims.service.impl.common.CurrentUserService;
-import com.ims.service.serviceInterface.notification.NotificationService;
 
 import com.ims.service.serviceInterface.permission.invoiceApproval.InvoiceApprovalPermissionService;
 import com.ims.service.serviceInterface.permission.invoiceApproval.InvoiceApprovalService;
@@ -34,6 +32,12 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ims.common.notification.Notify;
+import com.ims.enums.notification.NotificationAction;
+import com.ims.enums.notification.NotificationModule;
+import com.ims.enums.notification.NotificationPriority;
+import com.ims.enums.notification.NotificationType;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -46,13 +50,25 @@ public class InvoiceApprovalServiceImpl implements InvoiceApprovalService {
     private final InvoiceRepository invoiceRepository;
     private final CurrentUserService currentUserService;
     private final InvoiceApprovalPermissionService permissionService;
-    private final NotificationService notificationService;
     private final BaseEntityUtil baseEntityUtil;
     // =========================================================
     // SUBMIT INVOICE FOR APPROVAL
     // =========================================================
 
     @Override
+    @Notify(
+            module = NotificationModule.INVOICE_APPROVAL,
+            action = NotificationAction.SUBMITTED,
+            title = "Invoice submitted for approval",
+            message = "'Invoice ' + #result.invoiceNumber + ' has been submitted for approval.'",
+            entityName = "INVOICE_APPROVAL",
+            entityId = "#result.id",
+            actionUrl = "'/invoices/view/' + #result.invoiceId",
+            notificationType = NotificationType.INFO,
+            priority = NotificationPriority.HIGH,
+            permissionModule = "Invoices",
+            permissionAction = "APPROVE"
+    )
     @Auditable(
             action = AuditAction.SUBMITTED,
             entity = "INVOICE_APPROVAL",
@@ -134,26 +150,6 @@ public class InvoiceApprovalServiceImpl implements InvoiceApprovalService {
 
         invoiceRepository.save(invoice);
 
-        // Notify all authorized approvers
-        String invoiceNumber = invoice.getInvoiceNumber();
-
-        for (UserEntity approver : approvers) {
-
-            notificationService.createNotification(
-                    approver,
-                    currentUser,
-                    "Invoice approval required",
-                    "Invoice " + invoiceNumber
-                            + " is waiting for your approval.",
-                    "INVOICES",
-                    "INVOICE_APPROVAL",
-                    invoice.getId(),
-                    invoiceNumber,
-                    NotificationPriority.HIGH,
-                    "/invoices/view/" + invoice.getId()
-            );
-        }
-
         return mapToResponse(saved);
     }
 
@@ -228,6 +224,18 @@ public class InvoiceApprovalServiceImpl implements InvoiceApprovalService {
     // =========================================================
 
     @Override
+    @Notify(
+            module = NotificationModule.INVOICE_APPROVAL,
+            action = NotificationAction.APPROVED,
+            title = "Invoice approval granted",
+            message = "'Invoice ' + #result.invoiceNumber + ' has been approved.'",
+            entityName = "INVOICE_APPROVAL",
+            entityId = "#result.id",
+            actionUrl = "'/invoices/view/' + #result.invoiceId",
+            notificationType = NotificationType.SUCCESS,
+            priority = NotificationPriority.HIGH,
+            recipientUserIds = "#result.submittedById"
+    )
     @Auditable(
             action = AuditAction.APPROVE,
             entity = "INVOICE_APPROVAL",
@@ -279,15 +287,6 @@ public class InvoiceApprovalServiceImpl implements InvoiceApprovalService {
         approvalRepository.save(approval);
         invoiceRepository.save(invoice);
 
-        notifySubmitter(
-                approval,
-                currentUser,
-                "Invoice approved",
-                "Your invoice " + invoice.getInvoiceNumber()
-                        + " has been approved.",
-                "INVOICE_APPROVED"
-        );
-
         baseEntityUtil.prepareForUpdate(
                 approval
         );
@@ -300,6 +299,18 @@ public class InvoiceApprovalServiceImpl implements InvoiceApprovalService {
     // =========================================================
 
     @Override
+    @Notify(
+            module = NotificationModule.INVOICE_APPROVAL,
+            action = NotificationAction.REJECTED,
+            title = "Invoice approval rejected",
+            message = "'Invoice ' + #result.invoiceNumber + ' has been rejected.'",
+            entityName = "INVOICE_APPROVAL",
+            entityId = "#result.id",
+            actionUrl = "'/invoices/view/' + #result.invoiceId",
+            notificationType = NotificationType.WARNING,
+            priority = NotificationPriority.HIGH,
+            recipientUserIds = "#result.submittedById"
+    )
     @Auditable(
             action = AuditAction.REJECT,
             entity = "INVOICE_APPROVAL",
@@ -348,14 +359,7 @@ public class InvoiceApprovalServiceImpl implements InvoiceApprovalService {
         approvalRepository.save(approval);
         invoiceRepository.save(invoice);
 
-        notifySubmitter(
-                approval,
-                currentUser,
-                "Invoice rejected",
-                "Your invoice " + invoice.getInvoiceNumber()
-                        + " was rejected. Reason: " + request.getComment(),
-                "INVOICE_REJECTED"
-        );
+
 
         return mapToResponse(approval);
     }
@@ -365,6 +369,18 @@ public class InvoiceApprovalServiceImpl implements InvoiceApprovalService {
     // =========================================================
 
     @Override
+    @Notify(
+            module = NotificationModule.INVOICE_APPROVAL,
+            action = NotificationAction.CANCELLED,
+            title = "Invoice approval request cancelled",
+            message = "'The approval request for invoice ' + #result.invoiceNumber + ' has been cancelled.'",
+            entityName = "INVOICE_APPROVAL",
+            entityId = "#result.id",
+            actionUrl = "'/invoices/view/' + #result.invoiceId",
+            notificationType = NotificationType.WARNING,
+            priority = NotificationPriority.NORMAL,
+            recipientUserIds = "#result.submittedById"
+    )
     @Auditable(
             action = AuditAction.CANCEL,
             entity = "INVOICE_APPROVAL",
@@ -400,15 +416,7 @@ public class InvoiceApprovalServiceImpl implements InvoiceApprovalService {
 
         InvoiceApprovalEntity saved = approvalRepository.save(approval);
 
-        notifySubmitter(
-                approval,
-                currentUser,
-                "Invoice approval cancelled",
-                "The approval request for invoice "
-                        + approval.getInvoice().getInvoiceNumber()
-                        + " has been cancelled.",
-                "INVOICE_APPROVAL_CANCELLED"
-        );
+
 
         return mapToResponse(saved);
     }
@@ -538,33 +546,7 @@ public class InvoiceApprovalServiceImpl implements InvoiceApprovalService {
         return value.trim();
     }
 
-    // =========================================================
-    // NOTIFY SUBMITTER
-    // =========================================================
 
-    private void notifySubmitter(
-            InvoiceApprovalEntity approval,
-            UserEntity sender,
-            String title,
-            String message,
-            String notificationType
-    ) {
-
-        InvoiceEntity invoice = approval.getInvoice();
-
-        notificationService.createNotification(
-                approval.getSubmittedBy(),
-                sender,
-                title,
-                message,
-                "INVOICES",
-                notificationType,
-                invoice.getId(),
-                invoice.getInvoiceNumber(),
-                NotificationPriority.NORMAL,
-                "/invoices/view/" + invoice.getId()
-        );
-    }
 
     // =========================================================
     // ENTITY TO RESPONSE

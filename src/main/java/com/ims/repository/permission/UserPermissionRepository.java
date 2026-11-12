@@ -160,4 +160,32 @@ public interface UserPermissionRepository
     Optional<UserBasedPermission> findByIdForAudit(
             @Param("id") Long id
     );
+
+    @Query("""
+        SELECT DISTINCT u.id
+        FROM UserEntity u
+
+        LEFT JOIN UserBasedPermission up
+            ON up.user.id = u.id
+            AND up.module.id = :moduleId
+            AND up.action.id = :actionId
+
+        LEFT JOIN RoleBasedPermission rp
+            ON rp.role.id = u.role.id
+            AND rp.module.id = :moduleId
+            AND rp.action.id = :actionId
+
+        WHERE u.active = true
+
+        AND (
+            CASE
+                WHEN up.id IS NOT NULL THEN up.allowed
+                ELSE COALESCE(rp.allowed, false)
+            END
+        ) = true
+        """)
+    List<Long> findActiveUserIdsWithPermission(
+            @Param("moduleId") Long moduleId,
+            @Param("actionId") Long actionId
+    );
 }

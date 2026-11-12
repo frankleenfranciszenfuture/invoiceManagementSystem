@@ -139,4 +139,14 @@ public class InvoiceApprovalPermissionService {
         return "ADMIN".equalsIgnoreCase(roleName)
                 || "SUPER_ADMIN".equalsIgnoreCase(roleName);
     }
+
+    public List<Long> findApproverUserIds() {
+
+        return findApprovers()
+                .stream()
+                .map(UserEntity::getId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+    }
 }

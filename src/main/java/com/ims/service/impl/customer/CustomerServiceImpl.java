@@ -4,11 +4,16 @@ package com.ims.service.impl.customer;
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
 import com.ims.common.audit.Auditable;
+import com.ims.common.notification.Notify;
 import com.ims.dtos.customer.CustomerRequest;
 import com.ims.dtos.customer.CustomerResponse;
 import com.ims.entity.CustomerEntity;
 import com.ims.enums.CustomerStatus;
 import com.ims.enums.audit.AuditAction;
+import com.ims.enums.notification.NotificationAction;
+import com.ims.enums.notification.NotificationModule;
+import com.ims.enums.notification.NotificationPriority;
+import com.ims.enums.notification.NotificationType;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.exception.ValidationException;
 import com.ims.mapper.address.AddressMapper;
@@ -47,6 +52,16 @@ public class CustomerServiceImpl implements CustomerService {
     // =====================================================
 
     @Override
+    @Notify(
+            module = NotificationModule.CUSTOMERS,
+            action = NotificationAction.CREATED,
+            title = "New customer created",
+            message = "'Customer ' + #result.data.displayName + ' was created.'",
+            entityName = "CUSTOMER",
+            entityId = "#result.data.id",
+            notificationType = NotificationType.SUCCESS,
+            priority = NotificationPriority.NORMAL
+    )
     @Auditable(
             action = AuditAction.CREATE,
             entity = "CUSTOMER",
@@ -94,6 +109,17 @@ public class CustomerServiceImpl implements CustomerService {
     // =====================================================
 
     @Override
+    @Notify(
+            module = NotificationModule.CUSTOMERS,
+            action = NotificationAction.UPDATED,
+            title = "Customer updated",
+            message = "'Customer ' + #result.data.displayName + ' was updated.'",
+            entityName = "CUSTOMER",
+            entityId = "#result.data.id",
+            actionUrl = "'/customers/view/' + #result.data.id",
+            notificationType = NotificationType.INFO,
+            priority = NotificationPriority.NORMAL
+    )
     @Auditable(
             action = AuditAction.UPDATE,
             entity = "CUSTOMER",
@@ -334,6 +360,17 @@ public class CustomerServiceImpl implements CustomerService {
     // =====================================================
 
     @Override
+    @Notify(
+            module = NotificationModule.CUSTOMERS,
+            action = NotificationAction.DELETED,
+            title = "Customer deleted",
+            message = "'Customer with ID ' + #p0 + ' was deleted.'",
+            entityName = "CUSTOMER",
+            entityId = "#p0",
+            actionUrl = "'/customers'",
+            notificationType = NotificationType.WARNING,
+            priority = NotificationPriority.NORMAL
+    )
     @Auditable(
             action = AuditAction.DELETE,
             entity = "CUSTOMER",
@@ -367,6 +404,17 @@ public class CustomerServiceImpl implements CustomerService {
     // =====================================================
 
     @Override
+    @Notify(
+            module = NotificationModule.CUSTOMERS,
+            action = NotificationAction.STATUS_CHANGED,
+            title = "Customer restored",
+            message = "'Customer with ID ' + #p0 + ' was restored successfully.'",
+            entityName = "CUSTOMER",
+            entityId = "#p0",
+            actionUrl = "'/customers'",
+            notificationType = NotificationType.SUCCESS,
+            priority = NotificationPriority.NORMAL
+    )
     @Auditable(
             action = AuditAction.RESTORED,
             entity = "CUSTOMER",

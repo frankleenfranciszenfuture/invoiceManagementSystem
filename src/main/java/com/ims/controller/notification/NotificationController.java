@@ -1,11 +1,16 @@
 package com.ims.controller.notification;
 
+
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
 import com.ims.dtos.notification.NotificationResponse;
 import com.ims.service.serviceInterface.notification.NotificationService;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.Sort;
 
 import org.springframework.web.bind.annotation.*;
 
@@ -16,54 +21,67 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
+
     // =========================================================
-    // GET MY NOTIFICATIONS
-    // GET /notifications?page=0&size=20
+    // INBOX
+    // GET /notifications
     // =========================================================
 
     @GetMapping
-    public ApiResponse<PageResponse<NotificationResponse>> getMyNotifications(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+    public ApiResponse<PageResponse<NotificationResponse>> getInbox(
+            @PageableDefault(
+                    size = 10,
+                    sort = "createdAt",
+                    direction = Sort.Direction.DESC
+            )
+            Pageable pageable
     ) {
 
-        return ApiResponse.success(
-                notificationService.getMyNotifications(page, size),
-                "Notifications fetched successfully"
-        );
+        return notificationService.getInbox(pageable);
     }
 
+
     // =========================================================
-    // GET UNREAD COUNT
+    // ARCHIVED
+    // GET /notifications/archived
+    // =========================================================
+
+    @GetMapping("/archived")
+    public ApiResponse<PageResponse<NotificationResponse>>
+    getArchivedNotifications(
+            @PageableDefault(size = 10)
+            Pageable pageable
+    ) {
+
+        return notificationService.getArchivedNotifications(pageable);
+    }
+
+
+    // =========================================================
+    // UNREAD COUNT
     // GET /notifications/unread-count
     // =========================================================
 
     @GetMapping("/unread-count")
     public ApiResponse<Long> getUnreadCount() {
 
-        return ApiResponse.success(
-                notificationService.getUnreadCount(),
-                "Unread notification count fetched successfully"
-        );
+        return notificationService.getUnreadCount();
     }
 
+
     // =========================================================
-    // MARK ONE AS READ
-    // PATCH /notifications/{id}/read
+    // MARK AS READ
+    // PATCH /notifications/{recipientId}/read
     // =========================================================
 
-    @PatchMapping("/{id}/read")
+    @PatchMapping("/{recipientId}/read")
     public ApiResponse<Void> markAsRead(
-            @PathVariable Long id
+            @PathVariable Long recipientId
     ) {
 
-        notificationService.markAsRead(id);
-
-        return ApiResponse.success(
-                null,
-                "Notification marked as read"
-        );
+        return notificationService.markAsRead(recipientId);
     }
+
 
     // =========================================================
     // MARK ALL AS READ
@@ -73,29 +91,48 @@ public class NotificationController {
     @PatchMapping("/read-all")
     public ApiResponse<Void> markAllAsRead() {
 
-        notificationService.markAllAsRead();
-
-        return ApiResponse.success(
-                null,
-                "All notifications marked as read"
-        );
+        return notificationService.markAllAsRead();
     }
 
+
     // =========================================================
-    // DELETE NOTIFICATION
-    // DELETE /notifications/{id}
+    // ARCHIVE
+    // PATCH /notifications/{recipientId}/archive
     // =========================================================
 
-    @DeleteMapping("/{id}")
-    public ApiResponse<Void> deleteNotification(
-            @PathVariable Long id
+    @PatchMapping("/{recipientId}/archive")
+    public ApiResponse<Void> archiveNotification(
+            @PathVariable Long recipientId
     ) {
 
-        notificationService.deleteNotification(id);
+        return notificationService.archiveNotification(recipientId);
+    }
 
-        return ApiResponse.success(
-                null,
-                "Notification deleted successfully"
-        );
+
+    // =========================================================
+    // RESTORE
+    // PATCH /notifications/{recipientId}/restore
+    // =========================================================
+
+    @PatchMapping("/{recipientId}/restore")
+    public ApiResponse<Void> restoreNotification(
+            @PathVariable Long recipientId
+    ) {
+
+        return notificationService.restoreNotification(recipientId);
+    }
+
+
+    // =========================================================
+    // DELETE
+    // DELETE /notifications/{recipientId}
+    // =========================================================
+
+    @DeleteMapping("/{recipientId}")
+    public ApiResponse<Void> deleteNotification(
+            @PathVariable Long recipientId
+    ) {
+
+        return notificationService.deleteNotification(recipientId);
     }
 }

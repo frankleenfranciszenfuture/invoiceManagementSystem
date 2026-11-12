@@ -1,0 +1,31 @@
+package com.ims.enums.notification;
+
+public enum NotificationModule {
+
+    APPROVAL,
+    BANK_ACCOUNT,
+    BANK_TRANSACTION,
+    CASH_ACCOUNT,
+    CASH_TRANSACTION,
+    CATEGORY,
+    CUSTOMERS,
+    EXPENSE,
+    INVENTORY,
+    INVENTORY_STOCK,
+    INVENTORY_TRANSACTION,
+    INVOICES,
+    INVOICE_APPROVAL,
+    ITEM,
+    PARTY,
+    PARTY_CLEARANCE,
+    PAYMENT,
+    PURCHASE_ORDER,
+    SALES_ORDER,
+    SALES_PERSON,
+    SIZE,
+    SUBCATEGORY,
+    SYSTEM,
+    TAX_MASTER,
+    UNIT,
+    WAREHOUSE
+}
