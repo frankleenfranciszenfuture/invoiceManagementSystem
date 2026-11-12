@@ -1,3 +1,4 @@
+
 package com.ims.reports.provider.clearance;
 
 import com.ims.dtos.reports.*;
@@ -9,7 +10,6 @@ import com.ims.enums.reports.ReportModule;
 import com.ims.enums.reports.ReportType;
 import com.ims.repository.CreditClearanceRepository;
 
-import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 
@@ -20,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,47 +49,23 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
     }
 
     // =========================================================
-    // REPORT DEFINITIONS
+    // SINGLE REPORT DEFINITION
     // =========================================================
 
     @Override
     public List<ReportDefinition> getReportDefinitions() {
 
         return List.of(
-
                 ReportDefinition.builder()
-                        .code("CREDIT_CLEARANCE_REGISTER")
-                        .name("Credit Clearance Register")
+                        .code("CREDIT_CLEARANCE_REPORT")
+                        .name("Credit Clearance Report")
                         .description(
-                                "Complete credit clearance records including " +
-                                        "clearance number, party, payment method, " +
-                                        "clearance date and outstanding credit."
+                                "Complete credit clearance report containing clearance details, " +
+                                        "party information, credit limits, outstanding credit, " +
+                                        "payment information, remarks, status and audit information."
                         )
                         .type(ReportType.REGISTER)
-                        .columns(getRegisterColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("CREDIT_CLEARANCE_DETAILS")
-                        .name("Credit Clearance Details")
-                        .description(
-                                "Detailed credit clearance information including " +
-                                        "previous outstanding credit, clearance amount, " +
-                                        "remaining outstanding credit and payment details."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getDetailsColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("CREDIT_CLEARANCE_PARTY_REPORT")
-                        .name("Credit Clearance Party Report")
-                        .description(
-                                "Credit clearance history grouped by party " +
-                                        "identification and party type."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getPartyColumns())
+                        .columns(getColumns())
                         .build()
         );
     }
@@ -103,11 +80,19 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
             Pageable pageable
     ) {
 
+        if (request == null || !hasText(request.getReportCode())) {
+            throw new IllegalArgumentException("Report code is required.");
+        }
+
         String reportCode = request.getReportCode()
                 .trim()
                 .toUpperCase(Locale.ROOT);
 
-        List<ReportColumn> columns = getColumns(reportCode);
+        if (!"CREDIT_CLEARANCE_REPORT".equals(reportCode)) {
+            throw new IllegalArgumentException(
+                    "Unsupported credit clearance report: " + reportCode
+            );
+        }
 
         Specification<CreditClearanceEntity> specification =
                 buildSpecification(request.getFilters());
@@ -120,20 +105,16 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                         databasePageable
                 );
 
-        List<Map<String, Object>> rows =
-                clearancePage.getContent()
-                        .stream()
-                        .map(clearance -> mapCreditClearance(
-                                clearance,
-                                reportCode
-                        ))
-                        .toList();
+        List<Map<String, Object>> rows = clearancePage.getContent()
+                .stream()
+                .map(this::mapCreditClearance)
+                .toList();
 
         ReportSummaryResponse summary =
                 generateSummary(specification);
 
         return ReportData.builder()
-                .columns(columns)
+                .columns(getColumns())
                 .rows(rows)
                 .totalElements(clearancePage.getTotalElements())
                 .pageNumber(clearancePage.getNumber())
@@ -145,59 +126,36 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
     }
 
     // =========================================================
-    // REPORT COLUMN SELECTION
+    // REPORT COLUMNS
     // =========================================================
 
-    private List<ReportColumn> getColumns(String reportCode) {
-
-        return switch (reportCode) {
-
-            case "CREDIT_CLEARANCE_REGISTER" ->
-                    getRegisterColumns();
-
-            case "CREDIT_CLEARANCE_DETAILS" ->
-                    getDetailsColumns();
-
-            case "CREDIT_CLEARANCE_PARTY_REPORT" ->
-                    getPartyColumns();
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported credit clearance report: " + reportCode
-            );
-        };
-    }
-
-    // =========================================================
-    // REGISTER COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getRegisterColumns() {
+    private List<ReportColumn> getColumns() {
 
         return List.of(
-
                 column("id", "Clearance ID", "NUMBER"),
                 column("clearanceNo", "Clearance Number", "STRING"),
 
+                // Party information
                 column("partyId", "Party ID", "NUMBER"),
                 column("partyCode", "Party Code", "STRING"),
                 column("partyName", "Party Name", "STRING"),
                 column("partyType", "Party Type", "STRING"),
 
-                column("creditLimit", "Credit Limit", "NUMBER"),
-                column("clearanceAmount", "Clearance Amount", "NUMBER"),
-
+                // Credit information
+                column("creditLimit", "Credit Limit", "DECIMAL"),
                 column(
                         "previousOutstandingCredit",
                         "Previous Outstanding Credit",
-                        "NUMBER"
+                        "DECIMAL"
                 ),
-
+                column("clearanceAmount", "Clearance Amount", "DECIMAL"),
                 column(
                         "remainingOutstandingCredit",
                         "Remaining Outstanding Credit",
-                        "NUMBER"
+                        "DECIMAL"
                 ),
 
+                // Payment information
                 column("paymentMethod", "Payment Method", "STRING"),
                 column(
                         "paymentReferenceNumber",
@@ -205,96 +163,19 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                         "STRING"
                 ),
 
+                // Clearance information
                 column("clearanceDate", "Clearance Date", "DATE"),
-                column("status", "Status", "STRING"),
+                column("remarks", "Remarks", "STRING"),
 
+                // Status
+                column("status", "Status", "STRING"),
                 column("active", "Active", "BOOLEAN"),
+
+                // Audit information
                 column("createdAt", "Created At", "DATETIME"),
                 column("updatedAt", "Updated At", "DATETIME"),
                 column("createdBy", "Created By", "NUMBER"),
                 column("updatedBy", "Updated By", "NUMBER")
-        );
-    }
-
-    // =========================================================
-    // DETAILS COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getDetailsColumns() {
-
-        return List.of(
-
-                column("id", "Clearance ID", "NUMBER"),
-                column("clearanceNo", "Clearance Number", "STRING"),
-
-                column("partyId", "Party ID", "NUMBER"),
-                column("partyCode", "Party Code", "STRING"),
-                column("partyName", "Party Name", "STRING"),
-                column("partyType", "Party Type", "STRING"),
-
-                column("creditLimit", "Credit Limit", "NUMBER"),
-
-                column(
-                        "previousOutstandingCredit",
-                        "Previous Outstanding Credit",
-                        "NUMBER"
-                ),
-
-                column("clearanceAmount", "Clearance Amount", "NUMBER"),
-
-                column(
-                        "remainingOutstandingCredit",
-                        "Remaining Outstanding Credit",
-                        "NUMBER"
-                ),
-
-                column("paymentMethod", "Payment Method", "STRING"),
-                column(
-                        "paymentReferenceNumber",
-                        "Payment Reference Number",
-                        "STRING"
-                ),
-
-                column("clearanceDate", "Clearance Date", "DATE"),
-                column("remarks", "Remarks", "STRING"),
-                column("status", "Status", "STRING")
-        );
-    }
-
-    // =========================================================
-    // PARTY REPORT COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getPartyColumns() {
-
-        return List.of(
-
-                column("partyId", "Party ID", "NUMBER"),
-                column("partyCode", "Party Code", "STRING"),
-                column("partyName", "Party Name", "STRING"),
-                column("partyType", "Party Type", "STRING"),
-
-                column("clearanceNo", "Clearance Number", "STRING"),
-                column("clearanceDate", "Clearance Date", "DATE"),
-
-                column("creditLimit", "Credit Limit", "NUMBER"),
-
-                column(
-                        "previousOutstandingCredit",
-                        "Previous Outstanding Credit",
-                        "NUMBER"
-                ),
-
-                column("clearanceAmount", "Clearance Amount", "NUMBER"),
-
-                column(
-                        "remainingOutstandingCredit",
-                        "Remaining Outstanding Credit",
-                        "NUMBER"
-                ),
-
-                column("paymentMethod", "Payment Method", "STRING"),
-                column("status", "Status", "STRING")
         );
     }
 
@@ -317,7 +198,88 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
     }
 
     // =========================================================
-    // CREDIT CLEARANCE SPECIFICATION
+    // MAP CREDIT CLEARANCE
+    // =========================================================
+
+    private Map<String, Object> mapCreditClearance(
+            CreditClearanceEntity clearance
+    ) {
+
+        Map<String, Object> row = new LinkedHashMap<>();
+
+        // Clearance identification
+        row.put("id", clearance.getId());
+        row.put("clearanceNo", clearance.getClearanceNo());
+
+        // Party information
+        if (clearance.getParty() != null) {
+
+            row.put("partyId", clearance.getParty().getId());
+            row.put("partyCode", clearance.getParty().getPartyCode());
+            row.put("partyName", clearance.getParty().getCompanyName());
+
+        } else {
+
+            row.put("partyId", null);
+            row.put("partyCode", null);
+            row.put("partyName", null);
+        }
+
+        row.put("partyType", enumValue(clearance.getPartyType()));
+
+        // Credit information
+        row.put("creditLimit", clearance.getCreditLimit());
+
+        row.put(
+                "previousOutstandingCredit",
+                clearance.getPreviousOutstandingCredit()
+        );
+
+        row.put("clearanceAmount", clearance.getClearanceAmount());
+
+        row.put(
+                "remainingOutstandingCredit",
+                clearance.getRemainingOutstandingCredit()
+        );
+
+        // Payment information
+        row.put(
+                "paymentMethod",
+                enumValue(clearance.getPaymentMethod())
+        );
+
+        row.put(
+                "paymentReferenceNumber",
+                clearance.getPaymentReferenceNumber()
+        );
+
+        // Clearance information
+        row.put("clearanceDate", clearance.getClearanceDate());
+        row.put("remarks", clearance.getRemarks());
+
+        // Status
+        row.put("status", enumValue(clearance.getStatus()));
+        row.put("active", clearance.getActive());
+
+        // Audit information
+        row.put("createdAt", clearance.getCreatedAt());
+        row.put("updatedAt", clearance.getUpdatedAt());
+        row.put("createdBy", clearance.getCreatedBy());
+        row.put("updatedBy", clearance.getUpdatedBy());
+
+        return row;
+    }
+
+    // =========================================================
+    // ENUM HELPER
+    // =========================================================
+
+    private String enumValue(Enum<?> value) {
+        return value == null ? null : value.name();
+    }
+
+    // =========================================================
+    // SPECIFICATION / FILTERS
     // =========================================================
 
     private Specification<CreditClearanceEntity> buildSpecification(
@@ -337,21 +299,12 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                             ? Map.of()
                             : filters.getFilters();
 
-            // -------------------------------------------------
-            // PARTY JOIN
-            // -------------------------------------------------
-
             var partyJoin = root.join("party", JoinType.LEFT);
 
-            // -------------------------------------------------
-            // KEYWORD
-            // -------------------------------------------------
-
+            // Keyword search
             if (hasText(filters.getKeyword())) {
 
-                String keyword = containsPattern(
-                        filters.getKeyword()
-                );
+                String keyword = containsPattern(filters.getKeyword());
 
                 predicates.add(
                         cb.or(
@@ -379,14 +332,9 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
-            // CLEARANCE NUMBER
-            // -------------------------------------------------
-
-            String clearanceNo = getFilterValue(
-                    customFilters,
-                    "clearanceNo"
-            );
+            // Clearance number
+            String clearanceNo =
+                    getFilterValue(customFilters, "clearanceNo");
 
             if (hasText(clearanceNo)) {
 
@@ -398,33 +346,18 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
-            // PARTY ID
-            // -------------------------------------------------
-
-            Long partyId = getLongFilter(
-                    customFilters,
-                    "partyId"
-            );
+            // Party ID
+            Long partyId = getLongFilter(customFilters, "partyId");
 
             if (partyId != null) {
-
                 predicates.add(
-                        cb.equal(
-                                partyJoin.get("id"),
-                                partyId
-                        )
+                        cb.equal(partyJoin.get("id"), partyId)
                 );
             }
 
-            // -------------------------------------------------
-            // PARTY TYPE
-            // -------------------------------------------------
-
-            String partyTypeValue = getFilterValue(
-                    customFilters,
-                    "partyType"
-            );
+            // Party type
+            String partyTypeValue =
+                    getFilterValue(customFilters, "partyType");
 
             if (hasText(partyTypeValue)
                     && !"ALL".equalsIgnoreCase(partyTypeValue)) {
@@ -436,10 +369,7 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                     );
 
                     predicates.add(
-                            cb.equal(
-                                    root.get("partyType"),
-                                    partyType
-                            )
+                            cb.equal(root.get("partyType"), partyType)
                     );
 
                 } catch (IllegalArgumentException exception) {
@@ -450,14 +380,9 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                 }
             }
 
-            // -------------------------------------------------
-            // PAYMENT METHOD
-            // -------------------------------------------------
-
-            String paymentMethodValue = getFilterValue(
-                    customFilters,
-                    "paymentMethod"
-            );
+            // Payment method
+            String paymentMethodValue =
+                    getFilterValue(customFilters, "paymentMethod");
 
             if (hasText(paymentMethodValue)
                     && !"ALL".equalsIgnoreCase(paymentMethodValue)) {
@@ -469,10 +394,7 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                     );
 
                     predicates.add(
-                            cb.equal(
-                                    root.get("paymentMethod"),
-                                    paymentMethod
-                            )
+                            cb.equal(root.get("paymentMethod"), paymentMethod)
                     );
 
                 } catch (IllegalArgumentException exception) {
@@ -483,14 +405,9 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                 }
             }
 
-            // -------------------------------------------------
-            // CLEARANCE STATUS
-            // -------------------------------------------------
-
-            String statusValue = getFilterValue(
-                    customFilters,
-                    "status"
-            );
+            // Status
+            String statusValue =
+                    getFilterValue(customFilters, "status");
 
             if (!hasText(statusValue)) {
                 statusValue = filters.getStatus();
@@ -506,10 +423,7 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                     );
 
                     predicates.add(
-                            cb.equal(
-                                    root.get("status"),
-                                    status
-                            )
+                            cb.equal(root.get("status"), status)
                     );
 
                 } catch (IllegalArgumentException exception) {
@@ -520,17 +434,16 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                 }
             }
 
-            // -------------------------------------------------
-            // MINIMUM CLEARANCE AMOUNT
-            // -------------------------------------------------
+            // Clearance amount range
+            BigDecimal minAmount =
+                    getBigDecimalFilter(customFilters, "minAmount");
 
-            BigDecimal minAmount = getBigDecimalFilter(
-                    customFilters,
-                    "minAmount"
-            );
+            BigDecimal maxAmount =
+                    getBigDecimalFilter(customFilters, "maxAmount");
+
+            validateAmountRange(minAmount, maxAmount, "Clearance amount");
 
             if (minAmount != null) {
-
                 predicates.add(
                         cb.greaterThanOrEqualTo(
                                 root.get("clearanceAmount"),
@@ -539,17 +452,7 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
-            // MAXIMUM CLEARANCE AMOUNT
-            // -------------------------------------------------
-
-            BigDecimal maxAmount = getBigDecimalFilter(
-                    customFilters,
-                    "maxAmount"
-            );
-
             if (maxAmount != null) {
-
                 predicates.add(
                         cb.lessThanOrEqualTo(
                                 root.get("clearanceAmount"),
@@ -558,30 +461,84 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                 );
             }
 
-            if (minAmount != null && maxAmount != null
-                    && minAmount.compareTo(maxAmount) > 0) {
+            // Credit limit range
+            BigDecimal minCreditLimit =
+                    getBigDecimalFilter(customFilters, "minCreditLimit");
 
-                throw new IllegalArgumentException(
-                        "Minimum clearance amount cannot be greater than maximum amount."
+            BigDecimal maxCreditLimit =
+                    getBigDecimalFilter(customFilters, "maxCreditLimit");
+
+            validateAmountRange(minCreditLimit, maxCreditLimit, "Credit limit");
+
+            if (minCreditLimit != null) {
+                predicates.add(
+                        cb.greaterThanOrEqualTo(
+                                root.get("creditLimit"),
+                                minCreditLimit
+                        )
                 );
             }
 
-            // -------------------------------------------------
-            // CLEARANCE DATE RANGE
-            // -------------------------------------------------
+            if (maxCreditLimit != null) {
+                predicates.add(
+                        cb.lessThanOrEqualTo(
+                                root.get("creditLimit"),
+                                maxCreditLimit
+                        )
+                );
+            }
 
-            LocalDate clearanceDateFrom = getDateFilter(
-                    customFilters,
-                    "clearanceDateFrom"
+            // Remaining outstanding credit range
+            BigDecimal minRemaining =
+                    getBigDecimalFilter(
+                            customFilters,
+                            "minRemainingOutstandingCredit"
+                    );
+
+            BigDecimal maxRemaining =
+                    getBigDecimalFilter(
+                            customFilters,
+                            "maxRemainingOutstandingCredit"
+                    );
+
+            validateAmountRange(
+                    minRemaining,
+                    maxRemaining,
+                    "Remaining outstanding credit"
             );
 
-            LocalDate clearanceDateTo = getDateFilter(
-                    customFilters,
-                    "clearanceDateTo"
+            if (minRemaining != null) {
+                predicates.add(
+                        cb.greaterThanOrEqualTo(
+                                root.get("remainingOutstandingCredit"),
+                                minRemaining
+                        )
+                );
+            }
+
+            if (maxRemaining != null) {
+                predicates.add(
+                        cb.lessThanOrEqualTo(
+                                root.get("remainingOutstandingCredit"),
+                                maxRemaining
+                        )
+                );
+            }
+
+            // Specific clearance date range
+            LocalDate clearanceDateFrom =
+                    getDateFilter(customFilters, "clearanceDateFrom");
+
+            LocalDate clearanceDateTo =
+                    getDateFilter(customFilters, "clearanceDateTo");
+
+            validateDateRange(
+                    clearanceDateFrom,
+                    clearanceDateTo,
+                    "Clearance date"
             );
 
             if (clearanceDateFrom != null) {
-
                 predicates.add(
                         cb.greaterThanOrEqualTo(
                                 root.get("clearanceDate"),
@@ -591,7 +548,6 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
             }
 
             if (clearanceDateTo != null) {
-
                 predicates.add(
                         cb.lessThanOrEqualTo(
                                 root.get("clearanceDate"),
@@ -600,21 +556,13 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                 );
             }
 
-            validateDateRange(
-                    clearanceDateFrom,
-                    clearanceDateTo,
-                    "Clearance date"
-            );
-
-            // -------------------------------------------------
-            // COMMON DATE FILTERS
-            // -------------------------------------------------
-
+            // Common date filters
             LocalDate fromDate = filters.getFromDate();
             LocalDate toDate = filters.getToDate();
 
-            if (fromDate != null) {
+            validateDateRange(fromDate, toDate, "Date");
 
+            if (fromDate != null) {
                 predicates.add(
                         cb.greaterThanOrEqualTo(
                                 root.get("clearanceDate"),
@@ -624,7 +572,6 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
             }
 
             if (toDate != null) {
-
                 predicates.add(
                         cb.lessThanOrEqualTo(
                                 root.get("clearanceDate"),
@@ -633,16 +580,8 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                 );
             }
 
-            validateDateRange(fromDate, toDate, "Date");
-
-            // -------------------------------------------------
-            // ACTIVE FLAG FROM BASE ENTITY
-            // -------------------------------------------------
-
-            String active = getFilterValue(
-                    customFilters,
-                    "active"
-            );
+            // Active filter
+            String active = getFilterValue(customFilters, "active");
 
             if (hasText(active)) {
 
@@ -662,225 +601,8 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                 );
             }
 
-            return cb.and(
-                    predicates.toArray(new Predicate[0])
-            );
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
-    }
-
-    // =========================================================
-    // MAP CREDIT CLEARANCE
-    // =========================================================
-
-    private Map<String, Object> mapCreditClearance(
-            CreditClearanceEntity clearance,
-            String reportCode
-    ) {
-
-        Map<String, Object> row = new LinkedHashMap<>();
-
-        switch (reportCode) {
-
-            case "CREDIT_CLEARANCE_REGISTER" ->
-                    mapRegister(clearance, row);
-
-            case "CREDIT_CLEARANCE_DETAILS" ->
-                    mapDetails(clearance, row);
-
-            case "CREDIT_CLEARANCE_PARTY_REPORT" ->
-                    mapPartyReport(clearance, row);
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported credit clearance report: " + reportCode
-            );
-        }
-
-        return row;
-    }
-
-    // =========================================================
-    // REGISTER MAPPING
-    // =========================================================
-
-    private void mapRegister(
-            CreditClearanceEntity clearance,
-            Map<String, Object> row
-    ) {
-
-        mapCommonFields(clearance, row);
-
-        row.put("creditLimit", clearance.getCreditLimit());
-        row.put("clearanceAmount", clearance.getClearanceAmount());
-
-        row.put(
-                "previousOutstandingCredit",
-                clearance.getPreviousOutstandingCredit()
-        );
-
-        row.put(
-                "remainingOutstandingCredit",
-                clearance.getRemainingOutstandingCredit()
-        );
-
-        row.put(
-                "paymentMethod",
-                clearance.getPaymentMethod() == null
-                        ? null
-                        : clearance.getPaymentMethod().name()
-        );
-
-        row.put(
-                "paymentReferenceNumber",
-                clearance.getPaymentReferenceNumber()
-        );
-
-        row.put("clearanceDate", clearance.getClearanceDate());
-
-        row.put(
-                "status",
-                clearance.getStatus() == null
-                        ? null
-                        : clearance.getStatus().name()
-        );
-
-        row.put("active", clearance.getActive());
-        row.put("createdAt", clearance.getCreatedAt());
-        row.put("updatedAt", clearance.getUpdatedAt());
-        row.put("createdBy", clearance.getCreatedBy());
-        row.put("updatedBy", clearance.getUpdatedBy());
-    }
-
-    // =========================================================
-    // DETAILS MAPPING
-    // =========================================================
-
-    private void mapDetails(
-            CreditClearanceEntity clearance,
-            Map<String, Object> row
-    ) {
-
-        mapCommonFields(clearance, row);
-
-        row.put("creditLimit", clearance.getCreditLimit());
-
-        row.put(
-                "previousOutstandingCredit",
-                clearance.getPreviousOutstandingCredit()
-        );
-
-        row.put("clearanceAmount", clearance.getClearanceAmount());
-
-        row.put(
-                "remainingOutstandingCredit",
-                clearance.getRemainingOutstandingCredit()
-        );
-
-        row.put(
-                "paymentMethod",
-                clearance.getPaymentMethod() == null
-                        ? null
-                        : clearance.getPaymentMethod().name()
-        );
-
-        row.put(
-                "paymentReferenceNumber",
-                clearance.getPaymentReferenceNumber()
-        );
-
-        row.put("clearanceDate", clearance.getClearanceDate());
-        row.put("remarks", clearance.getRemarks());
-
-        row.put(
-                "status",
-                clearance.getStatus() == null
-                        ? null
-                        : clearance.getStatus().name()
-        );
-    }
-
-    // =========================================================
-    // PARTY REPORT MAPPING
-    // =========================================================
-
-    private void mapPartyReport(
-            CreditClearanceEntity clearance,
-            Map<String, Object> row
-    ) {
-
-        mapPartyFields(clearance, row);
-
-        row.put("clearanceNo", clearance.getClearanceNo());
-        row.put("clearanceDate", clearance.getClearanceDate());
-        row.put("creditLimit", clearance.getCreditLimit());
-
-        row.put(
-                "previousOutstandingCredit",
-                clearance.getPreviousOutstandingCredit()
-        );
-
-        row.put("clearanceAmount", clearance.getClearanceAmount());
-
-        row.put(
-                "remainingOutstandingCredit",
-                clearance.getRemainingOutstandingCredit()
-        );
-
-        row.put(
-                "paymentMethod",
-                clearance.getPaymentMethod() == null
-                        ? null
-                        : clearance.getPaymentMethod().name()
-        );
-
-        row.put(
-                "status",
-                clearance.getStatus() == null
-                        ? null
-                        : clearance.getStatus().name()
-        );
-    }
-
-    // =========================================================
-    // COMMON MAPPING
-    // =========================================================
-
-    private void mapCommonFields(
-            CreditClearanceEntity clearance,
-            Map<String, Object> row
-    ) {
-
-        row.put("id", clearance.getId());
-        row.put("clearanceNo", clearance.getClearanceNo());
-
-        mapPartyFields(clearance, row);
-
-        row.put("clearanceDate", clearance.getClearanceDate());
-    }
-
-    private void mapPartyFields(
-            CreditClearanceEntity clearance,
-            Map<String, Object> row
-    ) {
-
-        if (clearance.getParty() == null) {
-
-            row.put("partyId", null);
-            row.put("partyCode", null);
-            row.put("partyName", null);
-
-        } else {
-
-            row.put("partyId", clearance.getParty().getId());
-            row.put("partyCode", clearance.getParty().getPartyCode());
-            row.put("partyName", clearance.getParty().getCompanyName());
-        }
-
-        row.put(
-                "partyType",
-                clearance.getPartyType() == null
-                        ? null
-                        : clearance.getPartyType().name()
-        );
     }
 
     // =========================================================
@@ -907,11 +629,33 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
                 )
         );
 
+        long customerClearances = creditClearanceRepository.count(
+                specification.and(
+                        (root, query, cb) ->
+                                cb.equal(
+                                        root.get("partyType"),
+                                        PartyType.CUSTOMER
+                                )
+                )
+        );
+
+        long supplierClearances = creditClearanceRepository.count(
+                specification.and(
+                        (root, query, cb) ->
+                                cb.equal(
+                                        root.get("partyType"),
+                                        PartyType.SUPPLIER
+                                )
+                )
+        );
+
         Map<String, Object> metrics = new LinkedHashMap<>();
 
         metrics.put("totalCreditClearances", total);
         metrics.put("activeRecords", activeRecords);
         metrics.put("inactiveRecords", inactiveRecords);
+        metrics.put("customerClearances", customerClearances);
+        metrics.put("supplierClearances", supplierClearances);
 
         return ReportSummaryResponse.builder()
                 .metrics(metrics)
@@ -934,19 +678,14 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
 
             List<Sort.Order> orders = new ArrayList<>();
 
-            pageable.getSort().forEach(order -> {
-
-                String entityField = mapSortField(
-                        order.getProperty()
-                );
-
-                orders.add(
-                        new Sort.Order(
-                                order.getDirection(),
-                                entityField
-                        )
-                );
-            });
+            pageable.getSort().forEach(order ->
+                    orders.add(
+                            new Sort.Order(
+                                    order.getDirection(),
+                                    mapSortField(order.getProperty())
+                            )
+                    )
+            );
 
             mappedSort = Sort.by(orders);
         }
@@ -961,27 +700,61 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
     private String mapSortField(String field) {
 
         return switch (field) {
-
+            case "id" -> "id";
             case "clearanceNo" -> "clearanceNo";
             case "partyId" -> "party.id";
             case "partyCode" -> "party.partyCode";
             case "partyName" -> "party.companyName";
             case "partyType" -> "partyType";
             case "creditLimit" -> "creditLimit";
+            case "previousOutstandingCredit" -> "previousOutstandingCredit";
             case "clearanceAmount" -> "clearanceAmount";
-            case "previousOutstandingCredit" ->
-                    "previousOutstandingCredit";
-            case "remainingOutstandingCredit" ->
-                    "remainingOutstandingCredit";
+            case "remainingOutstandingCredit" -> "remainingOutstandingCredit";
             case "paymentMethod" -> "paymentMethod";
+            case "paymentReferenceNumber" -> "paymentReferenceNumber";
             case "clearanceDate" -> "clearanceDate";
             case "status" -> "status";
+            case "active" -> "active";
             case "createdAt" -> "createdAt";
             case "updatedAt" -> "updatedAt";
-            case "id" -> "id";
-
             default -> "id";
         };
+    }
+
+    // =========================================================
+    // VALIDATION HELPERS
+    // =========================================================
+
+    private void validateAmountRange(
+            BigDecimal minimum,
+            BigDecimal maximum,
+            String fieldName
+    ) {
+
+        if (minimum != null && maximum != null
+                && minimum.compareTo(maximum) > 0) {
+
+            throw new IllegalArgumentException(
+                    "Minimum " + fieldName.toLowerCase(Locale.ROOT) +
+                            " cannot be greater than maximum " +
+                            fieldName.toLowerCase(Locale.ROOT) + "."
+            );
+        }
+    }
+
+    private void validateDateRange(
+            LocalDate fromDate,
+            LocalDate toDate,
+            String label
+    ) {
+
+        if (fromDate != null && toDate != null
+                && fromDate.isAfter(toDate)) {
+
+            throw new IllegalArgumentException(
+                    label + " from date cannot be after to date."
+            );
+        }
     }
 
     // =========================================================
@@ -1066,29 +839,11 @@ public class CreditClearanceReportProvider implements ReportDataProvider {
         }
     }
 
-    private void validateDateRange(
-            LocalDate fromDate,
-            LocalDate toDate,
-            String label
-    ) {
-
-        if (fromDate != null && toDate != null
-                && fromDate.isAfter(toDate)) {
-
-            throw new IllegalArgumentException(
-                    label + " from date cannot be after to date."
-            );
-        }
-    }
-
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
     }
 
     private String containsPattern(String value) {
-
-        return "%"
-                + value.trim().toLowerCase(Locale.ROOT)
-                + "%";
+        return "%" + value.trim().toLowerCase(Locale.ROOT) + "%";
     }
 }

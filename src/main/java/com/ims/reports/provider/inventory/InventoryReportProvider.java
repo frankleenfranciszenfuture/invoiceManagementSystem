@@ -38,8 +38,7 @@ public class InventoryReportProvider implements ReportDataProvider {
     private final InventoryStockRepository inventoryStockRepository;
     private final InventoryTransactionRepository inventoryTransactionRepository;
 
-    private static final String STOCK_REGISTER = "INVENTORY_STOCK_REGISTER";
-    private static final String LOW_STOCK = "INVENTORY_LOW_STOCK_REPORT";
+    private static final String STOCK_REPORT = "INVENTORY_STOCK_REPORT";
     private static final String TRANSACTION_REPORT = "INVENTORY_TRANSACTION_REPORT";
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
@@ -63,90 +62,121 @@ public class InventoryReportProvider implements ReportDataProvider {
         return List.of(
 
                 ReportDefinition.builder()
-                        .code(STOCK_REGISTER)
-                        .name("Inventory Stock Register")
+                        .code(STOCK_REPORT)
+                        .name("Inventory Stock Report")
                         .description(
-                                "View current stock quantities, reserved stock, " +
-                                        "available stock, average cost and stock value."
+                                "Complete inventory stock report including product, " +
+                                        "warehouse, unit, size, stock quantities, reserved " +
+                                        "quantities, available stock, minimum and maximum " +
+                                        "stock levels, average cost and stock value. " +
+                                        "Supports low-stock filtering."
                         )
                         .type(ReportType.REGISTER)
-                        .columns(stockColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code(LOW_STOCK)
-                        .name("Low Stock Report")
-                        .description(
-                                "View products whose available stock has reached " +
-                                        "or fallen below their configured minimum stock."
-                        )
-                        .type(ReportType.SUMMARY)
-                        .columns(stockColumns())
+                        .columns(getStockColumns())
                         .build(),
 
                 ReportDefinition.builder()
                         .code(TRANSACTION_REPORT)
                         .name("Inventory Transaction Report")
                         .description(
-                                "View inventory stock-in and stock-out transactions, " +
-                                        "references, balances and transaction costs."
+                                "Complete inventory transaction report including " +
+                                        "stock movements, product, warehouse, unit, size, " +
+                                        "references, quantities, balances and transaction costs."
                         )
                         .type(ReportType.TRANSACTION)
-                        .columns(transactionColumns())
+                        .columns(getTransactionColumns())
                         .build()
         );
     }
 
     // =========================================================
-    // REPORT COLUMNS
+    // STOCK REPORT COLUMNS
     // =========================================================
 
-    private List<ReportColumn> stockColumns() {
+    private List<ReportColumn> getStockColumns() {
 
         return List.of(
+                column("id", "ID", "NUMBER"),
+
+                column("productId", "Product ID", "NUMBER"),
                 column("productCode", "Product Code", "STRING"),
                 column("productName", "Product Name", "STRING"),
                 column("sku", "SKU", "STRING"),
+
+                column("warehouseId", "Warehouse ID", "NUMBER"),
                 column("warehouseName", "Warehouse", "STRING"),
+                column("warehouseCode", "Warehouse Code", "STRING"),
+
+                column("unitId", "Unit ID", "NUMBER"),
                 column("unitName", "Unit", "STRING"),
                 column("unitShortName", "Unit Short Name", "STRING"),
+
+                column("sizeId", "Size ID", "NUMBER"),
                 column("sizeName", "Size", "STRING"),
-                column("quantity", "Total Quantity", "NUMBER"),
-                column("reservedQuantity", "Reserved Quantity", "NUMBER"),
-                column("availableQuantity", "Available Quantity", "NUMBER"),
-                column("minimumStock", "Minimum Stock", "NUMBER"),
-                column("maximumStock", "Maximum Stock", "NUMBER"),
-                column("averageCost", "Average Cost", "CURRENCY"),
-                column("stockValue", "Stock Value", "CURRENCY")
+
+                column("quantity", "Total Quantity", "DECIMAL"),
+                column("reservedQuantity", "Reserved Quantity", "DECIMAL"),
+                column("availableQuantity", "Available Quantity", "DECIMAL"),
+
+                column("minimumStock", "Minimum Stock", "DECIMAL"),
+                column("maximumStock", "Maximum Stock", "DECIMAL"),
+
+                column("averageCost", "Average Cost", "DECIMAL"),
+                column("stockValue", "Stock Value", "DECIMAL")
         );
     }
 
-    private List<ReportColumn> transactionColumns() {
+    // =========================================================
+    // TRANSACTION REPORT COLUMNS
+    // =========================================================
+
+    private List<ReportColumn> getTransactionColumns() {
 
         return List.of(
+                column("id", "ID", "NUMBER"),
+
                 column("transactionNo", "Transaction No", "STRING"),
                 column("transactionDate", "Transaction Date", "DATETIME"),
+
+                column("productId", "Product ID", "NUMBER"),
                 column("productCode", "Product Code", "STRING"),
                 column("productName", "Product Name", "STRING"),
+
+                column("warehouseId", "Warehouse ID", "NUMBER"),
                 column("warehouseName", "Warehouse", "STRING"),
+                column("warehouseCode", "Warehouse Code", "STRING"),
+
+                column("unitId", "Unit ID", "NUMBER"),
                 column("unitName", "Unit", "STRING"),
+                column("unitShortName", "Unit Short Name", "STRING"),
+
+                column("sizeId", "Size ID", "NUMBER"),
                 column("sizeName", "Size", "STRING"),
+
                 column("movementType", "Movement Type", "STRING"),
                 column("referenceType", "Reference Type", "STRING"),
                 column("referenceId", "Reference ID", "NUMBER"),
-                column("quantityIn", "Quantity In", "NUMBER"),
-                column("quantityOut", "Quantity Out", "NUMBER"),
-                column("balanceAfter", "Balance After", "NUMBER"),
-                column("unitCost", "Unit Cost", "CURRENCY"),
+
+                column("quantityIn", "Quantity In", "DECIMAL"),
+                column("quantityOut", "Quantity Out", "DECIMAL"),
+                column("balanceAfter", "Balance After", "DECIMAL"),
+
+                column("unitCost", "Unit Cost", "DECIMAL"),
+
                 column("notes", "Notes", "STRING")
         );
     }
+
+    // =========================================================
+    // COMMON COLUMN BUILDER
+    // =========================================================
 
     private ReportColumn column(
             String key,
             String label,
             String dataType
     ) {
+
         return ReportColumn.builder()
                 .key(key)
                 .label(label)
@@ -166,7 +196,7 @@ public class InventoryReportProvider implements ReportDataProvider {
     ) {
 
         if (request == null || !hasText(request.getReportCode())) {
-            throw new IllegalArgumentException("Report code is required");
+            throw new IllegalArgumentException("Report code is required.");
         }
 
         String reportCode = request.getReportCode()
@@ -177,11 +207,8 @@ public class InventoryReportProvider implements ReportDataProvider {
 
         return switch (reportCode) {
 
-            case STOCK_REGISTER ->
-                    generateStockReport(filters, pageable, false);
-
-            case LOW_STOCK ->
-                    generateStockReport(filters, pageable, true);
+            case STOCK_REPORT ->
+                    generateStockReport(filters, pageable);
 
             case TRANSACTION_REPORT ->
                     generateTransactionReport(filters, pageable);
@@ -194,31 +221,37 @@ public class InventoryReportProvider implements ReportDataProvider {
     }
 
     // =========================================================
-    // STOCK REGISTER / LOW STOCK
+    // STOCK REPORT
     // =========================================================
 
     private ReportData generateStockReport(
             ReportFilterRequest filters,
-            Pageable pageable,
-            boolean lowStockOnly
+            Pageable pageable
     ) {
 
         Specification<InventoryStockEntity> specification =
-                buildStockSpecification(filters, lowStockOnly);
+                buildStockSpecification(filters);
 
         Pageable sortedPageable = buildPageable(
                 pageable,
-                Map.of(
-                        "productCode", "product.productCode",
-                        "productName", "product.productName",
-                        "sku", "product.sku",
-                        "warehouseName", "warehouse.warehouseName",
-                        "unitName", "unit.unitName",
-                        "sizeName", "size.sizeName",
-                        "quantity", "quantity",
-                        "reservedQuantity", "reservedQuantity",
-                        "availableQuantity", "availableQuantity",
-                        "averageCost", "averageCost"
+                Map.ofEntries(
+                        Map.entry("id", "id"),
+                        Map.entry("productId", "product.id"),
+                        Map.entry("productCode", "product.productCode"),
+                        Map.entry("productName", "product.productName"),
+                        Map.entry("sku", "product.sku"),
+                        Map.entry("warehouseId", "warehouse.id"),
+                        Map.entry("warehouseName", "warehouse.warehouseName"),
+                        Map.entry("unitId", "unit.id"),
+                        Map.entry("unitName", "unit.unitName"),
+                        Map.entry("sizeId", "size.id"),
+                        Map.entry("sizeName", "size.sizeName"),
+                        Map.entry("quantity", "quantity"),
+                        Map.entry("reservedQuantity", "reservedQuantity"),
+                        Map.entry("availableQuantity", "availableQuantity"),
+                        Map.entry("minimumStock", "product.minimumStock"),
+                        Map.entry("maximumStock", "product.maximumStock"),
+                        Map.entry("averageCost", "averageCost")
                 ),
                 "product.productName",
                 Sort.Direction.ASC
@@ -235,14 +268,11 @@ public class InventoryReportProvider implements ReportDataProvider {
                 .map(this::mapStockRow)
                 .toList();
 
-        List<InventoryStockEntity> allMatchingStocks =
-                inventoryStockRepository.findAll(specification);
-
         ReportSummaryResponse summary =
-                buildStockSummary(allMatchingStocks);
+                buildStockSummary(specification);
 
         return ReportData.builder()
-                .columns(stockColumns())
+                .columns(getStockColumns())
                 .rows(rows)
                 .totalElements(page.getTotalElements())
                 .pageNumber(page.getNumber())
@@ -258,8 +288,7 @@ public class InventoryReportProvider implements ReportDataProvider {
     // =========================================================
 
     private Specification<InventoryStockEntity> buildStockSpecification(
-            ReportFilterRequest filters,
-            boolean lowStockOnly
+            ReportFilterRequest filters
     ) {
 
         ReportFilterRequest requestFilters =
@@ -281,7 +310,10 @@ public class InventoryReportProvider implements ReportDataProvider {
 
             List<Predicate> predicates = new ArrayList<>();
 
+            Map<String, Object> values = getFilterValues(requestFilters);
+
             // KEYWORD
+
             if (hasText(requestFilters.getKeyword())) {
 
                 String keyword = containsPattern(requestFilters.getKeyword());
@@ -300,27 +332,30 @@ public class InventoryReportProvider implements ReportDataProvider {
                 );
             }
 
-            // STATUS
+            // PRODUCT STATUS
+
             if (hasText(requestFilters.getStatus())
                     && !"ALL".equalsIgnoreCase(requestFilters.getStatus())) {
 
                 predicates.add(
                         cb.equal(
                                 product.get("status").as(String.class),
-                                requestFilters.getStatus().trim().toUpperCase(Locale.ROOT)
+                                requestFilters.getStatus()
+                                        .trim()
+                                        .toUpperCase(Locale.ROOT)
                         )
                 );
             }
 
-            Map<String, Object> values = getFilterValues(requestFilters);
-
             // ENTITY FILTERS
+
             addIdPredicate(predicates, cb, product.get("id"), values.get("productId"));
             addIdPredicate(predicates, cb, warehouse.get("id"), values.get("warehouseId"));
             addIdPredicate(predicates, cb, unit.get("id"), values.get("unitId"));
             addIdPredicate(predicates, cb, size.get("id"), values.get("sizeId"));
 
             // QUANTITY FILTERS
+
             addDecimalPredicate(
                     predicates, cb, root.<BigDecimal>get("quantity"),
                     values.get("minQuantity"), true
@@ -329,6 +364,16 @@ public class InventoryReportProvider implements ReportDataProvider {
             addDecimalPredicate(
                     predicates, cb, root.<BigDecimal>get("quantity"),
                     values.get("maxQuantity"), false
+            );
+
+            addDecimalPredicate(
+                    predicates, cb, root.<BigDecimal>get("reservedQuantity"),
+                    values.get("minReservedQuantity"), true
+            );
+
+            addDecimalPredicate(
+                    predicates, cb, root.<BigDecimal>get("reservedQuantity"),
+                    values.get("maxReservedQuantity"), false
             );
 
             addDecimalPredicate(
@@ -351,17 +396,39 @@ public class InventoryReportProvider implements ReportDataProvider {
                     values.get("maxAverageCost"), false
             );
 
-            // LOW STOCK
-            if (lowStockOnly) {
+            // LOW STOCK FILTER
+            // true: only stock at or below minimum stock
+            // false: exclude low stock
 
-                predicates.add(cb.isNotNull(product.get("minimumStock")));
+            Object lowStockValue = values.get("lowStockOnly");
 
-                predicates.add(
-                        cb.lessThanOrEqualTo(
-                                root.<BigDecimal>get("availableQuantity"),
-                                product.<BigDecimal>get("minimumStock")
-                        )
-                );
+            if (lowStockValue != null && hasText(lowStockValue)) {
+
+                Boolean lowStockOnly = parseBoolean(lowStockValue);
+
+                if (lowStockOnly != null && lowStockOnly) {
+
+                    predicates.add(cb.isNotNull(product.get("minimumStock")));
+
+                    predicates.add(
+                            cb.lessThanOrEqualTo(
+                                    root.<BigDecimal>get("availableQuantity"),
+                                    product.<BigDecimal>get("minimumStock")
+                            )
+                    );
+
+                } else if (Boolean.FALSE.equals(lowStockOnly)) {
+
+                    predicates.add(
+                            cb.or(
+                                    cb.isNull(product.get("minimumStock")),
+                                    cb.greaterThan(
+                                            root.<BigDecimal>get("availableQuantity"),
+                                            product.<BigDecimal>get("minimumStock")
+                                    )
+                            )
+                    );
+                }
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
@@ -384,8 +451,6 @@ public class InventoryReportProvider implements ReportDataProvider {
         BigDecimal quantity = valueOrZero(stock.getQuantity());
         BigDecimal averageCost = valueOrZero(stock.getAverageCost());
 
-        BigDecimal stockValue = quantity.multiply(averageCost);
-
         Map<String, Object> row = new LinkedHashMap<>();
 
         row.put("id", stock.getId());
@@ -398,6 +463,8 @@ public class InventoryReportProvider implements ReportDataProvider {
         row.put("warehouseId", warehouse != null ? warehouse.getId() : null);
         row.put("warehouseName",
                 warehouse != null ? warehouse.getWarehouseName() : null);
+        row.put("warehouseCode",
+                warehouse != null ? warehouse.getWarehouseCode() : null);
 
         row.put("unitId", unit != null ? unit.getId() : null);
         row.put("unitName", unit != null ? unit.getUnitName() : null);
@@ -418,7 +485,7 @@ public class InventoryReportProvider implements ReportDataProvider {
                 product != null ? product.getMaximumStock() : null);
 
         row.put("averageCost", averageCost);
-        row.put("stockValue", stockValue);
+        row.put("stockValue", quantity.multiply(averageCost));
 
         return row;
     }
@@ -428,8 +495,11 @@ public class InventoryReportProvider implements ReportDataProvider {
     // =========================================================
 
     private ReportSummaryResponse buildStockSummary(
-            List<InventoryStockEntity> stocks
+            Specification<InventoryStockEntity> specification
     ) {
+
+        List<InventoryStockEntity> stocks =
+                inventoryStockRepository.findAll(specification);
 
         BigDecimal totalQuantity = ZERO;
         BigDecimal totalReserved = ZERO;
@@ -478,7 +548,7 @@ public class InventoryReportProvider implements ReportDataProvider {
     }
 
     // =========================================================
-    // INVENTORY TRANSACTION REPORT
+    // TRANSACTION REPORT
     // =========================================================
 
     private ReportData generateTransactionReport(
@@ -490,12 +560,17 @@ public class InventoryReportProvider implements ReportDataProvider {
                 buildTransactionSpecification(filters);
 
         Map<String, String> sortFields = Map.ofEntries(
+                Map.entry("id", "id"),
                 Map.entry("transactionNo", "transactionNo"),
                 Map.entry("transactionDate", "transactionDate"),
+                Map.entry("productId", "product.id"),
                 Map.entry("productName", "product.productName"),
                 Map.entry("productCode", "product.productCode"),
+                Map.entry("warehouseId", "warehouse.id"),
                 Map.entry("warehouseName", "warehouse.warehouseName"),
+                Map.entry("unitId", "unit.id"),
                 Map.entry("unitName", "unit.unitName"),
+                Map.entry("sizeId", "size.id"),
                 Map.entry("sizeName", "size.sizeName"),
                 Map.entry("movementType", "movementType"),
                 Map.entry("referenceType", "referenceType"),
@@ -525,14 +600,11 @@ public class InventoryReportProvider implements ReportDataProvider {
                 .map(this::mapTransactionRow)
                 .toList();
 
-        List<InventoryTransactionEntity> allMatchingTransactions =
-                inventoryTransactionRepository.findAll(specification);
-
         ReportSummaryResponse summary =
-                buildTransactionSummary(allMatchingTransactions);
+                buildTransactionSummary(specification);
 
         return ReportData.builder()
-                .columns(transactionColumns())
+                .columns(getTransactionColumns())
                 .rows(rows)
                 .totalElements(page.getTotalElements())
                 .pageNumber(page.getNumber())
@@ -572,6 +644,7 @@ public class InventoryReportProvider implements ReportDataProvider {
             Map<String, Object> values = getFilterValues(requestFilters);
 
             // KEYWORD
+
             if (hasText(requestFilters.getKeyword())) {
 
                 String keyword = containsPattern(requestFilters.getKeyword());
@@ -583,12 +656,15 @@ public class InventoryReportProvider implements ReportDataProvider {
                                 cb.like(cb.lower(product.get("productCode")), keyword),
                                 cb.like(cb.lower(warehouse.get("warehouseName")), keyword),
                                 cb.like(cb.lower(warehouse.get("warehouseCode")), keyword),
+                                cb.like(cb.lower(unit.get("unitName")), keyword),
+                                cb.like(cb.lower(size.get("sizeName")), keyword),
                                 cb.like(cb.lower(root.get("notes")), keyword)
                         )
                 );
             }
 
             // DATE RANGE
+
             if (requestFilters.getFromDate() != null) {
 
                 LocalDateTime fromDate =
@@ -605,7 +681,9 @@ public class InventoryReportProvider implements ReportDataProvider {
             if (requestFilters.getToDate() != null) {
 
                 LocalDateTime toDate =
-                        requestFilters.getToDate().plusDays(1).atStartOfDay();
+                        requestFilters.getToDate()
+                                .plusDays(1)
+                                .atStartOfDay();
 
                 predicates.add(
                         cb.lessThan(
@@ -616,6 +694,7 @@ public class InventoryReportProvider implements ReportDataProvider {
             }
 
             // ENTITY FILTERS
+
             addIdPredicate(predicates, cb, product.get("id"), values.get("productId"));
             addIdPredicate(predicates, cb, warehouse.get("id"), values.get("warehouseId"));
             addIdPredicate(predicates, cb, unit.get("id"), values.get("unitId"));
@@ -629,6 +708,7 @@ public class InventoryReportProvider implements ReportDataProvider {
             );
 
             // MOVEMENT TYPE
+
             if (hasText(values.get("movementType"))) {
 
                 predicates.add(
@@ -641,6 +721,7 @@ public class InventoryReportProvider implements ReportDataProvider {
             }
 
             // REFERENCE TYPE
+
             if (hasText(values.get("referenceType"))) {
 
                 predicates.add(
@@ -653,6 +734,7 @@ public class InventoryReportProvider implements ReportDataProvider {
             }
 
             // UNIT COST
+
             addDecimalPredicate(
                     predicates,
                     cb,
@@ -666,6 +748,42 @@ public class InventoryReportProvider implements ReportDataProvider {
                     cb,
                     root.<BigDecimal>get("unitCost"),
                     values.get("maxUnitCost"),
+                    false
+            );
+
+            // QUANTITY IN
+
+            addDecimalPredicate(
+                    predicates,
+                    cb,
+                    root.<BigDecimal>get("quantityIn"),
+                    values.get("minQuantityIn"),
+                    true
+            );
+
+            addDecimalPredicate(
+                    predicates,
+                    cb,
+                    root.<BigDecimal>get("quantityIn"),
+                    values.get("maxQuantityIn"),
+                    false
+            );
+
+            // QUANTITY OUT
+
+            addDecimalPredicate(
+                    predicates,
+                    cb,
+                    root.<BigDecimal>get("quantityOut"),
+                    values.get("minQuantityOut"),
+                    true
+            );
+
+            addDecimalPredicate(
+                    predicates,
+                    cb,
+                    root.<BigDecimal>get("quantityOut"),
+                    values.get("maxQuantityOut"),
                     false
             );
 
@@ -699,6 +817,8 @@ public class InventoryReportProvider implements ReportDataProvider {
         row.put("warehouseId", warehouse != null ? warehouse.getId() : null);
         row.put("warehouseName",
                 warehouse != null ? warehouse.getWarehouseName() : null);
+        row.put("warehouseCode",
+                warehouse != null ? warehouse.getWarehouseCode() : null);
 
         row.put("unitId", unit != null ? unit.getId() : null);
         row.put("unitName", unit != null ? unit.getUnitName() : null);
@@ -717,7 +837,6 @@ public class InventoryReportProvider implements ReportDataProvider {
         row.put("balanceAfter", valueOrZero(transaction.getBalanceAfter()));
 
         row.put("unitCost", valueOrZero(transaction.getUnitCost()));
-
         row.put("notes", transaction.getNotes());
 
         return row;
@@ -728,8 +847,11 @@ public class InventoryReportProvider implements ReportDataProvider {
     // =========================================================
 
     private ReportSummaryResponse buildTransactionSummary(
-            List<InventoryTransactionEntity> transactions
+            Specification<InventoryTransactionEntity> specification
     ) {
+
+        List<InventoryTransactionEntity> transactions =
+                inventoryTransactionRepository.findAll(specification);
 
         BigDecimal totalQuantityIn = ZERO;
         BigDecimal totalQuantityOut = ZERO;
@@ -796,6 +918,10 @@ public class InventoryReportProvider implements ReportDataProvider {
             Sort.Direction defaultDirection
     ) {
 
+        if (pageable != null && pageable.isUnpaged()) {
+            return Pageable.unpaged();
+        }
+
         int page = pageable != null ? pageable.getPageNumber() : 0;
         int size = pageable != null ? pageable.getPageSize() : 20;
 
@@ -855,7 +981,7 @@ public class InventoryReportProvider implements ReportDataProvider {
 
         try {
             predicates.add(
-                    cb.equal(path, Long.valueOf(value.toString()))
+                    cb.equal(path, Long.valueOf(value.toString().trim()))
             );
         } catch (NumberFormatException ignored) {
             // Invalid ID filter is ignored.
@@ -876,21 +1002,34 @@ public class InventoryReportProvider implements ReportDataProvider {
 
         try {
 
-            BigDecimal amount = new BigDecimal(value.toString());
+            BigDecimal amount = new BigDecimal(value.toString().trim());
 
             if (minimum) {
-                predicates.add(
-                        cb.greaterThanOrEqualTo(path, amount)
-                );
+                predicates.add(cb.greaterThanOrEqualTo(path, amount));
             } else {
-                predicates.add(
-                        cb.lessThanOrEqualTo(path, amount)
-                );
+                predicates.add(cb.lessThanOrEqualTo(path, amount));
             }
 
         } catch (NumberFormatException ignored) {
             // Invalid numeric filter is ignored.
         }
+    }
+
+    private Boolean parseBoolean(Object value) {
+
+        if (!hasText(value)) {
+            return null;
+        }
+
+        String normalized = value.toString()
+                .trim()
+                .toUpperCase(Locale.ROOT);
+
+        return switch (normalized) {
+            case "TRUE", "YES", "1", "ACTIVE" -> true;
+            case "FALSE", "NO", "0", "INACTIVE" -> false;
+            default -> null;
+        };
     }
 
     private boolean hasText(Object value) {

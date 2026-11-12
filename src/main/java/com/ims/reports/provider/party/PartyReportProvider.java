@@ -1,19 +1,12 @@
+
 package com.ims.reports.provider.party;
 
-
-import com.ims.dtos.party.PartyResponse;
 import com.ims.dtos.reports.*;
-import com.ims.dtos.party.reports.PartyContactReportResponse;
-import com.ims.dtos.party.reports.PartyCreditReportResponse;
-
 import com.ims.entity.PartyEntity;
-
 import com.ims.enums.PartyType;
 import com.ims.enums.Status;
-
 import com.ims.enums.reports.ReportModule;
 import com.ims.enums.reports.ReportType;
-
 import com.ims.repository.PartyRepository;
 
 import jakarta.persistence.criteria.Predicate;
@@ -55,46 +48,24 @@ public class PartyReportProvider implements ReportDataProvider {
     }
 
     // =========================================================
-    // REPORT DEFINITIONS
+    // SINGLE REPORT DEFINITION
     // =========================================================
 
     @Override
     public List<ReportDefinition> getReportDefinitions() {
 
         return List.of(
-
                 ReportDefinition.builder()
-                        .code("PARTY_REGISTER")
-                        .name("Party Register")
+                        .code("PARTY_REPORT")
+                        .name("Party Report")
                         .description(
-                                "Complete party information including party code, " +
-                                        "party type, company details, contact information " +
-                                        "and status."
+                                "Complete party report containing party details, " +
+                                        "contact information, credit limits, outstanding " +
+                                        "credit, receivables, payables, payment terms, " +
+                                        "status and audit information."
                         )
                         .type(ReportType.REGISTER)
-                        .columns(getRegisterColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("PARTY_CREDIT_REPORT")
-                        .name("Party Credit Report")
-                        .description(
-                                "Party credit limits, outstanding credit, " +
-                                        "receivables, payables and available credit."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getCreditColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("PARTY_CONTACT_REPORT")
-                        .name("Party Contact Report")
-                        .description(
-                                "Party contact information including contact person, " +
-                                        "email, mobile, GST, PAN and website."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getContactColumns())
+                        .columns(getColumns())
                         .build()
         );
     }
@@ -117,7 +88,11 @@ public class PartyReportProvider implements ReportDataProvider {
                 .trim()
                 .toUpperCase(Locale.ROOT);
 
-        List<ReportColumn> columns = getColumns(reportCode);
+        if (!"PARTY_REPORT".equals(reportCode)) {
+            throw new IllegalArgumentException(
+                    "Unsupported party report: " + reportCode
+            );
+        }
 
         Specification<PartyEntity> specification =
                 buildSpecification(request.getFilters());
@@ -131,14 +106,14 @@ public class PartyReportProvider implements ReportDataProvider {
 
         List<Map<String, Object>> rows = partyPage.getContent()
                 .stream()
-                .map(party -> mapParty(reportCode, party))
+                .map(this::mapParty)
                 .toList();
 
         ReportSummaryResponse summary =
                 generateSummary(specification);
 
         return ReportData.builder()
-                .columns(columns)
+                .columns(getColumns())
                 .rows(rows)
                 .totalElements(partyPage.getTotalElements())
                 .pageNumber(partyPage.getNumber())
@@ -153,126 +128,48 @@ public class PartyReportProvider implements ReportDataProvider {
     // REPORT COLUMNS
     // =========================================================
 
-    private List<ReportColumn> getColumns(String reportCode) {
-
-        return switch (reportCode) {
-
-            case "PARTY_REGISTER" ->
-                    getRegisterColumns();
-
-            case "PARTY_CREDIT_REPORT" ->
-                    getCreditColumns();
-
-            case "PARTY_CONTACT_REPORT" ->
-                    getContactColumns();
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported party report: " + reportCode
-            );
-        };
-    }
-
-    // =========================================================
-    // REGISTER COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getRegisterColumns() {
+    private List<ReportColumn> getColumns() {
 
         return List.of(
 
+                // Party identification
                 column("id", "Party ID", "NUMBER"),
                 column("partyCode", "Party Code", "STRING"),
                 column("partyType", "Party Type", "STRING"),
 
+                // Party details
                 column("companyName", "Company Name", "STRING"),
                 column("contactPerson", "Contact Person", "STRING"),
 
+                // Contact details
                 column("email", "Email", "STRING"),
                 column("mobile", "Mobile", "STRING"),
                 column("alternateMobile", "Alternate Mobile", "STRING"),
+                column("website", "Website", "STRING"),
 
+                // Tax details
                 column("gstNumber", "GST Number", "STRING"),
                 column("panNumber", "PAN Number", "STRING"),
 
-                column("website", "Website", "STRING"),
+                // Credit details
+                column("creditLimit", "Credit Limit", "DECIMAL"),
+                column("outstandingCredit", "Outstanding Credit", "DECIMAL"),
+                column("outstandingReceivable", "Outstanding Receivable", "DECIMAL"),
+                column("outstandingPayable", "Outstanding Payable", "DECIMAL"),
+                column("availableCredit", "Available Credit", "DECIMAL"),
 
+                // Payment details
+                column("paymentTerms", "Payment Terms", "STRING"),
+
+                // Status
                 column("status", "Status", "STRING"),
                 column("active", "Active", "BOOLEAN"),
 
+                // Audit
                 column("createdAt", "Created At", "DATETIME"),
-                column("updatedAt", "Updated At", "DATETIME")
-        );
-    }
-
-    // =========================================================
-    // CREDIT COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getCreditColumns() {
-
-        return List.of(
-
-                column("id", "Party ID", "NUMBER"),
-                column("partyCode", "Party Code", "STRING"),
-                column("partyType", "Party Type", "STRING"),
-                column("companyName", "Company Name", "STRING"),
-
-                column("creditLimit", "Credit Limit", "NUMBER"),
-
-                column(
-                        "outstandingCredit",
-                        "Outstanding Credit",
-                        "NUMBER"
-                ),
-
-                column(
-                        "outstandingReceivable",
-                        "Outstanding Receivable",
-                        "NUMBER"
-                ),
-
-                column(
-                        "outstandingPayable",
-                        "Outstanding Payable",
-                        "NUMBER"
-                ),
-
-                column(
-                        "availableCredit",
-                        "Available Credit",
-                        "NUMBER"
-                ),
-
-                column("paymentTerms", "Payment Terms", "STRING"),
-
-                column("status", "Status", "STRING"),
-                column("active", "Active", "BOOLEAN")
-        );
-    }
-
-    // =========================================================
-    // CONTACT COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getContactColumns() {
-
-        return List.of(
-
-                column("id", "Party ID", "NUMBER"),
-                column("partyCode", "Party Code", "STRING"),
-                column("partyType", "Party Type", "STRING"),
-
-                column("companyName", "Company Name", "STRING"),
-                column("contactPerson", "Contact Person", "STRING"),
-
-                column("email", "Email", "STRING"),
-                column("mobile", "Mobile", "STRING"),
-                column("alternateMobile", "Alternate Mobile", "STRING"),
-
-                column("gstNumber", "GST Number", "STRING"),
-                column("panNumber", "PAN Number", "STRING"),
-
-                column("website", "Website", "STRING")
+                column("updatedAt", "Updated At", "DATETIME"),
+                column("createdBy", "Created By", "NUMBER"),
+                column("updatedBy", "Updated By", "NUMBER")
         );
     }
 
@@ -295,189 +192,51 @@ public class PartyReportProvider implements ReportDataProvider {
     }
 
     // =========================================================
-    // PARTY RESPONSE MAPPING
+    // PARTY MAPPING
     // =========================================================
 
-    private Map<String, Object> mapParty(
-            String reportCode,
-            PartyEntity party
-    ) {
-
-        return switch (reportCode) {
-
-            case "PARTY_REGISTER" ->
-                    mapRegisterResponse(party);
-
-            case "PARTY_CREDIT_REPORT" ->
-                    mapCreditResponse(party);
-
-            case "PARTY_CONTACT_REPORT" ->
-                    mapContactResponse(party);
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported party report: " + reportCode
-            );
-        };
-    }
-
-    // =========================================================
-    // PARTY REGISTER
-    // Uses your existing PartyResponse
-    // =========================================================
-
-    private Map<String, Object> mapRegisterResponse(
-            PartyEntity party
-    ) {
-
-        PartyResponse response = new PartyResponse();
-
-        response.setId(party.getId());
-        response.setPartyCode(party.getPartyCode());
-        response.setPartyType(party.getPartyType());
-
-        response.setCompanyName(party.getCompanyName());
-        response.setContactPerson(party.getContactPerson());
-
-        response.setEmail(party.getEmail());
-        response.setMobile(party.getMobile());
-        response.setAlternateMobile(party.getAlternateMobile());
-
-        response.setGstNumber(party.getGstNumber());
-        response.setPanNumber(party.getPanNumber());
-        response.setWebsite(party.getWebsite());
-
-        response.setCreditLimit(party.getCreditLimit());
-        response.setOutstandingCredit(party.getOutstandingCredit());
-        response.setOutstandingReceivable(party.getOutstandingReceivable());
-        response.setOutstandingPayable(party.getOutstandingPayable());
-        response.setAvailableCredit(party.getAvailableCredit());
-
-        response.setPaymentTerms(party.getPaymentTerms());
-        response.setStatus(party.getStatus());
-
-        /*
-         * The report does not currently include address or bank-account
-         * columns, so those response properties are not populated here.
-         *
-         * If your BaseResponse exposes active, createdAt and updatedAt
-         * setters, populate them here as well.
-         */
+    private Map<String, Object> mapParty(PartyEntity party) {
 
         Map<String, Object> row = new LinkedHashMap<>();
 
-        row.put("id", response.getId());
-        row.put("partyCode", response.getPartyCode());
-        row.put("partyType", enumValue(response.getPartyType()));
+        // Party identification
+        row.put("id", party.getId());
+        row.put("partyCode", party.getPartyCode());
+        row.put("partyType", enumValue(party.getPartyType()));
 
-        row.put("companyName", response.getCompanyName());
-        row.put("contactPerson", response.getContactPerson());
+        // Party details
+        row.put("companyName", party.getCompanyName());
+        row.put("contactPerson", party.getContactPerson());
 
-        row.put("email", response.getEmail());
-        row.put("mobile", response.getMobile());
-        row.put("alternateMobile", response.getAlternateMobile());
+        // Contact details
+        row.put("email", party.getEmail());
+        row.put("mobile", party.getMobile());
+        row.put("alternateMobile", party.getAlternateMobile());
+        row.put("website", party.getWebsite());
 
-        row.put("gstNumber", response.getGstNumber());
-        row.put("panNumber", response.getPanNumber());
+        // Tax details
+        row.put("gstNumber", party.getGstNumber());
+        row.put("panNumber", party.getPanNumber());
 
-        row.put("website", response.getWebsite());
+        // Credit details
+        row.put("creditLimit", party.getCreditLimit());
+        row.put("outstandingCredit", party.getOutstandingCredit());
+        row.put("outstandingReceivable", party.getOutstandingReceivable());
+        row.put("outstandingPayable", party.getOutstandingPayable());
+        row.put("availableCredit", party.getAvailableCredit());
 
-        row.put("status", enumValue(response.getStatus()));
+        // Payment details
+        row.put("paymentTerms", party.getPaymentTerms());
+
+        // Status
+        row.put("status", enumValue(party.getStatus()));
         row.put("active", party.getActive());
 
+        // Audit
         row.put("createdAt", party.getCreatedAt());
         row.put("updatedAt", party.getUpdatedAt());
-
-        return row;
-    }
-
-    // =========================================================
-    // PARTY CREDIT RESPONSE MAPPING
-    // =========================================================
-
-    private Map<String, Object> mapCreditResponse(
-            PartyEntity party
-    ) {
-
-        PartyCreditReportResponse response =
-                PartyCreditReportResponse.builder()
-                        .id(party.getId())
-                        .partyCode(party.getPartyCode())
-                        .partyType(enumValue(party.getPartyType()))
-                        .companyName(party.getCompanyName())
-
-                        .creditLimit(party.getCreditLimit())
-                        .outstandingCredit(party.getOutstandingCredit())
-                        .outstandingReceivable(party.getOutstandingReceivable())
-                        .outstandingPayable(party.getOutstandingPayable())
-                        .availableCredit(party.getAvailableCredit())
-
-                        .paymentTerms(party.getPaymentTerms())
-                        .status(enumValue(party.getStatus()))
-                        .active(party.getActive())
-                        .build();
-
-        Map<String, Object> row = new LinkedHashMap<>();
-
-        row.put("id", response.getId());
-        row.put("partyCode", response.getPartyCode());
-        row.put("partyType", response.getPartyType());
-        row.put("companyName", response.getCompanyName());
-
-        row.put("creditLimit", response.getCreditLimit());
-        row.put("outstandingCredit", response.getOutstandingCredit());
-        row.put("outstandingReceivable", response.getOutstandingReceivable());
-        row.put("outstandingPayable", response.getOutstandingPayable());
-        row.put("availableCredit", response.getAvailableCredit());
-
-        row.put("paymentTerms", response.getPaymentTerms());
-        row.put("status", response.getStatus());
-        row.put("active", response.getActive());
-
-        return row;
-    }
-
-    // =========================================================
-    // PARTY CONTACT RESPONSE MAPPING
-    // =========================================================
-
-    private Map<String, Object> mapContactResponse(
-            PartyEntity party
-    ) {
-
-        PartyContactReportResponse response =
-                PartyContactReportResponse.builder()
-                        .id(party.getId())
-                        .partyCode(party.getPartyCode())
-                        .partyType(enumValue(party.getPartyType()))
-
-                        .companyName(party.getCompanyName())
-                        .contactPerson(party.getContactPerson())
-
-                        .email(party.getEmail())
-                        .mobile(party.getMobile())
-                        .alternateMobile(party.getAlternateMobile())
-
-                        .gstNumber(party.getGstNumber())
-                        .panNumber(party.getPanNumber())
-                        .website(party.getWebsite())
-                        .build();
-
-        Map<String, Object> row = new LinkedHashMap<>();
-
-        row.put("id", response.getId());
-        row.put("partyCode", response.getPartyCode());
-        row.put("partyType", response.getPartyType());
-
-        row.put("companyName", response.getCompanyName());
-        row.put("contactPerson", response.getContactPerson());
-
-        row.put("email", response.getEmail());
-        row.put("mobile", response.getMobile());
-        row.put("alternateMobile", response.getAlternateMobile());
-
-        row.put("gstNumber", response.getGstNumber());
-        row.put("panNumber", response.getPanNumber());
-        row.put("website", response.getWebsite());
+        row.put("createdBy", party.getCreatedBy());
+        row.put("updatedBy", party.getUpdatedBy());
 
         return row;
     }
@@ -511,9 +270,9 @@ public class PartyReportProvider implements ReportDataProvider {
                             ? Map.of()
                             : filters.getFilters();
 
-            // ---------------------------------------------
+            // -------------------------------------------------
             // KEYWORD SEARCH
-            // ---------------------------------------------
+            // -------------------------------------------------
 
             if (hasText(filters.getKeyword())) {
 
@@ -526,20 +285,21 @@ public class PartyReportProvider implements ReportDataProvider {
                                 cb.like(cb.lower(root.get("contactPerson")), keyword),
                                 cb.like(cb.lower(root.get("email")), keyword),
                                 cb.like(cb.lower(root.get("mobile")), keyword),
+                                cb.like(cb.lower(root.get("alternateMobile")), keyword),
                                 cb.like(cb.lower(root.get("gstNumber")), keyword),
-                                cb.like(cb.lower(root.get("panNumber")), keyword)
+                                cb.like(cb.lower(root.get("panNumber")), keyword),
+                                cb.like(cb.lower(root.get("website")), keyword)
                         )
                 );
             }
 
-            // ---------------------------------------------
+            // -------------------------------------------------
             // PARTY CODE
-            // ---------------------------------------------
+            // -------------------------------------------------
 
             String partyCode = getFilterValue(customFilters, "partyCode");
 
             if (hasText(partyCode)) {
-
                 predicates.add(
                         cb.like(
                                 cb.lower(root.get("partyCode")),
@@ -548,14 +308,13 @@ public class PartyReportProvider implements ReportDataProvider {
                 );
             }
 
-            // ---------------------------------------------
+            // -------------------------------------------------
             // COMPANY NAME
-            // ---------------------------------------------
+            // -------------------------------------------------
 
             String companyName = getFilterValue(customFilters, "companyName");
 
             if (hasText(companyName)) {
-
                 predicates.add(
                         cb.like(
                                 cb.lower(root.get("companyName")),
@@ -564,16 +323,15 @@ public class PartyReportProvider implements ReportDataProvider {
                 );
             }
 
-            // ---------------------------------------------
+            // -------------------------------------------------
             // PARTY TYPE
-            // ---------------------------------------------
+            // -------------------------------------------------
 
             String partyType = getFilterValue(customFilters, "partyType");
 
             if (hasText(partyType) && !"ALL".equalsIgnoreCase(partyType)) {
 
                 try {
-
                     PartyType type = PartyType.valueOf(
                             partyType.trim().toUpperCase(Locale.ROOT)
                     );
@@ -583,16 +341,15 @@ public class PartyReportProvider implements ReportDataProvider {
                     );
 
                 } catch (IllegalArgumentException exception) {
-
                     throw new IllegalArgumentException(
                             "Invalid party type: " + partyType
                     );
                 }
             }
 
-            // ---------------------------------------------
-            // PARTY STATUS
-            // ---------------------------------------------
+            // -------------------------------------------------
+            // STATUS
+            // -------------------------------------------------
 
             String status = getFilterValue(customFilters, "status");
 
@@ -603,7 +360,6 @@ public class PartyReportProvider implements ReportDataProvider {
             if (hasText(status) && !"ALL".equalsIgnoreCase(status)) {
 
                 try {
-
                     Status partyStatus = Status.valueOf(
                             status.trim().toUpperCase(Locale.ROOT)
                     );
@@ -613,21 +369,19 @@ public class PartyReportProvider implements ReportDataProvider {
                     );
 
                 } catch (IllegalArgumentException exception) {
-
                     throw new IllegalArgumentException(
                             "Invalid party status: " + status
                     );
                 }
             }
 
-            // ---------------------------------------------
+            // -------------------------------------------------
             // EMAIL
-            // ---------------------------------------------
+            // -------------------------------------------------
 
             String email = getFilterValue(customFilters, "email");
 
             if (hasText(email)) {
-
                 predicates.add(
                         cb.like(
                                 cb.lower(root.get("email")),
@@ -636,14 +390,13 @@ public class PartyReportProvider implements ReportDataProvider {
                 );
             }
 
-            // ---------------------------------------------
+            // -------------------------------------------------
             // MOBILE
-            // ---------------------------------------------
+            // -------------------------------------------------
 
             String mobile = getFilterValue(customFilters, "mobile");
 
             if (hasText(mobile)) {
-
                 predicates.add(
                         cb.like(
                                 root.get("mobile"),
@@ -652,14 +405,13 @@ public class PartyReportProvider implements ReportDataProvider {
                 );
             }
 
-            // ---------------------------------------------
+            // -------------------------------------------------
             // GST NUMBER
-            // ---------------------------------------------
+            // -------------------------------------------------
 
             String gstNumber = getFilterValue(customFilters, "gstNumber");
 
             if (hasText(gstNumber)) {
-
                 predicates.add(
                         cb.like(
                                 cb.lower(root.get("gstNumber")),
@@ -668,14 +420,13 @@ public class PartyReportProvider implements ReportDataProvider {
                 );
             }
 
-            // ---------------------------------------------
+            // -------------------------------------------------
             // PAN NUMBER
-            // ---------------------------------------------
+            // -------------------------------------------------
 
             String panNumber = getFilterValue(customFilters, "panNumber");
 
             if (hasText(panNumber)) {
-
                 predicates.add(
                         cb.like(
                                 cb.lower(root.get("panNumber")),
@@ -684,9 +435,9 @@ public class PartyReportProvider implements ReportDataProvider {
                 );
             }
 
-            // ---------------------------------------------
-            // CREDIT LIMIT
-            // ---------------------------------------------
+            // -------------------------------------------------
+            // CREDIT LIMIT RANGE
+            // -------------------------------------------------
 
             BigDecimal minCreditLimit =
                     getBigDecimalFilter(customFilters, "minCreditLimit");
@@ -694,14 +445,9 @@ public class PartyReportProvider implements ReportDataProvider {
             BigDecimal maxCreditLimit =
                     getBigDecimalFilter(customFilters, "maxCreditLimit");
 
-            validateAmountRange(
-                    minCreditLimit,
-                    maxCreditLimit,
-                    "Credit limit"
-            );
+            validateAmountRange(minCreditLimit, maxCreditLimit, "Credit limit");
 
             if (minCreditLimit != null) {
-
                 predicates.add(
                         cb.greaterThanOrEqualTo(
                                 root.get("creditLimit"),
@@ -711,7 +457,6 @@ public class PartyReportProvider implements ReportDataProvider {
             }
 
             if (maxCreditLimit != null) {
-
                 predicates.add(
                         cb.lessThanOrEqualTo(
                                 root.get("creditLimit"),
@@ -720,9 +465,9 @@ public class PartyReportProvider implements ReportDataProvider {
                 );
             }
 
-            // ---------------------------------------------
-            // OUTSTANDING CREDIT
-            // ---------------------------------------------
+            // -------------------------------------------------
+            // OUTSTANDING CREDIT RANGE
+            // -------------------------------------------------
 
             BigDecimal minOutstandingCredit =
                     getBigDecimalFilter(customFilters, "minOutstandingCredit");
@@ -737,7 +482,6 @@ public class PartyReportProvider implements ReportDataProvider {
             );
 
             if (minOutstandingCredit != null) {
-
                 predicates.add(
                         cb.greaterThanOrEqualTo(
                                 root.get("outstandingCredit"),
@@ -747,7 +491,6 @@ public class PartyReportProvider implements ReportDataProvider {
             }
 
             if (maxOutstandingCredit != null) {
-
                 predicates.add(
                         cb.lessThanOrEqualTo(
                                 root.get("outstandingCredit"),
@@ -756,9 +499,9 @@ public class PartyReportProvider implements ReportDataProvider {
                 );
             }
 
-            // ---------------------------------------------
-            // OUTSTANDING RECEIVABLE
-            // ---------------------------------------------
+            // -------------------------------------------------
+            // OUTSTANDING RECEIVABLE RANGE
+            // -------------------------------------------------
 
             BigDecimal minReceivable =
                     getBigDecimalFilter(customFilters, "minOutstandingReceivable");
@@ -773,7 +516,6 @@ public class PartyReportProvider implements ReportDataProvider {
             );
 
             if (minReceivable != null) {
-
                 predicates.add(
                         cb.greaterThanOrEqualTo(
                                 root.get("outstandingReceivable"),
@@ -783,7 +525,6 @@ public class PartyReportProvider implements ReportDataProvider {
             }
 
             if (maxReceivable != null) {
-
                 predicates.add(
                         cb.lessThanOrEqualTo(
                                 root.get("outstandingReceivable"),
@@ -792,9 +533,9 @@ public class PartyReportProvider implements ReportDataProvider {
                 );
             }
 
-            // ---------------------------------------------
-            // OUTSTANDING PAYABLE
-            // ---------------------------------------------
+            // -------------------------------------------------
+            // OUTSTANDING PAYABLE RANGE
+            // -------------------------------------------------
 
             BigDecimal minPayable =
                     getBigDecimalFilter(customFilters, "minOutstandingPayable");
@@ -809,7 +550,6 @@ public class PartyReportProvider implements ReportDataProvider {
             );
 
             if (minPayable != null) {
-
                 predicates.add(
                         cb.greaterThanOrEqualTo(
                                 root.get("outstandingPayable"),
@@ -819,7 +559,6 @@ public class PartyReportProvider implements ReportDataProvider {
             }
 
             if (maxPayable != null) {
-
                 predicates.add(
                         cb.lessThanOrEqualTo(
                                 root.get("outstandingPayable"),
@@ -828,23 +567,55 @@ public class PartyReportProvider implements ReportDataProvider {
                 );
             }
 
-            // ---------------------------------------------
+            // -------------------------------------------------
+            // AVAILABLE CREDIT RANGE
+            // -------------------------------------------------
+
+            BigDecimal minAvailableCredit =
+                    getBigDecimalFilter(customFilters, "minAvailableCredit");
+
+            BigDecimal maxAvailableCredit =
+                    getBigDecimalFilter(customFilters, "maxAvailableCredit");
+
+            validateAmountRange(
+                    minAvailableCredit,
+                    maxAvailableCredit,
+                    "Available credit"
+            );
+
+            if (minAvailableCredit != null) {
+                predicates.add(
+                        cb.greaterThanOrEqualTo(
+                                root.get("availableCredit"),
+                                minAvailableCredit
+                        )
+                );
+            }
+
+            if (maxAvailableCredit != null) {
+                predicates.add(
+                        cb.lessThanOrEqualTo(
+                                root.get("availableCredit"),
+                                maxAvailableCredit
+                        )
+                );
+            }
+
+            // -------------------------------------------------
             // CREATED DATE RANGE
-            // ---------------------------------------------
+            // -------------------------------------------------
 
             LocalDate fromDate = filters.getFromDate();
             LocalDate toDate = filters.getToDate();
 
             if (fromDate != null && toDate != null
                     && fromDate.isAfter(toDate)) {
-
                 throw new IllegalArgumentException(
                         "From date cannot be after to date."
                 );
             }
 
             if (fromDate != null) {
-
                 predicates.add(
                         cb.greaterThanOrEqualTo(
                                 root.get("createdAt"),
@@ -854,7 +625,6 @@ public class PartyReportProvider implements ReportDataProvider {
             }
 
             if (toDate != null) {
-
                 predicates.add(
                         cb.lessThan(
                                 root.get("createdAt"),
@@ -863,9 +633,9 @@ public class PartyReportProvider implements ReportDataProvider {
                 );
             }
 
-            // ---------------------------------------------
-            // ACTIVE FLAG
-            // ---------------------------------------------
+            // -------------------------------------------------
+            // ACTIVE
+            // -------------------------------------------------
 
             String active = getFilterValue(customFilters, "active");
 
@@ -873,7 +643,6 @@ public class PartyReportProvider implements ReportDataProvider {
 
                 if (!"true".equalsIgnoreCase(active)
                         && !"false".equalsIgnoreCase(active)) {
-
                     throw new IllegalArgumentException(
                             "Active filter must be true or false."
                     );
@@ -925,12 +694,23 @@ public class PartyReportProvider implements ReportDataProvider {
                 )
         );
 
+        long supplierParties = partyRepository.count(
+                specification.and(
+                        (root, query, cb) ->
+                                cb.equal(
+                                        root.get("partyType"),
+                                        PartyType.SUPPLIER
+                                )
+                )
+        );
+
         Map<String, Object> metrics = new LinkedHashMap<>();
 
         metrics.put("totalParties", total);
         metrics.put("activeRecords", activeRecords);
         metrics.put("inactiveRecords", inactiveRecords);
         metrics.put("customerParties", customerParties);
+        metrics.put("supplierParties", supplierParties);
 
         return ReportSummaryResponse.builder()
                 .metrics(metrics)
@@ -953,15 +733,14 @@ public class PartyReportProvider implements ReportDataProvider {
 
             List<Sort.Order> orders = new ArrayList<>();
 
-            pageable.getSort().forEach(order -> {
-
-                orders.add(
-                        new Sort.Order(
-                                order.getDirection(),
-                                mapSortField(order.getProperty())
-                        )
-                );
-            });
+            pageable.getSort().forEach(order ->
+                    orders.add(
+                            new Sort.Order(
+                                    order.getDirection(),
+                                    mapSortField(order.getProperty())
+                            )
+                    )
+            );
 
             mappedSort = Sort.by(orders);
         }
@@ -988,7 +767,9 @@ public class PartyReportProvider implements ReportDataProvider {
             case "outstandingCredit" -> "outstandingCredit";
             case "outstandingReceivable" -> "outstandingReceivable";
             case "outstandingPayable" -> "outstandingPayable";
+            case "availableCredit" -> "availableCredit";
             case "status" -> "status";
+            case "active" -> "active";
             case "createdAt" -> "createdAt";
             case "updatedAt" -> "updatedAt";
 
@@ -1049,7 +830,6 @@ public class PartyReportProvider implements ReportDataProvider {
             BigDecimal amount = new BigDecimal(value);
 
             if (amount.compareTo(BigDecimal.ZERO) < 0) {
-
                 throw new IllegalArgumentException(
                         "Amount filter cannot be negative: " + key
                 );
@@ -1058,7 +838,6 @@ public class PartyReportProvider implements ReportDataProvider {
             return amount;
 
         } catch (NumberFormatException exception) {
-
             throw new IllegalArgumentException(
                     "Invalid amount filter: " + key
             );
@@ -1070,7 +849,6 @@ public class PartyReportProvider implements ReportDataProvider {
     }
 
     private String containsPattern(String value) {
-
         return "%"
                 + value.trim().toLowerCase(Locale.ROOT)
                 + "%";

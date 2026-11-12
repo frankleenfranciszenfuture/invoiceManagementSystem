@@ -1,3 +1,4 @@
+
 package com.ims.reports.provider.bankTransaction;
 
 import com.ims.dtos.reports.*;
@@ -7,8 +8,6 @@ import com.ims.enums.reports.ReportModule;
 import com.ims.enums.reports.ReportType;
 import com.ims.repository.BankTransactionRepository;
 
-import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 
 import lombok.RequiredArgsConstructor;
@@ -18,16 +17,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor
@@ -36,246 +32,92 @@ public class BankTransactionReportProvider implements ReportDataProvider {
 
     private final BankTransactionRepository bankTransactionRepository;
 
-    // =========================================================
+    // =====================================================
     // MODULE
-    // =========================================================
+    // =====================================================
 
     @Override
     public ReportModule getModule() {
         return ReportModule.BANK_TRANSACTION;
     }
 
-    // =========================================================
-    // REPORT DEFINITIONS
-    // =========================================================
+    // =====================================================
+    // REPORT DEFINITION
+    // =====================================================
 
     @Override
     public List<ReportDefinition> getReportDefinitions() {
 
         return List.of(
-
                 ReportDefinition.builder()
-                        .code("BANK_TRANSACTION_REGISTER")
-                        .name("Bank Transaction Register")
+                        .code("BANK_TRANSACTION_REPORT")
+                        .name("Bank Transaction Report")
                         .description(
-                                "Complete bank transaction register including " +
-                                        "transaction number, bank account, direction, " +
-                                        "amount, currency, transaction date and status."
+                                "Complete bank transaction information including " +
+                                        "bank account, payment, party, transaction amounts, " +
+                                        "references, reversals and audit information."
                         )
                         .type(ReportType.REGISTER)
-                        .columns(getRegisterColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("BANK_TRANSACTION_DETAILS")
-                        .name("Bank Transaction Details")
-                        .description(
-                                "Detailed bank transaction information including " +
-                                        "payment, party, reference number, exchange rate " +
-                                        "and transaction description."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getDetailsColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("BANK_TRANSACTION_REVERSALS")
-                        .name("Bank Transaction Reversal Report")
-                        .description(
-                                "Bank transaction reversal details including " +
-                                        "original transaction references and reversal amounts."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getReversalColumns())
+                        .columns(getColumns())
                         .build()
         );
     }
 
-    // =========================================================
-    // GENERATE REPORT
-    // =========================================================
-
-    @Override
-    public ReportData generate(
-            ReportRequest request,
-            Pageable pageable
-    ) {
-
-        if (request == null || !hasText(request.getReportCode())) {
-            throw new IllegalArgumentException(
-                    "Bank transaction report code is required."
-            );
-        }
-
-        String reportCode = request.getReportCode()
-                .trim()
-                .toUpperCase(Locale.ROOT);
-
-        List<ReportColumn> columns = getColumns(reportCode);
-
-        Specification<BankTransactionEntity> specification =
-                buildSpecification(request.getFilters());
-
-        Pageable databasePageable = mapSortProperties(pageable);
-
-        Page<BankTransactionEntity> transactionPage =
-                bankTransactionRepository.findAll(
-                        specification,
-                        databasePageable
-                );
-
-        List<Map<String, Object>> rows =
-                transactionPage.getContent()
-                        .stream()
-                        .map(transaction ->
-                                mapTransaction(transaction, reportCode)
-                        )
-                        .toList();
-
-        ReportSummaryResponse summary =
-                generateSummary(specification);
-
-        return ReportData.builder()
-                .columns(columns)
-                .rows(rows)
-                .totalElements(transactionPage.getTotalElements())
-                .pageNumber(transactionPage.getNumber())
-                .pageSize(transactionPage.getSize())
-                .totalPages(transactionPage.getTotalPages())
-                .last(transactionPage.isLast())
-                .summary(summary)
-                .build();
-    }
-
-    // =========================================================
+    // =====================================================
     // REPORT COLUMNS
-    // =========================================================
+    // =====================================================
 
-    private List<ReportColumn> getColumns(String reportCode) {
-
-        return switch (reportCode) {
-
-            case "BANK_TRANSACTION_REGISTER" ->
-                    getRegisterColumns();
-
-            case "BANK_TRANSACTION_DETAILS" ->
-                    getDetailsColumns();
-
-            case "BANK_TRANSACTION_REVERSALS" ->
-                    getReversalColumns();
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported bank transaction report: " + reportCode
-            );
-        };
-    }
-
-    // =========================================================
-    // REGISTER COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getRegisterColumns() {
+    private List<ReportColumn> getColumns() {
 
         return List.of(
 
+                // Transaction information
+
                 column("id", "Transaction ID", "NUMBER"),
                 column("transactionNumber", "Transaction Number", "STRING"),
+                column("direction", "Direction", "STRING"),
+                column("transactionDate", "Transaction Date", "DATE"),
+
+                // Bank account information
 
                 column("bankAccountId", "Bank Account ID", "NUMBER"),
                 column("bankAccountName", "Bank Account Name", "STRING"),
 
-                column("direction", "Direction", "STRING"),
-                column("transactionDate", "Transaction Date", "DATE"),
+                // Payment information
 
-                column("amount", "Amount", "NUMBER"),
+                column("paymentId", "Payment ID", "NUMBER"),
+                column("paymentNumber", "Payment Number", "STRING"),
+
+                // Party information
+
+                column("partyId", "Party ID", "NUMBER"),
+                column("partyName", "Party Name", "STRING"),
+
+                // Financial information
+
+                column("amount", "Transaction Amount", "DECIMAL"),
+                column("baseAmount", "Base Amount (INR)", "DECIMAL"),
+                column("exchangeRate", "Exchange Rate", "DECIMAL"),
                 column("currencyCode", "Currency", "STRING"),
 
-                column("baseAmount", "Base Amount (INR)", "NUMBER"),
-                column("exchangeRate", "Exchange Rate", "NUMBER"),
+                // Reference information
 
                 column("referenceNumber", "Reference Number", "STRING"),
+                column("description", "Description", "STRING"),
 
-                column("active", "Active", "BOOLEAN"),
+                // Reversal information
+
+                column("reversalOfId", "Reversal Of Transaction ID", "NUMBER"),
+
+                // Audit information
 
                 column("createdAt", "Created At", "DATETIME"),
                 column("updatedAt", "Updated At", "DATETIME"),
                 column("createdBy", "Created By", "NUMBER"),
-                column("updatedBy", "Updated By", "NUMBER")
+                column("updatedBy", "Updated By", "NUMBER"),
+                column("active", "Active", "BOOLEAN")
         );
     }
-
-    // =========================================================
-    // DETAILS COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getDetailsColumns() {
-
-        return List.of(
-
-                column("id", "Transaction ID", "NUMBER"),
-                column("transactionNumber", "Transaction Number", "STRING"),
-
-                column("bankAccountId", "Bank Account ID", "NUMBER"),
-                column("bankAccountName", "Bank Account Name", "STRING"),
-
-                column("paymentId", "Payment ID", "NUMBER"),
-                column("partyId", "Party ID", "NUMBER"),
-                column("partyName", "Party Name", "STRING"),
-
-                column("direction", "Direction", "STRING"),
-                column("transactionDate", "Transaction Date", "DATE"),
-
-                column("amount", "Transaction Amount", "NUMBER"),
-                column("currencyCode", "Currency", "STRING"),
-
-                column("baseAmount", "Base Amount (INR)", "NUMBER"),
-                column("exchangeRate", "Exchange Rate", "NUMBER"),
-
-                column("referenceNumber", "Reference Number", "STRING"),
-                column("description", "Description", "STRING"),
-
-                column("active", "Active", "BOOLEAN"),
-
-                column("createdAt", "Created At", "DATETIME"),
-                column("updatedAt", "Updated At", "DATETIME")
-        );
-    }
-
-    // =========================================================
-    // REVERSAL COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getReversalColumns() {
-
-        return List.of(
-
-                column("id", "Transaction ID", "NUMBER"),
-                column("transactionNumber", "Transaction Number", "STRING"),
-
-                column("reversalOfId", "Original Transaction ID", "NUMBER"),
-
-                column("bankAccountId", "Bank Account ID", "NUMBER"),
-                column("bankAccountName", "Bank Account Name", "STRING"),
-
-                column("direction", "Direction", "STRING"),
-                column("transactionDate", "Transaction Date", "DATE"),
-
-                column("amount", "Reversal Amount", "NUMBER"),
-                column("currencyCode", "Currency", "STRING"),
-
-                column("baseAmount", "Base Amount (INR)", "NUMBER"),
-
-                column("referenceNumber", "Reference Number", "STRING"),
-                column("description", "Description", "STRING"),
-
-                column("active", "Active", "BOOLEAN"),
-                column("createdAt", "Created At", "DATETIME")
-        );
-    }
-
-    // =========================================================
-    // COMMON COLUMN BUILDER
-    // =========================================================
 
     private ReportColumn column(
             String key,
@@ -291,9 +133,52 @@ public class BankTransactionReportProvider implements ReportDataProvider {
                 .build();
     }
 
-    // =========================================================
-    // BANK TRANSACTION SPECIFICATION
-    // =========================================================
+    // =====================================================
+    // GENERATE REPORT
+    // =====================================================
+
+    @Override
+    public ReportData generate(
+            ReportRequest request,
+            Pageable pageable
+    ) {
+
+        Specification<BankTransactionEntity> specification =
+                buildSpecification(request.getFilters());
+
+        Pageable databasePageable =
+                mapSortProperties(pageable);
+
+        Page<BankTransactionEntity> transactionPage =
+                bankTransactionRepository.findAll(
+                        specification,
+                        databasePageable
+                );
+
+        List<Map<String, Object>> rows =
+                transactionPage.getContent()
+                        .stream()
+                        .map(this::mapBankTransaction)
+                        .toList();
+
+        ReportSummaryResponse summary =
+                generateSummary(specification);
+
+        return ReportData.builder()
+                .columns(getColumns())
+                .rows(rows)
+                .totalElements(transactionPage.getTotalElements())
+                .pageNumber(transactionPage.getNumber())
+                .pageSize(transactionPage.getSize())
+                .totalPages(transactionPage.getTotalPages())
+                .last(transactionPage.isLast())
+                .summary(summary)
+                .build();
+    }
+
+    // =====================================================
+    // FILTER SPECIFICATION
+    // =====================================================
 
     private Specification<BankTransactionEntity> buildSpecification(
             ReportFilterRequest filters
@@ -307,127 +192,25 @@ public class BankTransactionReportProvider implements ReportDataProvider {
                 return cb.conjunction();
             }
 
-            Map<String, Object> customFilters =
-                    filters.getFilters() == null
-                            ? Map.of()
-                            : filters.getFilters();
+            // Bank account filter
 
-            // -------------------------------------------------
-            // KEYWORD
-            // -------------------------------------------------
+            String bankAccountId =
+                    getFilterValue(filters.getFilters(), "bankAccountId");
 
-            if (hasText(filters.getKeyword())) {
-
-                String keyword = containsPattern(
-                        filters.getKeyword()
-                );
-
-                predicates.add(
-                        cb.or(
-                                cb.like(
-                                        cb.lower(root.get("transactionNumber")),
-                                        keyword
-                                ),
-                                cb.like(
-                                        cb.lower(root.get("referenceNumber")),
-                                        keyword
-                                ),
-                                cb.like(
-                                        cb.lower(root.get("description")),
-                                        keyword
-                                ),
-                                cb.like(
-                                        cb.lower(root.get("currencyCode")),
-                                        keyword
-                                )
-                        )
-                );
-            }
-
-            // -------------------------------------------------
-            // TRANSACTION NUMBER
-            // -------------------------------------------------
-
-            String transactionNumber = getFilterValue(
-                    customFilters,
-                    "transactionNumber"
-            );
-
-            if (hasText(transactionNumber)) {
-
-                predicates.add(
-                        cb.like(
-                                cb.lower(root.get("transactionNumber")),
-                                containsPattern(transactionNumber)
-                        )
-                );
-            }
-
-            // -------------------------------------------------
-            // BANK ACCOUNT ID
-            // -------------------------------------------------
-
-            Long bankAccountId = getLongFilter(
-                    customFilters,
-                    "bankAccountId"
-            );
-
-            if (bankAccountId != null) {
+            if (hasText(bankAccountId)) {
 
                 predicates.add(
                         cb.equal(
                                 root.get("bankAccount").get("id"),
-                                bankAccountId
+                                parseLong(bankAccountId, "bankAccountId")
                         )
                 );
             }
 
-            // -------------------------------------------------
-            // PAYMENT ID
-            // -------------------------------------------------
+            // Transaction direction
 
-            Long paymentId = getLongFilter(
-                    customFilters,
-                    "paymentId"
-            );
-
-            if (paymentId != null) {
-
-                predicates.add(
-                        cb.equal(
-                                root.get("payment").get("id"),
-                                paymentId
-                        )
-                );
-            }
-
-            // -------------------------------------------------
-            // PARTY ID
-            // -------------------------------------------------
-
-            Long partyId = getLongFilter(
-                    customFilters,
-                    "partyId"
-            );
-
-            if (partyId != null) {
-
-                predicates.add(
-                        cb.equal(
-                                root.get("party").get("id"),
-                                partyId
-                        )
-                );
-            }
-
-            // -------------------------------------------------
-            // DIRECTION
-            // -------------------------------------------------
-
-            String direction = getFilterValue(
-                    customFilters,
-                    "direction"
-            );
+            String direction =
+                    getFilterValue(filters.getFilters(), "direction");
 
             if (hasText(direction)
                     && !"ALL".equalsIgnoreCase(direction)) {
@@ -436,7 +219,7 @@ public class BankTransactionReportProvider implements ReportDataProvider {
 
                     BankTransactionDirection transactionDirection =
                             BankTransactionDirection.valueOf(
-                                    direction.trim().toUpperCase(Locale.ROOT)
+                                    direction.toUpperCase(Locale.ROOT)
                             );
 
                     predicates.add(
@@ -454,230 +237,18 @@ public class BankTransactionReportProvider implements ReportDataProvider {
                 }
             }
 
-            // -------------------------------------------------
-            // CURRENCY CODE
-            // -------------------------------------------------
-
-            String currencyCode = getFilterValue(
-                    customFilters,
-                    "currencyCode"
-            );
-
-            if (hasText(currencyCode)) {
-
-                predicates.add(
-                        cb.equal(
-                                cb.upper(root.get("currencyCode")),
-                                currencyCode.toUpperCase(Locale.ROOT)
-                        )
-                );
-            }
-
-            // -------------------------------------------------
-            // REFERENCE NUMBER
-            // -------------------------------------------------
-
-            String referenceNumber = getFilterValue(
-                    customFilters,
-                    "referenceNumber"
-            );
-
-            if (hasText(referenceNumber)) {
-
-                predicates.add(
-                        cb.like(
-                                cb.lower(root.get("referenceNumber")),
-                                containsPattern(referenceNumber)
-                        )
-                );
-            }
-
-            // -------------------------------------------------
-            // AMOUNT RANGE
-            // -------------------------------------------------
-
-            BigDecimal minAmount = getBigDecimalFilter(
-                    customFilters,
-                    "minAmount"
-            );
-
-            BigDecimal maxAmount = getBigDecimalFilter(
-                    customFilters,
-                    "maxAmount"
-            );
-
-            validateAmountRange(minAmount, maxAmount);
-
-            if (minAmount != null) {
-
-                predicates.add(
-                        cb.greaterThanOrEqualTo(
-                                root.get("amount"),
-                                minAmount
-                        )
-                );
-            }
-
-            if (maxAmount != null) {
-
-                predicates.add(
-                        cb.lessThanOrEqualTo(
-                                root.get("amount"),
-                                maxAmount
-                        )
-                );
-            }
-
-            // -------------------------------------------------
-            // BASE AMOUNT RANGE
-            // -------------------------------------------------
-
-            BigDecimal minBaseAmount = getBigDecimalFilter(
-                    customFilters,
-                    "minBaseAmount"
-            );
-
-            BigDecimal maxBaseAmount = getBigDecimalFilter(
-                    customFilters,
-                    "maxBaseAmount"
-            );
-
-            validateAmountRange(minBaseAmount, maxBaseAmount);
-
-            if (minBaseAmount != null) {
-
-                predicates.add(
-                        cb.greaterThanOrEqualTo(
-                                root.get("baseAmount"),
-                                minBaseAmount
-                        )
-                );
-            }
-
-            if (maxBaseAmount != null) {
-
-                predicates.add(
-                        cb.lessThanOrEqualTo(
-                                root.get("baseAmount"),
-                                maxBaseAmount
-                        )
-                );
-            }
-
-            // -------------------------------------------------
-            // REVERSAL FILTER
-            // -------------------------------------------------
-
-            String reversalOnly = getFilterValue(
-                    customFilters,
-                    "reversalOnly"
-            );
-
-            if (hasText(reversalOnly)) {
-
-                validateBoolean(reversalOnly, "reversalOnly");
-
-                if (Boolean.parseBoolean(reversalOnly)) {
-
-                    predicates.add(
-                            cb.isNotNull(root.get("reversalOf"))
-                    );
-
-                } else {
-
-                    predicates.add(
-                            cb.isNull(root.get("reversalOf"))
-                    );
-                }
-            }
-
-            // -------------------------------------------------
-            // ORIGINAL TRANSACTION ID
-            // -------------------------------------------------
-
-            Long reversalOfId = getLongFilter(
-                    customFilters,
-                    "reversalOfId"
-            );
-
-            if (reversalOfId != null) {
-
-                predicates.add(
-                        cb.equal(
-                                root.get("reversalOf").get("id"),
-                                reversalOfId
-                        )
-                );
-            }
-
-            // -------------------------------------------------
-            // ACTIVE FLAG
-            // -------------------------------------------------
-
-            String active = getFilterValue(
-                    customFilters,
-                    "active"
-            );
-
-            if (hasText(active)) {
-
-                validateBoolean(active, "active");
-
-                predicates.add(
-                        cb.equal(
-                                root.get("active"),
-                                Boolean.parseBoolean(active)
-                        )
-                );
-            }
-
-            // -------------------------------------------------
-            // TRANSACTION DATE RANGE
-            // -------------------------------------------------
-
-            LocalDate transactionDateFrom = getDateFilter(
-                    customFilters,
-                    "transactionDateFrom"
-            );
-
-            LocalDate transactionDateTo = getDateFilter(
-                    customFilters,
-                    "transactionDateTo"
-            );
-
-            validateDateRange(
-                    transactionDateFrom,
-                    transactionDateTo
-            );
-
-            if (transactionDateFrom != null) {
-
-                predicates.add(
-                        cb.greaterThanOrEqualTo(
-                                root.get("transactionDate"),
-                                transactionDateFrom
-                        )
-                );
-            }
-
-            if (transactionDateTo != null) {
-
-                predicates.add(
-                        cb.lessThanOrEqualTo(
-                                root.get("transactionDate"),
-                                transactionDateTo
-                        )
-                );
-            }
-
-            // -------------------------------------------------
-            // COMMON DATE FILTERS
-            // -------------------------------------------------
+            // Transaction date range
 
             LocalDate fromDate = filters.getFromDate();
             LocalDate toDate = filters.getToDate();
 
-            validateDateRange(fromDate, toDate);
+            if (fromDate != null && toDate != null
+                    && fromDate.isAfter(toDate)) {
+
+                throw new IllegalArgumentException(
+                        "From date cannot be after to date."
+                );
+            }
 
             if (fromDate != null) {
 
@@ -699,21 +270,59 @@ public class BankTransactionReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
-            // COMMON STATUS FILTER
-            // -------------------------------------------------
+            // Keyword search
 
-            String status = filters.getStatus();
+            if (hasText(filters.getKeyword())) {
 
-            if (hasText(status)
-                    && !"ALL".equalsIgnoreCase(status)) {
-
-                validateBoolean(status, "status");
+                String keyword =
+                        containsPattern(filters.getKeyword());
 
                 predicates.add(
-                        cb.equal(
-                                root.get("active"),
-                                Boolean.parseBoolean(status)
+                        cb.or(
+
+                                cb.like(
+                                        cb.lower(root.get("transactionNumber")),
+                                        keyword
+                                ),
+
+                                cb.like(
+                                        cb.lower(
+                                                root.get("bankAccount")
+                                                        .get("accountName")
+                                        ),
+                                        keyword
+                                ),
+
+                                cb.like(
+                                        cb.lower(
+                                                root.get("payment")
+                                                        .get("paymentNumber")
+                                        ),
+                                        keyword
+                                ),
+
+                                cb.like(
+                                        cb.lower(
+                                                root.get("party")
+                                                        .get("displayName")
+                                        ),
+                                        keyword
+                                ),
+
+                                cb.like(
+                                        cb.lower(root.get("referenceNumber")),
+                                        keyword
+                                ),
+
+                                cb.like(
+                                        cb.lower(root.get("description")),
+                                        keyword
+                                ),
+
+                                cb.like(
+                                        cb.lower(root.get("currencyCode")),
+                                        keyword
+                                )
                         )
                 );
             }
@@ -724,96 +333,15 @@ public class BankTransactionReportProvider implements ReportDataProvider {
         };
     }
 
-    // =========================================================
-    // MAP TRANSACTION
-    // =========================================================
+    // =====================================================
+    // MAP BANK TRANSACTION
+    // =====================================================
 
-    private Map<String, Object> mapTransaction(
-            BankTransactionEntity transaction,
-            String reportCode
+    private Map<String, Object> mapBankTransaction(
+            BankTransactionEntity transaction
     ) {
 
         Map<String, Object> row = new LinkedHashMap<>();
-
-        switch (reportCode) {
-
-            case "BANK_TRANSACTION_REGISTER" ->
-                    mapRegister(transaction, row);
-
-            case "BANK_TRANSACTION_DETAILS" ->
-                    mapDetails(transaction, row);
-
-            case "BANK_TRANSACTION_REVERSALS" ->
-                    mapReversal(transaction, row);
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported bank transaction report: " + reportCode
-            );
-        }
-
-        return row;
-    }
-
-    // =========================================================
-    // MAP REGISTER
-    // =========================================================
-
-    private void mapRegister(
-            BankTransactionEntity transaction,
-            Map<String, Object> row
-    ) {
-
-        row.put("id", transaction.getId());
-
-        row.put(
-                "transactionNumber",
-                transaction.getTransactionNumber()
-        );
-
-        row.put(
-                "bankAccountId",
-                transaction.getBankAccount() == null
-                        ? null
-                        : transaction.getBankAccount().getId()
-        );
-
-        row.put(
-                "bankAccountName",
-                transaction.getBankAccount() == null
-                        ? null
-                        : transaction.getBankAccount().getAccountName()
-        );
-
-        row.put(
-                "direction",
-                transaction.getDirection() == null
-                        ? null
-                        : transaction.getDirection().name()
-        );
-
-        row.put("transactionDate", transaction.getTransactionDate());
-        row.put("amount", transaction.getAmount());
-        row.put("currencyCode", transaction.getCurrencyCode());
-        row.put("baseAmount", transaction.getBaseAmount());
-        row.put("exchangeRate", transaction.getExchangeRate());
-        row.put("referenceNumber", transaction.getReferenceNumber());
-
-        row.put("active", transaction.getActive());
-
-        row.put("createdAt", transaction.getCreatedAt());
-        row.put("updatedAt", transaction.getUpdatedAt());
-        row.put("createdBy", transaction.getCreatedBy());
-        row.put("updatedBy", transaction.getUpdatedBy());
-    }
-
-    // =========================================================
-    // MAP DETAILS
-    // =========================================================
-
-    private void mapDetails(
-            BankTransactionEntity transaction,
-            Map<String, Object> row
-    ) {
 
         row.put("id", transaction.getId());
 
@@ -844,6 +372,13 @@ public class BankTransactionReportProvider implements ReportDataProvider {
         );
 
         row.put(
+                "paymentNumber",
+                transaction.getPayment() == null
+                        ? null
+                        : transaction.getPayment().getPaymentNumber()
+        );
+
+        row.put(
                 "partyId",
                 transaction.getParty() == null
                         ? null
@@ -864,35 +399,25 @@ public class BankTransactionReportProvider implements ReportDataProvider {
                         : transaction.getDirection().name()
         );
 
-        row.put("transactionDate", transaction.getTransactionDate());
+        row.put(
+                "transactionDate",
+                transaction.getTransactionDate()
+        );
+
         row.put("amount", transaction.getAmount());
-        row.put("currencyCode", transaction.getCurrencyCode());
+
         row.put("baseAmount", transaction.getBaseAmount());
+
         row.put("exchangeRate", transaction.getExchangeRate());
-        row.put("referenceNumber", transaction.getReferenceNumber());
-        row.put("description", transaction.getDescription());
 
-        row.put("active", transaction.getActive());
-
-        row.put("createdAt", transaction.getCreatedAt());
-        row.put("updatedAt", transaction.getUpdatedAt());
-    }
-
-    // =========================================================
-    // MAP REVERSAL
-    // =========================================================
-
-    private void mapReversal(
-            BankTransactionEntity transaction,
-            Map<String, Object> row
-    ) {
-
-        row.put("id", transaction.getId());
+        row.put("currencyCode", transaction.getCurrencyCode());
 
         row.put(
-                "transactionNumber",
-                transaction.getTransactionNumber()
+                "referenceNumber",
+                transaction.getReferenceNumber()
         );
+
+        row.put("description", transaction.getDescription());
 
         row.put(
                 "reversalOfId",
@@ -901,41 +426,22 @@ public class BankTransactionReportProvider implements ReportDataProvider {
                         : transaction.getReversalOf().getId()
         );
 
-        row.put(
-                "bankAccountId",
-                transaction.getBankAccount() == null
-                        ? null
-                        : transaction.getBankAccount().getId()
-        );
+        row.put("createdAt", transaction.getCreatedAt());
 
-        row.put(
-                "bankAccountName",
-                transaction.getBankAccount() == null
-                        ? null
-                        : transaction.getBankAccount().getAccountName()
-        );
+        row.put("updatedAt", transaction.getUpdatedAt());
 
-        row.put(
-                "direction",
-                transaction.getDirection() == null
-                        ? null
-                        : transaction.getDirection().name()
-        );
+        row.put("createdBy", transaction.getCreatedBy());
 
-        row.put("transactionDate", transaction.getTransactionDate());
-        row.put("amount", transaction.getAmount());
-        row.put("currencyCode", transaction.getCurrencyCode());
-        row.put("baseAmount", transaction.getBaseAmount());
-        row.put("referenceNumber", transaction.getReferenceNumber());
-        row.put("description", transaction.getDescription());
+        row.put("updatedBy", transaction.getUpdatedBy());
 
         row.put("active", transaction.getActive());
-        row.put("createdAt", transaction.getCreatedAt());
+
+        return row;
     }
 
-    // =========================================================
+    // =====================================================
     // SUMMARY
-    // =========================================================
+    // =====================================================
 
     private ReportSummaryResponse generateSummary(
             Specification<BankTransactionEntity> specification
@@ -943,17 +449,6 @@ public class BankTransactionReportProvider implements ReportDataProvider {
 
         long totalTransactions =
                 bankTransactionRepository.count(specification);
-
-        long creditTransactions =
-                bankTransactionRepository.count(
-                        specification.and(
-                                (root, query, cb) ->
-                                        cb.equal(
-                                                root.get("direction"),
-                                                BankTransactionDirection.CREDIT
-                                        )
-                        )
-                );
 
         long debitTransactions =
                 bankTransactionRepository.count(
@@ -966,6 +461,17 @@ public class BankTransactionReportProvider implements ReportDataProvider {
                         )
                 );
 
+        long creditTransactions =
+                bankTransactionRepository.count(
+                        specification.and(
+                                (root, query, cb) ->
+                                        cb.equal(
+                                                root.get("direction"),
+                                                BankTransactionDirection.CREDIT
+                                        )
+                        )
+                );
+
         long reversalTransactions =
                 bankTransactionRepository.count(
                         specification.and(
@@ -974,48 +480,75 @@ public class BankTransactionReportProvider implements ReportDataProvider {
                         )
                 );
 
-        long originalTransactions =
-                bankTransactionRepository.count(
-                        specification.and(
-                                (root, query, cb) ->
-                                        cb.isNull(root.get("reversalOf"))
-                        )
+        BigDecimal totalDebitBaseAmount =
+                calculateBaseAmount(
+                        specification,
+                        BankTransactionDirection.DEBIT
                 );
 
-        long activeRecords =
-                bankTransactionRepository.count(
-                        specification.and(
-                                (root, query, cb) ->
-                                        cb.isTrue(root.get("active"))
-                        )
-                );
-
-        long inactiveRecords =
-                bankTransactionRepository.count(
-                        specification.and(
-                                (root, query, cb) ->
-                                        cb.isFalse(root.get("active"))
-                        )
+        BigDecimal totalCreditBaseAmount =
+                calculateBaseAmount(
+                        specification,
+                        BankTransactionDirection.CREDIT
                 );
 
         Map<String, Object> metrics = new LinkedHashMap<>();
 
         metrics.put("totalTransactions", totalTransactions);
-        metrics.put("creditTransactions", creditTransactions);
+
         metrics.put("debitTransactions", debitTransactions);
-        metrics.put("reversalTransactions", reversalTransactions);
-        metrics.put("originalTransactions", originalTransactions);
-        metrics.put("activeRecords", activeRecords);
-        metrics.put("inactiveRecords", inactiveRecords);
+
+        metrics.put("creditTransactions", creditTransactions);
+
+        metrics.put(
+                "totalDebitBaseAmount",
+                totalDebitBaseAmount
+        );
+
+        metrics.put(
+                "totalCreditBaseAmount",
+                totalCreditBaseAmount
+        );
+
+        metrics.put(
+                "reversalTransactions",
+                reversalTransactions
+        );
 
         return ReportSummaryResponse.builder()
                 .metrics(metrics)
                 .build();
     }
 
-    // =========================================================
+    // =====================================================
+    // BASE AMOUNT CALCULATION
+    // =====================================================
+
+    private BigDecimal calculateBaseAmount(
+            Specification<BankTransactionEntity> specification,
+            BankTransactionDirection direction
+    ) {
+
+        List<BankTransactionEntity> transactions =
+                bankTransactionRepository.findAll(
+                        specification.and(
+                                (root, query, cb) ->
+                                        cb.equal(
+                                                root.get("direction"),
+                                                direction
+                                        )
+                        )
+                );
+
+        return transactions.stream()
+                .map(BankTransactionEntity::getBaseAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    // =====================================================
     // SORT MAPPING
-    // =========================================================
+    // =====================================================
 
     private Pageable mapSortProperties(Pageable pageable) {
 
@@ -1031,13 +564,10 @@ public class BankTransactionReportProvider implements ReportDataProvider {
 
             pageable.getSort().forEach(order -> {
 
-                String entityField =
-                        mapSortField(order.getProperty());
-
                 orders.add(
                         new Sort.Order(
                                 order.getDirection(),
-                                entityField
+                                mapSortField(order.getProperty())
                         )
                 );
             });
@@ -1056,34 +586,28 @@ public class BankTransactionReportProvider implements ReportDataProvider {
 
         return switch (field) {
 
-            case "transactionNumber" -> "transactionNumber";
-            case "bankAccountId" -> "bankAccount.id";
-            case "bankAccountName" -> "bankAccount.accountName";
-            case "paymentId" -> "payment.id";
-            case "partyId" -> "party.id";
-            case "direction" -> "direction";
-            case "transactionDate" -> "transactionDate";
-            case "amount" -> "amount";
-            case "baseAmount" -> "baseAmount";
-            case "exchangeRate" -> "exchangeRate";
-            case "currencyCode" -> "currencyCode";
-            case "referenceNumber" -> "referenceNumber";
-            case "createdAt" -> "createdAt";
-            case "updatedAt" -> "updatedAt";
-            case "id" -> "id";
+            case "transactionDate",
+                 "transactionNumber",
+                 "amount",
+                 "createdAt",
+                 "updatedAt" -> field;
 
-            default -> "id";
+            default -> "transactionDate";
         };
     }
 
-    // =========================================================
+    // =====================================================
     // HELPERS
-    // =========================================================
+    // =====================================================
 
     private String getFilterValue(
             Map<String, Object> filters,
             String key
     ) {
+
+        if (filters == null) {
+            return null;
+        }
 
         Object value = filters.get(key);
 
@@ -1092,118 +616,32 @@ public class BankTransactionReportProvider implements ReportDataProvider {
                 : String.valueOf(value).trim();
     }
 
-    private Long getLongFilter(
-            Map<String, Object> filters,
-            String key
-    ) {
-
-        String value = getFilterValue(filters, key);
-
-        if (!hasText(value)) {
-            return null;
-        }
-
-        try {
-            return Long.parseLong(value);
-        } catch (NumberFormatException exception) {
-            throw new IllegalArgumentException(
-                    "Invalid " + key + " filter: " + value
-            );
-        }
-    }
-
-    private BigDecimal getBigDecimalFilter(
-            Map<String, Object> filters,
-            String key
-    ) {
-
-        String value = getFilterValue(filters, key);
-
-        if (!hasText(value)) {
-            return null;
-        }
-
-        try {
-            return new BigDecimal(value);
-        } catch (NumberFormatException exception) {
-            throw new IllegalArgumentException(
-                    "Invalid " + key + " filter: " + value
-            );
-        }
-    }
-
-    private LocalDate getDateFilter(
-            Map<String, Object> filters,
-            String key
-    ) {
-
-        String value = getFilterValue(filters, key);
-
-        if (!hasText(value)) {
-            return null;
-        }
-
-        try {
-            return LocalDate.parse(value);
-        } catch (Exception exception) {
-            throw new IllegalArgumentException(
-                    "Invalid " + key + " date. Expected yyyy-MM-dd."
-            );
-        }
-    }
-
-    private void validateAmountRange(
-            BigDecimal minAmount,
-            BigDecimal maxAmount
-    ) {
-
-        if (minAmount != null
-                && maxAmount != null
-                && minAmount.compareTo(maxAmount) > 0) {
-
-            throw new IllegalArgumentException(
-                    "Minimum amount cannot be greater than maximum amount."
-            );
-        }
-    }
-
-    private void validateDateRange(
-            LocalDate fromDate,
-            LocalDate toDate
-    ) {
-
-        if (fromDate != null
-                && toDate != null
-                && fromDate.isAfter(toDate)) {
-
-            throw new IllegalArgumentException(
-                    "From date cannot be after to date."
-            );
-        }
-    }
-
-    private void validateBoolean(
-            String value,
-            String fieldName
-    ) {
-
-        if (!"true".equalsIgnoreCase(value)
-                && !"false".equalsIgnoreCase(value)) {
-
-            throw new IllegalArgumentException(
-                    fieldName + " filter must be true or false."
-            );
-        }
-    }
-
     private boolean hasText(String value) {
+
         return value != null && !value.isBlank();
     }
 
     private String containsPattern(String value) {
 
-        return "%"
-                + value.trim().toLowerCase(Locale.ROOT)
-                + "%";
+        return "%" +
+                value.trim().toLowerCase(Locale.ROOT) +
+                "%";
+    }
+
+    private Long parseLong(
+            String value,
+            String field
+    ) {
+
+        try {
+
+            return Long.valueOf(value);
+
+        } catch (NumberFormatException exception) {
+
+            throw new IllegalArgumentException(
+                    "Invalid value for " + field
+            );
+        }
     }
 }

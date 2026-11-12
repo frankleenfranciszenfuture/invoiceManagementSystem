@@ -1,5 +1,5 @@
-package com.ims.reports.provider.expense;
 
+package com.ims.reports.provider.expense;
 
 import com.ims.dtos.reports.*;
 import com.ims.entity.ExpenseEntity;
@@ -9,6 +9,7 @@ import com.ims.enums.reports.ReportModule;
 import com.ims.enums.reports.ReportType;
 import com.ims.repository.ExpenseRepository;
 
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,45 +48,24 @@ public class ExpenseReportProvider implements ReportDataProvider {
     }
 
     // =========================================================
-    // REPORT DEFINITIONS
+    // SINGLE REPORT DEFINITION
     // =========================================================
 
     @Override
     public List<ReportDefinition> getReportDefinitions() {
 
         return List.of(
-
                 ReportDefinition.builder()
-                        .code("EXPENSE_REGISTER")
-                        .name("Expense Register")
+                        .code("EXPENSE_REPORT")
+                        .name("Expense Report")
                         .description(
-                                "Complete expense register including expense number, "
-                                        + "category, vendor, expense date, amount and status."
+                                "Complete expense report containing expense identification, " +
+                                        "category, vendor, warehouse, currency, tax breakdown, " +
+                                        "amounts, payment information, approval details, " +
+                                        "rejection details, status and audit information."
                         )
                         .type(ReportType.REGISTER)
-                        .columns(getRegisterColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("EXPENSE_DETAILS")
-                        .name("Expense Details")
-                        .description(
-                                "Detailed expense information including currency, "
-                                        + "tax breakdown, vendor, warehouse and approval details."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getDetailsColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("EXPENSE_PAYMENT_REPORT")
-                        .name("Expense Payment Report")
-                        .description(
-                                "Expense payment report including total amount, "
-                                        + "paid amount, due amount and payment status."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getPaymentColumns())
+                        .columns(getColumns())
                         .build()
         );
     }
@@ -109,7 +90,11 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 .trim()
                 .toUpperCase(Locale.ROOT);
 
-        List<ReportColumn> columns = getColumns(reportCode);
+        if (!"EXPENSE_REPORT".equals(reportCode)) {
+            throw new IllegalArgumentException(
+                    "Unsupported expense report: " + reportCode
+            );
+        }
 
         Specification<ExpenseEntity> specification =
                 buildSpecification(request.getFilters());
@@ -125,16 +110,14 @@ public class ExpenseReportProvider implements ReportDataProvider {
         List<Map<String, Object>> rows =
                 expensePage.getContent()
                         .stream()
-                        .map(expense ->
-                                mapExpense(expense, reportCode)
-                        )
+                        .map(this::mapExpense)
                         .toList();
 
         ReportSummaryResponse summary =
                 generateSummary(specification);
 
         return ReportData.builder()
-                .columns(columns)
+                .columns(getColumns())
                 .rows(rows)
                 .totalElements(expensePage.getTotalElements())
                 .pageNumber(expensePage.getNumber())
@@ -146,65 +129,85 @@ public class ExpenseReportProvider implements ReportDataProvider {
     }
 
     // =========================================================
-    // REPORT COLUMN SELECTION
+    // REPORT COLUMNS
     // =========================================================
 
-    private List<ReportColumn> getColumns(String reportCode) {
-
-        return switch (reportCode) {
-
-            case "EXPENSE_REGISTER" ->
-                    getRegisterColumns();
-
-            case "EXPENSE_DETAILS" ->
-                    getDetailsColumns();
-
-            case "EXPENSE_PAYMENT_REPORT" ->
-                    getPaymentColumns();
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported expense report: " + reportCode
-            );
-        };
-    }
-
-    // =========================================================
-    // REGISTER COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getRegisterColumns() {
+    private List<ReportColumn> getColumns() {
 
         return List.of(
 
+                // Expense identification
                 column("id", "Expense ID", "NUMBER"),
                 column("expenseNo", "Expense Number", "STRING"),
                 column("expenseType", "Expense Type", "STRING"),
 
+                // Category
                 column("expenseCategoryId", "Category ID", "NUMBER"),
 
+                // Expense information
                 column("expenseDate", "Expense Date", "DATE"),
-
                 column("description", "Description", "STRING"),
                 column("referenceNo", "Reference Number", "STRING"),
 
+                // Vendor
                 column("vendorId", "Vendor ID", "NUMBER"),
                 column("vendorName", "Vendor Name", "STRING"),
 
+                // Warehouse
                 column("warehouseId", "Warehouse ID", "NUMBER"),
 
-                column("amount", "Amount", "NUMBER"),
-                column("discountAmount", "Discount Amount", "NUMBER"),
-                column("taxableAmount", "Taxable Amount", "NUMBER"),
-                column("totalTaxAmount", "Total Tax", "NUMBER"),
-                column("totalAmount", "Total Amount", "NUMBER"),
+                // Currency
+                column("currencyId", "Currency ID", "NUMBER"),
+                column("currencyCode", "Currency Code", "STRING"),
+                column("exchangeRate", "Exchange Rate", "DECIMAL"),
 
-                column("currencyCode", "Currency", "STRING"),
+                // Tax master
+                column("taxMasterId", "Tax Master ID", "NUMBER"),
 
+                // Expense amounts
+                column("amount", "Amount", "DECIMAL"),
+                column("discountAmount", "Discount Amount", "DECIMAL"),
+                column("taxableAmount", "Taxable Amount", "DECIMAL"),
+
+                // Tax breakdown
+                column("cgstAmount", "CGST Amount", "DECIMAL"),
+                column("sgstAmount", "SGST Amount", "DECIMAL"),
+                column("igstAmount", "IGST Amount", "DECIMAL"),
+                column("totalTaxAmount", "Total Tax Amount", "DECIMAL"),
+                column("totalAmount", "Total Amount", "DECIMAL"),
+
+                // Base currency amounts
+                column("baseAmount", "Base Amount (INR)", "DECIMAL"),
+                column("baseDiscountAmount", "Base Discount Amount", "DECIMAL"),
+                column("baseTaxableAmount", "Base Taxable Amount", "DECIMAL"),
+                column("baseCgstAmount", "Base CGST Amount", "DECIMAL"),
+                column("baseSgstAmount", "Base SGST Amount", "DECIMAL"),
+                column("baseIgstAmount", "Base IGST Amount", "DECIMAL"),
+                column("baseTotalTaxAmount", "Base Total Tax", "DECIMAL"),
+                column("baseTotalAmount", "Base Total Amount (INR)", "DECIMAL"),
+
+                // Payment information
+                column("paidAmount", "Paid Amount", "DECIMAL"),
+                column("dueAmount", "Due Amount", "DECIMAL"),
+
+                // Status
                 column("expenseStatus", "Expense Status", "STRING"),
                 column("paymentStatus", "Payment Status", "STRING"),
 
-                column("active", "Active", "BOOLEAN"),
+                // Approval information
+                column("approvedBy", "Approved By", "NUMBER"),
+                column("approvedAt", "Approved At", "DATETIME"),
 
+                // Rejection information
+                column("rejectedBy", "Rejected By", "NUMBER"),
+                column("rejectedAt", "Rejected At", "DATETIME"),
+                column("rejectionReason", "Rejection Reason", "STRING"),
+
+                // Additional information
+                column("notes", "Notes", "STRING"),
+
+                // Active and audit information
+                column("active", "Active", "BOOLEAN"),
                 column("createdAt", "Created At", "DATETIME"),
                 column("updatedAt", "Updated At", "DATETIME"),
                 column("createdBy", "Created By", "NUMBER"),
@@ -213,108 +216,7 @@ public class ExpenseReportProvider implements ReportDataProvider {
     }
 
     // =========================================================
-    // DETAILS COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getDetailsColumns() {
-
-        return List.of(
-
-                column("id", "Expense ID", "NUMBER"),
-                column("expenseNo", "Expense Number", "STRING"),
-                column("expenseType", "Expense Type", "STRING"),
-
-                column("expenseCategoryId", "Category ID", "NUMBER"),
-
-                column("expenseDate", "Expense Date", "DATE"),
-                column("description", "Description", "STRING"),
-                column("referenceNo", "Reference Number", "STRING"),
-
-                column("vendorId", "Vendor ID", "NUMBER"),
-                column("vendorName", "Vendor Name", "STRING"),
-
-                column("warehouseId", "Warehouse ID", "NUMBER"),
-
-                column("currencyId", "Currency ID", "NUMBER"),
-                column("currencyCode", "Currency Code", "STRING"),
-                column("exchangeRate", "Exchange Rate", "NUMBER"),
-
-                column("taxMasterId", "Tax Master ID", "NUMBER"),
-
-                column("amount", "Amount", "NUMBER"),
-                column("discountAmount", "Discount Amount", "NUMBER"),
-                column("taxableAmount", "Taxable Amount", "NUMBER"),
-
-                column("cgstAmount", "CGST Amount", "NUMBER"),
-                column("sgstAmount", "SGST Amount", "NUMBER"),
-                column("igstAmount", "IGST Amount", "NUMBER"),
-                column("totalTaxAmount", "Total Tax Amount", "NUMBER"),
-                column("totalAmount", "Total Amount", "NUMBER"),
-
-                column("baseAmount", "Base Amount (INR)", "NUMBER"),
-                column("baseDiscountAmount", "Base Discount Amount", "NUMBER"),
-                column("baseTaxableAmount", "Base Taxable Amount", "NUMBER"),
-                column("baseCgstAmount", "Base CGST Amount", "NUMBER"),
-                column("baseSgstAmount", "Base SGST Amount", "NUMBER"),
-                column("baseIgstAmount", "Base IGST Amount", "NUMBER"),
-                column("baseTotalTaxAmount", "Base Total Tax", "NUMBER"),
-                column("baseTotalAmount", "Base Total Amount", "NUMBER"),
-
-                column("expenseStatus", "Expense Status", "STRING"),
-                column("paymentStatus", "Payment Status", "STRING"),
-
-                column("approvedBy", "Approved By", "NUMBER"),
-                column("approvedAt", "Approved At", "DATETIME"),
-
-                column("rejectedBy", "Rejected By", "NUMBER"),
-                column("rejectedAt", "Rejected At", "DATETIME"),
-                column("rejectionReason", "Rejection Reason", "STRING"),
-
-                column("notes", "Notes", "STRING"),
-
-                column("active", "Active", "BOOLEAN"),
-                column("createdAt", "Created At", "DATETIME"),
-                column("updatedAt", "Updated At", "DATETIME")
-        );
-    }
-
-    // =========================================================
-    // PAYMENT COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getPaymentColumns() {
-
-        return List.of(
-
-                column("id", "Expense ID", "NUMBER"),
-                column("expenseNo", "Expense Number", "STRING"),
-
-                column("expenseDate", "Expense Date", "DATE"),
-
-                column("expenseCategoryId", "Category ID", "NUMBER"),
-
-                column("vendorId", "Vendor ID", "NUMBER"),
-                column("vendorName", "Vendor Name", "STRING"),
-
-                column("currencyCode", "Currency", "STRING"),
-
-                column("totalAmount", "Total Amount", "NUMBER"),
-                column("baseTotalAmount", "Base Total Amount (INR)", "NUMBER"),
-
-                column("paidAmount", "Paid Amount", "NUMBER"),
-                column("dueAmount", "Due Amount", "NUMBER"),
-
-                column("expenseStatus", "Expense Status", "STRING"),
-                column("paymentStatus", "Payment Status", "STRING"),
-
-                column("active", "Active", "BOOLEAN"),
-
-                column("createdAt", "Created At", "DATETIME")
-        );
-    }
-
-    // =========================================================
-    // COMMON COLUMN BUILDER
+    // COLUMN BUILDER
     // =========================================================
 
     private ReportColumn column(
@@ -332,7 +234,151 @@ public class ExpenseReportProvider implements ReportDataProvider {
     }
 
     // =========================================================
-    // EXPENSE SPECIFICATION
+    // MAP EXPENSE
+    // =========================================================
+
+    private Map<String, Object> mapExpense(
+            ExpenseEntity expense
+    ) {
+
+        Map<String, Object> row = new LinkedHashMap<>();
+
+        // Expense identification
+        row.put("id", expense.getId());
+        row.put("expenseNo", expense.getExpenseNo());
+
+        row.put(
+                "expenseType",
+                enumValue(expense.getExpenseType())
+        );
+
+        // Category
+        row.put(
+                "expenseCategoryId",
+                expense.getExpenseCategory() == null
+                        ? null
+                        : expense.getExpenseCategory().getId()
+        );
+
+        // Expense information
+        row.put("expenseDate", expense.getExpenseDate());
+        row.put("description", expense.getDescription());
+        row.put("referenceNo", expense.getReferenceNo());
+
+        // Vendor
+        row.put(
+                "vendorId",
+                expense.getVendor() == null
+                        ? null
+                        : expense.getVendor().getId()
+        );
+
+        row.put(
+                "vendorName",
+                expense.getVendor() == null
+                        ? null
+                        : expense.getVendor().getCompanyName()
+        );
+
+        // Warehouse
+        row.put("warehouseId", expense.getWarehouseId());
+
+        // Currency
+        row.put(
+                "currencyId",
+                expense.getCurrency() == null
+                        ? null
+                        : expense.getCurrency().getId()
+        );
+
+        row.put(
+                "currencyCode",
+                expense.getCurrency() == null
+                        ? null
+                        : expense.getCurrency().getCurrencyCode()
+        );
+
+        row.put("exchangeRate", expense.getExchangeRate());
+
+        // Tax master
+        row.put(
+                "taxMasterId",
+                expense.getTaxMaster() == null
+                        ? null
+                        : expense.getTaxMaster().getId()
+        );
+
+        // Expense amounts
+        row.put("amount", expense.getAmount());
+        row.put("discountAmount", expense.getDiscountAmount());
+        row.put("taxableAmount", expense.getTaxableAmount());
+
+        // Tax breakdown
+        row.put("cgstAmount", expense.getCgstAmount());
+        row.put("sgstAmount", expense.getSgstAmount());
+        row.put("igstAmount", expense.getIgstAmount());
+        row.put("totalTaxAmount", expense.getTotalTaxAmount());
+        row.put("totalAmount", expense.getTotalAmount());
+
+        // Base currency amounts
+        row.put("baseAmount", expense.getBaseAmount());
+        row.put("baseDiscountAmount", expense.getBaseDiscountAmount());
+        row.put("baseTaxableAmount", expense.getBaseTaxableAmount());
+
+        row.put("baseCgstAmount", expense.getBaseCgstAmount());
+        row.put("baseSgstAmount", expense.getBaseSgstAmount());
+        row.put("baseIgstAmount", expense.getBaseIgstAmount());
+
+        row.put("baseTotalTaxAmount", expense.getBaseTotalTaxAmount());
+        row.put("baseTotalAmount", expense.getBaseTotalAmount());
+
+        // Payment information
+        row.put("paidAmount", expense.getPaidAmount());
+        row.put("dueAmount", expense.getDueAmount());
+
+        // Status
+        row.put(
+                "expenseStatus",
+                enumValue(expense.getExpenseStatus())
+        );
+
+        row.put(
+                "paymentStatus",
+                enumValue(expense.getPaymentStatus())
+        );
+
+        // Approval information
+        row.put("approvedBy", expense.getApprovedBy());
+        row.put("approvedAt", expense.getApprovedAt());
+
+        // Rejection information
+        row.put("rejectedBy", expense.getRejectedBy());
+        row.put("rejectedAt", expense.getRejectedAt());
+        row.put("rejectionReason", expense.getRejectionReason());
+
+        // Additional information
+        row.put("notes", expense.getNotes());
+
+        // Active and audit information
+        row.put("active", expense.getActive());
+        row.put("createdAt", expense.getCreatedAt());
+        row.put("updatedAt", expense.getUpdatedAt());
+        row.put("createdBy", expense.getCreatedBy());
+        row.put("updatedBy", expense.getUpdatedBy());
+
+        return row;
+    }
+
+    // =========================================================
+    // ENUM HELPER
+    // =========================================================
+
+    private String enumValue(Enum<?> value) {
+        return value == null ? null : value.name();
+    }
+
+    // =========================================================
+    // SPECIFICATION / FILTERS
     // =========================================================
 
     private Specification<ExpenseEntity> buildSpecification(
@@ -352,15 +398,12 @@ public class ExpenseReportProvider implements ReportDataProvider {
                             ? Map.of()
                             : filters.getFilters();
 
-            // -------------------------------------------------
-            // KEYWORD
-            // -------------------------------------------------
+            var vendorJoin = root.join("vendor", JoinType.LEFT);
 
+            // Keyword search
             if (hasText(filters.getKeyword())) {
 
-                String keyword = containsPattern(
-                        filters.getKeyword()
-                );
+                String keyword = containsPattern(filters.getKeyword());
 
                 predicates.add(
                         cb.or(
@@ -377,27 +420,18 @@ public class ExpenseReportProvider implements ReportDataProvider {
                                         keyword
                                 ),
                                 cb.like(
-                                        cb.lower(
-                                                root.get("vendor")
-                                                        .get("companyName")
-                                        ),
+                                        cb.lower(vendorJoin.get("companyName")),
                                         keyword
                                 )
                         )
                 );
             }
 
-            // -------------------------------------------------
-            // EXPENSE NUMBER
-            // -------------------------------------------------
-
-            String expenseNo = getFilterValue(
-                    customFilters,
-                    "expenseNo"
-            );
+            // Expense number
+            String expenseNo =
+                    getFilterValue(customFilters, "expenseNo");
 
             if (hasText(expenseNo)) {
-
                 predicates.add(
                         cb.like(
                                 cb.lower(root.get("expenseNo")),
@@ -406,14 +440,9 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
-            // EXPENSE TYPE
-            // -------------------------------------------------
-
-            String expenseType = getFilterValue(
-                    customFilters,
-                    "expenseType"
-            );
+            // Expense type
+            String expenseType =
+                    getFilterValue(customFilters, "expenseType");
 
             if (hasText(expenseType)
                     && !"ALL".equalsIgnoreCase(expenseType)) {
@@ -426,17 +455,11 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
-            // EXPENSE CATEGORY
-            // -------------------------------------------------
-
-            Long expenseCategoryId = getLongFilter(
-                    customFilters,
-                    "expenseCategoryId"
-            );
+            // Expense category
+            Long expenseCategoryId =
+                    getLongFilter(customFilters, "expenseCategoryId");
 
             if (expenseCategoryId != null) {
-
                 predicates.add(
                         cb.equal(
                                 root.get("expenseCategory").get("id"),
@@ -445,55 +468,31 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
-            // VENDOR
-            // -------------------------------------------------
-
-            Long vendorId = getLongFilter(
-                    customFilters,
-                    "vendorId"
-            );
+            // Vendor
+            Long vendorId =
+                    getLongFilter(customFilters, "vendorId");
 
             if (vendorId != null) {
-
                 predicates.add(
-                        cb.equal(
-                                root.get("vendor").get("id"),
-                                vendorId
-                        )
+                        cb.equal(vendorJoin.get("id"), vendorId)
                 );
             }
 
-            // -------------------------------------------------
-            // WAREHOUSE
-            // -------------------------------------------------
-
-            Long warehouseId = getLongFilter(
-                    customFilters,
-                    "warehouseId"
-            );
+            // Warehouse
+            Long warehouseId =
+                    getLongFilter(customFilters, "warehouseId");
 
             if (warehouseId != null) {
-
                 predicates.add(
-                        cb.equal(
-                                root.get("warehouseId"),
-                                warehouseId
-                        )
+                        cb.equal(root.get("warehouseId"), warehouseId)
                 );
             }
 
-            // -------------------------------------------------
-            // CURRENCY
-            // -------------------------------------------------
-
-            Long currencyId = getLongFilter(
-                    customFilters,
-                    "currencyId"
-            );
+            // Currency ID
+            Long currencyId =
+                    getLongFilter(customFilters, "currencyId");
 
             if (currencyId != null) {
-
                 predicates.add(
                         cb.equal(
                                 root.get("currency").get("id"),
@@ -502,34 +501,24 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 );
             }
 
-            String currencyCode = getFilterValue(
-                    customFilters,
-                    "currencyCode"
-            );
+            // Currency code
+            String currencyCode =
+                    getFilterValue(customFilters, "currencyCode");
 
             if (hasText(currencyCode)) {
-
                 predicates.add(
                         cb.equal(
-                                cb.upper(
-                                        root.get("currency").get("currencyCode")
-                                ),
+                                cb.upper(root.get("currency").get("currencyCode")),
                                 currencyCode.toUpperCase(Locale.ROOT)
                         )
                 );
             }
 
-            // -------------------------------------------------
-            // TAX MASTER
-            // -------------------------------------------------
-
-            Long taxMasterId = getLongFilter(
-                    customFilters,
-                    "taxMasterId"
-            );
+            // Tax master
+            Long taxMasterId =
+                    getLongFilter(customFilters, "taxMasterId");
 
             if (taxMasterId != null) {
-
                 predicates.add(
                         cb.equal(
                                 root.get("taxMaster").get("id"),
@@ -538,25 +527,18 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
-            // EXPENSE STATUS
-            // -------------------------------------------------
-
-            String expenseStatus = getFilterValue(
-                    customFilters,
-                    "expenseStatus"
-            );
+            // Expense status
+            String expenseStatus =
+                    getFilterValue(customFilters, "expenseStatus");
 
             if (hasText(expenseStatus)
                     && !"ALL".equalsIgnoreCase(expenseStatus)) {
 
                 try {
 
-                    ExpenseStatus status =
-                            ExpenseStatus.valueOf(
-                                    expenseStatus.trim()
-                                            .toUpperCase(Locale.ROOT)
-                            );
+                    ExpenseStatus status = ExpenseStatus.valueOf(
+                            expenseStatus.trim().toUpperCase(Locale.ROOT)
+                    );
 
                     predicates.add(
                             cb.equal(root.get("expenseStatus"), status)
@@ -570,14 +552,9 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 }
             }
 
-            // -------------------------------------------------
-            // PAYMENT STATUS
-            // -------------------------------------------------
-
-            String paymentStatus = getFilterValue(
-                    customFilters,
-                    "paymentStatus"
-            );
+            // Payment status
+            String paymentStatus =
+                    getFilterValue(customFilters, "paymentStatus");
 
             if (hasText(paymentStatus)
                     && !"ALL".equalsIgnoreCase(paymentStatus)) {
@@ -586,8 +563,7 @@ public class ExpenseReportProvider implements ReportDataProvider {
 
                     ExpensePaymentStatus status =
                             ExpensePaymentStatus.valueOf(
-                                    paymentStatus.trim()
-                                            .toUpperCase(Locale.ROOT)
+                                    paymentStatus.trim().toUpperCase(Locale.ROOT)
                             );
 
                     predicates.add(
@@ -602,17 +578,11 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 }
             }
 
-            // -------------------------------------------------
-            // REFERENCE NUMBER
-            // -------------------------------------------------
-
-            String referenceNo = getFilterValue(
-                    customFilters,
-                    "referenceNo"
-            );
+            // Reference number
+            String referenceNo =
+                    getFilterValue(customFilters, "referenceNo");
 
             if (hasText(referenceNo)) {
-
                 predicates.add(
                         cb.like(
                                 cb.lower(root.get("referenceNo")),
@@ -621,24 +591,16 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
-            // AMOUNT RANGE
-            // -------------------------------------------------
+            // Total amount range
+            BigDecimal minAmount =
+                    getBigDecimalFilter(customFilters, "minAmount");
 
-            BigDecimal minAmount = getBigDecimalFilter(
-                    customFilters,
-                    "minAmount"
-            );
+            BigDecimal maxAmount =
+                    getBigDecimalFilter(customFilters, "maxAmount");
 
-            BigDecimal maxAmount = getBigDecimalFilter(
-                    customFilters,
-                    "maxAmount"
-            );
-
-            validateAmountRange(minAmount, maxAmount);
+            validateAmountRange(minAmount, maxAmount, "Total amount");
 
             if (minAmount != null) {
-
                 predicates.add(
                         cb.greaterThanOrEqualTo(
                                 root.get("totalAmount"),
@@ -648,7 +610,6 @@ public class ExpenseReportProvider implements ReportDataProvider {
             }
 
             if (maxAmount != null) {
-
                 predicates.add(
                         cb.lessThanOrEqualTo(
                                 root.get("totalAmount"),
@@ -657,24 +618,16 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
-            // PAID AMOUNT RANGE
-            // -------------------------------------------------
+            // Paid amount range
+            BigDecimal minPaidAmount =
+                    getBigDecimalFilter(customFilters, "minPaidAmount");
 
-            BigDecimal minPaidAmount = getBigDecimalFilter(
-                    customFilters,
-                    "minPaidAmount"
-            );
+            BigDecimal maxPaidAmount =
+                    getBigDecimalFilter(customFilters, "maxPaidAmount");
 
-            BigDecimal maxPaidAmount = getBigDecimalFilter(
-                    customFilters,
-                    "maxPaidAmount"
-            );
-
-            validateAmountRange(minPaidAmount, maxPaidAmount);
+            validateAmountRange(minPaidAmount, maxPaidAmount, "Paid amount");
 
             if (minPaidAmount != null) {
-
                 predicates.add(
                         cb.greaterThanOrEqualTo(
                                 root.get("paidAmount"),
@@ -684,7 +637,6 @@ public class ExpenseReportProvider implements ReportDataProvider {
             }
 
             if (maxPaidAmount != null) {
-
                 predicates.add(
                         cb.lessThanOrEqualTo(
                                 root.get("paidAmount"),
@@ -693,24 +645,16 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
-            // DUE AMOUNT RANGE
-            // -------------------------------------------------
+            // Due amount range
+            BigDecimal minDueAmount =
+                    getBigDecimalFilter(customFilters, "minDueAmount");
 
-            BigDecimal minDueAmount = getBigDecimalFilter(
-                    customFilters,
-                    "minDueAmount"
-            );
+            BigDecimal maxDueAmount =
+                    getBigDecimalFilter(customFilters, "maxDueAmount");
 
-            BigDecimal maxDueAmount = getBigDecimalFilter(
-                    customFilters,
-                    "maxDueAmount"
-            );
-
-            validateAmountRange(minDueAmount, maxDueAmount);
+            validateAmountRange(minDueAmount, maxDueAmount, "Due amount");
 
             if (minDueAmount != null) {
-
                 predicates.add(
                         cb.greaterThanOrEqualTo(
                                 root.get("dueAmount"),
@@ -720,7 +664,6 @@ public class ExpenseReportProvider implements ReportDataProvider {
             }
 
             if (maxDueAmount != null) {
-
                 predicates.add(
                         cb.lessThanOrEqualTo(
                                 root.get("dueAmount"),
@@ -729,24 +672,20 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
-            // EXPENSE DATE RANGE
-            // -------------------------------------------------
+            // Expense date range
+            LocalDate expenseDateFrom =
+                    getDateFilter(customFilters, "expenseDateFrom");
 
-            LocalDate expenseDateFrom = getDateFilter(
-                    customFilters,
-                    "expenseDateFrom"
+            LocalDate expenseDateTo =
+                    getDateFilter(customFilters, "expenseDateTo");
+
+            validateDateRange(
+                    expenseDateFrom,
+                    expenseDateTo,
+                    "Expense date"
             );
-
-            LocalDate expenseDateTo = getDateFilter(
-                    customFilters,
-                    "expenseDateTo"
-            );
-
-            validateDateRange(expenseDateFrom, expenseDateTo);
 
             if (expenseDateFrom != null) {
-
                 predicates.add(
                         cb.greaterThanOrEqualTo(
                                 root.get("expenseDate"),
@@ -756,7 +695,6 @@ public class ExpenseReportProvider implements ReportDataProvider {
             }
 
             if (expenseDateTo != null) {
-
                 predicates.add(
                         cb.lessThanOrEqualTo(
                                 root.get("expenseDate"),
@@ -765,17 +703,13 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
-            // COMMON DATE FILTERS
-            // -------------------------------------------------
-
+            // Common date filters
             LocalDate fromDate = filters.getFromDate();
             LocalDate toDate = filters.getToDate();
 
-            validateDateRange(fromDate, toDate);
+            validateDateRange(fromDate, toDate, "Date");
 
             if (fromDate != null) {
-
                 predicates.add(
                         cb.greaterThanOrEqualTo(
                                 root.get("expenseDate"),
@@ -785,7 +719,6 @@ public class ExpenseReportProvider implements ReportDataProvider {
             }
 
             if (toDate != null) {
-
                 predicates.add(
                         cb.lessThanOrEqualTo(
                                 root.get("expenseDate"),
@@ -794,14 +727,9 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
-            // ACTIVE FILTER
-            // -------------------------------------------------
-
-            String active = getFilterValue(
-                    customFilters,
-                    "active"
-            );
+            // Active filter
+            String active =
+                    getFilterValue(customFilters, "active");
 
             if (hasText(active)
                     && !"ALL".equalsIgnoreCase(active)) {
@@ -813,10 +741,9 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
-            // COMMON STATUS FILTER
-            // -------------------------------------------------
-
+            // Common status filter
+            // In this provider, filters.getStatus() represents
+            // the record active/inactive filter, not ExpenseStatus.
             String status = filters.getStatus();
 
             if (hasText(status)
@@ -829,254 +756,8 @@ public class ExpenseReportProvider implements ReportDataProvider {
                 );
             }
 
-            return cb.and(
-                    predicates.toArray(new Predicate[0])
-            );
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
-    }
-
-    // =========================================================
-    // MAP EXPENSE
-    // =========================================================
-
-    private Map<String, Object> mapExpense(
-            ExpenseEntity expense,
-            String reportCode
-    ) {
-
-        Map<String, Object> row = new LinkedHashMap<>();
-
-        switch (reportCode) {
-
-            case "EXPENSE_REGISTER" ->
-                    mapRegister(expense, row);
-
-            case "EXPENSE_DETAILS" ->
-                    mapDetails(expense, row);
-
-            case "EXPENSE_PAYMENT_REPORT" ->
-                    mapPayment(expense, row);
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported expense report: " + reportCode
-            );
-        }
-
-        return row;
-    }
-
-    // =========================================================
-    // MAP COMMON DETAILS
-    // =========================================================
-
-    private void mapCommonDetails(
-            ExpenseEntity expense,
-            Map<String, Object> row
-    ) {
-
-        row.put("id", expense.getId());
-        row.put("expenseNo", expense.getExpenseNo());
-
-        row.put(
-                "expenseType",
-                expense.getExpenseType() == null
-                        ? null
-                        : expense.getExpenseType().name()
-        );
-
-        row.put(
-                "expenseCategoryId",
-                expense.getExpenseCategory() == null
-                        ? null
-                        : expense.getExpenseCategory().getId()
-        );
-
-        row.put("expenseDate", expense.getExpenseDate());
-        row.put("description", expense.getDescription());
-        row.put("referenceNo", expense.getReferenceNo());
-
-        row.put(
-                "vendorId",
-                expense.getVendor() == null
-                        ? null
-                        : expense.getVendor().getId()
-        );
-
-        row.put(
-                "vendorName",
-                expense.getVendor() == null
-                        ? null
-                        : expense.getVendor().getCompanyName()
-        );
-
-        row.put("warehouseId", expense.getWarehouseId());
-
-        row.put(
-                "currencyId",
-                expense.getCurrency() == null
-                        ? null
-                        : expense.getCurrency().getId()
-        );
-
-        row.put(
-                "currencyCode",
-                expense.getCurrency() == null
-                        ? null
-                        : expense.getCurrency().getCurrencyCode()
-        );
-
-        row.put("exchangeRate", expense.getExchangeRate());
-
-        row.put(
-                "taxMasterId",
-                expense.getTaxMaster() == null
-                        ? null
-                        : expense.getTaxMaster().getId()
-        );
-
-        row.put("amount", expense.getAmount());
-        row.put("discountAmount", expense.getDiscountAmount());
-        row.put("taxableAmount", expense.getTaxableAmount());
-
-        row.put("cgstAmount", expense.getCgstAmount());
-        row.put("sgstAmount", expense.getSgstAmount());
-        row.put("igstAmount", expense.getIgstAmount());
-
-        row.put("totalTaxAmount", expense.getTotalTaxAmount());
-        row.put("totalAmount", expense.getTotalAmount());
-
-        row.put("baseAmount", expense.getBaseAmount());
-        row.put("baseDiscountAmount", expense.getBaseDiscountAmount());
-        row.put("baseTaxableAmount", expense.getBaseTaxableAmount());
-
-        row.put("baseCgstAmount", expense.getBaseCgstAmount());
-        row.put("baseSgstAmount", expense.getBaseSgstAmount());
-        row.put("baseIgstAmount", expense.getBaseIgstAmount());
-
-        row.put("baseTotalTaxAmount", expense.getBaseTotalTaxAmount());
-        row.put("baseTotalAmount", expense.getBaseTotalAmount());
-
-        row.put("paidAmount", expense.getPaidAmount());
-        row.put("dueAmount", expense.getDueAmount());
-
-        row.put(
-                "expenseStatus",
-                expense.getExpenseStatus() == null
-                        ? null
-                        : expense.getExpenseStatus().name()
-        );
-
-        row.put(
-                "paymentStatus",
-                expense.getPaymentStatus() == null
-                        ? null
-                        : expense.getPaymentStatus().name()
-        );
-
-        row.put("active", expense.getActive());
-        row.put("createdAt", expense.getCreatedAt());
-        row.put("updatedAt", expense.getUpdatedAt());
-    }
-
-    // =========================================================
-    // MAP REGISTER
-    // =========================================================
-
-    private void mapRegister(
-            ExpenseEntity expense,
-            Map<String, Object> row
-    ) {
-
-        mapCommonDetails(expense, row);
-
-        row.put("createdBy", expense.getCreatedBy());
-        row.put("updatedBy", expense.getUpdatedBy());
-    }
-
-    // =========================================================
-    // MAP DETAILS
-    // =========================================================
-
-    private void mapDetails(
-            ExpenseEntity expense,
-            Map<String, Object> row
-    ) {
-
-        mapCommonDetails(expense, row);
-
-        row.put("approvedBy", expense.getApprovedBy());
-        row.put("approvedAt", expense.getApprovedAt());
-
-        row.put("rejectedBy", expense.getRejectedBy());
-        row.put("rejectedAt", expense.getRejectedAt());
-        row.put("rejectionReason", expense.getRejectionReason());
-
-        row.put("notes", expense.getNotes());
-    }
-
-    // =========================================================
-    // MAP PAYMENT
-    // =========================================================
-
-    private void mapPayment(
-            ExpenseEntity expense,
-            Map<String, Object> row
-    ) {
-
-        row.put("id", expense.getId());
-        row.put("expenseNo", expense.getExpenseNo());
-        row.put("expenseDate", expense.getExpenseDate());
-
-        row.put(
-                "expenseCategoryId",
-                expense.getExpenseCategory() == null
-                        ? null
-                        : expense.getExpenseCategory().getId()
-        );
-
-        row.put(
-                "vendorId",
-                expense.getVendor() == null
-                        ? null
-                        : expense.getVendor().getId()
-        );
-
-        row.put(
-                "vendorName",
-                expense.getVendor() == null
-                        ? null
-                        : expense.getVendor().getCompanyName()
-        );
-
-        row.put(
-                "currencyCode",
-                expense.getCurrency() == null
-                        ? null
-                        : expense.getCurrency().getCurrencyCode()
-        );
-
-        row.put("totalAmount", expense.getTotalAmount());
-        row.put("baseTotalAmount", expense.getBaseTotalAmount());
-
-        row.put("paidAmount", expense.getPaidAmount());
-        row.put("dueAmount", expense.getDueAmount());
-
-        row.put(
-                "expenseStatus",
-                expense.getExpenseStatus() == null
-                        ? null
-                        : expense.getExpenseStatus().name()
-        );
-
-        row.put(
-                "paymentStatus",
-                expense.getPaymentStatus() == null
-                        ? null
-                        : expense.getPaymentStatus().name()
-        );
-
-        row.put("active", expense.getActive());
-        row.put("createdAt", expense.getCreatedAt());
     }
 
     // =========================================================
@@ -1159,13 +840,10 @@ public class ExpenseReportProvider implements ReportDataProvider {
 
             pageable.getSort().forEach(order -> {
 
-                String entityField =
-                        mapSortField(order.getProperty());
-
                 orders.add(
                         new Sort.Order(
                                 order.getDirection(),
-                                entityField
+                                mapSortField(order.getProperty())
                         )
                 );
             });
@@ -1184,10 +862,13 @@ public class ExpenseReportProvider implements ReportDataProvider {
 
         return switch (field) {
 
+            case "id" -> "id";
             case "expenseNo" -> "expenseNo";
             case "expenseType" -> "expenseType";
             case "expenseCategoryId" -> "expenseCategory.id";
             case "expenseDate" -> "expenseDate";
+            case "description" -> "description";
+            case "referenceNo" -> "referenceNo";
             case "vendorId" -> "vendor.id";
             case "vendorName" -> "vendor.companyName";
             case "warehouseId" -> "warehouseId";
@@ -1200,12 +881,50 @@ public class ExpenseReportProvider implements ReportDataProvider {
             case "dueAmount" -> "dueAmount";
             case "expenseStatus" -> "expenseStatus";
             case "paymentStatus" -> "paymentStatus";
+            case "active" -> "active";
             case "createdAt" -> "createdAt";
             case "updatedAt" -> "updatedAt";
-            case "id" -> "id";
 
             default -> "id";
         };
+    }
+
+    // =========================================================
+    // VALIDATION HELPERS
+    // =========================================================
+
+    private void validateAmountRange(
+            BigDecimal minimum,
+            BigDecimal maximum,
+            String fieldName
+    ) {
+
+        if (minimum != null
+                && maximum != null
+                && minimum.compareTo(maximum) > 0) {
+
+            throw new IllegalArgumentException(
+                    "Minimum " + fieldName.toLowerCase(Locale.ROOT) +
+                            " cannot be greater than maximum " +
+                            fieldName.toLowerCase(Locale.ROOT) + "."
+            );
+        }
+    }
+
+    private void validateDateRange(
+            LocalDate fromDate,
+            LocalDate toDate,
+            String label
+    ) {
+
+        if (fromDate != null
+                && toDate != null
+                && fromDate.isAfter(toDate)) {
+
+            throw new IllegalArgumentException(
+                    label + " from date cannot be after to date."
+            );
+        }
     }
 
     // =========================================================
@@ -1236,12 +955,12 @@ public class ExpenseReportProvider implements ReportDataProvider {
         }
 
         try {
-            return Long.parseLong(value);
+            return Long.valueOf(value);
 
         } catch (NumberFormatException exception) {
 
             throw new IllegalArgumentException(
-                    "Invalid " + key + " filter: " + value
+                    "Invalid numeric filter: " + key
             );
         }
     }
@@ -1263,7 +982,7 @@ public class ExpenseReportProvider implements ReportDataProvider {
         } catch (NumberFormatException exception) {
 
             throw new IllegalArgumentException(
-                    "Invalid " + key + " filter: " + value
+                    "Invalid amount filter: " + key
             );
         }
     }
@@ -1282,44 +1001,10 @@ public class ExpenseReportProvider implements ReportDataProvider {
         try {
             return LocalDate.parse(value);
 
-        } catch (Exception exception) {
+        } catch (RuntimeException exception) {
 
             throw new IllegalArgumentException(
-                    "Invalid " + key + " date. Expected yyyy-MM-dd."
-            );
-        }
-    }
-
-    // =========================================================
-    // VALIDATIONS
-    // =========================================================
-
-    private void validateAmountRange(
-            BigDecimal minAmount,
-            BigDecimal maxAmount
-    ) {
-
-        if (minAmount != null
-                && maxAmount != null
-                && minAmount.compareTo(maxAmount) > 0) {
-
-            throw new IllegalArgumentException(
-                    "Minimum amount cannot be greater than maximum amount."
-            );
-        }
-    }
-
-    private void validateDateRange(
-            LocalDate fromDate,
-            LocalDate toDate
-    ) {
-
-        if (fromDate != null
-                && toDate != null
-                && fromDate.isAfter(toDate)) {
-
-            throw new IllegalArgumentException(
-                    "From date cannot be after to date."
+                    "Invalid date filter: " + key
             );
         }
     }
@@ -1349,10 +1034,6 @@ public class ExpenseReportProvider implements ReportDataProvider {
     }
 
     private String containsPattern(String value) {
-
-        return "%"
-                + value.trim().toLowerCase(Locale.ROOT)
-                + "%";
+        return "%" + value.trim().toLowerCase(Locale.ROOT) + "%";
     }
 }
-

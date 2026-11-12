@@ -1,13 +1,10 @@
+
 package com.ims.reports.provider.purchaseOrder;
 
-
 import com.ims.dtos.reports.*;
-
 import com.ims.entity.PurchaseOrderGoodsReceiptEntity;
-
 import com.ims.enums.reports.ReportModule;
 import com.ims.enums.reports.ReportType;
-
 import com.ims.repository.PurchaseOrderGoodsReceiptRepository;
 
 import jakarta.persistence.criteria.Join;
@@ -60,38 +57,15 @@ public class PurchaseOrderGoodsReceiptReportProvider
         return List.of(
 
                 ReportDefinition.builder()
-                        .code("GOODS_RECEIPT_REGISTER")
-                        .name("Goods Receipt Register")
+                        .code("GOODS_RECEIPT_REPORT")
+                        .name("Goods Receipt Report")
                         .description(
-                                "Complete goods receipt register including " +
-                                        "receipt number, purchase order, warehouse " +
-                                        "and receipt date."
+                                "Complete goods receipt information including " +
+                                        "receipt number, purchase order, warehouse, " +
+                                        "receipt date, notes and audit information."
                         )
                         .type(ReportType.REGISTER)
-                        .columns(getRegisterColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("GOODS_RECEIPT_DETAILS")
-                        .name("Goods Receipt Details")
-                        .description(
-                                "Detailed goods receipt information including " +
-                                        "purchase order reference, warehouse, notes " +
-                                        "and record audit information."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getDetailsColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("GOODS_RECEIPT_DATE_REPORT")
-                        .name("Goods Receipt Date Report")
-                        .description(
-                                "Goods receipts grouped by receipt date " +
-                                        "with their purchase order and warehouse references."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getDateReportColumns())
+                        .columns(getColumns())
                         .build()
         );
     }
@@ -116,7 +90,13 @@ public class PurchaseOrderGoodsReceiptReportProvider
                 .trim()
                 .toUpperCase(Locale.ROOT);
 
-        List<ReportColumn> columns = getColumns(reportCode);
+        if (!"GOODS_RECEIPT_REPORT".equals(reportCode)) {
+            throw new IllegalArgumentException(
+                    "Unsupported goods receipt report: " + reportCode
+            );
+        }
+
+        List<ReportColumn> columns = getColumns();
 
         Specification<PurchaseOrderGoodsReceiptEntity> specification =
                 buildSpecification(request.getFilters());
@@ -132,7 +112,7 @@ public class PurchaseOrderGoodsReceiptReportProvider
         List<Map<String, Object>> rows =
                 receiptPage.getContent()
                         .stream()
-                        .map(receipt -> mapGoodsReceipt(receipt, reportCode))
+                        .map(this::mapGoodsReceipt)
                         .toList();
 
         ReportSummaryResponse summary =
@@ -154,58 +134,7 @@ public class PurchaseOrderGoodsReceiptReportProvider
     // REPORT COLUMNS
     // =========================================================
 
-    private List<ReportColumn> getColumns(String reportCode) {
-
-        return switch (reportCode) {
-
-            case "GOODS_RECEIPT_REGISTER" ->
-                    getRegisterColumns();
-
-            case "GOODS_RECEIPT_DETAILS" ->
-                    getDetailsColumns();
-
-            case "GOODS_RECEIPT_DATE_REPORT" ->
-                    getDateReportColumns();
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported goods receipt report: " + reportCode
-            );
-        };
-    }
-
-    // =========================================================
-    // REGISTER COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getRegisterColumns() {
-
-        return List.of(
-
-                column("id", "Receipt ID", "NUMBER"),
-
-                column("receiptNo", "Receipt Number", "STRING"),
-
-                column("purchaseOrderId", "Purchase Order ID", "NUMBER"),
-
-                column("orderNo", "Purchase Order Number", "STRING"),
-
-                column("warehouseId", "Warehouse ID", "NUMBER"),
-
-                column("receiptDate", "Receipt Date", "DATE"),
-
-                column("active", "Active", "BOOLEAN"),
-
-                column("createdAt", "Created At", "DATETIME"),
-
-                column("updatedAt", "Updated At", "DATETIME")
-        );
-    }
-
-    // =========================================================
-    // DETAILS COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getDetailsColumns() {
+    private List<ReportColumn> getColumns() {
 
         return List.of(
 
@@ -234,32 +163,6 @@ public class PurchaseOrderGoodsReceiptReportProvider
                 column("updatedBy", "Updated By", "NUMBER")
         );
     }
-
-    // =========================================================
-    // DATE REPORT COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getDateReportColumns() {
-
-        return List.of(
-
-                column("receiptNo", "Receipt Number", "STRING"),
-
-                column("orderNo", "Purchase Order Number", "STRING"),
-
-                column("purchaseOrderId", "Purchase Order ID", "NUMBER"),
-
-                column("warehouseId", "Warehouse ID", "NUMBER"),
-
-                column("receiptDate", "Receipt Date", "DATE"),
-
-                column("notes", "Notes", "STRING")
-        );
-    }
-
-    // =========================================================
-    // COLUMN BUILDER
-    // =========================================================
 
     private ReportColumn column(
             String key,
@@ -302,11 +205,9 @@ public class PurchaseOrderGoodsReceiptReportProvider
 
             if (hasText(filters.getKeyword())) {
 
-                String keyword = containsPattern(
-                        filters.getKeyword()
-                );
+                String keyword = containsPattern(filters.getKeyword());
 
-                Join<Object, Object> purchaseOrderJoin =
+                Join<PurchaseOrderGoodsReceiptEntity, ?> purchaseOrderJoin =
                         root.join("purchaseOrder", JoinType.LEFT);
 
                 predicates.add(
@@ -393,6 +294,21 @@ public class PurchaseOrderGoodsReceiptReportProvider
                     "receiptDateFrom"
             );
 
+            // ---------------------------------------------
+            // RECEIPT DATE TO
+            // ---------------------------------------------
+
+            LocalDate receiptDateTo = getDateFilter(
+                    customFilters,
+                    "receiptDateTo"
+            );
+
+            validateDateRange(
+                    receiptDateFrom,
+                    receiptDateTo,
+                    "Receipt date"
+            );
+
             if (receiptDateFrom != null) {
 
                 predicates.add(
@@ -403,15 +319,6 @@ public class PurchaseOrderGoodsReceiptReportProvider
                 );
             }
 
-            // ---------------------------------------------
-            // RECEIPT DATE TO
-            // ---------------------------------------------
-
-            LocalDate receiptDateTo = getDateFilter(
-                    customFilters,
-                    "receiptDateTo"
-            );
-
             if (receiptDateTo != null) {
 
                 predicates.add(
@@ -421,12 +328,6 @@ public class PurchaseOrderGoodsReceiptReportProvider
                         )
                 );
             }
-
-            validateDateRange(
-                    receiptDateFrom,
-                    receiptDateTo,
-                    "Receipt date"
-            );
 
             // ---------------------------------------------
             // COMMON DATE FILTER
@@ -500,39 +401,10 @@ public class PurchaseOrderGoodsReceiptReportProvider
     // =========================================================
 
     private Map<String, Object> mapGoodsReceipt(
-            PurchaseOrderGoodsReceiptEntity receipt,
-            String reportCode
+            PurchaseOrderGoodsReceiptEntity receipt
     ) {
 
         Map<String, Object> row = new LinkedHashMap<>();
-
-        switch (reportCode) {
-
-            case "GOODS_RECEIPT_REGISTER" ->
-                    mapRegister(receipt, row);
-
-            case "GOODS_RECEIPT_DETAILS" ->
-                    mapDetails(receipt, row);
-
-            case "GOODS_RECEIPT_DATE_REPORT" ->
-                    mapDateReport(receipt, row);
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported goods receipt report: " + reportCode
-            );
-        }
-
-        return row;
-    }
-
-    // =========================================================
-    // REGISTER MAPPING
-    // =========================================================
-
-    private void mapRegister(
-            PurchaseOrderGoodsReceiptEntity receipt,
-            Map<String, Object> row
-    ) {
 
         row.put("id", receipt.getId());
 
@@ -561,66 +433,19 @@ public class PurchaseOrderGoodsReceiptReportProvider
 
         row.put("receiptDate", receipt.getReceiptDate());
 
+        row.put("notes", receipt.getNotes());
+
         row.put("active", receipt.getActive());
 
         row.put("createdAt", receipt.getCreatedAt());
 
         row.put("updatedAt", receipt.getUpdatedAt());
-    }
-
-    // =========================================================
-    // DETAILS MAPPING
-    // =========================================================
-
-    private void mapDetails(
-            PurchaseOrderGoodsReceiptEntity receipt,
-            Map<String, Object> row
-    ) {
-
-        mapRegister(receipt, row);
-
-        row.put("notes", receipt.getNotes());
 
         row.put("createdBy", receipt.getCreatedBy());
 
         row.put("updatedBy", receipt.getUpdatedBy());
-    }
 
-    // =========================================================
-    // DATE REPORT MAPPING
-    // =========================================================
-
-    private void mapDateReport(
-            PurchaseOrderGoodsReceiptEntity receipt,
-            Map<String, Object> row
-    ) {
-
-        row.put("receiptNo", receipt.getReceiptNo());
-
-        row.put(
-                "orderNo",
-                receipt.getPurchaseOrder() == null
-                        ? null
-                        : receipt.getPurchaseOrder().getOrderNo()
-        );
-
-        row.put(
-                "purchaseOrderId",
-                receipt.getPurchaseOrder() == null
-                        ? null
-                        : receipt.getPurchaseOrder().getId()
-        );
-
-        row.put(
-                "warehouseId",
-                receipt.getWarehouse() == null
-                        ? null
-                        : receipt.getWarehouse().getId()
-        );
-
-        row.put("receiptDate", receipt.getReceiptDate());
-
-        row.put("notes", receipt.getNotes());
+        return row;
     }
 
     // =========================================================
@@ -712,9 +537,15 @@ public class PurchaseOrderGoodsReceiptReportProvider
 
             case "warehouseId" -> "warehouse.id";
 
+            case "active" -> "active";
+
             case "createdAt" -> "createdAt";
 
             case "updatedAt" -> "updatedAt";
+
+            case "createdBy" -> "createdBy";
+
+            case "updatedBy" -> "updatedBy";
 
             default -> "id";
         };
@@ -811,7 +642,6 @@ public class PurchaseOrderGoodsReceiptReportProvider
     }
 
     private boolean hasText(String value) {
-
         return value != null && !value.isBlank();
     }
 

@@ -1,5 +1,5 @@
-package com.ims.reports.provider.purchaseOrder;
 
+package com.ims.reports.provider.purchaseOrder;
 
 import com.ims.dtos.reports.*;
 import com.ims.entity.PurchaseOrderEntity;
@@ -35,6 +35,8 @@ import java.util.Map;
 @Transactional(readOnly = true)
 public class PurchaseOrderReportProvider implements ReportDataProvider {
 
+    private static final String REPORT_CODE = "PURCHASE_ORDER_REPORT";
+
     private final PurchaseOrderRepository purchaseOrderRepository;
 
     // =========================================================
@@ -54,40 +56,17 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
     public List<ReportDefinition> getReportDefinitions() {
 
         return List.of(
-
                 ReportDefinition.builder()
-                        .code("PURCHASE_ORDER_REGISTER")
-                        .name("Purchase Order Register")
+                        .code(REPORT_CODE)
+                        .name("Purchase Order Report")
                         .description(
-                                "Complete purchase order information including " +
-                                        "supplier, warehouse, dates, status, currency " +
-                                        "and order totals."
+                                "Complete purchase order report including supplier, " +
+                                        "warehouse, order and delivery dates, status, currency, " +
+                                        "discounts, GST, received amounts, financial totals " +
+                                        "and audit information."
                         )
                         .type(ReportType.REGISTER)
-                        .columns(getRegisterColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("PURCHASE_ORDER_DETAILS")
-                        .name("Purchase Order Details")
-                        .description(
-                                "Detailed purchase order financial information " +
-                                        "including discounts, GST, currency conversion " +
-                                        "and received amounts."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getDetailsColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("PURCHASE_ORDER_DELIVERY")
-                        .name("Purchase Order Delivery Report")
-                        .description(
-                                "Purchase order delivery schedule including " +
-                                        "order date, expected delivery date and status."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getDeliveryColumns())
+                        .columns(getColumns())
                         .build()
         );
     }
@@ -102,11 +81,21 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
             Pageable pageable
     ) {
 
+        if (request == null || !hasText(request.getReportCode())) {
+            throw new IllegalArgumentException(
+                    "Purchase order report code is required."
+            );
+        }
+
         String reportCode = request.getReportCode()
                 .trim()
                 .toUpperCase(Locale.ROOT);
 
-        List<ReportColumn> columns = getColumns(reportCode);
+        if (!REPORT_CODE.equals(reportCode)) {
+            throw new IllegalArgumentException(
+                    "Unsupported purchase order report: " + reportCode
+            );
+        }
 
         Specification<PurchaseOrderEntity> specification =
                 buildSpecification(request.getFilters());
@@ -122,14 +111,14 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
         List<Map<String, Object>> rows =
                 purchaseOrderPage.getContent()
                         .stream()
-                        .map(order -> mapPurchaseOrder(order, reportCode))
+                        .map(this::mapPurchaseOrder)
                         .toList();
 
         ReportSummaryResponse summary =
                 generateSummary(specification);
 
         return ReportData.builder()
-                .columns(columns)
+                .columns(getColumns())
                 .rows(rows)
                 .totalElements(purchaseOrderPage.getTotalElements())
                 .pageNumber(purchaseOrderPage.getNumber())
@@ -144,82 +133,66 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
     // REPORT COLUMNS
     // =========================================================
 
-    private List<ReportColumn> getColumns(String reportCode) {
-
-        return switch (reportCode) {
-
-            case "PURCHASE_ORDER_REGISTER" ->
-                    getRegisterColumns();
-
-            case "PURCHASE_ORDER_DETAILS" ->
-                    getDetailsColumns();
-
-            case "PURCHASE_ORDER_DELIVERY" ->
-                    getDeliveryColumns();
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported purchase order report: " + reportCode
-            );
-        };
-    }
-
-    private List<ReportColumn> getRegisterColumns() {
+    private List<ReportColumn> getColumns() {
 
         return List.of(
+
+                // ---------------------------------------------
+                // Basic information
+                // ---------------------------------------------
 
                 column("id", "Purchase Order ID", "NUMBER"),
                 column("orderNo", "Order Number", "STRING"),
 
+                // ---------------------------------------------
+                // Supplier
+                // ---------------------------------------------
+
                 column("partyId", "Supplier ID", "NUMBER"),
+                column("partyName", "Supplier Name", "STRING"),
+                column("partyCode", "Supplier Code", "STRING"),
+
+                // ---------------------------------------------
+                // Warehouse
+                // ---------------------------------------------
+
                 column("warehouseId", "Warehouse ID", "NUMBER"),
+                column("warehouseName", "Warehouse Name", "STRING"),
+
+                // ---------------------------------------------
+                // Dates and status
+                // ---------------------------------------------
 
                 column("orderDate", "Order Date", "DATE"),
                 column("expectedDeliveryDate", "Expected Delivery Date", "DATE"),
-
                 column("purchaseOrderStatus", "Purchase Order Status", "STRING"),
+
+                // ---------------------------------------------
+                // Currency
+                // ---------------------------------------------
 
                 column("currencyId", "Currency ID", "NUMBER"),
                 column("currencyCode", "Currency Code", "STRING"),
                 column("exchangeRate", "Exchange Rate", "NUMBER"),
 
-                column("subtotal", "Subtotal", "NUMBER"),
-                column("discountAmount", "Discount Amount", "NUMBER"),
-                column("taxableAmount", "Taxable Amount", "NUMBER"),
-                column("totalTaxAmount", "Total Tax Amount", "NUMBER"),
-                column("grandTotal", "Grand Total", "NUMBER"),
-
-                column("receivedTotalAmount", "Received Amount", "NUMBER"),
-
-                column("active", "Active", "BOOLEAN"),
-                column("createdAt", "Created At", "DATETIME"),
-                column("updatedAt", "Updated At", "DATETIME"),
-                column("createdBy", "Created By", "NUMBER"),
-                column("updatedBy", "Updated By", "NUMBER")
-        );
-    }
-
-    private List<ReportColumn> getDetailsColumns() {
-
-        return List.of(
-
-                column("id", "Purchase Order ID", "NUMBER"),
-                column("orderNo", "Order Number", "STRING"),
-
-                column("partyId", "Supplier ID", "NUMBER"),
-                column("warehouseId", "Warehouse ID", "NUMBER"),
-
-                column("orderDate", "Order Date", "DATE"),
-                column("purchaseOrderStatus", "Status", "STRING"),
-
-                column("currencyCode", "Currency Code", "STRING"),
-                column("exchangeRate", "Exchange Rate", "NUMBER"),
+                // ---------------------------------------------
+                // Discount
+                // ---------------------------------------------
 
                 column("discountType", "Discount Type", "STRING"),
                 column("discountValue", "Discount Value", "NUMBER"),
 
+                // ---------------------------------------------
+                // Order amounts
+                // ---------------------------------------------
+
                 column("subtotal", "Subtotal", "NUMBER"),
                 column("discountAmount", "Discount Amount", "NUMBER"),
                 column("taxableAmount", "Taxable Amount", "NUMBER"),
+
+                // ---------------------------------------------
+                // GST
+                // ---------------------------------------------
 
                 column("cgstAmount", "CGST Amount", "NUMBER"),
                 column("sgstAmount", "SGST Amount", "NUMBER"),
@@ -228,39 +201,38 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
 
                 column("grandTotal", "Grand Total", "NUMBER"),
 
+                // ---------------------------------------------
+                // Base currency amounts (INR)
+                // ---------------------------------------------
+
                 column("baseSubtotal", "Base Subtotal (INR)", "NUMBER"),
                 column("baseDiscountAmount", "Base Discount (INR)", "NUMBER"),
                 column("baseTaxableAmount", "Base Taxable Amount (INR)", "NUMBER"),
-                column("baseTotalTaxAmount", "Base Tax Amount (INR)", "NUMBER"),
+                column("baseTotalTaxAmount", "Base Total Tax (INR)", "NUMBER"),
                 column("baseGrandTotal", "Base Grand Total (INR)", "NUMBER"),
 
-                column("receivedTotalAmount", "Received Amount", "NUMBER"),
-                column("baseReceivedTotalAmount", "Base Received Amount (INR)", "NUMBER")
-        );
-    }
-
-    private List<ReportColumn> getDeliveryColumns() {
-
-        return List.of(
-
-                column("id", "Purchase Order ID", "NUMBER"),
-                column("orderNo", "Order Number", "STRING"),
-
-                column("partyId", "Supplier ID", "NUMBER"),
-                column("warehouseId", "Warehouse ID", "NUMBER"),
-
-                column("orderDate", "Order Date", "DATE"),
-                column("expectedDeliveryDate", "Expected Delivery Date", "DATE"),
-
-                column("purchaseOrderStatus", "Purchase Order Status", "STRING"),
+                // ---------------------------------------------
+                // Received amounts
+                // ---------------------------------------------
 
                 column("receivedTotalAmount", "Received Amount", "NUMBER"),
-                column("baseReceivedTotalAmount", "Received Amount (INR)", "NUMBER"),
+                column("baseReceivedTotalAmount", "Base Received Amount (INR)", "NUMBER"),
 
-                column("grandTotal", "Order Grand Total", "NUMBER"),
-                column("baseGrandTotal", "Order Grand Total (INR)", "NUMBER"),
+                // ---------------------------------------------
+                // Additional information
+                // ---------------------------------------------
 
-                column("notes", "Notes", "STRING")
+                column("notes", "Notes", "STRING"),
+
+                // ---------------------------------------------
+                // Audit
+                // ---------------------------------------------
+
+                column("active", "Active", "BOOLEAN"),
+                column("createdAt", "Created At", "DATETIME"),
+                column("updatedAt", "Updated At", "DATETIME"),
+                column("createdBy", "Created By", "NUMBER"),
+                column("updatedBy", "Updated By", "NUMBER")
         );
     }
 
@@ -294,6 +266,11 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
                 return cb.conjunction();
             }
 
+            Map<String, Object> customFilters =
+                    filters.getFilters() == null
+                            ? Map.of()
+                            : filters.getFilters();
+
             // ---------------------------------------------
             // Keyword
             // ---------------------------------------------
@@ -311,21 +288,42 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
                                 cb.like(
                                         cb.lower(root.get("notes")),
                                         keyword
+                                ),
+                                cb.like(
+                                        cb.lower(root.get("party").get("companyName")),
+                                        keyword
                                 )
                         )
                 );
             }
 
-            Map<String, Object> customFilters =
-                    filters.getFilters() == null
-                            ? Map.of()
-                            : filters.getFilters();
+            // ---------------------------------------------
+            // Order number
+            // ---------------------------------------------
+
+            String orderNo = getFilterValue(
+                    customFilters,
+                    "orderNo"
+            );
+
+            if (hasText(orderNo)) {
+
+                predicates.add(
+                        cb.like(
+                                cb.lower(root.get("orderNo")),
+                                containsPattern(orderNo)
+                        )
+                );
+            }
 
             // ---------------------------------------------
             // Supplier
             // ---------------------------------------------
 
-            Long partyId = getLongFilter(customFilters, "partyId");
+            Long partyId = getLongFilter(
+                    customFilters,
+                    "partyId"
+            );
 
             if (partyId != null) {
 
@@ -337,11 +335,29 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
                 );
             }
 
+            String partyName = getFilterValue(
+                    customFilters,
+                    "partyName"
+            );
+
+            if (hasText(partyName)) {
+
+                predicates.add(
+                        cb.like(
+                                cb.lower(root.get("party").get("companyName")),
+                                containsPattern(partyName)
+                        )
+                );
+            }
+
             // ---------------------------------------------
             // Warehouse
             // ---------------------------------------------
 
-            Long warehouseId = getLongFilter(customFilters, "warehouseId");
+            Long warehouseId = getLongFilter(
+                    customFilters,
+                    "warehouseId"
+            );
 
             if (warehouseId != null) {
 
@@ -357,7 +373,10 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
             // Currency
             // ---------------------------------------------
 
-            Long currencyId = getLongFilter(customFilters, "currencyId");
+            Long currencyId = getLongFilter(
+                    customFilters,
+                    "currencyId"
+            );
 
             if (currencyId != null) {
 
@@ -365,6 +384,21 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
                         cb.equal(
                                 root.get("currency").get("id"),
                                 currencyId
+                        )
+                );
+            }
+
+            String currencyCode = getFilterValue(
+                    customFilters,
+                    "currencyCode"
+            );
+
+            if (hasText(currencyCode)) {
+
+                predicates.add(
+                        cb.equal(
+                                cb.lower(root.get("currency").get("currencyCode")),
+                                currencyCode.toLowerCase(Locale.ROOT)
                         )
                 );
             }
@@ -407,6 +441,52 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
             }
 
             // ---------------------------------------------
+            // Discount type
+            // ---------------------------------------------
+
+            String discountType = getFilterValue(
+                    customFilters,
+                    "discountType"
+            );
+
+            if (hasText(discountType) && !"ALL".equalsIgnoreCase(discountType)) {
+
+                try {
+
+                    Class<?> discountTypeClass =
+                            root.get("discountType").getJavaType();
+
+                    if (discountTypeClass.isEnum()) {
+
+                        @SuppressWarnings({"rawtypes", "unchecked"})
+                        Enum<?> enumValue = Enum.valueOf(
+                                (Class<? extends Enum>) discountTypeClass,
+                                discountType.trim().toUpperCase(Locale.ROOT)
+                        );
+
+                        predicates.add(
+                                cb.equal(root.get("discountType"), enumValue)
+                        );
+
+                    } else {
+
+                        predicates.add(
+                                cb.equal(
+                                        cb.lower(root.get("discountType").as(String.class)),
+                                        discountType.toLowerCase(Locale.ROOT)
+                                )
+                        );
+                    }
+
+                } catch (IllegalArgumentException exception) {
+
+                    throw new IllegalArgumentException(
+                            "Invalid discount type: " + discountType
+                    );
+                }
+            }
+
+            // ---------------------------------------------
             // Minimum grand total
             // ---------------------------------------------
 
@@ -444,13 +524,7 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
                 );
             }
 
-            if (minAmount != null && maxAmount != null
-                    && minAmount.compareTo(maxAmount) > 0) {
-
-                throw new IllegalArgumentException(
-                        "Minimum amount cannot be greater than maximum amount."
-                );
-            }
+            validateAmountRange(minAmount, maxAmount);
 
             // ---------------------------------------------
             // Expected delivery date range
@@ -486,8 +560,54 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
                 );
             }
 
+            validateDateRange(
+                    expectedDeliveryFrom,
+                    expectedDeliveryTo,
+                    "Expected delivery date"
+            );
+
             // ---------------------------------------------
             // Order date range
+            // ---------------------------------------------
+
+            LocalDate orderDateFrom = getDateFilter(
+                    customFilters,
+                    "orderDateFrom"
+            );
+
+            LocalDate orderDateTo = getDateFilter(
+                    customFilters,
+                    "orderDateTo"
+            );
+
+            if (orderDateFrom != null) {
+
+                predicates.add(
+                        cb.greaterThanOrEqualTo(
+                                root.get("orderDate"),
+                                orderDateFrom
+                        )
+                );
+            }
+
+            if (orderDateTo != null) {
+
+                predicates.add(
+                        cb.lessThanOrEqualTo(
+                                root.get("orderDate"),
+                                orderDateTo
+                        )
+                );
+            }
+
+            validateDateRange(
+                    orderDateFrom,
+                    orderDateTo,
+                    "Order date"
+            );
+
+            // ---------------------------------------------
+            // Common date filters
             // ---------------------------------------------
 
             LocalDate fromDate = filters.getFromDate();
@@ -513,19 +633,20 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
                 );
             }
 
-            if (fromDate != null && toDate != null
-                    && fromDate.isAfter(toDate)) {
-
-                throw new IllegalArgumentException(
-                        "From date cannot be after to date."
-                );
-            }
+            validateDateRange(
+                    fromDate,
+                    toDate,
+                    "From date"
+            );
 
             // ---------------------------------------------
-            // Active flag from BaseEntity
+            // Active flag
             // ---------------------------------------------
 
-            String active = getFilterValue(customFilters, "active");
+            String active = getFilterValue(
+                    customFilters,
+                    "active"
+            );
 
             if (hasText(active)) {
 
@@ -554,48 +675,64 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
     // =========================================================
 
     private Map<String, Object> mapPurchaseOrder(
-            PurchaseOrderEntity order,
-            String reportCode
+            PurchaseOrderEntity order
     ) {
 
         Map<String, Object> row = new LinkedHashMap<>();
 
-        switch (reportCode) {
-
-            case "PURCHASE_ORDER_REGISTER" ->
-                    mapRegister(order, row);
-
-            case "PURCHASE_ORDER_DETAILS" ->
-                    mapDetails(order, row);
-
-            case "PURCHASE_ORDER_DELIVERY" ->
-                    mapDelivery(order, row);
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported purchase order report: " + reportCode
-            );
-        }
-
-        return row;
-    }
-
-    private void mapRegister(
-            PurchaseOrderEntity order,
-            Map<String, Object> row
-    ) {
+        // ---------------------------------------------
+        // Basic information
+        // ---------------------------------------------
 
         row.put("id", order.getId());
         row.put("orderNo", order.getOrderNo());
 
+        // ---------------------------------------------
+        // Supplier
+        // ---------------------------------------------
+
         row.put(
                 "partyId",
-                order.getParty() == null ? null : order.getParty().getId()
+                order.getParty() == null
+                        ? null
+                        : order.getParty().getId()
         );
 
         row.put(
-                "warehouseId",
-                order.getWarehouse() == null ? null : order.getWarehouse().getId()
+                "partyName",
+                order.getParty() == null
+                        ? null
+                        : order.getParty().getCompanyName()
         );
+
+        row.put(
+                "partyCode",
+                order.getParty() == null
+                        ? null
+                        : order.getParty().getPartyCode()
+        );
+
+        // ---------------------------------------------
+        // Warehouse
+        // ---------------------------------------------
+
+        row.put(
+                "warehouseId",
+                order.getWarehouse() == null
+                        ? null
+                        : order.getWarehouse().getId()
+        );
+
+        row.put(
+                "warehouseName",
+                order.getWarehouse() == null
+                        ? null
+                        : order.getWarehouse().getWarehouseName()
+        );
+
+        // ---------------------------------------------
+        // Dates and status
+        // ---------------------------------------------
 
         row.put("orderDate", order.getOrderDate());
         row.put("expectedDeliveryDate", order.getExpectedDeliveryDate());
@@ -607,56 +744,29 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
                         : order.getPurchaseOrderStatus().name()
         );
 
+        // ---------------------------------------------
+        // Currency
+        // ---------------------------------------------
+
         row.put(
                 "currencyId",
-                order.getCurrency() == null ? null : order.getCurrency().getId()
-        );
-
-        row.put("exchangeRate", order.getExchangeRate());
-
-        row.put("subtotal", order.getSubtotal());
-        row.put("discountAmount", order.getDiscountAmount());
-        row.put("taxableAmount", order.getTaxableAmount());
-        row.put("totalTaxAmount", order.getTotalTaxAmount());
-        row.put("grandTotal", order.getGrandTotal());
-
-        row.put("receivedTotalAmount", order.getReceivedTotalAmount());
-
-        row.put("active", order.getActive());
-        row.put("createdAt", order.getCreatedAt());
-        row.put("updatedAt", order.getUpdatedAt());
-        row.put("createdBy", order.getCreatedBy());
-        row.put("updatedBy", order.getUpdatedBy());
-    }
-
-    private void mapDetails(
-            PurchaseOrderEntity order,
-            Map<String, Object> row
-    ) {
-
-        row.put("id", order.getId());
-        row.put("orderNo", order.getOrderNo());
-
-        row.put(
-                "partyId",
-                order.getParty() == null ? null : order.getParty().getId()
-        );
-
-        row.put(
-                "warehouseId",
-                order.getWarehouse() == null ? null : order.getWarehouse().getId()
-        );
-
-        row.put("orderDate", order.getOrderDate());
-
-        row.put(
-                "purchaseOrderStatus",
-                order.getPurchaseOrderStatus() == null
+                order.getCurrency() == null
                         ? null
-                        : order.getPurchaseOrderStatus().name()
+                        : order.getCurrency().getId()
+        );
+
+        row.put(
+                "currencyCode",
+                order.getCurrency() == null
+                        ? null
+                        : order.getCurrency().getCurrencyCode()
         );
 
         row.put("exchangeRate", order.getExchangeRate());
+
+        // ---------------------------------------------
+        // Discount
+        // ---------------------------------------------
 
         row.put(
                 "discountType",
@@ -667,9 +777,17 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
 
         row.put("discountValue", order.getDiscountValue());
 
+        // ---------------------------------------------
+        // Order amounts
+        // ---------------------------------------------
+
         row.put("subtotal", order.getSubtotal());
         row.put("discountAmount", order.getDiscountAmount());
         row.put("taxableAmount", order.getTaxableAmount());
+
+        // ---------------------------------------------
+        // GST
+        // ---------------------------------------------
 
         row.put("cgstAmount", order.getCgstAmount());
         row.put("sgstAmount", order.getSgstAmount());
@@ -678,51 +796,40 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
 
         row.put("grandTotal", order.getGrandTotal());
 
+        // ---------------------------------------------
+        // Base currency amounts
+        // ---------------------------------------------
+
         row.put("baseSubtotal", order.getBaseSubtotal());
         row.put("baseDiscountAmount", order.getBaseDiscountAmount());
         row.put("baseTaxableAmount", order.getBaseTaxableAmount());
         row.put("baseTotalTaxAmount", order.getBaseTotalTaxAmount());
         row.put("baseGrandTotal", order.getBaseGrandTotal());
 
-        row.put("receivedTotalAmount", order.getReceivedTotalAmount());
-        row.put("baseReceivedTotalAmount", order.getBaseReceivedTotalAmount());
-    }
-
-    private void mapDelivery(
-            PurchaseOrderEntity order,
-            Map<String, Object> row
-    ) {
-
-        row.put("id", order.getId());
-        row.put("orderNo", order.getOrderNo());
-
-        row.put(
-                "partyId",
-                order.getParty() == null ? null : order.getParty().getId()
-        );
-
-        row.put(
-                "warehouseId",
-                order.getWarehouse() == null ? null : order.getWarehouse().getId()
-        );
-
-        row.put("orderDate", order.getOrderDate());
-        row.put("expectedDeliveryDate", order.getExpectedDeliveryDate());
-
-        row.put(
-                "purchaseOrderStatus",
-                order.getPurchaseOrderStatus() == null
-                        ? null
-                        : order.getPurchaseOrderStatus().name()
-        );
+        // ---------------------------------------------
+        // Received amounts
+        // ---------------------------------------------
 
         row.put("receivedTotalAmount", order.getReceivedTotalAmount());
         row.put("baseReceivedTotalAmount", order.getBaseReceivedTotalAmount());
 
-        row.put("grandTotal", order.getGrandTotal());
-        row.put("baseGrandTotal", order.getBaseGrandTotal());
+        // ---------------------------------------------
+        // Additional information
+        // ---------------------------------------------
 
         row.put("notes", order.getNotes());
+
+        // ---------------------------------------------
+        // Audit
+        // ---------------------------------------------
+
+        row.put("active", order.getActive());
+        row.put("createdAt", order.getCreatedAt());
+        row.put("updatedAt", order.getUpdatedAt());
+        row.put("createdBy", order.getCreatedBy());
+        row.put("updatedBy", order.getUpdatedBy());
+
+        return row;
     }
 
     // =========================================================
@@ -781,7 +888,7 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
             return Pageable.unpaged();
         }
 
-        Sort mappedSort = Sort.unsorted();
+        Sort mappedSort;
 
         if (pageable.getSort().isSorted()) {
 
@@ -800,6 +907,13 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
             });
 
             mappedSort = Sort.by(orders);
+
+        } else {
+
+            mappedSort = Sort.by(
+                    Sort.Direction.DESC,
+                    "orderDate"
+            );
         }
 
         return PageRequest.of(
@@ -817,10 +931,33 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
             case "orderDate" -> "orderDate";
             case "expectedDeliveryDate" -> "expectedDeliveryDate";
             case "purchaseOrderStatus" -> "purchaseOrderStatus";
+
+            case "partyId", "partyName", "partyCode" -> "party.companyName";
+            case "warehouseId", "warehouseName" -> "warehouse.warehouseName";
+            case "currencyId", "currencyCode" -> "currency.currencyCode";
+
+            case "discountType" -> "discountType";
+            case "discountValue" -> "discountValue";
+
             case "subtotal" -> "subtotal";
             case "discountAmount" -> "discountAmount";
+            case "taxableAmount" -> "taxableAmount";
+            case "cgstAmount" -> "cgstAmount";
+            case "sgstAmount" -> "sgstAmount";
+            case "igstAmount" -> "igstAmount";
+            case "totalTaxAmount" -> "totalTaxAmount";
             case "grandTotal" -> "grandTotal";
+
+            case "baseSubtotal" -> "baseSubtotal";
+            case "baseDiscountAmount" -> "baseDiscountAmount";
+            case "baseTaxableAmount" -> "baseTaxableAmount";
+            case "baseTotalTaxAmount" -> "baseTotalTaxAmount";
+            case "baseGrandTotal" -> "baseGrandTotal";
+
             case "receivedTotalAmount" -> "receivedTotalAmount";
+            case "baseReceivedTotalAmount" -> "baseReceivedTotalAmount";
+
+            case "active" -> "active";
             case "createdAt" -> "createdAt";
             case "updatedAt" -> "updatedAt";
             case "id" -> "id";
@@ -901,6 +1038,35 @@ public class PurchaseOrderReportProvider implements ReportDataProvider {
         } catch (RuntimeException exception) {
             throw new IllegalArgumentException(
                     "Invalid date filter: " + key
+            );
+        }
+    }
+
+    private void validateAmountRange(
+            BigDecimal minAmount,
+            BigDecimal maxAmount
+    ) {
+
+        if (minAmount != null && maxAmount != null
+                && minAmount.compareTo(maxAmount) > 0) {
+
+            throw new IllegalArgumentException(
+                    "Minimum amount cannot be greater than maximum amount."
+            );
+        }
+    }
+
+    private void validateDateRange(
+            LocalDate fromDate,
+            LocalDate toDate,
+            String label
+    ) {
+
+        if (fromDate != null && toDate != null
+                && fromDate.isAfter(toDate)) {
+
+            throw new IllegalArgumentException(
+                    label + " from date cannot be after to date."
             );
         }
     }

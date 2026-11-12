@@ -1,5 +1,5 @@
-package com.ims.reports.provider.invoice;
 
+package com.ims.reports.provider.invoice;
 
 import com.ims.dtos.reports.*;
 import com.ims.entity.InvoiceEntity;
@@ -10,6 +10,8 @@ import com.ims.enums.reports.ReportModule;
 import com.ims.enums.reports.ReportType;
 import com.ims.repository.InvoiceRepository;
 
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Component
@@ -40,6 +43,8 @@ import java.util.stream.Collectors;
 public class InvoiceReportProvider implements ReportDataProvider {
 
     private final InvoiceRepository invoiceRepository;
+
+    private static final String INVOICE_REPORT = "INVOICE_REPORT";
 
     // =========================================================
     // MODULE
@@ -51,7 +56,7 @@ public class InvoiceReportProvider implements ReportDataProvider {
     }
 
     // =========================================================
-    // REPORT DEFINITIONS
+    // REPORT DEFINITION
     // =========================================================
 
     @Override
@@ -60,209 +65,47 @@ public class InvoiceReportProvider implements ReportDataProvider {
         return List.of(
 
                 ReportDefinition.builder()
-                        .code("INVOICE_REGISTER")
-                        .name("Invoice Register")
+                        .code(INVOICE_REPORT)
+                        .name("Invoice Report")
                         .description(
-                                "Complete invoice listing including invoice number, " +
-                                        "customer, invoice dates, amounts, currency and status."
+                                "Complete invoice report including invoice details, " +
+                                        "customer information, invoice items, GST breakdown, " +
+                                        "currency, company, bank account, signature, payment " +
+                                        "amounts, status and audit information."
                         )
                         .type(ReportType.REGISTER)
-                        .columns(getRegisterColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("INVOICE_ITEMS")
-                        .name("Invoice Item Report")
-                        .description(
-                                "Invoice item summary including products, quantities, " +
-                                        "unit prices, discounts and GST details."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getItemColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("INVOICE_DETAILS")
-                        .name("Invoice Details Report")
-                        .description(
-                                "Detailed invoice information including customer, " +
-                                        "company, bank account, currency and signature details."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getDetailColumns())
+                        .columns(getColumns())
                         .build()
         );
-    }
-
-    // =========================================================
-    // GENERATE REPORT
-    // =========================================================
-
-    @Override
-    public ReportData generate(
-            ReportRequest request,
-            Pageable pageable
-    ) {
-
-        String reportCode = request.getReportCode()
-                .trim()
-                .toUpperCase(Locale.ROOT);
-
-        List<ReportColumn> columns = getColumns(reportCode);
-
-        Specification<InvoiceEntity> specification =
-                buildSpecification(request.getFilters());
-
-        Pageable databasePageable = mapSortProperties(pageable);
-
-        Page<InvoiceEntity> invoicePage =
-                invoiceRepository.findAll(
-                        specification,
-                        databasePageable
-                );
-
-        List<Map<String, Object>> rows =
-                invoicePage.getContent()
-                        .stream()
-                        .map(invoice ->
-                                mapInvoice(invoice, reportCode)
-                        )
-                        .toList();
-
-        ReportSummaryResponse summary =
-                generateSummary(specification);
-
-        return ReportData.builder()
-                .columns(columns)
-                .rows(rows)
-                .totalElements(invoicePage.getTotalElements())
-                .pageNumber(invoicePage.getNumber())
-                .pageSize(invoicePage.getSize())
-                .totalPages(invoicePage.getTotalPages())
-                .last(invoicePage.isLast())
-                .summary(summary)
-                .build();
     }
 
     // =========================================================
     // REPORT COLUMNS
     // =========================================================
 
-    private List<ReportColumn> getColumns(String reportCode) {
-
-        return switch (reportCode) {
-
-            case "INVOICE_REGISTER" ->
-                    getRegisterColumns();
-
-            case "INVOICE_ITEMS" ->
-                    getItemColumns();
-
-            case "INVOICE_DETAILS" ->
-                    getDetailColumns();
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported invoice report: " + reportCode
-            );
-        };
-    }
-
-    // =========================================================
-    // REGISTER COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getRegisterColumns() {
+    private List<ReportColumn> getColumns() {
 
         return List.of(
+
+                // Invoice
 
                 column("id", "Invoice ID", "NUMBER"),
                 column("invoiceNumber", "Invoice Number", "STRING"),
                 column("invoiceType", "Invoice Type", "STRING"),
 
-                column("customerId", "Customer ID", "NUMBER"),
-                column("customerName", "Customer Name", "STRING"),
-
-                column("invoiceDate", "Invoice Date", "DATE"),
-                column("dueDate", "Due Date", "DATE"),
-
-                column("subtotal", "Subtotal", "CURRENCY"),
-                column("discountAmount", "Discount Amount", "CURRENCY"),
-                column("taxAmount", "Tax Amount", "CURRENCY"),
-                column("shippingAmount", "Shipping Amount", "CURRENCY"),
-                column("grandTotal", "Grand Total", "CURRENCY"),
-
-                column("currencyId", "Currency ID", "NUMBER"),
-                column("currencyCode", "Currency Code", "STRING"),
-                column("currencyName", "Currency Name", "STRING"),
-                column("exchangeRate", "Exchange Rate", "DECIMAL"),
-
-                column("salesPersonId", "Sales Person ID", "NUMBER"),
-                column("salesPersonName", "Sales Person", "STRING"),
-
-                column("status", "Invoice Status", "STRING"),
-
-                column("active", "Active", "BOOLEAN"),
-
-                column("createdAt", "Created At", "DATETIME"),
-                column("updatedAt", "Updated At", "DATETIME"),
-                column("createdBy", "Created By", "NUMBER"),
-                column("updatedBy", "Updated By", "NUMBER")
-        );
-    }
-
-    // =========================================================
-    // ITEM COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getItemColumns() {
-
-        return List.of(
-
-                column("id", "Invoice ID", "NUMBER"),
-                column("invoiceNumber", "Invoice Number", "STRING"),
-
-                column("customerName", "Customer Name", "STRING"),
-                column("invoiceDate", "Invoice Date", "DATE"),
-
-                column("itemCount", "Total Items", "NUMBER"),
-                column("productNames", "Products", "STRING"),
-                column("totalQuantity", "Total Quantity", "DECIMAL"),
-
-                column("itemGrossAmount", "Gross Amount", "CURRENCY"),
-                column("itemDiscountAmount", "Discount Amount", "CURRENCY"),
-                column("itemTaxableAmount", "Taxable Amount", "CURRENCY"),
-
-                column("itemCgstAmount", "CGST Amount", "CURRENCY"),
-                column("itemSgstAmount", "SGST Amount", "CURRENCY"),
-                column("itemIgstAmount", "IGST Amount", "CURRENCY"),
-
-                column("itemTaxAmount", "Total Tax", "CURRENCY"),
-                column("itemTotalAmount", "Item Total", "CURRENCY"),
-
-                column("currencyCode", "Currency", "STRING"),
-                column("status", "Invoice Status", "STRING")
-        );
-    }
-
-    // =========================================================
-    // DETAIL COLUMNS
-    // =========================================================
-
-    private List<ReportColumn> getDetailColumns() {
-
-        return List.of(
-
-                column("id", "Invoice ID", "NUMBER"),
-                column("invoiceNumber", "Invoice Number", "STRING"),
-                column("invoiceType", "Invoice Type", "STRING"),
+                // Customer
 
                 column("customerId", "Customer ID", "NUMBER"),
                 column("customerName", "Customer Name", "STRING"),
                 column("customerEmail", "Customer Email", "STRING"),
                 column("customerMobile", "Customer Mobile", "STRING"),
 
+                // Invoice dates
+
                 column("invoiceDate", "Invoice Date", "DATE"),
                 column("dueDate", "Due Date", "DATE"),
+
+                // Invoice totals
 
                 column("subtotal", "Subtotal", "CURRENCY"),
                 column("discountAmount", "Discount Amount", "CURRENCY"),
@@ -270,13 +113,41 @@ public class InvoiceReportProvider implements ReportDataProvider {
                 column("shippingAmount", "Shipping Amount", "CURRENCY"),
                 column("grandTotal", "Grand Total", "CURRENCY"),
 
+                // Currency
+
+                column("currencyId", "Currency ID", "NUMBER"),
                 column("currencyCode", "Currency Code", "STRING"),
                 column("currencyName", "Currency Name", "STRING"),
                 column("exchangeRate", "Exchange Rate", "DECIMAL"),
 
+                // Sales person
+
                 column("salesPersonId", "Sales Person ID", "NUMBER"),
+                column("salesPersonName", "Sales Person", "STRING"),
+
+                // Invoice items
+
+                column("itemCount", "Total Items", "NUMBER"),
+                column("productNames", "Products", "STRING"),
+                column("totalQuantity", "Total Quantity", "DECIMAL"),
+
+                column("itemGrossAmount", "Item Gross Amount", "CURRENCY"),
+                column("itemDiscountAmount", "Item Discount Amount", "CURRENCY"),
+                column("itemTaxableAmount", "Item Taxable Amount", "CURRENCY"),
+
+                column("itemCgstAmount", "Item CGST Amount", "CURRENCY"),
+                column("itemSgstAmount", "Item SGST Amount", "CURRENCY"),
+                column("itemIgstAmount", "Item IGST Amount", "CURRENCY"),
+
+                column("itemTaxAmount", "Item Total Tax", "CURRENCY"),
+                column("itemTotalAmount", "Item Total Amount", "CURRENCY"),
+
+                // Company
+
                 column("companyId", "Company ID", "NUMBER"),
                 column("companyName", "Company Name", "STRING"),
+
+                // Bank account
 
                 column("bankAccountId", "Bank Account ID", "NUMBER"),
                 column("accountNumber", "Account Number", "STRING"),
@@ -285,13 +156,23 @@ public class InvoiceReportProvider implements ReportDataProvider {
                 column("ifsc", "IFSC", "STRING"),
                 column("swiftCode", "SWIFT Code", "STRING"),
 
+                // Email signature
+
                 column("emailSignatureId", "Email Signature ID", "NUMBER"),
                 column("signatureName", "Signature Name", "STRING"),
 
+                // Invoice status
+
                 column("status", "Invoice Status", "STRING"),
+
+                // Additional information
+
                 column("notes", "Notes", "STRING"),
                 column("termsAndConditions", "Terms And Conditions", "STRING"),
 
+                // Audit
+
+                column("active", "Active", "BOOLEAN"),
                 column("createdAt", "Created At", "DATETIME"),
                 column("updatedAt", "Updated At", "DATETIME"),
                 column("createdBy", "Created By", "NUMBER"),
@@ -314,6 +195,63 @@ public class InvoiceReportProvider implements ReportDataProvider {
     }
 
     // =========================================================
+    // GENERATE REPORT
+    // =========================================================
+
+    @Override
+    public ReportData generate(
+            ReportRequest request,
+            Pageable pageable
+    ) {
+
+        if (request == null || !hasText(request.getReportCode())) {
+            throw new IllegalArgumentException("Report code is required.");
+        }
+
+        String reportCode = request.getReportCode()
+                .trim()
+                .toUpperCase(Locale.ROOT);
+
+        if (!INVOICE_REPORT.equals(reportCode)) {
+            throw new IllegalArgumentException(
+                    "Unsupported invoice report: " + reportCode
+            );
+        }
+
+        ReportFilterRequest filters = request.getFilters();
+
+        Specification<InvoiceEntity> specification =
+                buildSpecification(filters);
+
+        Pageable databasePageable = mapSortProperties(pageable);
+
+        Page<InvoiceEntity> page =
+                invoiceRepository.findAll(
+                        specification,
+                        databasePageable
+                );
+
+        List<Map<String, Object>> rows = page.getContent()
+                .stream()
+                .map(this::mapInvoice)
+                .toList();
+
+        ReportSummaryResponse summary =
+                generateSummary(specification);
+
+        return ReportData.builder()
+                .columns(getColumns())
+                .rows(rows)
+                .totalElements(page.getTotalElements())
+                .pageNumber(page.getNumber())
+                .pageSize(page.getSize())
+                .totalPages(page.getTotalPages())
+                .last(page.isLast())
+                .summary(summary)
+                .build();
+    }
+
+    // =========================================================
     // INVOICE SPECIFICATION
     // =========================================================
 
@@ -321,53 +259,48 @@ public class InvoiceReportProvider implements ReportDataProvider {
             ReportFilterRequest filters
     ) {
 
+        ReportFilterRequest requestFilters =
+                filters != null ? filters : new ReportFilterRequest();
+
         return (root, query, cb) -> {
 
             List<Predicate> predicates = new ArrayList<>();
 
-            if (filters == null) {
-                return cb.conjunction();
-            }
+            Map<String, Object> customFilters =
+                    requestFilters.getFilters() == null
+                            ? Map.of()
+                            : requestFilters.getFilters();
 
-            // -------------------------------------------------
             // KEYWORD
-            // -------------------------------------------------
 
-            if (hasText(filters.getKeyword())) {
+            if (hasText(requestFilters.getKeyword())) {
 
                 String keyword = containsPattern(
-                        filters.getKeyword()
+                        requestFilters.getKeyword()
                 );
+
+                Join<InvoiceEntity, ?> customer =
+                        root.join("customer", JoinType.LEFT);
 
                 predicates.add(
                         cb.or(
-
                                 cb.like(
                                         cb.lower(root.get("invoiceNumber")),
                                         keyword
                                 ),
-
                                 cb.like(
-                                        cb.lower(root.get("customer").get("displayName")),
+                                        cb.lower(customer.get("displayName")),
                                         keyword
                                 ),
-
                                 cb.like(
-                                        cb.lower(root.get("customer").get("email")),
+                                        cb.lower(customer.get("email")),
                                         keyword
                                 )
                         )
                 );
             }
 
-            Map<String, Object> customFilters =
-                    filters.getFilters() == null
-                            ? Map.of()
-                            : filters.getFilters();
-
-            // -------------------------------------------------
             // INVOICE TYPE
-            // -------------------------------------------------
 
             String invoiceType = getFilterValue(
                     customFilters,
@@ -379,14 +312,11 @@ public class InvoiceReportProvider implements ReportDataProvider {
                 try {
 
                     InvoiceType type = InvoiceType.valueOf(
-                            invoiceType.toUpperCase(Locale.ROOT)
+                            invoiceType.trim().toUpperCase(Locale.ROOT)
                     );
 
                     predicates.add(
-                            cb.equal(
-                                    root.get("invoiceType"),
-                                    type
-                            )
+                            cb.equal(root.get("invoiceType"), type)
                     );
 
                 } catch (IllegalArgumentException exception) {
@@ -397,9 +327,7 @@ public class InvoiceReportProvider implements ReportDataProvider {
                 }
             }
 
-            // -------------------------------------------------
             // INVOICE STATUS
-            // -------------------------------------------------
 
             String invoiceStatus = getFilterValue(
                     customFilters,
@@ -407,7 +335,7 @@ public class InvoiceReportProvider implements ReportDataProvider {
             );
 
             if (!hasText(invoiceStatus)) {
-                invoiceStatus = filters.getStatus();
+                invoiceStatus = requestFilters.getStatus();
             }
 
             if (hasText(invoiceStatus)
@@ -420,10 +348,7 @@ public class InvoiceReportProvider implements ReportDataProvider {
                     );
 
                     predicates.add(
-                            cb.equal(
-                                    root.get("status"),
-                                    status
-                            )
+                            cb.equal(root.get("status"), status)
                     );
 
                 } catch (IllegalArgumentException exception) {
@@ -434,9 +359,7 @@ public class InvoiceReportProvider implements ReportDataProvider {
                 }
             }
 
-            // -------------------------------------------------
             // CUSTOMER ID
-            // -------------------------------------------------
 
             String customerId = getFilterValue(
                     customFilters,
@@ -453,9 +376,7 @@ public class InvoiceReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
             // CURRENCY ID
-            // -------------------------------------------------
 
             String currencyId = getFilterValue(
                     customFilters,
@@ -472,9 +393,24 @@ public class InvoiceReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
+            // SALES PERSON ID
+
+            String salesPersonId = getFilterValue(
+                    customFilters,
+                    "salesPersonId"
+            );
+
+            if (hasText(salesPersonId)) {
+
+                predicates.add(
+                        cb.equal(
+                                root.get("salesPerson").get("id"),
+                                parseLong(salesPersonId, "Sales Person ID")
+                        )
+                );
+            }
+
             // MINIMUM AMOUNT
-            // -------------------------------------------------
 
             String minAmount = getFilterValue(
                     customFilters,
@@ -485,15 +421,13 @@ public class InvoiceReportProvider implements ReportDataProvider {
 
                 predicates.add(
                         cb.greaterThanOrEqualTo(
-                                root.get("grandTotal"),
+                                root.<BigDecimal>get("grandTotal"),
                                 parseAmount(minAmount, "Minimum amount")
                         )
                 );
             }
 
-            // -------------------------------------------------
             // MAXIMUM AMOUNT
-            // -------------------------------------------------
 
             String maxAmount = getFilterValue(
                     customFilters,
@@ -504,18 +438,20 @@ public class InvoiceReportProvider implements ReportDataProvider {
 
                 predicates.add(
                         cb.lessThanOrEqualTo(
-                                root.get("grandTotal"),
+                                root.<BigDecimal>get("grandTotal"),
                                 parseAmount(maxAmount, "Maximum amount")
                         )
                 );
             }
 
-            // -------------------------------------------------
-            // INVOICE DATE RANGE
-            // -------------------------------------------------
+            validateAmountRange(minAmount, maxAmount);
 
-            LocalDate fromDate = filters.getFromDate();
-            LocalDate toDate = filters.getToDate();
+            // INVOICE DATE RANGE
+
+            LocalDate fromDate = requestFilters.getFromDate();
+            LocalDate toDate = requestFilters.getToDate();
+
+            validateDateRange(fromDate, toDate);
 
             if (fromDate != null) {
 
@@ -537,58 +473,51 @@ public class InvoiceReportProvider implements ReportDataProvider {
                 );
             }
 
-            // -------------------------------------------------
             // ACTIVE
-            // -------------------------------------------------
 
-            predicates.add(
-                    cb.isTrue(root.get("active"))
+            String activeValue = getFilterValue(
+                    customFilters,
+                    "active"
             );
 
-            return cb.and(
-                    predicates.toArray(new Predicate[0])
-            );
+            if (!hasText(activeValue)) {
+                activeValue = requestFilters.getStatus() != null
+                        && ("ACTIVE".equalsIgnoreCase(requestFilters.getStatus())
+                        || "INACTIVE".equalsIgnoreCase(requestFilters.getStatus()))
+                        ? requestFilters.getStatus()
+                        : null;
+            }
+
+            if (hasText(activeValue)) {
+
+                Boolean active = parseBoolean(activeValue);
+
+                if (active == null) {
+                    throw new IllegalArgumentException(
+                            "Invalid active filter: " + activeValue
+                    );
+                }
+
+                predicates.add(
+                        cb.equal(root.get("active"), active)
+                );
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
 
     // =========================================================
-    // MAP INVOICE
+    // INVOICE ROW MAPPING
     // =========================================================
 
     private Map<String, Object> mapInvoice(
-            InvoiceEntity invoice,
-            String reportCode
+            InvoiceEntity invoice
     ) {
 
         Map<String, Object> row = new LinkedHashMap<>();
 
-        switch (reportCode) {
-
-            case "INVOICE_REGISTER" ->
-                    mapRegister(invoice, row);
-
-            case "INVOICE_ITEMS" ->
-                    mapItems(invoice, row);
-
-            case "INVOICE_DETAILS" ->
-                    mapDetails(invoice, row);
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported invoice report: " + reportCode
-            );
-        }
-
-        return row;
-    }
-
-    // =========================================================
-    // REGISTER MAPPING
-    // =========================================================
-
-    private void mapRegister(
-            InvoiceEntity invoice,
-            Map<String, Object> row
-    ) {
+        // INVOICE
 
         row.put("id", invoice.getId());
         row.put("invoiceNumber", invoice.getInvoiceNumber());
@@ -599,6 +528,8 @@ public class InvoiceReportProvider implements ReportDataProvider {
                         ? null
                         : invoice.getInvoiceType().name()
         );
+
+        // CUSTOMER
 
         row.put(
                 "customerId",
@@ -614,8 +545,26 @@ public class InvoiceReportProvider implements ReportDataProvider {
                         : invoice.getCustomer().getDisplayName()
         );
 
+        row.put(
+                "customerEmail",
+                invoice.getCustomer() == null
+                        ? null
+                        : invoice.getCustomer().getEmail()
+        );
+
+        row.put(
+                "customerMobile",
+                invoice.getCustomer() == null
+                        ? null
+                        : invoice.getCustomer().getMobile()
+        );
+
+        // DATES
+
         row.put("invoiceDate", invoice.getInvoiceDate());
         row.put("dueDate", invoice.getDueDate());
+
+        // TOTALS
 
         row.put("subtotal", invoice.getSubtotal());
         row.put("discountAmount", invoice.getDiscountAmount());
@@ -623,7 +572,11 @@ public class InvoiceReportProvider implements ReportDataProvider {
         row.put("shippingAmount", invoice.getShippingAmount());
         row.put("grandTotal", invoice.getGrandTotal());
 
+        // CURRENCY
+
         mapCurrency(invoice, row);
+
+        // SALES PERSON
 
         row.put(
                 "salesPersonId",
@@ -639,6 +592,88 @@ public class InvoiceReportProvider implements ReportDataProvider {
                         : invoice.getSalesPerson().getSalesPersonName()
         );
 
+        // INVOICE ITEMS
+
+        mapInvoiceItems(invoice, row);
+
+        // COMPANY
+
+        row.put(
+                "companyId",
+                invoice.getCompanyDetails() == null
+                        ? null
+                        : invoice.getCompanyDetails().getId()
+        );
+
+        row.put(
+                "companyName",
+                invoice.getCompanyDetails() == null
+                        ? null
+                        : invoice.getCompanyDetails().getCompanyName()
+        );
+
+        // BANK ACCOUNT
+
+        row.put(
+                "bankAccountId",
+                invoice.getBankAccount() == null
+                        ? null
+                        : invoice.getBankAccount().getId()
+        );
+
+        row.put(
+                "accountNumber",
+                invoice.getBankAccount() == null
+                        ? null
+                        : invoice.getBankAccount().getAccountNumber()
+        );
+
+        row.put(
+                "bankName",
+                invoice.getBankAccount() == null
+                        ? null
+                        : invoice.getBankAccount().getBankName()
+        );
+
+        row.put(
+                "branchName",
+                invoice.getBankAccount() == null
+                        ? null
+                        : invoice.getBankAccount().getBranchName()
+        );
+
+        row.put(
+                "ifsc",
+                invoice.getBankAccount() == null
+                        ? null
+                        : invoice.getBankAccount().getIfsc()
+        );
+
+        row.put(
+                "swiftCode",
+                invoice.getBankAccount() == null
+                        ? null
+                        : invoice.getBankAccount().getSwiftCode()
+        );
+
+        // EMAIL SIGNATURE
+
+        row.put(
+                "emailSignatureId",
+                invoice.getEmailSignature() == null
+                        ? null
+                        : invoice.getEmailSignature().getId()
+        );
+
+        row.put(
+                "signatureName",
+                invoice.getEmailSignature() == null
+                        ? null
+                        : invoice.getEmailSignature().getSignatureName()
+        );
+
+        // STATUS AND ADDITIONAL INFORMATION
+
         row.put(
                 "status",
                 invoice.getStatus() == null
@@ -646,29 +681,28 @@ public class InvoiceReportProvider implements ReportDataProvider {
                         : invoice.getStatus().name()
         );
 
-        mapAudit(invoice, row);
+        row.put("notes", invoice.getNotes());
+        row.put("termsAndConditions", invoice.getTermsAndConditions());
+
+        // AUDIT
+
+        row.put("active", invoice.getActive());
+        row.put("createdAt", invoice.getCreatedAt());
+        row.put("updatedAt", invoice.getUpdatedAt());
+        row.put("createdBy", invoice.getCreatedBy());
+        row.put("updatedBy", invoice.getUpdatedBy());
+
+        return row;
     }
 
     // =========================================================
-    // ITEM SUMMARY MAPPING
+    // INVOICE ITEM MAPPING
     // =========================================================
 
-    private void mapItems(
+    private void mapInvoiceItems(
             InvoiceEntity invoice,
             Map<String, Object> row
     ) {
-
-        row.put("id", invoice.getId());
-        row.put("invoiceNumber", invoice.getInvoiceNumber());
-
-        row.put(
-                "customerName",
-                invoice.getCustomer() == null
-                        ? null
-                        : invoice.getCustomer().getDisplayName()
-        );
-
-        row.put("invoiceDate", invoice.getInvoiceDate());
 
         List<InvoiceItemEntity> items =
                 invoice.getInvoiceItems() == null
@@ -732,120 +766,6 @@ public class InvoiceReportProvider implements ReportDataProvider {
                 "itemTotalAmount",
                 sumItems(items, InvoiceItemEntity::getTotalAmount)
         );
-
-        mapCurrency(invoice, row);
-
-        row.put(
-                "status",
-                invoice.getStatus() == null
-                        ? null
-                        : invoice.getStatus().name()
-        );
-    }
-
-    // =========================================================
-    // DETAIL MAPPING
-    // =========================================================
-
-    private void mapDetails(
-            InvoiceEntity invoice,
-            Map<String, Object> row
-    ) {
-
-        mapRegister(invoice, row);
-
-        row.put(
-                "customerEmail",
-                invoice.getCustomer() == null
-                        ? null
-                        : invoice.getCustomer().getEmail()
-        );
-
-        row.put(
-                "customerMobile",
-                invoice.getCustomer() == null
-                        ? null
-                        : invoice.getCustomer().getMobile()
-        );
-
-        // Company
-
-        row.put(
-                "companyId",
-                invoice.getCompanyDetails() == null
-                        ? null
-                        : invoice.getCompanyDetails().getId()
-        );
-
-        row.put(
-                "companyName",
-                invoice.getCompanyDetails() == null
-                        ? null
-                        : invoice.getCompanyDetails().getCompanyName()
-        );
-
-        // Bank account
-
-        row.put(
-                "bankAccountId",
-                invoice.getBankAccount() == null
-                        ? null
-                        : invoice.getBankAccount().getId()
-        );
-
-        row.put(
-                "accountNumber",
-                invoice.getBankAccount() == null
-                        ? null
-                        : invoice.getBankAccount().getAccountNumber()
-        );
-
-        row.put(
-                "bankName",
-                invoice.getBankAccount() == null
-                        ? null
-                        : invoice.getBankAccount().getBankName()
-        );
-
-        row.put(
-                "branchName",
-                invoice.getBankAccount() == null
-                        ? null
-                        : invoice.getBankAccount().getBranchName()
-        );
-
-        row.put(
-                "ifsc",
-                invoice.getBankAccount() == null
-                        ? null
-                        : invoice.getBankAccount().getIfsc()
-        );
-
-        row.put(
-                "swiftCode",
-                invoice.getBankAccount() == null
-                        ? null
-                        : invoice.getBankAccount().getSwiftCode()
-        );
-
-        // Email signature
-
-        row.put(
-                "emailSignatureId",
-                invoice.getEmailSignature() == null
-                        ? null
-                        : invoice.getEmailSignature().getId()
-        );
-
-        row.put(
-                "signatureName",
-                invoice.getEmailSignature() == null
-                        ? null
-                        : invoice.getEmailSignature().getSignatureName()
-        );
-
-        row.put("notes", invoice.getNotes());
-        row.put("termsAndConditions", invoice.getTermsAndConditions());
     }
 
     // =========================================================
@@ -882,28 +802,12 @@ public class InvoiceReportProvider implements ReportDataProvider {
     }
 
     // =========================================================
-    // AUDIT MAPPING
-    // =========================================================
-
-    private void mapAudit(
-            InvoiceEntity invoice,
-            Map<String, Object> row
-    ) {
-
-        row.put("active", invoice.getActive());
-        row.put("createdAt", invoice.getCreatedAt());
-        row.put("updatedAt", invoice.getUpdatedAt());
-        row.put("createdBy", invoice.getCreatedBy());
-        row.put("updatedBy", invoice.getUpdatedBy());
-    }
-
-    // =========================================================
     // ITEM SUM HELPER
     // =========================================================
 
     private BigDecimal sumItems(
             List<InvoiceItemEntity> items,
-            java.util.function.Function<InvoiceItemEntity, BigDecimal> mapper
+            Function<InvoiceItemEntity, BigDecimal> mapper
     ) {
 
         return items.stream()
@@ -922,35 +826,12 @@ public class InvoiceReportProvider implements ReportDataProvider {
 
         long total = invoiceRepository.count(specification);
 
-        long draft = countByStatus(
-                specification,
-                InvoiceStatus.DRAFT
-        );
-
-        long sent = countByStatus(
-                specification,
-                InvoiceStatus.SENT
-        );
-
-        long paid = countByStatus(
-                specification,
-                InvoiceStatus.PAID
-        );
-
-        long partial = countByStatus(
-                specification,
-                InvoiceStatus.PARTIAL
-        );
-
-        long overdue = countByStatus(
-                specification,
-                InvoiceStatus.OVERDUE
-        );
-
-        long cancelled = countByStatus(
-                specification,
-                InvoiceStatus.CANCELLED
-        );
+        long draft = countByStatus(specification, InvoiceStatus.DRAFT);
+        long sent = countByStatus(specification, InvoiceStatus.SENT);
+        long paid = countByStatus(specification, InvoiceStatus.PAID);
+        long partial = countByStatus(specification, InvoiceStatus.PARTIAL);
+        long overdue = countByStatus(specification, InvoiceStatus.OVERDUE);
+        long cancelled = countByStatus(specification, InvoiceStatus.CANCELLED);
 
         Map<String, Object> metrics = new LinkedHashMap<>();
 
@@ -990,32 +871,32 @@ public class InvoiceReportProvider implements ReportDataProvider {
             return Pageable.unpaged();
         }
 
-        Sort mappedSort = Sort.unsorted();
-
-        if (pageable.getSort().isSorted()) {
-
-            List<Sort.Order> orders = new ArrayList<>();
-
-            pageable.getSort().forEach(order -> {
-
-                String entityField =
-                        mapSortField(order.getProperty());
-
-                orders.add(
-                        new Sort.Order(
-                                order.getDirection(),
-                                entityField
-                        )
-                );
-            });
-
-            mappedSort = Sort.by(orders);
+        if (!pageable.getSort().isSorted()) {
+            return PageRequest.of(
+                    pageable.getPageNumber(),
+                    pageable.getPageSize(),
+                    Sort.by(Sort.Direction.DESC, "invoiceDate")
+            );
         }
+
+        List<Sort.Order> orders = new ArrayList<>();
+
+        pageable.getSort().forEach(order -> {
+
+            String entityField = mapSortField(order.getProperty());
+
+            orders.add(
+                    new Sort.Order(
+                            order.getDirection(),
+                            entityField
+                    )
+            );
+        });
 
         return PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
-                mappedSort
+                Sort.by(orders)
         );
     }
 
@@ -1043,7 +924,7 @@ public class InvoiceReportProvider implements ReportDataProvider {
     }
 
     // =========================================================
-    // HELPERS
+    // FILTER HELPERS
     // =========================================================
 
     private String getFilterValue(
@@ -1076,7 +957,7 @@ public class InvoiceReportProvider implements ReportDataProvider {
     ) {
 
         try {
-            return Long.parseLong(value);
+            return Long.parseLong(value.trim());
         } catch (NumberFormatException exception) {
             throw new IllegalArgumentException(
                     "Invalid " + fieldName + ": " + value
@@ -1091,7 +972,7 @@ public class InvoiceReportProvider implements ReportDataProvider {
 
         try {
 
-            BigDecimal amount = new BigDecimal(value);
+            BigDecimal amount = new BigDecimal(value.trim());
 
             if (amount.compareTo(BigDecimal.ZERO) < 0) {
                 throw new IllegalArgumentException(
@@ -1108,5 +989,45 @@ public class InvoiceReportProvider implements ReportDataProvider {
             );
         }
     }
-}
 
+    private void validateAmountRange(
+            String minAmount,
+            String maxAmount
+    ) {
+
+        if (hasText(minAmount) && hasText(maxAmount)) {
+
+            BigDecimal minimum = parseAmount(minAmount, "Minimum amount");
+            BigDecimal maximum = parseAmount(maxAmount, "Maximum amount");
+
+            if (minimum.compareTo(maximum) > 0) {
+                throw new IllegalArgumentException(
+                        "Minimum amount cannot be greater than maximum amount."
+                );
+            }
+        }
+    }
+
+    private void validateDateRange(
+            LocalDate fromDate,
+            LocalDate toDate
+    ) {
+
+        if (fromDate != null && toDate != null
+                && fromDate.isAfter(toDate)) {
+
+            throw new IllegalArgumentException(
+                    "From date cannot be after to date."
+            );
+        }
+    }
+
+    private Boolean parseBoolean(String value) {
+
+        return switch (value.trim().toUpperCase(Locale.ROOT)) {
+            case "TRUE", "YES", "1", "ACTIVE" -> true;
+            case "FALSE", "NO", "0", "INACTIVE" -> false;
+            default -> null;
+        };
+    }
+}

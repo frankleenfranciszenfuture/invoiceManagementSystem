@@ -1,5 +1,5 @@
-package com.ims.reports.provider.customer;
 
+package com.ims.reports.provider.customer;
 
 import com.ims.dtos.reports.*;
 import com.ims.entity.CustomerEntity;
@@ -17,20 +17,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-
 import org.springframework.data.jpa.domain.Specification;
-
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor
@@ -39,75 +32,42 @@ public class CustomerReportProvider implements ReportDataProvider {
 
     private final CustomerRepository customerRepository;
 
-    // =========================================================
-    // MODULE
-    // =========================================================
-
     @Override
     public ReportModule getModule() {
         return ReportModule.CUSTOMER;
     }
 
-    // =========================================================
-    // REPORT DEFINITIONS
-    // =========================================================
+    // =====================================================
+    // SINGLE CUSTOMER REPORT
+    // =====================================================
 
     @Override
     public List<ReportDefinition> getReportDefinitions() {
 
         return List.of(
-
                 ReportDefinition.builder()
-                        .code("CUSTOMER_REGISTER")
-                        .name("Customer Register")
+                        .code("CUSTOMER_REPORT")
+                        .name("Customer Report")
                         .description(
-                                "Complete customer details including " +
-                                        "contact information, customer type, " +
-                                        "status and audit information."
+                                "Complete customer report including personal, " +
+                                        "business, contact, address, financial, " +
+                                        "portal and audit information."
                         )
                         .type(ReportType.REGISTER)
-                        .columns(getRegisterColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("CUSTOMER_CONTACTS")
-                        .name("Customer Contact Report")
-                        .description(
-                                "Customer contact details including " +
-                                        "email, work phone, mobile, website " +
-                                        "and social media information."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getContactColumns())
-                        .build(),
-
-                ReportDefinition.builder()
-                        .code("CUSTOMER_ADDRESSES")
-                        .name("Customer Address Report")
-                        .description(
-                                "Customer billing and shipping address details."
-                        )
-                        .type(ReportType.DETAILED)
-                        .columns(getAddressColumns())
+                        .columns(getColumns())
                         .build()
         );
     }
 
-    // =========================================================
+    // =====================================================
     // GENERATE REPORT
-    // =========================================================
+    // =====================================================
 
     @Override
     public ReportData generate(
             ReportRequest request,
             Pageable pageable
     ) {
-
-        String reportCode = request.getReportCode()
-                .trim()
-                .toUpperCase(Locale.ROOT);
-
-        List<ReportColumn> columns = getColumns(reportCode);
 
         Specification<CustomerEntity> specification =
                 buildSpecification(request.getFilters());
@@ -124,16 +84,14 @@ public class CustomerReportProvider implements ReportDataProvider {
         List<Map<String, Object>> rows =
                 customerPage.getContent()
                         .stream()
-                        .map(customer ->
-                                mapCustomer(customer, reportCode)
-                        )
+                        .map(this::mapCustomer)
                         .toList();
 
         ReportSummaryResponse summary =
                 generateSummary(specification);
 
         return ReportData.builder()
-                .columns(columns)
+                .columns(getColumns())
                 .rows(rows)
                 .totalElements(customerPage.getTotalElements())
                 .pageNumber(customerPage.getNumber())
@@ -144,86 +102,50 @@ public class CustomerReportProvider implements ReportDataProvider {
                 .build();
     }
 
-    // =========================================================
-    // REPORT COLUMNS
-    // =========================================================
+    // =====================================================
+    // ALL CUSTOMER COLUMNS
+    // =====================================================
 
-    private List<ReportColumn> getColumns(String reportCode) {
-
-        return switch (reportCode) {
-
-            case "CUSTOMER_REGISTER" ->
-                    getRegisterColumns();
-
-            case "CUSTOMER_CONTACTS" ->
-                    getContactColumns();
-
-            case "CUSTOMER_ADDRESSES" ->
-                    getAddressColumns();
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported customer report: " + reportCode
-            );
-        };
-    }
-
-    private List<ReportColumn> getRegisterColumns() {
+    private List<ReportColumn> getColumns() {
 
         return List.of(
 
+                // Customer Information
                 column("id", "Customer ID", "NUMBER"),
-                column("displayName", "Customer Name", "STRING"),
                 column("customerType", "Customer Type", "STRING"),
+                column("salutation", "Salutation", "STRING"),
+                column("displayName", "Customer Name", "STRING"),
                 column("companyName", "Company Name", "STRING"),
                 column("firstName", "First Name", "STRING"),
                 column("lastName", "Last Name", "STRING"),
-                column("email", "Email", "STRING"),
-                column("mobile", "Mobile", "STRING"),
-                column("currency", "Currency", "STRING"),
-                column("pan", "PAN", "STRING"),
-                column("paymentTerms", "Payment Terms", "STRING"),
-                column("customerLanguage", "Language", "STRING"),
-                column("status", "Customer Status", "STRING"),
-                column("active", "Active", "BOOLEAN"),
-                column("enablePortal", "Portal Enabled", "BOOLEAN"),
-                column("createdAt", "Created At", "DATETIME"),
-                column("updatedAt", "Updated At", "DATETIME"),
-                column("createdBy", "Created By", "NUMBER"),
-                column("updatedBy", "Updated By", "NUMBER")
-        );
-    }
 
-    private List<ReportColumn> getContactColumns() {
-
-        return List.of(
-
-                column("id", "Customer ID", "NUMBER"),
-                column("displayName", "Customer Name", "STRING"),
-                column("customerType", "Customer Type", "STRING"),
+                // Contact Information
                 column("email", "Email", "STRING"),
                 column("workPhoneCode", "Work Phone Code", "STRING"),
                 column("workPhone", "Work Phone", "STRING"),
                 column("mobileCode", "Mobile Code", "STRING"),
                 column("mobile", "Mobile", "STRING"),
                 column("websiteUrl", "Website", "STRING"),
+
+                // Business Information
                 column("department", "Department", "STRING"),
                 column("designation", "Designation", "STRING"),
+                column("pan", "PAN", "STRING"),
+
+                // Social Information
                 column("twitter", "Twitter", "STRING"),
                 column("skype", "Skype", "STRING"),
                 column("facebook", "Facebook", "STRING"),
-                column("status", "Customer Status", "STRING")
-        );
-    }
 
-    private List<ReportColumn> getAddressColumns() {
+                // Financial Information
+                column("currency", "Currency", "STRING"),
+                column("paymentTerms", "Payment Terms", "STRING"),
 
-        return List.of(
+                // Other Information
+                column("customerLanguage", "Language", "STRING"),
+                column("enablePortal", "Portal Enabled", "BOOLEAN"),
 
-                column("id", "Customer ID", "NUMBER"),
-                column("displayName", "Customer Name", "STRING"),
-                column("email", "Email", "STRING"),
-                column("mobile", "Mobile", "STRING"),
-
+                // Billing Address
                 column("billingAttention", "Billing Attention", "STRING"),
                 column("billingCountry", "Billing Country", "STRING"),
                 column("billingAddress", "Billing Address", "STRING"),
@@ -233,6 +155,7 @@ public class CustomerReportProvider implements ReportDataProvider {
                 column("billingPhone", "Billing Phone", "STRING"),
                 column("billingFax", "Billing Fax", "STRING"),
 
+                // Shipping Address
                 column("shippingAttention", "Shipping Attention", "STRING"),
                 column("shippingCountry", "Shipping Country", "STRING"),
                 column("shippingAddress", "Shipping Address", "STRING"),
@@ -242,7 +165,15 @@ public class CustomerReportProvider implements ReportDataProvider {
                 column("shippingPhone", "Shipping Phone", "STRING"),
                 column("shippingFax", "Shipping Fax", "STRING"),
 
-                column("status", "Customer Status", "STRING")
+                // Status
+                column("status", "Customer Status", "STRING"),
+                column("active", "Active", "BOOLEAN"),
+
+                // Audit Information
+                column("createdAt", "Created At", "DATETIME"),
+                column("updatedAt", "Updated At", "DATETIME"),
+                column("createdBy", "Created By", "NUMBER"),
+                column("updatedBy", "Updated By", "NUMBER")
         );
     }
 
@@ -260,9 +191,9 @@ public class CustomerReportProvider implements ReportDataProvider {
                 .build();
     }
 
-    // =========================================================
-    // CUSTOMER SPECIFICATION
-    // =========================================================
+    // =====================================================
+    // CUSTOMER FILTERS
+    // =====================================================
 
     private Specification<CustomerEntity> buildSpecification(
             ReportFilterRequest filters
@@ -276,42 +207,24 @@ public class CustomerReportProvider implements ReportDataProvider {
                 return cb.conjunction();
             }
 
-            // ---------------------------------------------
-            // Keyword
-            // ---------------------------------------------
+            // Keyword search
 
             if (hasText(filters.getKeyword())) {
 
-                String keyword = containsPattern(
-                        filters.getKeyword()
-                );
+                String keyword =
+                        containsPattern(filters.getKeyword());
 
                 predicates.add(
                         cb.or(
-                                cb.like(
-                                        cb.lower(root.get("displayName")),
-                                        keyword
-                                ),
-                                cb.like(
-                                        cb.lower(root.get("email")),
-                                        keyword
-                                ),
-                                cb.like(
-                                        cb.lower(root.get("customerType")),
-                                        keyword
-                                ),
-                                cb.like(
-                                        cb.lower(root.get("customerLanguage")),
-                                        keyword
-                                ),
-                                cb.like(
-                                        cb.lower(root.get("mobile")),
-                                        keyword
-                                ),
-                                cb.like(
-                                        cb.lower(root.get("companyName")),
-                                        keyword
-                                )
+                                cb.like(cb.lower(root.get("displayName")), keyword),
+                                cb.like(cb.lower(root.get("email")), keyword),
+                                cb.like(cb.lower(root.get("customerType")), keyword),
+                                cb.like(cb.lower(root.get("customerLanguage")), keyword),
+                                cb.like(cb.lower(root.get("mobile")), keyword),
+                                cb.like(cb.lower(root.get("companyName")), keyword),
+                                cb.like(cb.lower(root.get("firstName")), keyword),
+                                cb.like(cb.lower(root.get("lastName")), keyword),
+                                cb.like(cb.lower(root.get("pan")), keyword)
                         )
                 );
             }
@@ -321,14 +234,10 @@ public class CustomerReportProvider implements ReportDataProvider {
                             ? Map.of()
                             : filters.getFilters();
 
-            // ---------------------------------------------
             // Customer type
-            // ---------------------------------------------
 
-            String customerType = getFilterValue(
-                    customFilters,
-                    "customerType"
-            );
+            String customerType =
+                    getFilterValue(customFilters, "customerType");
 
             if (hasText(customerType)) {
 
@@ -340,14 +249,10 @@ public class CustomerReportProvider implements ReportDataProvider {
                 );
             }
 
-            // ---------------------------------------------
             // Currency
-            // ---------------------------------------------
 
-            String currency = getFilterValue(
-                    customFilters,
-                    "currency"
-            );
+            String currency =
+                    getFilterValue(customFilters, "currency");
 
             if (hasText(currency)) {
 
@@ -359,14 +264,10 @@ public class CustomerReportProvider implements ReportDataProvider {
                 );
             }
 
-            // ---------------------------------------------
-            // Customer status
-            // ---------------------------------------------
+            // Status
 
-            String status = getFilterValue(
-                    customFilters,
-                    "status"
-            );
+            String status =
+                    getFilterValue(customFilters, "status");
 
             if (!hasText(status)) {
                 status = filters.getStatus();
@@ -383,10 +284,7 @@ public class CustomerReportProvider implements ReportDataProvider {
                             );
 
                     predicates.add(
-                            cb.equal(
-                                    root.get("status"),
-                                    customerStatus
-                            )
+                            cb.equal(root.get("status"), customerStatus)
                     );
 
                 } catch (IllegalArgumentException exception) {
@@ -397,16 +295,20 @@ public class CustomerReportProvider implements ReportDataProvider {
                 }
             }
 
-            // ---------------------------------------------
             // Portal enabled
-            // ---------------------------------------------
 
-            String portalEnabled = getFilterValue(
-                    customFilters,
-                    "enablePortal"
-            );
+            String portalEnabled =
+                    getFilterValue(customFilters, "enablePortal");
 
             if (hasText(portalEnabled)) {
+
+                if (!"true".equalsIgnoreCase(portalEnabled)
+                        && !"false".equalsIgnoreCase(portalEnabled)) {
+
+                    throw new IllegalArgumentException(
+                            "Portal filter must be true or false."
+                    );
+                }
 
                 predicates.add(
                         cb.equal(
@@ -416,14 +318,10 @@ public class CustomerReportProvider implements ReportDataProvider {
                 );
             }
 
-            // ---------------------------------------------
-            // Active flag from BaseEntity
-            // ---------------------------------------------
+            // Active
 
-            String active = getFilterValue(
-                    customFilters,
-                    "active"
-            );
+            String active =
+                    getFilterValue(customFilters, "active");
 
             if (hasText(active)) {
 
@@ -443,35 +341,35 @@ public class CustomerReportProvider implements ReportDataProvider {
                 );
             }
 
-            // ---------------------------------------------
             // Created date range
-            // ---------------------------------------------
 
             LocalDate fromDate = filters.getFromDate();
             LocalDate toDate = filters.getToDate();
 
-            if (fromDate != null) {
+            if (fromDate != null && toDate != null
+                    && fromDate.isAfter(toDate)) {
 
-                LocalDateTime from =
-                        fromDate.atStartOfDay();
+                throw new IllegalArgumentException(
+                        "From date cannot be after to date."
+                );
+            }
+
+            if (fromDate != null) {
 
                 predicates.add(
                         cb.greaterThanOrEqualTo(
                                 root.get("createdAt"),
-                                from
+                                fromDate.atStartOfDay()
                         )
                 );
             }
 
             if (toDate != null) {
 
-                LocalDateTime to =
-                        toDate.plusDays(1).atStartOfDay();
-
                 predicates.add(
                         cb.lessThan(
                                 root.get("createdAt"),
-                                to
+                                toDate.plusDays(1).atStartOfDay()
                         )
                 );
             }
@@ -482,53 +380,74 @@ public class CustomerReportProvider implements ReportDataProvider {
         };
     }
 
-    // =========================================================
-    // MAP CUSTOMER
-    // =========================================================
+    // =====================================================
+    // MAP CUSTOMER INFORMATION
+    // =====================================================
 
     private Map<String, Object> mapCustomer(
-            CustomerEntity customer,
-            String reportCode
+            CustomerEntity customer
     ) {
 
         Map<String, Object> row = new LinkedHashMap<>();
 
-        switch (reportCode) {
-
-            case "CUSTOMER_REGISTER" ->
-                    mapRegister(customer, row);
-
-            case "CUSTOMER_CONTACTS" ->
-                    mapContacts(customer, row);
-
-            case "CUSTOMER_ADDRESSES" ->
-                    mapAddresses(customer, row);
-
-            default -> throw new IllegalArgumentException(
-                    "Unsupported customer report: " + reportCode
-            );
-        }
-
-        return row;
-    }
-
-    private void mapRegister(
-            CustomerEntity customer,
-            Map<String, Object> row
-    ) {
+        // Customer information
 
         row.put("id", customer.getId());
-        row.put("displayName", customer.getDisplayName());
         row.put("customerType", customer.getCustomerType());
+        row.put("salutation", customer.getSalutation());
+        row.put("displayName", customer.getDisplayName());
         row.put("companyName", customer.getCompanyName());
         row.put("firstName", customer.getFirstName());
         row.put("lastName", customer.getLastName());
+
+        // Contact information
+
         row.put("email", customer.getEmail());
+        row.put("workPhoneCode", customer.getWorkPhoneCode());
+        row.put("workPhone", customer.getWorkPhone());
+        row.put("mobileCode", customer.getMobileCode());
         row.put("mobile", customer.getMobile());
-        row.put("currency", customer.getCurrency());
+        row.put("websiteUrl", customer.getWebsiteUrl());
+
+        // Business information
+
+        row.put("department", customer.getDepartment());
+        row.put("designation", customer.getDesignation());
         row.put("pan", customer.getPan());
+
+        // Social information
+
+        row.put("twitter", customer.getTwitter());
+        row.put("skype", customer.getSkype());
+        row.put("facebook", customer.getFacebook());
+
+        // Financial information
+
+        row.put("currency", customer.getCurrency());
         row.put("paymentTerms", customer.getPaymentTerms());
+
+        // Other information
+
         row.put("customerLanguage", customer.getCustomerLanguage());
+        row.put("enablePortal", customer.getEnablePortal());
+
+        // Billing address
+
+        mapAddress(
+                customer.getBillingAddress(),
+                "billing",
+                row
+        );
+
+        // Shipping address
+
+        mapAddress(
+                customer.getShippingAddress(),
+                "shipping",
+                row
+        );
+
+        // Status
 
         row.put(
                 "status",
@@ -538,75 +457,20 @@ public class CustomerReportProvider implements ReportDataProvider {
         );
 
         row.put("active", customer.getActive());
-        row.put("enablePortal", customer.getEnablePortal());
+
+        // Audit information
 
         row.put("createdAt", customer.getCreatedAt());
         row.put("updatedAt", customer.getUpdatedAt());
         row.put("createdBy", customer.getCreatedBy());
         row.put("updatedBy", customer.getUpdatedBy());
+
+        return row;
     }
 
-    private void mapContacts(
-            CustomerEntity customer,
-            Map<String, Object> row
-    ) {
-
-        row.put("id", customer.getId());
-        row.put("displayName", customer.getDisplayName());
-        row.put("customerType", customer.getCustomerType());
-        row.put("email", customer.getEmail());
-
-        row.put("workPhoneCode", customer.getWorkPhoneCode());
-        row.put("workPhone", customer.getWorkPhone());
-
-        row.put("mobileCode", customer.getMobileCode());
-        row.put("mobile", customer.getMobile());
-
-        row.put("websiteUrl", customer.getWebsiteUrl());
-        row.put("department", customer.getDepartment());
-        row.put("designation", customer.getDesignation());
-
-        row.put("twitter", customer.getTwitter());
-        row.put("skype", customer.getSkype());
-        row.put("facebook", customer.getFacebook());
-
-        row.put(
-                "status",
-                customer.getStatus() == null
-                        ? null
-                        : customer.getStatus().name()
-        );
-    }
-
-    private void mapAddresses(
-            CustomerEntity customer,
-            Map<String, Object> row
-    ) {
-
-        row.put("id", customer.getId());
-        row.put("displayName", customer.getDisplayName());
-        row.put("email", customer.getEmail());
-        row.put("mobile", customer.getMobile());
-
-        mapAddress(
-                customer.getBillingAddress(),
-                "billing",
-                row
-        );
-
-        mapAddress(
-                customer.getShippingAddress(),
-                "shipping",
-                row
-        );
-
-        row.put(
-                "status",
-                customer.getStatus() == null
-                        ? null
-                        : customer.getStatus().name()
-        );
-    }
+    // =====================================================
+    // ADDRESS MAPPING
+    // =====================================================
 
     private void mapAddress(
             AddressEntity address,
@@ -614,34 +478,50 @@ public class CustomerReportProvider implements ReportDataProvider {
             Map<String, Object> row
     ) {
 
-        row.put(prefix + "Attention",
-                address == null ? null : address.getAttention());
+        row.put(
+                prefix + "Attention",
+                address == null ? null : address.getAttention()
+        );
 
-        row.put(prefix + "Country",
-                address == null ? null : address.getCountry());
+        row.put(
+                prefix + "Country",
+                address == null ? null : address.getCountry()
+        );
 
-        row.put(prefix + "Address",
-                address == null ? null : address.getAddress());
+        row.put(
+                prefix + "Address",
+                address == null ? null : address.getAddress()
+        );
 
-        row.put(prefix + "City",
-                address == null ? null : address.getCity());
+        row.put(
+                prefix + "City",
+                address == null ? null : address.getCity()
+        );
 
-        row.put(prefix + "State",
-                address == null ? null : address.getState());
+        row.put(
+                prefix + "State",
+                address == null ? null : address.getState()
+        );
 
-        row.put(prefix + "ZipCode",
-                address == null ? null : address.getZipCode());
+        row.put(
+                prefix + "ZipCode",
+                address == null ? null : address.getZipCode()
+        );
 
-        row.put(prefix + "Phone",
-                address == null ? null : address.getPhone());
+        row.put(
+                prefix + "Phone",
+                address == null ? null : address.getPhone()
+        );
 
-        row.put(prefix + "Fax",
-                address == null ? null : address.getFax());
+        row.put(
+                prefix + "Fax",
+                address == null ? null : address.getFax()
+        );
     }
 
-    // =========================================================
+    // =====================================================
     // SUMMARY
-    // =========================================================
+    // =====================================================
 
     private ReportSummaryResponse generateSummary(
             Specification<CustomerEntity> specification
@@ -696,9 +576,9 @@ public class CustomerReportProvider implements ReportDataProvider {
                 .build();
     }
 
-    // =========================================================
+    // =====================================================
     // SORT MAPPING
-    // =========================================================
+    // =====================================================
 
     private Pageable mapSortProperties(Pageable pageable) {
 
@@ -714,13 +594,10 @@ public class CustomerReportProvider implements ReportDataProvider {
 
             pageable.getSort().forEach(order -> {
 
-                String entityField =
-                        mapSortField(order.getProperty());
-
                 orders.add(
                         new Sort.Order(
                                 order.getDirection(),
-                                entityField
+                                mapSortField(order.getProperty())
                         )
                 );
             });
@@ -738,25 +615,24 @@ public class CustomerReportProvider implements ReportDataProvider {
     private String mapSortField(String field) {
 
         return switch (field) {
-
-            case "displayName" -> "displayName";
-            case "customerType" -> "customerType";
-            case "companyName" -> "companyName";
-            case "email" -> "email";
-            case "mobile" -> "mobile";
-            case "currency" -> "currency";
-            case "status" -> "status";
-            case "createdAt" -> "createdAt";
-            case "updatedAt" -> "updatedAt";
-            case "id" -> "id";
+            case "displayName",
+                 "customerType",
+                 "companyName",
+                 "email",
+                 "mobile",
+                 "currency",
+                 "status",
+                 "createdAt",
+                 "updatedAt",
+                 "id" -> field;
 
             default -> "id";
         };
     }
 
-    // =========================================================
+    // =====================================================
     // HELPERS
-    // =========================================================
+    // =====================================================
 
     private String getFilterValue(
             Map<String, Object> filters,
@@ -771,13 +647,14 @@ public class CustomerReportProvider implements ReportDataProvider {
     }
 
     private boolean hasText(String value) {
+
         return value != null && !value.isBlank();
     }
 
     private String containsPattern(String value) {
 
-        return "%"
-                + value.trim().toLowerCase(Locale.ROOT)
-                + "%";
+        return "%" +
+                value.trim().toLowerCase(Locale.ROOT) +
+                "%";
     }
 }

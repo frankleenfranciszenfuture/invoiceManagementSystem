@@ -32,8 +32,8 @@ public enum ReportModule {
     PARTY_CLEARANCE("Party Clearances"),
     WAREHOUSE("Warehouses"),
     EXPENSE("Expenses"),
-    INVENTORY("Inventory");
-
+    INVENTORY("Inventory"),
+    AUDIT_LOG("Audit logs");
     private final String displayName;
 
     public static ReportModule fromValue(String value) {

@@ -15,7 +15,7 @@ import java.util.Optional;
 @Repository
 public interface BankAccountRepository
         extends JpaRepository<BankAccount, Long>,
-        JpaSpecificationExecutor<BankAccount> {
+        JpaSpecificationExecutor<BankAccount>{
 
     // =====================================================
     // CREATE
