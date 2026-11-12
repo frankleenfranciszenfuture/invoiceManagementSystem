@@ -3,6 +3,7 @@ import React, {
     useEffect,
     useCallback,
     useState,
+    useRef,
 } from "react";
 
 import {
@@ -22,6 +23,7 @@ import NavbarAuditLog from "../components/NavbarAuditLog";
 import AuditLogOverview from "../pages/AuditLogOverview";
 import AuditLogFilters from "../pages/AuditLogFilters";
 import AuditLogTable from "../pages/AuditLogTable";
+import AuditLogExportToolbar from "../components/AuditLogExportToolbar";
 
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
 
@@ -60,7 +62,7 @@ export default function AuditLogDashboard() {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
-
+    const auditTableRef = useRef(null);
     /* =====================================================
        AUTH STATE
     ===================================================== */
@@ -310,7 +312,13 @@ export default function AuditLogDashboard() {
        MODULE SELECTION
     ===================================================== */
 
+    /* =====================================================
+    MODULE SELECTION + AUTO SCROLL
+ ===================================================== */
+
     const handleModuleChange = (moduleName) => {
+
+        // Update selected module filter
         dispatch(
             setAuditLogFilters({
                 entityName:
@@ -320,7 +328,16 @@ export default function AuditLogDashboard() {
             })
         );
 
+        // Reset pagination
         dispatch(setAuditLogPage(0));
+
+        // Scroll to audit table
+        requestAnimationFrame(() => {
+            auditTableRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+            });
+        });
     };
 
     const handleRefresh = () => {
@@ -512,39 +529,52 @@ export default function AuditLogDashboard() {
                         loading={loading}
                     />
 
-                    {/* FILTER TOGGLE */}
+                    {/* FILTER TOGGLE + TABLE HEADING */}
 
-                    <div className="
-                            mb-3 flex items-center justify-between
-                            px-2
-                        ">
+                    <div
+                        ref={auditTableRef}
+                        className="mb-3 scroll-mt-5"
+                    >
+                        <div className="
+        mb-3 flex items-center justify-between px-2
+    ">
 
-                        <p className="text-sm font-semibold text-gray-700">
-                            Audit Activities
-                        </p>
+                            <div>
+                                <p className="text-sm font-semibold text-gray-700">
+                                    {filters.entityName
+                                        ? `${filters.entityName.replaceAll("_", " ")} Audit Activities`
+                                        : "All Audit Activities"
+                                    }
+                                </p>
 
-                        <button
-                            type="button"
-                            onClick={() => setShowFilters((previous) => !previous)}
-                            className="
-            flex items-center gap-2 rounded-lg
-            border border-gray-200 bg-white
-            px-4 py-2 text-xs font-medium
-            text-gray-600 shadow-sm transition
-            hover:border-blue-300 hover:bg-blue-50
-            hover:text-blue-600
-        "
-                        >
-                            <icon name="sliders-horizontal" size={15} />
+                                <p className="mt-1 text-xs text-gray-500">
+                                    View audit history and changes for the selected module.
+                                </p>
+                            </div>
 
-                            {showFilters ? "Hide Filters" : "Show Filters"}
+                            <button
+                                type="button"
+                                onClick={() => setShowFilters(previous => !previous)}
+                                className="
+                flex items-center gap-2 rounded-lg
+                border border-gray-200 bg-white
+                px-4 py-2 text-xs font-medium
+                text-gray-600 shadow-sm transition
+                hover:border-blue-300 hover:bg-blue-50
+                hover:text-blue-600
+            "
+                            >
+                                <icon name="sliders-horizontal" size={15} />
 
-                            <icon
-                                name={showFilters ? "chevron-up" : "chevron-down"}
-                                size={14}
-                            />
-                        </button>
+                                {showFilters ? "Hide Filters" : "Show Filters"}
 
+                                <icon
+                                    name={showFilters ? "chevron-up" : "chevron-down"}
+                                    size={14}
+                                />
+                            </button>
+
+                        </div>
                     </div>
 
                     {/* FILTERS */}
@@ -572,6 +602,13 @@ export default function AuditLogDashboard() {
                             {error}
                         </div>
                     )}
+
+                    {/* EXPORT TOOLBAR */}
+
+                    <AuditLogExportToolbar
+                        filters={filters}
+                        totalElements={totalElements}
+                    />
 
                     {/* AUDIT TABLE */}
 

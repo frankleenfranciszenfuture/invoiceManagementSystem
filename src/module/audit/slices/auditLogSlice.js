@@ -4,6 +4,7 @@ import {
   fetchAuditLogs,
   fetchAuditLogById,
   fetchEntityAuditHistory,
+  exportAuditLogs,
 } from "../thunks/auditLogThunks";
 
 /* =====================================================
@@ -47,6 +48,10 @@ const initialState = {
   loading: false,
   detailsLoading: false,
   historyLoading: false,
+
+  exportLoading: false,
+  exportFormat: null,
+  exportError: null,
 
   error: null,
   detailsError: null,
@@ -170,6 +175,16 @@ const auditLogSlice = createSlice({
         ...initialState.historyPagination,
       },
     }),
+
+    clearAuditLogExportError: (state) => {
+      state.exportError = null;
+    },
+    clearAuditLogError: (state) => {
+      state.error = null;
+      state.detailsError = null;
+      state.historyError = null;
+      state.exportError = null;
+    },
   },
 
   extraReducers: (builder) => {
@@ -258,6 +273,33 @@ const auditLogSlice = createSlice({
           action.error?.message ||
           "Failed to fetch entity audit history.";
       });
+
+    /* =============================================
+   EXPORT AUDIT LOGS
+   ============================================= */
+
+    builder
+      .addCase(exportAuditLogs.pending, (state, action) => {
+        state.exportLoading = true;
+        state.exportFormat = action.meta.arg?.format || null;
+        state.exportError = null;
+      })
+
+      .addCase(exportAuditLogs.fulfilled, (state) => {
+        state.exportLoading = false;
+        state.exportFormat = null;
+        state.exportError = null;
+      })
+
+      .addCase(exportAuditLogs.rejected, (state, action) => {
+        state.exportLoading = false;
+        state.exportFormat = null;
+
+        state.exportError =
+          action.payload ||
+          action.error?.message ||
+          "Failed to export audit logs.";
+      });
   },
 });
 
@@ -273,6 +315,7 @@ export const {
   clearSelectedAuditLog,
   clearEntityAuditHistory,
   clearAuditLogError,
+  clearAuditLogExportError,
   resetAuditLogState,
 } = auditLogSlice.actions;
 
