@@ -2410,6 +2410,138 @@ export const reportModuleConfig = {
       },
     },
   },
+
+  NOTIFICATION: {
+    displayName: "Notifications",
+
+    reports: {
+      NOTIFICATION_REPORT: {
+        name: "Notification Report",
+        description:
+          "View notification details, recipients, read and archive status, priority, module, action and received timestamp.",
+
+        defaultSortBy: "receivedAt",
+        defaultSortDirection: "DESC",
+
+        sortFields: [
+          { label: "Received Date", value: "receivedAt" },
+          { label: "Notification ID", value: "notificationId" },
+          { label: "Title", value: "title" },
+          { label: "Module", value: "moduleName" },
+          { label: "Action", value: "action" },
+          { label: "Notification Type", value: "notificationType" },
+          { label: "Priority", value: "priority" },
+          { label: "Recipient ID", value: "recipientId" },
+          { label: "User ID", value: "userId" },
+          { label: "Read Date", value: "readAt" },
+          { label: "Archived Date", value: "archivedAt" },
+          {
+            label: "Notification Created Date",
+            value: "notificationCreatedAt",
+          },
+          { label: "Updated Date", value: "updatedAt" },
+        ],
+
+        filters: [
+          {
+            key: "module",
+            label: "Module",
+            type: "TEXT",
+            placeholder: "Enter module",
+          },
+          {
+            key: "moduleName",
+            label: "Module Name",
+            type: "TEXT",
+            placeholder: "Enter module name",
+          },
+          {
+            key: "action",
+            label: "Action",
+            type: "TEXT",
+            placeholder: "Enter action",
+          },
+          {
+            key: "notificationType",
+            label: "Notification Type",
+            type: "TEXT",
+            placeholder: "Enter notification type",
+          },
+          {
+            key: "priority",
+            label: "Priority",
+            type: "TEXT",
+            placeholder: "Enter priority",
+          },
+          {
+            key: "userId",
+            label: "User ID",
+            type: "NUMBER",
+            min: 1,
+            step: 1,
+          },
+          {
+            key: "read",
+            label: "Read Status",
+            type: "SELECT",
+            options: [
+              { label: "Read", value: "true" },
+              { label: "Unread", value: "false" },
+            ],
+          },
+          {
+            key: "archived",
+            label: "Archive Status",
+            type: "SELECT",
+            options: [
+              { label: "Archived", value: "true" },
+              { label: "Not Archived", value: "false" },
+            ],
+          },
+          {
+            key: "fromDate",
+            label: "Received From",
+            type: "DATE",
+          },
+          {
+            key: "toDate",
+            label: "Received To",
+            type: "DATE",
+          },
+        ],
+
+        columns: [
+          { key: "notificationId", label: "Notification ID" },
+          { key: "recipientId", label: "Recipient ID" },
+          { key: "userId", label: "User ID" },
+          { key: "title", label: "Title" },
+          { key: "message", label: "Message" },
+          { key: "module", label: "Module" },
+          { key: "moduleName", label: "Module Name" },
+          { key: "action", label: "Action" },
+          { key: "notificationType", label: "Notification Type" },
+          { key: "priority", label: "Priority" },
+          { key: "actionUrl", label: "Action URL" },
+          { key: "referenceId", label: "Reference ID" },
+          { key: "referenceNumber", label: "Reference Number" },
+          { key: "entityName", label: "Entity Name" },
+          { key: "entityId", label: "Entity ID" },
+          { key: "senderId", label: "Sender ID" },
+          { key: "createdByName", label: "Created By Name" },
+          { key: "read", label: "Read" },
+          { key: "readAt", label: "Read Date" },
+          { key: "archived", label: "Archived" },
+          { key: "archivedAt", label: "Archived Date" },
+          { key: "receivedAt", label: "Received Date" },
+          { key: "active", label: "Active" },
+          { key: "notificationCreatedAt", label: "Notification Created Date" },
+          { key: "updatedAt", label: "Updated Date" },
+          { key: "createdBy", label: "Created By" },
+          { key: "updatedBy", label: "Updated By" },
+        ],
+      },
+    },
+  },
 };
 
 /*
@@ -2443,6 +2575,7 @@ export const reportModules = [
   { code: "CREDIT_CLEARANCE", name: "Party Clearances" },
   { code: "WAREHOUSE", name: "Warehouses" },
   { code: "INVENTORY", name: "Inventory" },
+  { code: "NOTIFICATION", name: "Notifications" },
 ];
 
 /*

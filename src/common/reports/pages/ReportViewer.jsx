@@ -288,22 +288,6 @@ export default function ReportViewer() {
         return reportBuilderConfig?.filters || [];
     }, [reportBuilderConfig]);
 
-    const defaultSortBy = useMemo(() => {
-        return (
-            getReportDefaultSort(
-                activeModule,
-                activeReportCode
-            ) || "displayName"
-        );
-    }, [
-        activeModule,
-        activeReportCode,
-    ]);
-
-    /* =====================================================
-       REPORT DEFINITION
-    ===================================================== */
-
     const reportDefinition = useMemo(() => {
         const reports = catalog?.reports || [];
 
@@ -320,6 +304,28 @@ export default function ReportViewer() {
     const reportTitle =
         reportDefinition?.name ||
         formatLabel(activeReportCode || "Report");
+
+    const defaultSortBy = useMemo(() => {
+        const configuredSort =
+            getReportDefaultSort(activeModule, activeReportCode);
+
+        const availableColumns = reportDefinition?.columns || [];
+
+        if (
+            configuredSort &&
+            availableColumns.some((column) => column.key === configuredSort)
+        ) {
+            return configuredSort;
+        }
+
+        return availableColumns[0]?.key || "";
+    }, [activeModule, activeReportCode, reportDefinition]);
+
+    /* =====================================================
+       REPORT DEFINITION
+    ===================================================== */
+
+
 
     /* =====================================================
        COMMON REPORT REQUEST BUILDER

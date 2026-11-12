@@ -139,6 +139,7 @@ const inventorySlice = createSlice({
       .addCase(fetchStockById.pending, (state) => {
         state.stockLoading = true;
         state.stockError = null;
+        state.stock = null;
       })
       .addCase(fetchStockById.fulfilled, (state, action) => {
         state.stockLoading = false;
@@ -146,6 +147,7 @@ const inventorySlice = createSlice({
       })
       .addCase(fetchStockById.rejected, (state, action) => {
         state.stockLoading = false;
+        state.stock = null;
         state.stockError = action.payload || "Failed to fetch stock.";
       });
 
@@ -294,6 +296,7 @@ const inventorySlice = createSlice({
       .addCase(fetchInventoryTransactionById.pending, (state) => {
         state.transactionLoading = true;
         state.transactionError = null;
+        state.transaction = null;
       })
       .addCase(fetchInventoryTransactionById.fulfilled, (state, action) => {
         state.transactionLoading = false;
@@ -301,6 +304,7 @@ const inventorySlice = createSlice({
       })
       .addCase(fetchInventoryTransactionById.rejected, (state, action) => {
         state.transactionLoading = false;
+        state.transaction = null;
         state.transactionError =
           action.payload || "Failed to fetch transaction.";
       });

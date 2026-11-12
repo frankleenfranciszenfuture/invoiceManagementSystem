@@ -192,6 +192,12 @@ import InvoiceApprovalDashboard from "./module/approval/invoiceApproval/pages/In
 import InvoiceApprovalView from "./module/approval/invoiceApproval/pages/InvoiceApprovalView";
 import AuditLogDashboard from "./module/audit/pages/AuditLogDashboard";
 import AuditLogDetails from "./module/audit/pages/AuditLogDetails";
+import InventoryStockViewDetails from "./inventoryModule/inventory/pages/InventoryStockViewDetails";
+import InventoryTransactionViewDetails from "./inventoryModule/inventory/pages/InventoryTransactionViewDetails";
+import InventoryStockDashboard from "./inventoryModule/inventory/pages/InventoryStockDashboard";
+import InventoryTransactionDashboard from "./inventoryModule/inventory/pages/InventoryTransactionDashboard";
+import InventoryStockAdjustmentDashboard from "./inventoryModule/inventory/adjustmentStock/InventoryStockAdjustmentDashboard";
+import InventoryStockAdjustmentViewDetails from "./inventoryModule/inventory/adjustmentStock/InventoryStockAdjustmentViewDetails";
 
 
 
@@ -825,16 +831,57 @@ function AppContent() {
           element={<InventoryDashbaord />}
         />
 
+        {/* =================================================
+                    OPENINGSTOCK
+            ================================================= */}
+
         <Route
           path="/inventory/openStock"
+          element={<InventoryStockDashboard />}
+        />
+
+
+        <Route
+          path="/inventory/openStock/create"
           element={<InventoryOpeningStock />}
         />
 
+        <Route
+          path="/inventory/openStock/view/:id"
+          element={<InventoryStockViewDetails />}
+        />
 
         <Route
-          path="/inventory/adjustmentStock"
+          path="/inventory/transactions"
+          element={<InventoryTransactionDashboard />}
+        />
+        <Route
+          path="/inventory/transactions/view/:id"
+          element={<InventoryTransactionViewDetails />}
+        />
+
+        {/* =================================================
+                    ADJUSTMENT STOCK
+            ================================================= */}
+
+
+        <Route
+          path="/inventory/adjustmentStock/create"
           element={<InventoryStockAdjustment />}
         />
+        <Route
+          path="/inventory/adjustmentStock"
+          element={<InventoryStockAdjustmentDashboard />}
+        />
+
+        <Route
+          path="/inventory/adjustmentStock/view/:id"
+          element={<InventoryStockAdjustmentViewDetails />}
+        />
+
+        {/* =================================================
+                    WAREHOUSE
+            ================================================= */}
 
 
         <Route
@@ -980,7 +1027,7 @@ function AppContent() {
         />
 
         {/* =================================================
-                    PAYMENTS
+                  INVOICE  PAYMENTS
             ================================================= */}
 
         <Route
@@ -998,6 +1045,28 @@ function AppContent() {
         />
         <Route
           path="/invoice/payments/view/:id"
+          element={<PaymentViewDetails />}
+        />
+
+        {/* =================================================
+                    INVENTORY RECORD PAYMENTS
+            ================================================= */}
+
+        <Route
+          path="/inventory/payments"
+          element={<PaymentDashboard />}
+        />
+
+        <Route
+          path="/inventory/payments/create"
+          element={<PaymentCreate />}
+        />
+        <Route
+          path="/inventory/payments/edit/:id"
+          element={<PaymentCreate />}
+        />
+        <Route
+          path="/inventory/payments/view/:id"
           element={<PaymentViewDetails />}
         />
 

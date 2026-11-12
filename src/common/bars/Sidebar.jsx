@@ -268,11 +268,21 @@ const INVENTORY_NAV = [
 
     },
 
+
+
     {
         label: "Adjustment Stock",
         moduleName: "Adjustment Stock",
         icon: LayoutDashboard,
         to: "/inventory/adjustmentStock",
+
+    },
+
+    {
+        label: "Stock Transaction",
+        moduleName: "Stock Transaction",
+        icon: LayoutDashboard,
+        to: "/inventory/transactions",
 
     },
 
