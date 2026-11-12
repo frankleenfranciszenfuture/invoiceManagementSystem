@@ -12,6 +12,7 @@ public enum ReportModule {
     CUSTOMER("Customers"),
     PARTY("Parties"),
     CREDIT_CLEARANCE("Credit Clearance"),
+    PRODUCT("Product"),
     CATEGORY("Categories"),
     SUBCATEGORY("Subcategories"),
     SIZE("Sizes"),
@@ -33,6 +34,7 @@ public enum ReportModule {
     WAREHOUSE("Warehouses"),
     EXPENSE("Expenses"),
     INVENTORY("Inventory"),
+    NOTIFICATION("Notification"),
     AUDIT_LOG("Audit logs");
     private final String displayName;
 

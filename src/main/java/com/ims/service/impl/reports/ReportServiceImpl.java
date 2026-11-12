@@ -272,19 +272,24 @@ public class ReportServiceImpl implements ReportService {
         if (request.getSortBy() != null
                 && !request.getSortBy().isBlank()) {
 
-            boolean validColumn =
-                    definition.getColumns()
-                            .stream()
-                            .anyMatch(column ->
-                                    column.getKey().equals(
-                                            request.getSortBy()
-                                    )
-                            );
+            boolean validColumn = definition.getColumns()
+                    .stream()
+                    .anyMatch(column ->
+                            column.getKey().equals(request.getSortBy())
+                    );
 
             if (!validColumn) {
+                String availableColumns = definition.getColumns()
+                        .stream()
+                        .map(ReportColumn::getKey)
+                        .collect(Collectors.joining(", "));
+
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
-                        "Invalid report sort column."
+                        "Invalid report sort column: "
+                                + request.getSortBy()
+                                + ". Available columns: "
+                                + availableColumns
                 );
             }
 
