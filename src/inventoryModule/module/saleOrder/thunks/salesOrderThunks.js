@@ -205,3 +205,24 @@ export const deleteSalesOrder = createAsyncThunk(
     }
   },
 );
+
+/* ============================================================
+   CONVERT SALES ORDER TO INVOICE
+============================================================ */
+
+export const convertSaleOrderToInvoice = createAsyncThunk(
+  "salesOrder/convertSaleOrderToInvoice",
+  async (salesOrderId, { rejectWithValue }) => {
+    try {
+      const response = await api.post(
+        `/sale-orders/${salesOrderId}/convert-to-invoice`,
+      );
+
+      return getResponseData(response);
+    } catch (error) {
+      return rejectWithValue(
+        handleError(error, "Failed to convert sales order into invoice"),
+      );
+    }
+  },
+);

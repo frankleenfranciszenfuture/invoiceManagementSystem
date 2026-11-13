@@ -219,6 +219,27 @@ export default function ReportDashboard() {
         }
     };
 
+
+    /* =====================================================
+   CLOSE MODAL ON ESCAPE KEY
+   ===================================================== */
+
+    useEffect(() => {
+        if (!isReportModalOpen) return;
+
+        const handleEscapeKey = (event) => {
+            if (event.key === "Escape") {
+                handleCloseModal();
+            }
+        };
+
+        window.addEventListener("keydown", handleEscapeKey);
+
+        return () => {
+            window.removeEventListener("keydown", handleEscapeKey);
+        };
+    }, [isReportModalOpen]);
+
     /* =====================================================
        SELECTED MODULE DATA
        ===================================================== */
@@ -435,7 +456,7 @@ export default function ReportDashboard() {
 
                 ) : (
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
                         {filteredModules.map((item) => {
                             const moduleKey = item.module;
@@ -517,7 +538,7 @@ export default function ReportDashboard() {
                     }}
                 >
 
-                    <div className="flex max-h-[90vh] w-[780px] max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+                    <div className="flex max-h-[90vh] w-[680px] max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
 
                         {/* MODAL HEADER */}
 
@@ -591,7 +612,7 @@ export default function ReportDashboard() {
 
                             ) : (
 
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div className="grid grid-cols-3 gap-4 md:grid-cols-1">
 
                                     {reports.map((report) => (
 

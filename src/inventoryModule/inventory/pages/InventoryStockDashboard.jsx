@@ -17,6 +17,7 @@ import {
     Warehouse,
     RefreshCw,
     PackagePlus,
+    Home,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -37,6 +38,7 @@ import {
 
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
 import { useNavigate } from "react-router-dom";
+import ToolTipText from "../../../common/toolTip/ToolTipText";
 
 /* =========================================================
    CONSTANTS
@@ -448,15 +450,44 @@ export default function InventoryStockDashboard() {
                         mb-5 flex flex-wrap items-center
                         justify-between gap-3 px-2
                     ">
-                        <div>
-                            <h1 className="text-xl font-semibold text-gray-800">
-                                Inventory Stocks
-                            </h1>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => navigate("/")}
+                                className="
+                        group
+                        relative
+                            flex
+                            items-center
+                            justify-center
+                            rounded-md
+                            border
+                            border-blue-300
+                            bg-white
+                            px-2
+                            text-[#0095FD]
+                            transition
+                            hover:bg-[#0095FD]/20
+                        "
+                                title="Home"
+                            >
+                                <Home size={18} />
+                                <ToolTipText text="Home" position="bottom" />
 
-                            <p className="mt-1 text-sm text-gray-500">
-                                View and monitor product stock across warehouses.
-                            </p>
+                            </button>
+
+                            <div>
+                                <h1 className="text-xl font-semibold text-gray-800">
+                                    Inventory Stocks
+                                </h1>
+
+                                <p className="mt-1 text-sm text-gray-500">
+                                    View and monitor product stock across warehouses.
+                                </p>
+                            </div>
                         </div>
+
+
                         <div className="flex flex-wrap gap-2">
                             <button
                                 type="button"

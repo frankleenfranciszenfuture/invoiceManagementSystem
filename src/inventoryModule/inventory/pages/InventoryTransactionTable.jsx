@@ -281,10 +281,9 @@ export default function InventoryTransactionTable({
                                 "Product",
                                 "Warehouse",
                                 "Movement",
-                                "Date",
-                                "Quantity In",
-                                "Quantity Out",
-                                "Balance",
+                                "In",
+                                "Out",
+                                "Bal",
                                 ...(canViewTransaction ? ["Actions"] : []),
                             ].map((header) => (
                                 <th
@@ -388,14 +387,12 @@ export default function InventoryTransactionTable({
                                                 transaction.movementType || "—"
                                             ).replaceAll("_", " ")}
                                         </span>
-                                    </td>
-
-                                    {/* DATE */}
-                                    <td className="px-2 py-3 whitespace-nowrap">
-                                        <p className="font-medium text-gray-700">
+                                        <p className="mt-1 font-medium text-gray-500">
                                             {formatDate(transaction.transactionDate)}
                                         </p>
                                     </td>
+
+
 
                                     {/* QUANTITY IN */}
                                     <td className="px-2 py-3">

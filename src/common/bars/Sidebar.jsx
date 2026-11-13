@@ -89,6 +89,14 @@ const NAV = [
     },
 
     {
+        label: "Inventory",
+        moduleName: "Inventory",
+        icon: BoxIcon,
+        to: "/inventory/dashboard",
+        dropdown: true,
+    },
+
+    {
         label: "Invoices",
         moduleName: "Invoices",
         icon: FileText,
@@ -125,13 +133,6 @@ const NAV = [
         dropdown: true,
     },
 
-    {
-        label: "Inventory",
-        moduleName: "Inventory",
-        icon: BoxIcon,
-        to: "/inventory",
-        dropdown: true,
-    },
 
     {
         label: "Reports",
@@ -256,7 +257,7 @@ const INVENTORY_NAV = [
         label: "Inventory Dashboard",
         moduleName: "Inventory Dashboard",
         icon: LayoutDashboard,
-        to: "/inventory",
+        to: "/inventory/dashboard",
 
     },
 

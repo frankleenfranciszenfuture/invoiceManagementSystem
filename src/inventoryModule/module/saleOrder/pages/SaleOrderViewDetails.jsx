@@ -213,7 +213,8 @@ const SaleOrderViewDetails = () => {
 
     const status = getStatus(order);
 
-    const isDraft = status === "DRAFT";
+    const isDraft =
+        String(salesOrder?.salesOrderStatus || salesOrder?.status || "").toUpperCase() === "DRAFT";
 
     const customer = order?.customer || order?.party || null;
 
@@ -327,6 +328,7 @@ const SaleOrderViewDetails = () => {
         navigate(`/inventory/saleOrder/edit/${salesOrder.id}`);
     };
 
+
     return (
         <div className="space-y-6 pb-8 mt-2">
 
@@ -414,10 +416,9 @@ const SaleOrderViewDetails = () => {
                                 "
                             >
                                 <Pencil size={15} />
-                                Edit sales Order
+                                Edit Sales Order
                             </button>
                         )}
-
                         <div className="flex items-center gap-2">
                             <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600">
                                 <CalendarDays size={16} className="text-gray-400" />

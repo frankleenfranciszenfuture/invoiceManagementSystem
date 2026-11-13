@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
     Boxes,
     Warehouse,
@@ -14,6 +14,7 @@ import {
     ArrowLeft,
     ArrowDownToLine,
     ArrowUpFromLine,
+    Landmark,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -357,6 +358,9 @@ const InventoryStockAdjustment = ({
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
+    const { id } = useParams();
+
+    const isEdit = Boolean(id);
     /* ----------------------------- REDUX STATE ---------------------------- */
 
     const authState = useSelector((state) => state.auth || {});
@@ -802,56 +806,70 @@ const InventoryStockAdjustment = ({
     /* ---------------------------------------------------------------------- */
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="
+            flex h-full min-h-0 flex-col
+            bg-gray-50 px-3.5 py-3
+        ">
 
-            {/* Header */}
+            {/* HEADER */}
 
-            <div className="border border-lime-400 rounded bg-white px-2 py-4 m-3">
-                <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+            <div className="
+                mb-3 flex shrink-0 items-center
+                justify-between rounded-xl
+                border-b-[3px] border-[#B7E34A]
+                bg-white px-5 py-4 shadow-sm
+            ">
 
-                    <div className="flex items-center gap-3">
-                        <button
-                            type="button"
-                            onClick={handleClose}
-                            disabled={actionLoading}
-                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:bg-gray-50"
-                            title="Go back"
-                        >
-                            <ArrowLeft size={18} />
-                        </button>
-
-                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                            <PackagePlus size={22} />
-                        </div>
-
-                        <div>
-                            <h1 className="text-lg font-semibold text-gray-800">
-                                Create Stock Adjustment
-                            </h1>
-
-                            <p className="mt-0.5 text-sm text-gray-500">
-                                Increase or decrease existing inventory stock
-                            </p>
-                        </div>
-                    </div>
+                <div className="flex items-center gap-3">
 
                     <button
                         type="button"
                         onClick={handleClose}
-                        disabled={actionLoading}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-100 transition bg-red-500 hover:bg-red-400 hover:text-gray-100"
-                        title="Close"
+                        className="
+                    flex h-9 w-9 items-center justify-center
+                    rounded-lg border border-gray-200
+                    text-gray-500 transition hover:bg-gray-100
+                    "
+                        title="Go Back"
                     >
-                        <X size={19} />
+                        <ArrowLeft size={18} />
                     </button>
 
+                    <div>
+                        <h2 className="text-base font-semibold text-gray-800">
+                            {isEdit
+                                ? "Edit Adjustment Stock"
+                                : "Create Adjustment Stock"
+                            }
+                        </h2>
+
+                        <p className="mt-0.5 text-xs text-gray-400">
+                            {isEdit
+                                ? "Update the existing adjustment stock information"
+                                : "Create and configure a adjustment stock for your products"
+                            }
+                        </p>
+                    </div>
+
                 </div>
+
+                <div className="
+                    hidden items-center gap-2 rounded-lg
+                    bg-blue-50 px-3 py-2 sm:flex
+                ">
+                    <Landmark size={16} className="text-[#408DFB]" />
+
+                    <span className="text-xs font-medium text-[#408DFB]">
+                        Adjustment Stock
+                    </span>
+                </div>
+
             </div>
 
 
             {/* Main Content */}
 
-            <div className="mx-auto max-w-7xl space-y-5 p-2">
+            <div className=" space-y-5 p-2">
 
                 {/* Product and Warehouse Details */}
 

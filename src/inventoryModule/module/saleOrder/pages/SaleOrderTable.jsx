@@ -7,7 +7,8 @@ import {
     fetchAllSalesOrders,
     deleteSalesOrder,
     confirmSalesOrder,
-    dispatchSalesOrder
+    dispatchSalesOrder,
+    convertSaleOrderToInvoice,
 } from "../thunks/salesOrderThunks";
 
 import {
@@ -24,6 +25,7 @@ import {
     UserRound,
     CheckCircle,
     PackageCheck,
+    FileText,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -62,6 +64,7 @@ export default function SaleOrderTable({ salesOrders = [],
         ? salesOrders
         : [];
 
+    const [convertingOrderId, setConvertingOrderId] = React.useState(null);
     /* =====================================================
        AUTH STATE
     ===================================================== */
@@ -236,6 +239,19 @@ export default function SaleOrderTable({ salesOrders = [],
     };
 
     /* =====================================================
+   GENERATED INVOICE CHECK
+===================================================== */
+
+    const hasGeneratedInvoice = (order) => {
+        return Boolean(
+            order?.invoiceId ||
+            order?.invoiceGenerated ||
+            order?.invoice?.id ||
+            order?.convertedToInvoice
+        );
+    };
+
+    /* =====================================================
        CURRENCY FORMAT
     ===================================================== */
 
@@ -372,6 +388,80 @@ export default function SaleOrderTable({ salesOrders = [],
     };
 
     /* =====================================================
+   CONVERT SALES ORDER TO INVOICE
+===================================================== */
+
+    const handleConvertToInvoice = async (order) => {
+        if (!canEditSalesOrder) {
+            toast.error(
+                "You do not have permission to convert sales orders."
+            );
+            return;
+        }
+
+        if (!order?.id) {
+            toast.error("Sales order ID is missing.");
+            return;
+        }
+
+        const status = getOrderStatus(order);
+
+        if (!["CONFIRMED", "DISPATCHED"].includes(status)) {
+            toast.error(
+                "Only confirmed or dispatched sales orders can be converted."
+            );
+            return;
+        }
+
+        if (hasGeneratedInvoice(order)) {
+            toast.error("Invoice has already been generated for this sales order.");
+            return;
+        }
+
+        if (convertingOrderId !== null) {
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Convert sales order ${order?.orderNo || ""} into an invoice?`
+        );
+
+        if (!confirmed) return;
+
+        try {
+            setConvertingOrderId(order.id);
+
+            const invoice = await dispatch(
+                convertSaleOrderToInvoice(order.id)
+            ).unwrap();
+
+            if (!invoice?.id) {
+                throw new Error(
+                    "Invoice was generated, but its ID was not returned."
+                );
+            }
+
+            toast.success(
+                "Sales order converted into invoice successfully."
+            );
+
+            refreshSalesOrders(pageNumber, pageSize);
+
+            navigate(`/invoices/view/${invoice.id}`);
+
+        } catch (error) {
+            toast.error(
+                typeof error === "string"
+                    ? error
+                    : error?.message ||
+                    "Failed to convert sales order into invoice."
+            );
+        } finally {
+            setConvertingOrderId(null);
+        }
+    };
+
+    /* =====================================================
        VIEW SALES ORDER
     ===================================================== */
 
@@ -390,7 +480,7 @@ export default function SaleOrderTable({ salesOrders = [],
 
         dispatch(setExsistingSaleOrder(order));
 
-        navigate(`/inventory/saleOrder/view/${order.id}`);
+        navigate(`/inventory/salesOrder/view/${order.id}`);
     };
 
     /* =====================================================
@@ -724,8 +814,70 @@ export default function SaleOrderTable({ salesOrders = [],
                                             </button>
                                         )}
 
+
+                                        {/* CONVERT TO INVOICE */}
+
+                                        {canEditSalesOrder && (() => {
+                                            const canConvert = ["CONFIRMED", "DISPATCHED"].includes(status);
+                                            const alreadyConverted = hasGeneratedInvoice(order);
+                                            const isConverting = convertingOrderId === order.id;
+
+                                            const disabled =
+                                                !canConvert ||
+                                                alreadyConverted ||
+                                                isConverting ||
+                                                convertingOrderId !== null;
+
+                                            return (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleConvertToInvoice(order)}
+                                                    disabled={disabled}
+                                                    className={`
+                group relative
+                flex h-8 w-8
+                items-center justify-center
+                rounded-lg
+                transition
+                ${alreadyConverted
+                                                            ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                                                            : canConvert
+                                                                ? "bg-purple-50 text-purple-600 hover:bg-purple-100 hover:text-purple-700"
+                                                                : "cursor-not-allowed bg-gray-100 text-gray-300"
+                                                        }
+                disabled:opacity-70
+            `}
+                                                >
+                                                    {isConverting ? (
+                                                        <span className="
+                    h-4 w-4
+                    animate-spin
+                    rounded-full
+                    border-2
+                    border-purple-300
+                    border-t-purple-700
+                " />
+                                                    ) : (
+                                                        <FileText size={16} />
+                                                    )}
+
+                                                    <ToolTipText
+                                                        text={
+                                                            alreadyConverted
+                                                                ? "Invoice Already Generated"
+                                                                : !canConvert
+                                                                    ? "Conversion unavailable for this status"
+                                                                    : isConverting
+                                                                        ? "Converting..."
+                                                                        : "Convert to Invoice"
+                                                        }
+                                                        position="bottom"
+                                                    />
+                                                </button>
+                                            );
+                                        })()}
                                         {/* CONFIRM */}
-                                        {["CONFIRMED", "PARTIALLY_RECEIVED"].includes(status) && (
+                                        {status === "CONFIRMED" && (
                                             <button
                                                 type="button"
                                                 onClick={() => handleDispatchSalesOrder(order)}

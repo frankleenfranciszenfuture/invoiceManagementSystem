@@ -827,7 +827,7 @@ function AppContent() {
             ================================================= */}
 
         <Route
-          path="/inventory"
+          path="/inventory/dashboard"
           element={<InventoryDashbaord />}
         />
 
@@ -986,12 +986,12 @@ function AppContent() {
         />
 
         <Route
-          path="/inventory/saleOrder/create"
+          path="/inventory/salesOrder/create"
           element={<SalesOrderCreate />}
         />
 
         <Route
-          path="/inventory/saleOrder/view/:id"
+          path="/inventory/salesOrder/view/:id"
           element={<SaleOrderViewDetails />}
         />
 

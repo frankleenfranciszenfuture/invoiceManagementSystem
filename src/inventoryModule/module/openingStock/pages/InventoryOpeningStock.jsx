@@ -27,6 +27,7 @@ import {
     CheckCircle2,
     Calculator,
     ArrowLeft,
+    Landmark,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -829,492 +830,506 @@ const InventoryOpeningStock = ({
     ===================================================== */
 
     return (
-        <div className="flex h-full min-h-0 flex-col bg-gray-50 px-3 mr-3">
+        <div className="
+            flex h-full min-h-0 flex-col
+            bg-gray-50 px-3.5 py-3
+        ">
 
-            <div className="mt-5 px-2 flex min-h-0 flex-1 flex-col overflow-hidden bg-gray-50">
+            {/* HEADER */}
 
-                {/* =========================================
-                    HEADER
+            <div className="
+                mb-3 flex shrink-0 items-center
+                justify-between rounded-xl
+                border-b-[3px] border-[#B7E34A]
+                bg-white px-5 py-4 shadow-sm
+            ">
+
+                <div className="flex items-center gap-3">
+
+                    <button
+                        type="button"
+                        onClick={handleClose}
+                        className="
+                    flex h-9 w-9 items-center justify-center
+                    rounded-lg border border-gray-200
+                    text-gray-500 transition hover:bg-gray-100
+                    "
+                        title="Go Back"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
+
+                    <div>
+                        <h2 className="text-base font-semibold text-gray-800">
+                            {isEdit
+                                ? "Edit Open Stock"
+                                : "Create Open Stock"
+                            }
+                        </h2>
+
+                        <p className="mt-0.5 text-xs text-gray-400">
+                            {isEdit
+                                ? "Update the existing bank account information"
+                                : "Create and configure a bank account for your business"
+                            }
+                        </p>
+                    </div>
+
+                </div>
+
+                <div className="
+                    hidden items-center gap-2 rounded-lg
+                    bg-blue-50 px-3 py-2 sm:flex
+                ">
+                    <Landmark size={16} className="text-[#408DFB]" />
+
+                    <span className="text-xs font-medium text-[#408DFB]">
+                        Open Stock
+                    </span>
+                </div>
+
+            </div>
+
+            {/* =========================================
+                    FORM CONTENT
                 ========================================= */}
 
-                <header className="shrink-0 px-3 rounded-lg border border-lime-500 bg-white">
+            <form
+                onSubmit={handleSubmit}
+                className="flex min-h-0 flex-1 flex-col overflow-hidden"
+            >
 
-                    <div className="flex items-center justify-between gap-4 px-5 py-4">
+                <main className="min-h-0 flex-1 overflow-y-auto px-5 py-5 lg:px-1">
 
-                        <div className="flex min-w-0 items-center gap-3">
+                    <div className="mx-auto flex max-w-10xl flex-col gap-5">
 
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                                <PackagePlus size={22} />
+                        {/* =================================
+                                PRODUCT AND WAREHOUSE
+                            ================================= */}
+
+                        <section className={sectionClass}>
+
+                            <SectionHeading
+                                icon={Boxes}
+                                title="Product & Warehouse Details"
+                                description="Select the product and warehouse where the opening stock will be recorded."
+                            />
+
+                            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+
+                                <FormField
+                                    label="Product"
+                                    required
+                                >
+                                    <SelectField
+                                        value={formData.productId}
+                                        onChange={(value) =>
+                                            updateField("productId", value)
+                                        }
+                                        options={productOptions}
+                                        placeholder="Select product"
+                                    />
+                                </FormField>
+
+
+                                <FormField
+                                    label="Warehouse"
+                                    required
+                                >
+                                    <SelectField
+                                        value={formData.warehouseId}
+                                        onChange={(value) =>
+                                            updateField("warehouseId", value)
+                                        }
+                                        options={warehouseOptions}
+                                        placeholder="Select warehouse"
+                                    />
+                                </FormField>
+
+
+                                <FormField
+                                    label="Unit"
+                                    required
+                                    hint="Select the unit used to record this stock quantity."
+                                >
+                                    <SelectField
+                                        value={formData.unitId}
+                                        onChange={(value) =>
+                                            updateField("unitId", value)
+                                        }
+                                        options={unitOptions}
+                                        placeholder="Select unit"
+                                    />
+                                </FormField>
+
+
+                                <FormField
+                                    label="Size"
+                                    hint="Optional. Select a size if this product uses size variations."
+                                >
+                                    <SelectField
+                                        value={formData.sizeId}
+                                        onChange={(value) =>
+                                            updateField("sizeId", value)
+                                        }
+                                        options={sizeOptions}
+                                        placeholder="Select size (optional)"
+                                    />
+                                </FormField>
+
                             </div>
 
-                            <div className="min-w-0">
-                                <h1 className="truncate text-base font-semibold text-gray-700">
-                                    Create Opening Stock
-                                </h1>
+                        </section>
 
-                                <p className="mt-1 text-xs text-gray-400">
-                                    Add initial stock quantity and cost for a product.
-                                </p>
+
+                        {/* =================================
+                                OPENING STOCK QUANTITY AND COST
+                            ================================= */}
+
+                        <section className={sectionClass}>
+
+                            <SectionHeading
+                                icon={Calculator}
+                                title="Opening Stock & Cost"
+                                description="Enter the initial quantity and unit cost. The total stock value is calculated automatically."
+                            />
+
+                            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+
+                                <FormField
+                                    label="Opening Quantity"
+                                    required
+                                    hint="Enter the initial quantity available in the selected warehouse."
+                                >
+                                    <TextInput
+                                        type="number"
+                                        value={formData.quantity}
+                                        onChange={(value) =>
+                                            updateField("quantity", value)
+                                        }
+                                        placeholder="Enter quantity"
+                                        min="0.001"
+                                        step="any"
+                                    />
+                                </FormField>
+
+
+                                <FormField
+                                    label="Unit Cost"
+                                    required
+                                    hint="Enter the cost for one unit of this product."
+                                >
+                                    <TextInput
+                                        type="number"
+                                        value={formData.unitCost}
+                                        onChange={(value) =>
+                                            updateField("unitCost", value)
+                                        }
+                                        placeholder="Enter unit cost"
+                                        min="0"
+                                        step="0.01"
+                                    />
+                                </FormField>
+
                             </div>
 
-                        </div>
+
+                            {/* TOTAL VALUE PREVIEW */}
+
+                            <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50/70 p-4">
+
+                                <div className="flex flex-wrap items-center justify-between gap-4">
+
+                                    <div className="flex items-center gap-3">
+
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm">
+                                            <Calculator size={19} />
+                                        </div>
+
+                                        <div>
+                                            <p className="text-xs font-medium text-gray-500">
+                                                Total Opening Stock Value
+                                            </p>
+
+                                            <p className="mt-1 text-xs text-gray-400">
+                                                Quantity × Unit Cost
+                                            </p>
+                                        </div>
+
+                                    </div>
+
+                                    <p className="text-xl font-semibold tabular-nums text-blue-700">
+                                        {formatCurrency(totalStockValue)}
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                        </section>
+
+
+                        {/* =================================
+                                TRANSACTION DETAILS
+                            ================================= */}
+
+                        <section className={sectionClass}>
+
+                            <SectionHeading
+                                icon={CalendarDays}
+                                title="Transaction Details"
+                                description="Set the date and add any notes related to this opening stock entry."
+                            />
+
+                            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+
+                                <FormField
+                                    label="Transaction Date"
+                                    required
+                                    hint="Date and time when the opening stock is recorded."
+                                >
+                                    <TextInput
+                                        type="datetime-local"
+                                        value={formData.transactionDate}
+                                        onChange={(value) =>
+                                            updateField("transactionDate", value)
+                                        }
+                                    />
+                                </FormField>
+
+
+                                <FormField
+                                    label="Notes"
+                                    hint="Optional notes for reference."
+                                >
+                                    <TextAreaField
+                                        value={formData.notes}
+                                        onChange={(value) =>
+                                            updateField("notes", value)
+                                        }
+                                        placeholder="Enter opening stock notes..."
+                                        rows={3}
+                                        maxLength={500}
+                                    />
+                                </FormField>
+
+                            </div>
+
+                        </section>
+
+
+                        {/* =================================
+                                SUMMARY
+                            ================================= */}
+
+                        <section className={sectionClass}>
+
+                            <SectionHeading
+                                icon={CheckCircle2}
+                                title="Opening Stock Summary"
+                                description="Review the selected details before saving."
+                            />
+
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                                    <p className="text-xs text-gray-400">
+                                        Product
+                                    </p>
+
+                                    <p className="mt-2 truncate text-sm font-semibold text-gray-700">
+                                        {selectedProduct
+                                            ? getProductLabel(selectedProduct)
+                                            : "Not selected"}
+                                    </p>
+                                </div>
+
+
+                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                                    <p className="text-xs text-gray-400">
+                                        Warehouse
+                                    </p>
+
+                                    <p className="mt-2 truncate text-sm font-semibold text-gray-700">
+                                        {selectedWarehouse
+                                            ? getWarehouseLabel(selectedWarehouse)
+                                            : "Not selected"}
+                                    </p>
+                                </div>
+
+
+                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                                    <p className="text-xs text-gray-400">
+                                        Opening Quantity
+                                    </p>
+
+                                    <p className="mt-2 text-sm font-semibold text-gray-700">
+                                        {formData.quantity || "0"}
+                                    </p>
+                                </div>
+
+
+                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                                    <p className="text-xs text-gray-400">
+                                        Unit Cost
+                                    </p>
+
+                                    <p className="mt-2 text-sm font-semibold text-gray-700">
+                                        {formatCurrency(formData.unitCost)}
+                                    </p>
+                                </div>
+
+                            </div>
+
+                        </section>
+
+                    </div>
+
+                </main>
+
+
+                {/* =====================================
+                        FOOTER
+                    ===================================== */}
+
+                <footer className="relative z-20 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-5 py-3.5 lg:px-7">
+
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
 
                         <button
                             type="button"
                             onClick={handleClose}
                             disabled={actionLoading}
-                            title="Close"
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-500 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            className={buttonSecondaryClass}
                         >
-                            <X size={18} />
+                            <ArrowLeft size={16} />
+                            Cancel
                         </button>
-
                     </div>
 
-                </header>
 
-
-                {/* =========================================
-                    FORM CONTENT
-                ========================================= */}
-
-                <form
-                    onSubmit={handleSubmit}
-                    className="flex min-h-0 flex-1 flex-col overflow-hidden"
-                >
-
-                    <main className="min-h-0 flex-1 overflow-y-auto px-5 py-5 lg:px-1">
-
-                        <div className="mx-auto flex max-w-10xl flex-col gap-5">
-
-                            {/* =================================
-                                PRODUCT AND WAREHOUSE
-                            ================================= */}
-
-                            <section className={sectionClass}>
-
-                                <SectionHeading
-                                    icon={Boxes}
-                                    title="Product & Warehouse Details"
-                                    description="Select the product and warehouse where the opening stock will be recorded."
-                                />
-
-                                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-
-                                    <FormField
-                                        label="Product"
-                                        required
-                                    >
-                                        <SelectField
-                                            value={formData.productId}
-                                            onChange={(value) =>
-                                                updateField("productId", value)
-                                            }
-                                            options={productOptions}
-                                            placeholder="Select product"
-                                        />
-                                    </FormField>
-
-
-                                    <FormField
-                                        label="Warehouse"
-                                        required
-                                    >
-                                        <SelectField
-                                            value={formData.warehouseId}
-                                            onChange={(value) =>
-                                                updateField("warehouseId", value)
-                                            }
-                                            options={warehouseOptions}
-                                            placeholder="Select warehouse"
-                                        />
-                                    </FormField>
-
-
-                                    <FormField
-                                        label="Unit"
-                                        required
-                                        hint="Select the unit used to record this stock quantity."
-                                    >
-                                        <SelectField
-                                            value={formData.unitId}
-                                            onChange={(value) =>
-                                                updateField("unitId", value)
-                                            }
-                                            options={unitOptions}
-                                            placeholder="Select unit"
-                                        />
-                                    </FormField>
-
-
-                                    <FormField
-                                        label="Size"
-                                        hint="Optional. Select a size if this product uses size variations."
-                                    >
-                                        <SelectField
-                                            value={formData.sizeId}
-                                            onChange={(value) =>
-                                                updateField("sizeId", value)
-                                            }
-                                            options={sizeOptions}
-                                            placeholder="Select size (optional)"
-                                        />
-                                    </FormField>
-
-                                </div>
-
-                            </section>
-
-
-                            {/* =================================
-                                OPENING STOCK QUANTITY AND COST
-                            ================================= */}
-
-                            <section className={sectionClass}>
-
-                                <SectionHeading
-                                    icon={Calculator}
-                                    title="Opening Stock & Cost"
-                                    description="Enter the initial quantity and unit cost. The total stock value is calculated automatically."
-                                />
-
-                                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-
-                                    <FormField
-                                        label="Opening Quantity"
-                                        required
-                                        hint="Enter the initial quantity available in the selected warehouse."
-                                    >
-                                        <TextInput
-                                            type="number"
-                                            value={formData.quantity}
-                                            onChange={(value) =>
-                                                updateField("quantity", value)
-                                            }
-                                            placeholder="Enter quantity"
-                                            min="0.001"
-                                            step="any"
-                                        />
-                                    </FormField>
-
-
-                                    <FormField
-                                        label="Unit Cost"
-                                        required
-                                        hint="Enter the cost for one unit of this product."
-                                    >
-                                        <TextInput
-                                            type="number"
-                                            value={formData.unitCost}
-                                            onChange={(value) =>
-                                                updateField("unitCost", value)
-                                            }
-                                            placeholder="Enter unit cost"
-                                            min="0"
-                                            step="0.01"
-                                        />
-                                    </FormField>
-
-                                </div>
-
-
-                                {/* TOTAL VALUE PREVIEW */}
-
-                                <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50/70 p-4">
-
-                                    <div className="flex flex-wrap items-center justify-between gap-4">
-
-                                        <div className="flex items-center gap-3">
-
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm">
-                                                <Calculator size={19} />
-                                            </div>
-
-                                            <div>
-                                                <p className="text-xs font-medium text-gray-500">
-                                                    Total Opening Stock Value
-                                                </p>
-
-                                                <p className="mt-1 text-xs text-gray-400">
-                                                    Quantity × Unit Cost
-                                                </p>
-                                            </div>
-
-                                        </div>
-
-                                        <p className="text-xl font-semibold tabular-nums text-blue-700">
-                                            {formatCurrency(totalStockValue)}
-                                        </p>
-
-                                    </div>
-
-                                </div>
-
-                            </section>
-
-
-                            {/* =================================
-                                TRANSACTION DETAILS
-                            ================================= */}
-
-                            <section className={sectionClass}>
-
-                                <SectionHeading
-                                    icon={CalendarDays}
-                                    title="Transaction Details"
-                                    description="Set the date and add any notes related to this opening stock entry."
-                                />
-
-                                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-
-                                    <FormField
-                                        label="Transaction Date"
-                                        required
-                                        hint="Date and time when the opening stock is recorded."
-                                    >
-                                        <TextInput
-                                            type="datetime-local"
-                                            value={formData.transactionDate}
-                                            onChange={(value) =>
-                                                updateField("transactionDate", value)
-                                            }
-                                        />
-                                    </FormField>
-
-
-                                    <FormField
-                                        label="Notes"
-                                        hint="Optional notes for reference."
-                                    >
-                                        <TextAreaField
-                                            value={formData.notes}
-                                            onChange={(value) =>
-                                                updateField("notes", value)
-                                            }
-                                            placeholder="Enter opening stock notes..."
-                                            rows={3}
-                                            maxLength={500}
-                                        />
-                                    </FormField>
-
-                                </div>
-
-                            </section>
-
-
-                            {/* =================================
-                                SUMMARY
-                            ================================= */}
-
-                            <section className={sectionClass}>
-
-                                <SectionHeading
-                                    icon={CheckCircle2}
-                                    title="Opening Stock Summary"
-                                    description="Review the selected details before saving."
-                                />
-
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-
-                                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                                        <p className="text-xs text-gray-400">
-                                            Product
-                                        </p>
-
-                                        <p className="mt-2 truncate text-sm font-semibold text-gray-700">
-                                            {selectedProduct
-                                                ? getProductLabel(selectedProduct)
-                                                : "Not selected"}
-                                        </p>
-                                    </div>
-
-
-                                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                                        <p className="text-xs text-gray-400">
-                                            Warehouse
-                                        </p>
-
-                                        <p className="mt-2 truncate text-sm font-semibold text-gray-700">
-                                            {selectedWarehouse
-                                                ? getWarehouseLabel(selectedWarehouse)
-                                                : "Not selected"}
-                                        </p>
-                                    </div>
-
-
-                                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                                        <p className="text-xs text-gray-400">
-                                            Opening Quantity
-                                        </p>
-
-                                        <p className="mt-2 text-sm font-semibold text-gray-700">
-                                            {formData.quantity || "0"}
-                                        </p>
-                                    </div>
-
-
-                                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                                        <p className="text-xs text-gray-400">
-                                            Unit Cost
-                                        </p>
-
-                                        <p className="mt-2 text-sm font-semibold text-gray-700">
-                                            {formatCurrency(formData.unitCost)}
-                                        </p>
-                                    </div>
-
-                                </div>
-
-                            </section>
-
-                        </div>
-
-                    </main>
-
-
-                    {/* =====================================
-                        FOOTER
-                    ===================================== */}
-
-                    <footer className="relative z-20 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-5 py-3.5 lg:px-7">
-
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                            <span className="text-red-500">*</span>
-                            Required fields
-                        </div>
-
-
-                        <div className="flex flex-wrap items-center justify-end gap-2">
-
-                            <button
-                                type="button"
-                                onClick={handleClose}
-                                disabled={actionLoading}
-                                className={buttonSecondaryClass}
-                            >
-                                <ArrowLeft size={16} />
-                                Cancel
-                            </button>
-
-
-                            {/* SAVE & NEW */}
-
-                            <button
-                                type="button"
-                                onClick={() => handleSave("new")}
-                                disabled={actionLoading}
-                                className={buttonSecondaryClass}
-                            >
-                                {actionLoading ? (
-                                    <>
-                                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
-                                        Saving...
-                                    </>
-                                ) : (
-                                    "Save & New"
-                                )}
-                            </button>
-
-
-                            {/* SAVE DROPDOWN */}
-
-                            <div className="relative">
-
-                                <div className="flex overflow-hidden rounded-lg shadow-sm">
-
-                                    <button
-                                        type="submit"
-                                        disabled={actionLoading}
-                                        className={`${buttonPrimaryClass} rounded-r-none`}
-                                    >
-                                        {actionLoading ? (
-                                            <>
-                                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                                                Saving...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <CheckCircle2 size={16} />
-                                                Save
-                                            </>
-                                        )}
-                                    </button>
-
-
-                                    <button
-                                        type="button"
-                                        disabled={actionLoading}
-                                        onClick={() =>
-                                            setSaveMenuOpen((previous) => !previous)
-                                        }
-                                        className="inline-flex items-center justify-center border-l border-blue-400 bg-[#408DFB] px-3 text-white transition hover:bg-[#2878E8] disabled:cursor-not-allowed disabled:opacity-60"
-                                        title="More save options"
-                                    >
-                                        <ChevronDown size={16} />
-                                    </button>
-
-                                </div>
-
-
-                                {saveMenuOpen && (
-                                    <>
-                                        <button
-                                            type="button"
-                                            aria-label="Close save options"
-                                            onClick={() => setSaveMenuOpen(false)}
-                                            className="fixed inset-0 z-30 cursor-default"
-                                        />
-
-                                        <div className="absolute bottom-full right-0 z-40 mb-2 w-48 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setSaveMenuOpen(false);
-                                                    handleSave("new");
-                                                }}
-                                                disabled={actionLoading}
-                                                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
-                                            >
-                                                <PackagePlus
-                                                    size={15}
-                                                    className="text-gray-400"
-                                                />
-                                                Save & New
-                                            </button>
-
-
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setSaveMenuOpen(false);
-                                                    handleSave("close");
-                                                }}
-                                                disabled={actionLoading}
-                                                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
-                                            >
-                                                <CheckCircle2
-                                                    size={15}
-                                                    className="text-gray-400"
-                                                />
-                                                Save & Close
-                                            </button>
-
-                                        </div>
-                                    </>
-                                )}
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+
+
+
+
+                        {/* SAVE & NEW */}
+
+                        <button
+                            type="button"
+                            onClick={() => handleSave("new")}
+                            disabled={actionLoading}
+                            className={buttonSecondaryClass}
+                        >
+                            {actionLoading ? (
+                                <>
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                                    Saving...
+                                </>
+                            ) : (
+                                "Save & New"
+                            )}
+                        </button>
+
+
+                        {/* SAVE DROPDOWN */}
+
+                        <div className="relative">
+
+                            <div className="flex overflow-hidden rounded-lg shadow-sm">
+
+                                <button
+                                    type="submit"
+                                    disabled={actionLoading}
+                                    className={`${buttonPrimaryClass} rounded-r-none`}
+                                >
+                                    {actionLoading ? (
+                                        <>
+                                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CheckCircle2 size={16} />
+                                            Save
+                                        </>
+                                    )}
+                                </button>
+
+
+                                <button
+                                    type="button"
+                                    disabled={actionLoading}
+                                    onClick={() =>
+                                        setSaveMenuOpen((previous) => !previous)
+                                    }
+                                    className="inline-flex items-center justify-center border-l border-blue-400 bg-[#408DFB] px-3 text-white transition hover:bg-[#2878E8] disabled:cursor-not-allowed disabled:opacity-60"
+                                    title="More save options"
+                                >
+                                    <ChevronDown size={16} />
+                                </button>
 
                             </div>
 
+
+                            {saveMenuOpen && (
+                                <>
+                                    <button
+                                        type="button"
+                                        aria-label="Close save options"
+                                        onClick={() => setSaveMenuOpen(false)}
+                                        className="fixed inset-0 z-30 cursor-default"
+                                    />
+
+                                    <div className="absolute bottom-full right-0 z-40 mb-2 w-48 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSaveMenuOpen(false);
+                                                handleSave("new");
+                                            }}
+                                            disabled={actionLoading}
+                                            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
+                                        >
+                                            <PackagePlus
+                                                size={15}
+                                                className="text-gray-400"
+                                            />
+                                            Save & New
+                                        </button>
+
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSaveMenuOpen(false);
+                                                handleSave("close");
+                                            }}
+                                            disabled={actionLoading}
+                                            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
+                                        >
+                                            <CheckCircle2
+                                                size={15}
+                                                className="text-gray-400"
+                                            />
+                                            Save & Close
+                                        </button>
+
+                                    </div>
+                                </>
+                            )}
+
                         </div>
 
-                    </footer>
+                    </div>
 
-                </form>
+                </footer>
 
-            </div>
+            </form>
 
         </div>
+
     );
 };
 

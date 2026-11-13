@@ -15,10 +15,11 @@ import { getUserPermission } from "../../../../module/menuPermission/thunks/menu
 
 import InvoiceSkeleton from "../../../../common/loader/InvoiceSkeleton";
 import SalesOrderOverview from "./SalesOrderOverview";
+import { useNavigate } from "react-router-dom";
 
 export default function SaleOrderDashboard() {
     const dispatch = useDispatch();
-
+    const navigate = useNavigate();
     // AUTH STATE
     const user = useSelector((state) => state.auth?.user);
 
@@ -210,7 +211,8 @@ export default function SaleOrderDashboard() {
             return;
         }
 
-        dispatch(openModal({ type: "addSaleOrder" }));
+        // dispatch(openModal({ type: "addSaleOrder" }));
+        navigate("/inventory/salesOrder/create");
     };
 
     // AUTH CHECKING

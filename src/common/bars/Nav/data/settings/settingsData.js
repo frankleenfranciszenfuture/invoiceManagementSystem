@@ -26,7 +26,7 @@ export const settings = [
       // },
       {
         label: "Bank Account",
-        path: "/bankAccount",
+        path: "/settings/bankAccount",
         component: ComingSoon,
       },
     ],
@@ -39,7 +39,7 @@ export const settings = [
       { label: "Roles", path: "/settings/roles", component: ComingSoon },
       {
         label: "Menu Permission",
-        path: "/menuPermission",
+        path: "/settings/menuPermission",
         component: ComingSoon,
       },
     ],

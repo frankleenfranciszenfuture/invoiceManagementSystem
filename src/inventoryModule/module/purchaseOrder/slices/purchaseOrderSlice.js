@@ -34,7 +34,9 @@ const emptyPurchaseOrderItem = {
 ============================================================ */
 
 const initialPurchaseOrderCreate = {
-  partyId: "",
+  partyType: "PARTY",
+  customerId: null,
+  partyId: null,
   warehouseId: "",
   orderDate: "",
   expectedDeliveryDate: "",

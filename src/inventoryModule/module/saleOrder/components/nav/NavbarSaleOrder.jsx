@@ -329,7 +329,7 @@ export default function NavbarSaleOrder() {
     // ============================================================
 
     const handleCreateSalesOrder = () => {
-        navigate("/inventory/saleOrder/create");
+        navigate("/inventory/salesOrder/create");
     };
 
     const handleRefresh = () => {

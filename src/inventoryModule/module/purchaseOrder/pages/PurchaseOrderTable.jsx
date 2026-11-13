@@ -8,6 +8,7 @@ import {
     fetchPurchaseOrderById,
     deletePurchaseOrder,
     confirmPurchaseOrder,
+    convertPurchaseOrderToInvoice,
 } from "../thunks/purchaseOrderThunks";
 
 import {
@@ -24,6 +25,7 @@ import {
     UserRound,
     CheckCircle,
     PackageCheck,
+    FileText,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -60,6 +62,8 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
     const currentPurchaseOrders = Array.isArray(purchaseOrders)
         ? purchaseOrders
         : [];
+
+    const [convertingOrderId, setConvertingOrderId] = React.useState(null);
 
     /* =====================================================
        AUTH STATE
@@ -426,6 +430,65 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
         }
     };
 
+
+    /* =====================================================
+   CONVERT PURCHASE ORDER TO INVOICE
+===================================================== */
+
+    const handleConvertToInvoice = async (order) => {
+        if (!order?.id) {
+            toast.error("Purchase order ID is missing.");
+            return;
+        }
+
+        const status = getOrderStatus(order);
+
+        if (!["CONFIRMED", "RECEIVED"].includes(status)) {
+            toast.error(
+                "Only confirmed or received purchase orders can be converted into invoices."
+            );
+            return;
+        }
+
+        if (convertingOrderId !== null) {
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Convert purchase order ${order.orderNo || ""} into an invoice?`
+        );
+
+        if (!confirmed) return;
+
+        try {
+            setConvertingOrderId(order.id);
+
+            const invoice = await dispatch(
+                convertPurchaseOrderToInvoice(order.id)
+            ).unwrap();
+
+            if (!invoice?.id) {
+                throw new Error("Invoice created, but invoice ID was not returned.");
+            }
+
+            toast.success(
+                "Purchase order converted into invoice successfully."
+            );
+
+            navigate(`/invoices/view/${invoice.id}`);
+
+        } catch (error) {
+            toast.error(
+                typeof error === "string"
+                    ? error
+                    : error?.message ||
+                    "Failed to convert purchase order into invoice."
+            );
+        } finally {
+            setConvertingOrderId(null);
+        }
+    };
+
     /* =====================================================
    CREATE GOODS RECEIPT
 ===================================================== */
@@ -503,6 +566,19 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
         }
 
         return parsedDate.toLocaleDateString("en-IN");
+    };
+
+    /* =====================================================
+   CHECK WHETHER INVOICE ALREADY EXISTS
+===================================================== */
+
+    const hasGeneratedInvoice = (order) => {
+        return Boolean(
+            order?.invoiceId ||
+            order?.invoice?.id ||
+            order?.convertedToInvoice ||
+            order?.invoiceGenerated
+        );
     };
 
     /* =====================================================
@@ -776,6 +852,62 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
                                             </button>
                                         )}
 
+
+                                        {/* CONVERT TO INVOICE */}
+
+                                        {(() => {
+                                            const canConvert = ["CONFIRMED", "RECEIVED"].includes(status);
+                                            const alreadyConverted = hasGeneratedInvoice(order);
+                                            const isConverting = convertingOrderId === order.id;
+
+                                            const disabled =
+                                                !canConvert ||
+                                                alreadyConverted ||
+                                                isConverting ||
+                                                convertingOrderId !== null;
+
+                                            return (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleConvertToInvoice(order)}
+                                                    disabled={disabled}
+                                                    className={`
+                group relative
+                flex h-8 w-8
+                items-center justify-center
+                rounded-lg
+                transition
+                ${alreadyConverted
+                                                            ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                                                            : canConvert
+                                                                ? "bg-purple-50 text-purple-600 hover:bg-purple-100 hover:text-purple-700"
+                                                                : "cursor-not-allowed bg-gray-100 text-gray-300"
+                                                        }
+                disabled:opacity-70
+            `}
+                                                >
+                                                    {isConverting ? (
+                                                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-purple-300 border-t-purple-700" />
+                                                    ) : (
+                                                        <FileText size={16} />
+                                                    )}
+
+                                                    <ToolTipText
+                                                        text={
+                                                            alreadyConverted
+                                                                ? "Invoice Already Generated"
+                                                                : !canConvert
+                                                                    ? "Conversion unavailable for this status"
+                                                                    : isConverting
+                                                                        ? "Converting..."
+                                                                        : "Convert to Invoice"
+                                                        }
+                                                        position="bottom"
+                                                    />
+                                                </button>
+                                            );
+                                        })()}
+
                                         {/* VIEW */}
                                         {canViewPurchaseOrder && (
                                             <button
@@ -871,33 +1003,3 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
     );
 }
 
-// const Tooltip = ({ text, position = "top" }) => {
-//     const positionClasses = {
-//         top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
-//         bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
-//         left: "right-full top-1/2 -translate-y-1/2 mr-2",
-//         right: "left-full top-1/2 -translate-y-1/2 ml-2",
-//     };
-
-//     return (
-//         <span
-//             className={`
-//                 pointer-events-none
-//                 absolute ${positionClasses[position]}
-//                 z-[9999]
-//                 whitespace-nowrap
-//                 rounded-md
-//                 bg-gray-900
-//                 px-2.5 py-1.5
-//                 text-[11px] font-medium text-white
-//                 shadow-lg
-//                 opacity-0 invisible
-//                 group-hover:opacity-100
-//                 group-hover:visible
-//                 transition-all duration-150
-//             `}
-//         >
-//             {text}
-//         </span>
-//     );
-// };

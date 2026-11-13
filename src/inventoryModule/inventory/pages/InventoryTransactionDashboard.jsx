@@ -15,6 +15,7 @@ import {
     ArrowDownToLine,
     ArrowUpFromLine,
     History,
+    Home,
 } from "lucide-react";
 
 import InventoryTransactionTable from "../pages/InventoryTransactionTable";
@@ -32,6 +33,8 @@ import {
 } from "../../../module/menuPermission/thunks/menuPermissionThunks";
 
 import InvoiceSkeleton from "../../../common/loader/InvoiceSkeleton";
+import ToolTipText from "../../../common/toolTip/ToolTipText";
+import { useNavigate } from "react-router-dom";
 
 /* =========================================================
    CONSTANTS
@@ -55,7 +58,7 @@ const normalizeAction = (value) =>
 
 export default function InventoryTransactionDashboard() {
     const dispatch = useDispatch();
-
+    const navigate = useNavigate();
     /* =====================================================
        AUTH STATE
     ===================================================== */
@@ -420,17 +423,43 @@ export default function InventoryTransactionDashboard() {
                         mb-5 flex flex-wrap items-center
                         justify-between gap-3 px-2
                     ">
-                        <div>
-                            <h1 className="text-xl font-semibold text-gray-800">
-                                Inventory Transactions
-                            </h1>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => navigate("/inventory/dashboard")}
+                                className="
+                        group
+                        relative
+                            flex
+                            items-center
+                            justify-center
+                            rounded-md
+                            border
+                            border-blue-300
+                            bg-white
+                            px-2
+                            text-[#0095FD]
+                            transition
+                            hover:bg-[#0095FD]/20
+                        "
 
-                            <p className="mt-1 text-sm text-gray-500">
-                                Track stock movements and inventory history.
-                            </p>
+                            >
+                                <Home size={18} />
+                                <ToolTipText text="Home" position="bottom" />
+
+                            </button>
+
+                            <div>
+                                <h1 className="text-xl font-semibold text-gray-800">
+                                    Inventory Transactions
+                                </h1>
+
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Track stock movements and inventory history.
+                                </p>
+                            </div>
                         </div>
                     </div>
-
                     {/* TRANSACTION OVERVIEW */}
 
                     <div className="

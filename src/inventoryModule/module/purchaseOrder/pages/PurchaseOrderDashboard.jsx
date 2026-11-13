@@ -28,11 +28,12 @@ import {
 
 import InvoiceSkeleton from "../../../../common/loader/InvoiceSkeleton";
 import PurchaseOrderOverview from "./PurchaseOrderOverview";
+import { useNavigate } from "react-router-dom";
 
 
 export default function PurchaseOrderDashboard() {
     const dispatch = useDispatch();
-
+    const navigate = useNavigate();
     // ============================================================
     // AUTH STATE
     // ============================================================
@@ -45,6 +46,10 @@ export default function PurchaseOrderDashboard() {
 
     const authChecking = useSelector(
         (state) => state.auth?.authChecking === true
+    );
+
+    const pagination = useSelector(
+        (state) => state.purchaseOrder?.pagination || {}
     );
 
     // ============================================================
@@ -328,7 +333,8 @@ export default function PurchaseOrderDashboard() {
             return;
         }
 
-        dispatch(openModal({ type: "addPurchaseOrder" }));
+        // dispatch(openModal({ type: "addPurchaseOrder" }));
+        navigate("/inventory/purchaseOrder/create");
     };
 
     // ============================================================
@@ -390,6 +396,110 @@ export default function PurchaseOrderDashboard() {
     // PAGE
     // ============================================================
 
+    // return (
+    //     <div className="flex h-screen overflow-hidden bg-gray-50 font-sans text-[13px]">
+    //         <div className="min-h-0 flex-1 overflow-y-auto bg-white">
+    //             <div className="w-full max-w-30xl px-2 py-5">
+
+    //                 <NavbarPurchaseOrder />
+
+    //                 {/* PURCHASE ORDER OVERVIEW */}
+    //                 <PurchaseOrderOverview
+    //                     canViewPurchaseOrder={canViewPurchaseOrder}
+    //                     isAuthenticated={isAuthenticated}
+    //                     authChecking={authChecking}
+    //                 />
+
+    //                 {error && (
+    //                     <div className="mx-2 mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+    //                         {typeof error === "string"
+    //                             ? error
+    //                             : error?.message || "Unable to load purchase orders."}
+    //                     </div>
+    //                 )}
+
+    //                 {/* EXISTING TABLE / EMPTY STATE */}
+    //                 <div className="mt-2">
+    //                     {filteredPurchaseOrders.length > 0 ? (
+    //                         <PurchaseOrderTable
+    //                             purchaseOrders={filteredPurchaseOrders}
+    //                         />
+    //                     ) : (
+    //                         // Keep your existing empty state here
+    //                         <div>
+    //                             {/* Your existing empty state JSX */}
+    //                         </div>
+    //                     )}
+    //                 </div>
+    //             </div>
+    //         </div>
+    //     </div>
+    // );
+
+
+    // VIEW PERMISSION DENIED
+    if (!canViewPurchaseOrder) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-gray-50 font-sans">
+                <div className="px-6 text-center">
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-2xl font-semibold text-red-500">
+                        !
+                    </div>
+
+                    <h2 className="text-lg font-semibold text-gray-800">
+                        Access Denied
+                    </h2>
+
+                    <p className="mt-1 max-w-sm text-sm text-gray-500">
+                        You do not have permission to view sales orders.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // INITIAL SALES ORDER LOADING
+
+    <div className="mt-2">
+        {loading ? (
+            <InvoiceSkeleton />
+        ) : purchaseOrders.length > 0 ? (
+            <PurchaseOrderTable
+                purchaseOrders={purchaseOrders}
+            />
+        ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+                    <ShoppingCart
+                        size={28}
+                        className="text-blue-500"
+                    />
+                </div>
+
+                <h3 className="text-base font-semibold text-gray-800">
+                    No Purchase Orders Found
+                </h3>
+
+                <p className="mt-1 max-w-sm text-sm text-gray-500">
+                    No purchase orders are available for the selected filters.
+                </p>
+
+                {canCreatePurchaseOrder && (
+                    <button
+                        type="button"
+                        onClick={handleCreatePurchaseOrder}
+                        className="mt-5 inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                    >
+                        <Plus size={16} />
+                        Create Purchase Order
+                    </button>
+                )}
+            </div>
+        )}
+    </div>
+
+
+    // PAGE
     return (
         <div className="flex h-screen overflow-hidden bg-gray-50 font-sans text-[13px]">
             <div className="min-h-0 flex-1 overflow-y-auto bg-white">
@@ -397,31 +507,54 @@ export default function PurchaseOrderDashboard() {
 
                     <NavbarPurchaseOrder />
 
-                    {/* PURCHASE ORDER OVERVIEW */}
                     <PurchaseOrderOverview
-                        canViewPurchaseOrder={canViewPurchaseOrder}
-                        isAuthenticated={isAuthenticated}
-                        authChecking={authChecking}
+                        purchaseOrders={purchaseOrders}
+                        pagination={pagination}
+                        loading={loading}
                     />
 
                     {error && (
                         <div className="mx-2 mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
                             {typeof error === "string"
                                 ? error
-                                : error?.message || "Unable to load purchase orders."}
+                                : error?.message ||
+                                "Unable to load sales orders."}
                         </div>
                     )}
 
-                    {/* EXISTING TABLE / EMPTY STATE */}
                     <div className="mt-2">
-                        {filteredPurchaseOrders.length > 0 ? (
+                        {purchaseOrders.length > 0 ? (
                             <PurchaseOrderTable
-                                purchaseOrders={filteredPurchaseOrders}
+                                purchaseOrders={purchaseOrders}
                             />
                         ) : (
-                            // Keep your existing empty state here
-                            <div>
-                                {/* Your existing empty state JSX */}
+                            <div className="flex flex-col items-center justify-center py-16 text-center">
+                                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+                                    <ShoppingCart
+                                        size={28}
+                                        className="text-blue-500"
+                                    />
+                                </div>
+
+                                <h3 className="text-base font-semibold text-gray-800">
+                                    No Purchase Orders Found
+                                </h3>
+
+                                <p className="mt-1 max-w-sm text-sm text-gray-500">
+                                    No purchase orders are available for the
+                                    selected filters.
+                                </p>
+
+                                {canCreatePurchaseOrder && (
+                                    <button
+                                        type="button"
+                                        onClick={handleCreatePurchaseOrder}
+                                        className="mt-5 inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                                    >
+                                        <Plus size={16} />
+                                        Create Purchase Order
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -429,4 +562,5 @@ export default function PurchaseOrderDashboard() {
             </div>
         </div>
     );
+
 }

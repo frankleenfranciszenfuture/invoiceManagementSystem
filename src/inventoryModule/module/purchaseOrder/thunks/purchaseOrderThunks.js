@@ -257,3 +257,24 @@ export const fetchPurchaseOrderGoodsReceipts = createAsyncThunk(
     }
   },
 );
+
+/* ============================================================
+   CONVERT PURCHASE ORDER TO INVOICE
+============================================================ */
+
+export const convertPurchaseOrderToInvoice = createAsyncThunk(
+  "purchaseOrder/convertPurchaseOrderToInvoice",
+  async (purchaseOrderId, { rejectWithValue }) => {
+    try {
+      const response = await api.post(
+        `/purchase-orders/${purchaseOrderId}/convert-to-invoice`,
+      );
+
+      return getResponseData(response);
+    } catch (error) {
+      return rejectWithValue(
+        handleError(error, "Failed to convert purchase order into invoice"),
+      );
+    }
+  },
+);

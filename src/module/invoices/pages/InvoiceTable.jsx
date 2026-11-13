@@ -908,7 +908,7 @@ export default function InvoiceTable({
                                                 onClick={() =>
                                                     handleView(invoice)
                                                 }
-                                                title="View"
+
                                                 className="
                                                     group relative flex h-8 w-8
                                                     items-center justify-center
@@ -928,7 +928,7 @@ export default function InvoiceTable({
 
                                         {/* EDIT */}
 
-                                        {canEditInvoice && (
+                                        {canEditInvoice && invoiceStatus === "DRAFT" && (
                                             <button
                                                 type="button"
                                                 disabled={
@@ -937,7 +937,7 @@ export default function InvoiceTable({
                                                 onClick={() =>
                                                     handleEdit(invoice)
                                                 }
-                                                title="Edit"
+
                                                 className="
                                                     group relative flex h-8 w-8
                                                     items-center justify-center
@@ -965,7 +965,7 @@ export default function InvoiceTable({
                                                 onClick={() =>
                                                     handleDelete(invoice)
                                                 }
-                                                title="Delete"
+
                                                 className="
                                                     group relative flex h-8 w-8
                                                     items-center justify-center

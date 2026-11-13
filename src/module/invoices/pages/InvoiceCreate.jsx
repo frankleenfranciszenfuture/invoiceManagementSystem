@@ -3213,6 +3213,10 @@ BANKACCOUNT NAME
                     SALE_INVOICE: "Sales Invoice",
                     PURCHASE_INVOICE: "Purchase Invoice",
                     TAX_INVOICE: "Tax Invoice",
+                    QUOTATION: "Quotation",
+                    CREDIT_NOTE: "Credit Note",
+                    DEBIT_NOTE: "Debit Note",
+
                   }[invoice.invoiceType] || ""}
                 </h1>
 
@@ -3233,6 +3237,10 @@ BANKACCOUNT NAME
                       SALE_INVOICE: "Sales Invoice",
                       PURCHASE_INVOICE: "Purchase Invoice",
                       TAX_INVOICE: "Tax Invoice",
+                      TAX_INVOICE: "Tax Invoice",
+                      QUOTATION: "Quotation",
+                      CREDIT_NOTE: "Credit Note",
+                      DEBIT_NOTE: "Debit Note",
                     }[invoice.invoiceType] || ""}
                   </span>
 
@@ -3290,6 +3298,11 @@ BANKACCOUNT NAME
                     { value: "SALE_INVOICE", label: "Sales Invoice" },
                     { value: "PURCHASE_INVOICE", label: "Purchase Invoice" },
                     { value: "TAX_INVOICE", label: "Tax Invoice" },
+                    { value: "QUOTATION", label: "Quotation" },
+                    { value: "CREDIT_NOTE", label: "Credit Note" },
+                    { value: "DEBIT_NOTE", label: "Debit Note" },
+
+
                   ]}
                   placeholder="Select Invoice Type"
                 />
