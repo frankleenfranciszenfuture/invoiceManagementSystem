@@ -2,6 +2,7 @@ package com.ims.mapper.invoice;
 
 import com.ims.dtos.invoice.InvoiceResponse;
 import com.ims.entity.InvoiceEntity;
+
 import com.ims.mapper.audit.AuditMapper;
 import com.ims.mapper.company.CompanyMapper;
 import com.ims.mapper.customer.CustomerMapper;
@@ -9,6 +10,7 @@ import com.ims.mapper.party.PartyMapper;
 import com.ims.mapper.salesPerson.SalesPersonMapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 
@@ -20,134 +22,63 @@ import java.util.List;
                 SalesPersonMapper.class,
                 CompanyMapper.class,
                 CustomerMapper.class,
-                PartyMapper.class,
-        }
+                PartyMapper.class
+        },
+        unmappedTargetPolicy = ReportingPolicy.IGNORE
 )
 public interface InvoiceMapper {
 
-    // =====================================================
-    // ENTITY -> RESPONSE
-    // =====================================================
-    // CUSTOMER DETAILS
+    // =========================================================
+    // ENTITY TO RESPONSE
+    // =========================================================
+
+    @Mapping(target = "audit", source = ".")
     @Mapping(target = "customer", source = "customer")
+    @Mapping(target = "customerId", source = "customer.id")
+    @Mapping(target = "customerName", source = "customer.displayName")
 
+    @Mapping(target = "party", source = "party")
+    @Mapping(target = "partyId", source = "party.id")
+    @Mapping(target = "partyName", source = "party.companyName")
 
-    @Mapping(
-            target = "customerId",
-            source = "customer.id"
-    )
-    @Mapping(
-            target = "customerName",
-            source = "customer.companyName"
-    )
-    @Mapping(
-            target = "invoiceItems",
-            source = "invoiceItems"
-    )
-    @Mapping(
-            target = "salesPersonId",
-            source = "salesPerson.id")
+    @Mapping(target = "partyType", source = "partyType")
+    @Mapping(target = "sourceType", source = "sourceType")
 
-    @Mapping(
-            target = "salesPersonName",
-            source = "salesPerson.salesPersonName")
+    @Mapping(target = "purchaseOrderId", source = "purchaseOrder.id")
+    @Mapping(target = "purchaseOrderNumber", source = "purchaseOrder.orderNo")
 
-    // COMPANY DETAILS
+    @Mapping(target = "salesOrderId", source = "salesOrder.id")
+    @Mapping(target = "salesOrderNumber", source = "salesOrder.orderNo")
+
+    @Mapping(target = "salesPerson", source = "salesPerson")
+    @Mapping(target = "salesPersonId", source = "salesPerson.id")
+    @Mapping(target = "salesPersonName", source = "salesPerson.salesPersonName")
+
     @Mapping(target = "company", source = "companyDetails")
+    @Mapping(target = "companyId", source = "companyDetails.id")
+    @Mapping(target = "companyName", source = "companyDetails.companyName")
 
-    @Mapping(
-            target = "companyId",
-            source = "companyDetails.id"
-    )
-    @Mapping(
-            target = "companyName",
-            source = "companyDetails.companyName")
+    @Mapping(target = "bankAccount", source = "bankAccount")
+    @Mapping(target = "bankAccountId", source = "bankAccount.id")
+    @Mapping(target = "bankAccountName", source = "bankAccount.accountName")
 
-    @Mapping(
-            target = "companyCode",
-            source = "companyDetails.companyCode"
-    )
+    @Mapping(target = "emailSignature", source = "emailSignature")
+    @Mapping(target = "emailSignatureId", source = "emailSignature.id")
+    @Mapping(target = "emailSignatureName", source = "emailSignature.signatureName")
 
-    @Mapping(
-            target = "logo",
-            source = "companyDetails.logo"
-    )
+    @Mapping(target = "currencyId", source = "currency.id")
+    @Mapping(target = "currencyName", source = "currency.currencyName")
+    @Mapping(target = "currencyCode", source = "currency.currencyCode")
+    @Mapping(target = "currencySymbol", source = "currency.symbol")
+    @Mapping(target = "decimalPlaces", source = "currency.decimalPlaces")
 
-    @Mapping(
-            target = "bankAccountId",
-            source = "bankAccount.id"
-    )
-    @Mapping(
-            target = "bankName",
-            source = "bankAccount.bankName")
-
-    @Mapping(
-            target = "branchName",
-            source = "bankAccount.branchName")
-    @Mapping(
-            target = "accountNumber",
-            source = "bankAccount.accountNumber")
-
-    @Mapping(
-            target = "ifsc",
-            source = "bankAccount.ifsc"
-    )
-
-    @Mapping(
-            target = "swiftCode",
-            source = "bankAccount.swiftCode"
-    )
-
-    @Mapping(
-            target = "emailSignatureId",
-            source = "emailSignature.id"
-    )
-    @Mapping(
-            target = "userId",
-            source = "emailSignature.userId"
-    )
-    @Mapping(
-            target = "signatureName",
-            source = "emailSignature.signatureName"
-    )
-    @Mapping(
-            target = "signatureContent",
-            source = "emailSignature.signatureContent"
-    )
-    @Mapping(
-            target = "defaultForNewMessages",
-            source = "emailSignature.defaultForNewMessages"
-    )
-    @Mapping(
-            target = "defaultForReplies",
-            source = "emailSignature.defaultForReplies"
-    )
-
-    @Mapping(
-            target = "currencyId",
-            source = "currency.id"
-    )
-    @Mapping(
-            target = "currencyCode",
-            source = "currency.currencyCode"
-    )
-    @Mapping(
-            target = "currencyName",
-            source = "currency.currencyName"
-    )
-    @Mapping(
-            target = "exchangeRate",
-            source = "exchangeRate"
-    )
-    @Mapping(
-            target = "audit",
-            source = "."
-    )
+    @Mapping(target = "invoiceItems", source = "invoiceItems")
     InvoiceResponse toResponse(InvoiceEntity entity);
 
-    // =====================================================
-    // ENTITY LIST -> RESPONSE LIST
-    // =====================================================
+
+    // =========================================================
+    // ENTITY LIST TO RESPONSE LIST
+    // =========================================================
 
     List<InvoiceResponse> toResponseList(
             List<InvoiceEntity> entities

@@ -1,10 +1,13 @@
 package com.ims.controller.purchaseOrder;
 
+import com.ims.common.ApiResponse;
+import com.ims.dtos.invoice.InvoiceResponse;
 import com.ims.dtos.purchaseOrder.PurchaseOrderGoodsReceiptRequest;
 import com.ims.dtos.purchaseOrder.PurchaseOrderGoodsReceiptResponse;
 import com.ims.dtos.purchaseOrder.PurchaseOrderRequest;
 import com.ims.dtos.purchaseOrder.PurchaseOrderResponse;
 import com.ims.dtos.purchaseOrder.PurchaseOrderSearchRequest;
+import com.ims.service.serviceInterface.invoice.PurchaseOrderInvoiceService;
 import com.ims.service.serviceInterface.purchaseOrder.PurchaseOrderService;
 
 import jakarta.validation.Valid;
@@ -28,7 +31,7 @@ import java.util.List;
 public class PurchaseOrderController {
 
     private final PurchaseOrderService purchaseOrderService;
-
+    private final PurchaseOrderInvoiceService purchaseOrderInvoiceService;
     // =========================================================
     // CREATE PURCHASE ORDER
     // =========================================================
@@ -184,5 +187,22 @@ public class PurchaseOrderController {
                         purchaseOrderId
                 )
         );
+    }
+
+    // =========================================================
+// CONVERT PURCHASE ORDER TO INVOICE
+// =========================================================
+
+    @PostMapping("/{id}/convert-to-invoice")
+    public ResponseEntity<ApiResponse<InvoiceResponse>> convertToInvoice(
+            @PathVariable Long id
+    ) {
+
+        ApiResponse<InvoiceResponse> response =
+                purchaseOrderInvoiceService.convertPurchaseOrderToInvoice(id);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
     }
 }

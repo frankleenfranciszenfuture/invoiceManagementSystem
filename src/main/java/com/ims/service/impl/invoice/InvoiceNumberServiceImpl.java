@@ -219,20 +219,34 @@ public class InvoiceNumberServiceImpl
     public String generateInvoiceNumber() {
 
         int year = LocalDate.now().getYear();
-        String prefix = "INV" + year + " -";
 
-        Optional<InvoiceEntity> latestInvoice =
-                invoiceRepository.findTopByInvoiceNumberStartingWithOrderByInvoiceNumberDesc(prefix);
+        String prefix = "INV-" + year + "-";
+        String legacyPrefix = "INV" + year + " -";
 
         int nextNumber = 1;
 
+        // Check invoices generated using the new format.
+        Optional<InvoiceEntity> latestInvoice =
+                invoiceRepository
+                        .findTopByInvoiceNumberStartingWithOrderByInvoiceNumberDesc(prefix);
+
         if (latestInvoice.isPresent()) {
-            String lastInvoiceNumber = latestInvoice.get().getInvoiceNumber();
-            String sequence = lastInvoiceNumber.substring(prefix.length());
-            nextNumber = Integer.parseInt(sequence) + 1;
+            String lastNumber = latestInvoice.get().getInvoiceNumber();
+            String sequence = lastNumber.substring(prefix.length());
+            nextNumber = Math.max(nextNumber, Integer.parseInt(sequence) + 1);
+        }
+
+        // Also consider invoices generated using the previous format.
+        Optional<InvoiceEntity> latestLegacyInvoice =
+                invoiceRepository
+                        .findTopByInvoiceNumberStartingWithOrderByInvoiceNumberDesc(legacyPrefix);
+
+        if (latestLegacyInvoice.isPresent()) {
+            String lastNumber = latestLegacyInvoice.get().getInvoiceNumber();
+            String sequence = lastNumber.substring(legacyPrefix.length());
+            nextNumber = Math.max(nextNumber, Integer.parseInt(sequence) + 1);
         }
 
         return prefix + String.format("%04d", nextNumber);
     }
-
 }

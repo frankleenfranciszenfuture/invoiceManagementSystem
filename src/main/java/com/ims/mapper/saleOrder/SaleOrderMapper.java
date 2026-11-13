@@ -22,6 +22,13 @@ public interface SaleOrderMapper {
     @Mapping(target = "customer", source = "customer")
     @Mapping(target = "party", source = "party")
 
+    // Generated invoice
+    @Mapping(target = "invoiceId", source = "invoice.id")
+    @Mapping(
+            target = "invoiceGenerated",
+            expression = "java(entity.getInvoice() != null)"
+    )
+
     @Mapping(target = "warehouseId", source = "warehouse.id")
     @Mapping(target = "warehouseName", source = "warehouse.warehouseName")
 
@@ -31,13 +38,14 @@ public interface SaleOrderMapper {
     @Mapping(target = "currencySymbol", source = "currency.symbol")
 
     @Mapping(target = "items", source = "items")
+
     @Mapping(
             target = "shippingAmount",
             expression = """
-        java(entity.getShippingAmount() != null
-            ? entity.getShippingAmount()
-            : java.math.BigDecimal.ZERO)
-        """
+                java(entity.getShippingAmount() != null
+                    ? entity.getShippingAmount()
+                    : java.math.BigDecimal.ZERO)
+                """
     )
     SalesOrderResponse toResponse(SalesOrderEntity entity);
 

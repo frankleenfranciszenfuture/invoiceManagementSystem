@@ -1,9 +1,11 @@
- package com.ims.repository;
+package com.ims.repository;
 
 import com.ims.entity.InvoiceEntity;
 import com.ims.enums.InvoiceStatus;
 import com.ims.enums.InvoiceType;
+
 import jakarta.persistence.LockModeType;
+
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
@@ -30,6 +32,9 @@ public interface InvoiceRepository
     @Override
     @EntityGraph(attributePaths = {
             "customer",
+            "party",
+            "purchaseOrder",
+            "salesOrder",
             "invoiceItems",
             "invoiceItems.product",
             "invoiceItems.unit",
@@ -45,6 +50,9 @@ public interface InvoiceRepository
 
     @EntityGraph(attributePaths = {
             "customer",
+            "party",
+            "purchaseOrder",
+            "salesOrder",
             "invoiceItems",
             "invoiceItems.product",
             "invoiceItems.unit",
@@ -101,6 +109,9 @@ public interface InvoiceRepository
 
     @EntityGraph(attributePaths = {
             "customer",
+            "party",
+            "purchaseOrder",
+            "salesOrder",
             "invoiceItems",
             "invoiceItems.product",
             "invoiceItems.unit",
@@ -120,6 +131,9 @@ public interface InvoiceRepository
 
     @EntityGraph(attributePaths = {
             "customer",
+            "party",
+            "purchaseOrder",
+            "salesOrder",
             "invoiceItems",
             "invoiceItems.product",
             "invoiceItems.unit",
@@ -139,6 +153,9 @@ public interface InvoiceRepository
         SELECT DISTINCT i
         FROM InvoiceEntity i
         LEFT JOIN FETCH i.customer
+        LEFT JOIN FETCH i.party
+        LEFT JOIN FETCH i.purchaseOrder
+        LEFT JOIN FETCH i.salesOrder
         LEFT JOIN FETCH i.invoiceItems ii
         LEFT JOIN FETCH ii.product
         LEFT JOIN FETCH ii.unit
@@ -157,6 +174,9 @@ public interface InvoiceRepository
 
     @EntityGraph(attributePaths = {
             "customer",
+            "party",
+            "purchaseOrder",
+            "salesOrder",
             "invoiceItems",
             "invoiceItems.product",
             "invoiceItems.unit",
@@ -172,37 +192,91 @@ public interface InvoiceRepository
             @Param("id") Long id
     );
 
-    @EntityGraph(attributePaths = {"customer"})
+
+    // =====================================================
+    // DASHBOARD
+    // =====================================================
+
+    @EntityGraph(attributePaths = {
+            "customer",
+            "party"
+    })
     List<InvoiceEntity> findTop5ByActiveTrueOrderByCreatedAtDesc();
 
 
     long countByActiveTrue();
 
+
     List<InvoiceEntity> findTop10ByActiveTrueAndStatusOrderByCreatedAtDesc(
             InvoiceStatus status
     );
 
+
+    // =====================================================
+    // FIND BY ID FOR UPDATE
+    // =====================================================
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-    SELECT i
-    FROM InvoiceEntity i
-    WHERE i.id = :id
-      AND i.active = true
-""")
-    Optional<InvoiceEntity> findByIdForUpdate(@Param("id") Long id);
+        SELECT i
+        FROM InvoiceEntity i
+        WHERE i.id = :id
+          AND i.active = true
+    """)
+    Optional<InvoiceEntity> findByIdForUpdate(
+            @Param("id") Long id
+    );
 
+
+    // =====================================================
+    // CUSTOMER CHECK
+    // =====================================================
 
     boolean existsByCustomerId(Long customerId);
 
+
     // =====================================================
-// SOURCE ORDER DUPLICATE CHECKS
-// =====================================================
+    // SOURCE ORDER DUPLICATE CHECKS
+    // =====================================================
 
     boolean existsByPurchaseOrder_Id(Long purchaseOrderId);
 
     boolean existsBySalesOrder_Id(Long salesOrderId);
 
-    Optional<InvoiceEntity> findByPurchaseOrder_Id(Long purchaseOrderId);
 
-    Optional<InvoiceEntity> findBySalesOrder_Id(Long salesOrderId);
+    // =====================================================
+    // FIND INVOICE BY SOURCE ORDER
+    // =====================================================
+
+    @EntityGraph(attributePaths = {
+            "customer",
+            "party",
+            "purchaseOrder",
+            "salesOrder",
+            "invoiceItems",
+            "invoiceItems.product",
+            "invoiceItems.unit",
+            "invoiceItems.size",
+            "invoiceItems.taxMaster"
+    })
+    Optional<InvoiceEntity> findByPurchaseOrder_Id(
+            Long purchaseOrderId
+    );
+
+
+    @EntityGraph(attributePaths = {
+            "customer",
+            "party",
+            "purchaseOrder",
+            "salesOrder",
+            "invoiceItems",
+            "invoiceItems.product",
+            "invoiceItems.unit",
+            "invoiceItems.size",
+            "invoiceItems.taxMaster"
+    })
+    Optional<InvoiceEntity> findBySalesOrder_Id(
+            Long salesOrderId
+    );
+
 }

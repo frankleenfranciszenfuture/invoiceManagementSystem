@@ -65,6 +65,9 @@ public class PurchaseOrderEntity extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "party_id", nullable = true)
     private PartyEntity party;
+
+    @OneToOne(mappedBy = "purchaseOrder", fetch = FetchType.LAZY)
+    private InvoiceEntity invoice;
     // =====================================================
     // WAREHOUSE
     // =====================================================

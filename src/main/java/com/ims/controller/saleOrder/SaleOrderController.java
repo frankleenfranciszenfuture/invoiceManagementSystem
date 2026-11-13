@@ -4,10 +4,12 @@ package com.ims.controller.saleOrder;
 import com.ims.common.ApiResponse;
 import com.ims.common.PageResponse;
 
+import com.ims.dtos.invoice.InvoiceResponse;
 import com.ims.dtos.saleOrder.SalesOrderRequest;
 import com.ims.dtos.saleOrder.SalesOrderResponse;
 import com.ims.dtos.saleOrder.SalesOrderSearchRequest;
 
+import com.ims.service.serviceInterface.invoice.SalesOrderInvoiceService;
 import com.ims.service.serviceInterface.saleOrder.SaleOrderService;
 
 import jakarta.validation.Valid;
@@ -28,7 +30,7 @@ import org.springframework.web.bind.annotation.*;
 public class SaleOrderController {
 
     private final SaleOrderService saleOrderService;
-
+    private final SalesOrderInvoiceService salesOrderInvoiceService;
     // =====================================================
     // CREATE SALE ORDER
     // =====================================================
@@ -147,5 +149,20 @@ public class SaleOrderController {
         );
     }
 
+// =========================================================
+// CONVERT SALES ORDER TO INVOICE
+// =========================================================
 
+    @PostMapping("/{id}/convert-to-invoice")
+    public ResponseEntity<ApiResponse<InvoiceResponse>> convertToInvoice(
+            @PathVariable Long id
+    ) {
+
+        ApiResponse<InvoiceResponse> response =
+                salesOrderInvoiceService.convertSalesOrderToInvoice(id);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
+    }
 }

@@ -1,20 +1,27 @@
 package com.ims.dtos.invoice;
 
 import com.ims.dtos.common.BaseResponse;
-import com.ims.dtos.company.CompanyResponse;
 import com.ims.dtos.customer.CustomerResponse;
 import com.ims.dtos.party.PartyResponse;
-import com.ims.entity.Currency;
-import com.ims.entity.ExchangeRate;
-import com.ims.entity.SalesPersonEntity;
+import com.ims.dtos.salesPerson.SalesPersonResponse;
+import com.ims.dtos.company.CompanyResponse;
+import com.ims.dtos.bankAccount.BankAccountResponse;
+import com.ims.dtos.emailSignature.EmailSignatureResponse;
+
+import com.ims.enums.InvoicePartyType;
+import com.ims.enums.InvoiceSourceType;
 import com.ims.enums.InvoiceStatus;
 import com.ims.enums.InvoiceType;
-import lombok.*;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -24,48 +31,59 @@ import java.util.List;
 @SuperBuilder
 public class InvoiceResponse extends BaseResponse {
 
-    // =====================================================
-    // ID
-    // =====================================================
+    // =========================================================
+    // BASIC DETAILS
+    // =========================================================
 
     private Long id;
 
-
-    // =====================================================
-    // INVOICE NUMBER
-    // =====================================================
-
     private String invoiceNumber;
-
-
-    // =====================================================
-    // INVOICE TYPE
-    // =====================================================
 
     private InvoiceType invoiceType;
 
+    // =========================================================
+    // PARTY DETAILS
+    // =========================================================
 
-    // =====================================================
-    // CUSTOMER
-    // =====================================================
+    private InvoicePartyType partyType;
 
     private Long customerId;
 
     private String customerName;
 
     private CustomerResponse customer;
-    // =====================================================
-    // DATES
-    // =====================================================
+
+    private Long partyId;
+
+    private String partyName;
+
+    private PartyResponse party;
+
+    // =========================================================
+    // SOURCE ORDER DETAILS
+    // =========================================================
+
+    private InvoiceSourceType sourceType;
+
+    private Long purchaseOrderId;
+
+    private String purchaseOrderNumber;
+
+    private Long salesOrderId;
+
+    private String salesOrderNumber;
+
+    // =========================================================
+    // DATE DETAILS
+    // =========================================================
 
     private LocalDate invoiceDate;
 
     private LocalDate dueDate;
 
-
-    // =====================================================
-    // AMOUNTS
-    // =====================================================
+    // =========================================================
+    // AMOUNT DETAILS
+    // =========================================================
 
     private BigDecimal subtotal;
 
@@ -77,74 +95,83 @@ public class InvoiceResponse extends BaseResponse {
 
     private BigDecimal grandTotal;
 
+    // =========================================================
+    // SALES PERSON
+    // =========================================================
 
     private Long salesPersonId;
+
     private String salesPersonName;
 
+    private SalesPersonResponse salesPerson;
+
+    // =========================================================
+    // COMPANY DETAILS
+    // =========================================================
 
     private Long companyId;
+
     private String companyName;
-    private String companyCode;
 
     private CompanyResponse company;
 
+    // =========================================================
+    // BANK ACCOUNT DETAILS
+    // =========================================================
+
     private Long bankAccountId;
-    private String accountNumber;
-    private String bankName;
-    private String branchName;
-    private String ifsc;
-    private String swiftCode;
+
+    private String bankAccountName;
+
+    private BankAccountResponse bankAccount;
+
+    // =========================================================
+    // EMAIL SIGNATURE DETAILS
+    // =========================================================
 
     private Long emailSignatureId;
-    private Long userId;
-    private String signatureName;
-    private String signatureContent;
-    private boolean defaultForNewMessages;
-    private boolean defaultForReplies;
 
-    // =====================================================
-    // CURRENCY
-    // =====================================================
+    private String emailSignatureName;
+
+    private EmailSignatureResponse emailSignature;
+
+    // =========================================================
+    // CURRENCY DETAILS
+    // =========================================================
 
     private Long currencyId;
+
     private String currencyName;
 
     private String currencyCode;
 
-    private String logo;
+    private String currencySymbol;
 
-    // =====================================================
-    // EXCHANGE RATE
-    // =====================================================
+    private Integer decimalPlaces;
 
     private BigDecimal exchangeRate;
 
-    // =====================================================
-    // STATUS
-    // =====================================================
+    // =========================================================
+    // INVOICE STATUS
+    // =========================================================
 
     private InvoiceStatus status;
 
+    private LocalDateTime invoiceSentAt;
 
-    // =====================================================
-    // NOTES
-    // =====================================================
+    // =========================================================
+    // ADDITIONAL DETAILS
+    // =========================================================
 
     private String notes;
 
-
-    // =====================================================
-    // TERMS & CONDITIONS
-    // =====================================================
-
     private String termsAndConditions;
 
+    private String logo;
 
-    // =====================================================
-    // ITEMS
-    // =====================================================
+    // =========================================================
+    // INVOICE ITEMS
+    // =========================================================
 
-    @Builder.Default
-    private List<InvoiceItemResponse> invoiceItems =
-            new ArrayList<>();
+    private List<InvoiceItemResponse> invoiceItems;
 }

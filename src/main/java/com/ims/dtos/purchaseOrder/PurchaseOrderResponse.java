@@ -8,6 +8,7 @@ import com.ims.enums.PurchaseOrderStatus;
 
 import com.ims.enums.SaleOrderPartyType;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,12 +18,16 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class PurchaseOrderResponse {
 
     private Long id;
 
     private String orderNo;
+
+    // Generated invoice reference
+    private Long invoiceId;
+    private Boolean invoiceGenerated;
 
     private PurchaseOrderPartyType partyType;
 

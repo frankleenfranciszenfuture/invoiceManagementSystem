@@ -47,6 +47,9 @@ public class SalesOrderEntity extends BaseEntity {
     @JoinColumn(name = "party_id")
     private PartyEntity party;
 
+    @OneToOne(mappedBy = "salesOrder", fetch = FetchType.LAZY)
+    private InvoiceEntity invoice;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "warehouse_id", nullable = false)
     private WarehouseEntity warehouse;

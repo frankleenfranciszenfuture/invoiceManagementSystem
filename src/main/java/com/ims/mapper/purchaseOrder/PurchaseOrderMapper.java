@@ -1,3 +1,4 @@
+
 package com.ims.mapper.purchaseOrder;
 
 import com.ims.dtos.purchaseOrder.PurchaseOrderResponse;
@@ -21,6 +22,12 @@ public interface PurchaseOrderMapper {
     @Mapping(target = "customer", source = "customer")
     @Mapping(target = "party", source = "party")
 
+    @Mapping(target = "invoiceId", source = "invoice.id")
+    @Mapping(
+            target = "invoiceGenerated",
+            expression = "java(source.getInvoice() != null)"
+    )
+
     @Mapping(target = "warehouseId", source = "warehouse.id")
     @Mapping(target = "warehouseName", source = "warehouse.warehouseName")
 
@@ -42,9 +49,7 @@ public interface PurchaseOrderMapper {
                     "? source.getShippingAmount() " +
                     ": java.math.BigDecimal.ZERO)"
     )
-    PurchaseOrderResponse toResponse(
-            PurchaseOrderEntity source
-    );
+    PurchaseOrderResponse toResponse(PurchaseOrderEntity source);
 
     List<PurchaseOrderResponse> toResponseList(
             List<PurchaseOrderEntity> sources

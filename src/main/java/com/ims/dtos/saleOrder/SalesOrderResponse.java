@@ -1,9 +1,8 @@
+
 package com.ims.dtos.saleOrder;
 
 import com.ims.dtos.customer.CustomerResponse;
 import com.ims.dtos.party.PartyResponse;
-import com.ims.entity.CustomerEntity;
-import com.ims.entity.PartyEntity;
 import com.ims.enums.SaleOrderDiscountType;
 import com.ims.enums.SaleOrderPartyType;
 import com.ims.enums.SaleOrderStatus;
@@ -20,6 +19,10 @@ import java.util.List;
 public class SalesOrderResponse {
 
     private Long id;
+
+    // Generated invoice reference
+    private Long invoiceId;
+    private Boolean invoiceGenerated;
 
     private String orderNo;
 
