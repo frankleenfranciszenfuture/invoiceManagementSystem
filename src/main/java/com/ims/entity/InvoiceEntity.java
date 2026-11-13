@@ -6,6 +6,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import com.ims.enums.InvoicePartyType;
+import com.ims.enums.InvoiceSourceType;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -86,16 +89,39 @@ public class InvoiceEntity extends BaseEntity {
 
 
     // =====================================================
-    // CUSTOMER
+    // CUSTOMER / PARTY
     // =====================================================
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "party_type", nullable = false, length = 20)
+    @Builder.Default
+    private InvoicePartyType partyType = InvoicePartyType.CUSTOMER;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "customer_id",
-            nullable = false
-    )
+    @JoinColumn(name = "customer_id")
     private CustomerEntity customer;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "party_id")
+    private PartyEntity party;
+
+
+    // =====================================================
+// INVOICE SOURCE
+// =====================================================
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source_type", nullable = false, length = 30)
+    @Builder.Default
+    private InvoiceSourceType sourceType = InvoiceSourceType.MANUAL;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "purchase_order_id", unique = true)
+    private PurchaseOrderEntity purchaseOrder;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sales_order_id", unique = true)
+    private SalesOrderEntity salesOrder;
 
     // =====================================================
     // DATES

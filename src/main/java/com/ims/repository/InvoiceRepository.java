@@ -193,4 +193,16 @@ public interface InvoiceRepository
 
 
     boolean existsByCustomerId(Long customerId);
+
+    // =====================================================
+// SOURCE ORDER DUPLICATE CHECKS
+// =====================================================
+
+    boolean existsByPurchaseOrder_Id(Long purchaseOrderId);
+
+    boolean existsBySalesOrder_Id(Long salesOrderId);
+
+    Optional<InvoiceEntity> findByPurchaseOrder_Id(Long purchaseOrderId);
+
+    Optional<InvoiceEntity> findBySalesOrder_Id(Long salesOrderId);
 }

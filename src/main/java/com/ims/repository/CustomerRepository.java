@@ -22,6 +22,7 @@ public interface CustomerRepository
     // =====================================================
 
     Optional<CustomerEntity> findByEmail(String email);
+    Optional<CustomerEntity> findByIdAndActiveTrue(Long id);
 
     // =====================================================
     // CHECK DUPLICATE EMAIL
@@ -40,4 +41,6 @@ public interface CustomerRepository
     // =====================================================
 
     long countByCustomerType(String customerType);
+
+
 }

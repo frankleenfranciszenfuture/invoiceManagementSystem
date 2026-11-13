@@ -18,9 +18,7 @@ import java.util.List;
 )
 public interface PurchaseOrderMapper {
 
-    @Mapping(target = "partyId", source = "party.id")
-    @Mapping(target = "partyCode", source = "party.partyCode")
-    @Mapping(target = "supplierName", source = "party.companyName")
+    @Mapping(target = "customer", source = "customer")
     @Mapping(target = "party", source = "party")
 
     @Mapping(target = "warehouseId", source = "warehouse.id")

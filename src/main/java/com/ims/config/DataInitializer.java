@@ -112,6 +112,8 @@ public class DataInitializer implements CommandLineRunner {
 
                 "Adjustment Stock",
 
+                "Stock Transaction",
+
                 "Parties",
 
                 "Outstanding Clearances",
@@ -130,7 +132,7 @@ public class DataInitializer implements CommandLineRunner {
 
                 "Reports Selection",
 
-                "Audit log"
+                "Audit logs"
 
 
 
@@ -654,12 +656,22 @@ public class DataInitializer implements CommandLineRunner {
         // =====================================================
 
         addModuleAction("Open Stock", "CREATE");
+        addModuleAction("Open Stock", "VIEW");
 
         // =====================================================
         // ADJUSTMENT STOCK
         // =====================================================
 
         addModuleAction("Adjustment Stock", "CREATE");
+        addModuleAction("Adjustment Stock", "VIEW");
+
+
+        // =====================================================
+        // OPEN STOCK
+        // =====================================================
+
+        addModuleAction("Stock Transaction", "VIEW");
+
 
         // =====================================================
         // WAREHOUSE
@@ -731,7 +743,7 @@ public class DataInitializer implements CommandLineRunner {
         // AUDIT LOG
         // =====================================================
 
-        addModuleAction("Audit Log", "VIEW");
+        addModuleAction("Audit Logs", "VIEW");
 
     }
 

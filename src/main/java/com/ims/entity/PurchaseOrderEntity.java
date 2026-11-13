@@ -1,8 +1,10 @@
 package com.ims.entity;
 
 import com.ims.enums.PurchaseOrderDiscountType;
+import com.ims.enums.PurchaseOrderPartyType;
 import com.ims.enums.PurchaseOrderStatus;
 
+import com.ims.enums.SaleOrderPartyType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -50,10 +52,19 @@ public class PurchaseOrderEntity extends BaseEntity {
     // SUPPLIER
     // =====================================================
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "party_id", nullable = false)
-    private PartyEntity party;
 
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "party_type", nullable = false)
+    private PurchaseOrderPartyType partyType;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private CustomerEntity customer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "party_id", nullable = true)
+    private PartyEntity party;
     // =====================================================
     // WAREHOUSE
     // =====================================================

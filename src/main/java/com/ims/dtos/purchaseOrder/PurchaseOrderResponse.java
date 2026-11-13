@@ -1,9 +1,12 @@
 package com.ims.dtos.purchaseOrder;
 
+import com.ims.dtos.customer.CustomerResponse;
 import com.ims.dtos.party.PartyResponse;
 import com.ims.enums.PurchaseOrderDiscountType;
+import com.ims.enums.PurchaseOrderPartyType;
 import com.ims.enums.PurchaseOrderStatus;
 
+import com.ims.enums.SaleOrderPartyType;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -21,9 +24,10 @@ public class PurchaseOrderResponse {
 
     private String orderNo;
 
-    private Long partyId;
-    private String partyCode;
-    private String supplierName;
+    private PurchaseOrderPartyType partyType;
+
+    private CustomerResponse customer;
+
     private PartyResponse party;
 
     private Long warehouseId;

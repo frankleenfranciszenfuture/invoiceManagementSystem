@@ -1,10 +1,13 @@
 package com.ims.dtos.purchaseOrder;
 
 import com.ims.enums.PurchaseOrderDiscountType;
+import com.ims.enums.PurchaseOrderPartyType;
+import com.ims.enums.SaleOrderPartyType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -14,10 +17,14 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class PurchaseOrderRequest {
 
-    @NotNull(message = "Supplier is required.")
+    @NotNull(message = "Party type is required")
+    private PurchaseOrderPartyType partyType;
+
+    private Long customerId;
+
     private Long partyId;
 
     @NotNull(message = "Warehouse is required.")

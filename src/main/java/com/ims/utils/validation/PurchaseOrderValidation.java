@@ -6,6 +6,8 @@ import com.ims.dtos.purchaseOrder.PurchaseOrderRequest;
 import com.ims.entity.*;
 import com.ims.enums.PartyType;
 import com.ims.enums.PurchaseOrderDiscountType;
+import com.ims.enums.PurchaseOrderPartyType;
+import com.ims.enums.SaleOrderPartyType;
 import com.ims.exception.BadRequestException;
 import com.ims.repository.*;
 
@@ -34,27 +36,82 @@ public class PurchaseOrderValidation {
     private final SizeRepository sizeRepository;
     private final TaxMasterRepository taxMasterRepository;
     private final CurrencyRepository currencyRepository;
+    private final CustomerRepository customerRepository;
 
-    public PartyEntity validateSupplier(Long partyId) {
+    public void validatePartyType(
+            PurchaseOrderPartyType partyType,
+            Long customerId,
+            Long partyId
+    ) {
+
+        if (partyType == null) {
+            throw new BadRequestException("Purchase Order party type is required.");
+        }
+
+        switch (partyType) {
+
+            case CUSTOMER -> {
+                if (customerId == null) {
+                    throw new BadRequestException("Customer is required.");
+                }
+
+                if (partyId != null) {
+                    throw new BadRequestException(
+                            "Party ID is not allowed for CUSTOMER orders."
+                    );
+                }
+            }
+
+            case PARTY -> {
+                if (partyId == null) {
+                    throw new BadRequestException("Party is required.");
+                }
+
+                if (customerId != null) {
+                    throw new BadRequestException(
+                            "Customer ID is not allowed for PARTY orders."
+                    );
+                }
+            }
+
+            case BOTH -> {
+                if (customerId == null) {
+                    throw new BadRequestException(
+                            "Customer is required for BOTH orders."
+                    );
+                }
+
+                if (partyId == null) {
+                    throw new BadRequestException(
+                            "Party is required for BOTH orders."
+                    );
+                }
+            }
+        }
+    }
+
+    public CustomerEntity validateCustomer(Long customerId) {
+
+        if (customerId == null) {
+            throw new BadRequestException("Customer is required.");
+        }
+
+        return customerRepository.findByIdAndActiveTrue(customerId)
+                .orElseThrow(() ->
+                        new BadRequestException("Customer not found or inactive.")
+                );
+    }
+
+    public PartyEntity validateParty(Long partyId) {
 
         if (partyId == null) {
-            throw new IllegalArgumentException("Supplier is required.");
+            throw new BadRequestException("Party is required.");
         }
 
-        PartyEntity party = partyRepository.findByIdAndActiveTrue(partyId)
+        return partyRepository.findByIdAndActiveTrue(partyId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Supplier not found or inactive.")
+                        new BadRequestException("Party not found or inactive.")
                 );
-
-        PartyType partyType = party.getPartyType();
-
-        if (partyType != PartyType.SUPPLIER && partyType != PartyType.BOTH) {
-            throw new IllegalArgumentException(
-                    "Selected party is not a valid supplier."
-            );
-        }
-
-        return party;
     }
 
     public WarehouseEntity validateWarehouse(Long warehouseId) {
@@ -153,11 +210,27 @@ public class PurchaseOrderValidation {
     public void validateRequest(PurchaseOrderRequest request) {
 
         if (request == null) {
-            throw new IllegalArgumentException("Purchase Order request is required.");
+            throw new BadRequestException(
+                    "Purchase Order request is required."
+            );
         }
 
-        validateSupplier(request.getPartyId());
+        if (request.getCustomerId() != null) {
+            validateCustomer(request.getCustomerId());
+        }
+
+        if (request.getPartyId() != null) {
+            validateParty(request.getPartyId());
+        }
+
+        validatePartyType(
+                request.getPartyType(),
+                request.getCustomerId(),
+                request.getPartyId()
+        );
+
         validateWarehouse(request.getWarehouseId());
+
         validateCurrency(request.getCurrencyId());
 
         validateOrderDates(
@@ -171,7 +244,7 @@ public class PurchaseOrderValidation {
         );
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
-            throw new IllegalArgumentException(
+            throw new BadRequestException(
                     "At least one purchase order item is required."
             );
         }
@@ -181,20 +254,19 @@ public class PurchaseOrderValidation {
         for (PurchaseOrderItemRequest item : request.getItems()) {
 
             if (item == null) {
-                throw new IllegalArgumentException(
+                throw new BadRequestException(
                         "Purchase Order item cannot be empty."
                 );
             }
 
             validateItem(item);
 
-            // Prevent duplicate product + size + unit combinations.
             String key = item.getProductId()
                     + "-" + item.getUnitId()
                     + "-" + (item.getSizeId() == null ? "0" : item.getSizeId());
 
             if (!itemKeys.add(key)) {
-                throw new IllegalArgumentException(
+                throw new BadRequestException(
                         "Duplicate product, unit and size combination found."
                 );
             }

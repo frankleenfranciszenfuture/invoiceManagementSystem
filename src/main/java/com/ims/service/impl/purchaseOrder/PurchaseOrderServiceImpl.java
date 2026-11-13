@@ -9,17 +9,7 @@ import com.ims.dtos.purchaseOrder.PurchaseOrderResponse;
 import com.ims.dtos.purchaseOrder.PurchaseOrderRequest;
 import com.ims.dtos.purchaseOrder.PurchaseOrderSearchRequest;
 
-import com.ims.entity.Currency;
-import com.ims.entity.PartyEntity;
-import com.ims.entity.ProductEntity;
-import com.ims.entity.PurchaseOrderEntity;
-import com.ims.entity.PurchaseOrderGoodsReceiptEntity;
-import com.ims.entity.PurchaseOrderGoodsReceiptItemEntity;
-import com.ims.entity.PurchaseOrderItemEntity;
-import com.ims.entity.SizeEntity;
-import com.ims.entity.TaxMasterEntity;
-import com.ims.entity.UnitEntity;
-import com.ims.entity.WarehouseEntity;
+import com.ims.entity.*;
 
 import com.ims.enums.PurchaseOrderStatus;
 import com.ims.enums.PurchaseOrderTaxType;
@@ -136,7 +126,9 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
         purchaseOrder.setOrderNo(generatePurchaseOrderNumber());
 
-        purchaseOrder.setParty(references.supplier());
+        purchaseOrder.setPartyType(request.getPartyType());
+        purchaseOrder.setCustomer(references.customer);
+        purchaseOrder.setParty(references.party);
         purchaseOrder.setWarehouse(references.warehouse());
         purchaseOrder.setCurrency(references.currency());
 
@@ -288,7 +280,9 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 orderDate
         );
 
-        purchaseOrder.setParty(references.supplier());
+        purchaseOrder.setPartyType(request.getPartyType());
+        purchaseOrder.setCustomer(references.customer);
+        purchaseOrder.setParty(references.party);
         purchaseOrder.setWarehouse(references.warehouse());
         purchaseOrder.setCurrency(references.currency());
 
@@ -964,10 +958,19 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             PurchaseOrderRequest request
     ) {
 
-        PartyEntity supplier =
-                purchaseOrderValidation.validateSupplier(
-                        request.getPartyId()
-                );
+        purchaseOrderValidation.validatePartyType(
+                request.getPartyType(),
+                request.getCustomerId(),
+                request.getPartyId()
+        );
+
+        CustomerEntity customer = request.getCustomerId() != null
+                ? purchaseOrderValidation.validateCustomer(request.getCustomerId())
+                : null;
+
+        PartyEntity party = request.getPartyId() != null
+                ? purchaseOrderValidation.validateParty(request.getPartyId())
+                : null;
 
         WarehouseEntity warehouse =
                 purchaseOrderValidation.validateWarehouse(
@@ -980,18 +983,19 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 );
 
         return new OrderReferences(
-                supplier,
+                customer,
+                party,
                 warehouse,
                 currency
         );
     }
 
     private record OrderReferences(
-            PartyEntity supplier,
+            CustomerEntity customer,
+            PartyEntity party,
             WarehouseEntity warehouse,
             Currency currency
-    ) {
-    }
+    ) {}
 
 
     // =====================================================
@@ -1085,38 +1089,23 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     // PURCHASE ORDER CALCULATIONS
     // =====================================================
 
-    private void calculatePurchaseOrder(
-            PurchaseOrderEntity purchaseOrder
-    ) {
-
-        if (companyRegisteredState == null
-                || companyRegisteredState.isBlank()) {
-
-            throw new BadRequestException(
-                    "Company registered state is not configured."
-            );
-        }
+    private void calculatePurchaseOrder(PurchaseOrderEntity purchaseOrder) {
 
         PurchaseOrderTaxType taxType =
                 purchaseOrderTaxTypeResolver.resolveTaxType(
                         companyRegisteredState,
+                        purchaseOrder.getCustomer(),
                         purchaseOrder.getParty()
                 );
 
-        // Calculate subtotal, discounts and taxes.
-        calculationService.calculate(
-                purchaseOrder,
-                taxType
-        );
+        calculationService.calculate(purchaseOrder, taxType);
 
-        // Normalize shipping amount.
         BigDecimal shippingAmount = money(
                 purchaseOrder.getShippingAmount()
         );
 
         purchaseOrder.setShippingAmount(shippingAmount);
 
-        // Include shipping in selected currency grand total.
         BigDecimal grandTotal = money(
                 zeroIfNull(purchaseOrder.getGrandTotal())
                         .add(shippingAmount)
@@ -1124,7 +1113,6 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
         purchaseOrder.setGrandTotal(grandTotal);
 
-        // Include shipping in INR grand total.
         BigDecimal exchangeRate = purchaseOrder.getExchangeRate();
 
         if (exchangeRate == null || exchangeRate.signum() <= 0) {
@@ -1134,9 +1122,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         }
 
         purchaseOrder.setBaseGrandTotal(
-                money(
-                        grandTotal.multiply(exchangeRate)
-                )
+                money(grandTotal.multiply(exchangeRate))
         );
     }
 
