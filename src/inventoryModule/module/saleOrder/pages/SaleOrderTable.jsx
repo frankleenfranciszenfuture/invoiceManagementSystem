@@ -31,6 +31,7 @@ import {
 import toast from "react-hot-toast";
 import Pagination from "../../../../common/pagination/table/Pagination";
 import ToolTipText from "../../../../common/toolTip/ToolTipText";
+import { openModal } from "../../../../module/ui/uiSlice";
 
 export default function SaleOrderTable({ salesOrders = [],
     appliedFilters = {},
@@ -436,18 +437,20 @@ export default function SaleOrderTable({ salesOrders = [],
             ).unwrap();
 
             if (!invoice?.id) {
-                throw new Error(
-                    "Invoice was generated, but its ID was not returned."
-                );
+                toast.error("Invoice was created, but the invoice ID was not returned.");
+                return;
             }
 
-            toast.success(
-                "Sales order converted into invoice successfully."
-            );
+            toast.success("Sales order converted to invoice successfully.");
 
-            refreshSalesOrders(pageNumber, pageSize);
+            await dispatch(fetchAllSalesOrders());
 
-            navigate(`/invoices/view/${invoice.id}`);
+            navigate(`/invoices/sale/edit/${invoice.id}`, {
+                state: {
+                    isEdit: true,
+                    fromSalesOrder: true,
+                },
+            });
 
         } catch (error) {
             toast.error(
@@ -482,6 +485,8 @@ export default function SaleOrderTable({ salesOrders = [],
 
         navigate(`/inventory/salesOrder/view/${order.id}`);
     };
+
+
 
     /* =====================================================
        EDIT SALES ORDER

@@ -435,7 +435,15 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
    CONVERT PURCHASE ORDER TO INVOICE
 ===================================================== */
 
+
     const handleConvertToInvoice = async (order) => {
+        if (!canEditPurchaseOrder) {
+            toast.error(
+                "You do not have permission to convert purchase orders."
+            );
+            return;
+        }
+
         if (!order?.id) {
             toast.error("Purchase order ID is missing.");
             return;
@@ -447,6 +455,11 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
             toast.error(
                 "Only confirmed or received purchase orders can be converted into invoices."
             );
+            return;
+        }
+
+        if (hasGeneratedInvoice(order)) {
+            toast.error("An invoice has already been generated for this purchase order.");
             return;
         }
 
@@ -463,21 +476,47 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
         try {
             setConvertingOrderId(order.id);
 
-            const invoice = await dispatch(
+            const result = await dispatch(
                 convertPurchaseOrderToInvoice(order.id)
             ).unwrap();
 
+            // Extract invoice from API response
+            const invoice =
+                result?.data?.data ??
+                result?.data?.invoice ??
+                result?.data ??
+                result?.invoice ??
+                result;
+
             if (!invoice?.id) {
-                throw new Error("Invoice created, but invoice ID was not returned.");
+                throw new Error(
+                    "Invoice created, but invoice ID was not returned."
+                );
             }
 
             toast.success(
                 "Purchase order converted into invoice successfully."
             );
 
-            navigate(`/invoices/view/${invoice.id}`);
+            // Refresh Purchase Order list
+            dispatch(
+                fetchAllPurchaseOrders({
+                    page: pageNumber,
+                    size: pageSize,
+                })
+            );
+
+            // Navigate to the full-page invoice edit form
+            navigate(`/invoices/purchase/edit/${invoice.id}`, {
+                state: {
+                    isEdit: true,
+                    fromPurchaseOrder: true,
+                },
+            });
 
         } catch (error) {
+            console.error("Purchase Order conversion failed:", error);
+
             toast.error(
                 typeof error === "string"
                     ? error
@@ -488,6 +527,7 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
             setConvertingOrderId(null);
         }
     };
+
 
     /* =====================================================
    CREATE GOODS RECEIPT
@@ -571,16 +611,16 @@ export default function PurchaseOrderTable({ purchaseOrders = [] }) {
     /* =====================================================
    CHECK WHETHER INVOICE ALREADY EXISTS
 ===================================================== */
-
     const hasGeneratedInvoice = (order) => {
         return Boolean(
             order?.invoiceId ||
             order?.invoice?.id ||
+            order?.invoiceGenerated ||
             order?.convertedToInvoice ||
-            order?.invoiceGenerated
+            order?.purchaseOrderInvoiceId ||
+            order?.purchaseOrder?.invoiceId
         );
     };
-
     /* =====================================================
        LOADING
     ===================================================== */

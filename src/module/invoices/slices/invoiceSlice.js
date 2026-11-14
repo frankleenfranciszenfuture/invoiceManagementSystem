@@ -48,6 +48,11 @@ const emptyInvoice = {
   invoiceNumber: "",
   invoiceType: "",
 
+  // Sales Order reference
+  salesOrderId: null,
+  salesOrderNumber: "",
+  sourceType: "",
+
   customerId: "",
   customerName: "",
 
@@ -229,6 +234,7 @@ const invoiceSlice = createSlice({
    SET INVOICE FOR EDIT
 ===================================================== */
 
+
     setInvoiceForEdit: (state, action) => {
       const existingInvoice = action.payload;
 
@@ -238,29 +244,88 @@ const invoiceSlice = createSlice({
         ...emptyInvoice,
         ...existingInvoice,
 
-        // Preserve existing invoice items.
+        // Invoice details
+        invoiceNumber: existingInvoice.invoiceNumber ?? "",
+        invoiceType: existingInvoice.invoiceType ?? "",
+        invoiceDate: existingInvoice.invoiceDate || getTodayDate(),
+        dueDate: existingInvoice.dueDate || "",
+        invoiceStatus:
+          existingInvoice.status ??
+          existingInvoice.invoiceStatus ??
+          "DRAFT",
+
+        // Sales Order reference
+        salesOrderId: existingInvoice.salesOrderId ?? null,
+        salesOrderNumber: existingInvoice.salesOrderNumber ?? "",
+        sourceType: existingInvoice.sourceType ?? "",
+
+        // Customer
+        customerId: existingInvoice.customerId ?? "",
+        customerName:
+          existingInvoice.customerName ??
+          existingInvoice.customer?.displayName ??
+          existingInvoice.customer?.companyName ??
+          "",
+
+        // Salesperson
+        salesPersonId: existingInvoice.salesPersonId ?? "",
+        salesPersonName: existingInvoice.salesPersonName ?? "",
+
+        // Currency
+        currencyId: existingInvoice.currencyId ?? "",
+        currencyName: existingInvoice.currencyName ?? "",
+        currencyCode: existingInvoice.currencyCode ?? "",
+        exchangeRate: existingInvoice.exchangeRate ?? 1,
+
+        // Bank account
+        bankAccountId: existingInvoice.bankAccountId ?? "",
+        bankName:
+          existingInvoice.bankAccountName ??
+          existingInvoice.bankAccount?.bankName ??
+          "",
+
+        // Email signature
+        emailSignatureId: existingInvoice.emailSignatureId ?? "",
+        signatureName:
+          existingInvoice.emailSignatureName ??
+          existingInvoice.emailSignature?.signatureName ??
+          "",
+
+        // Invoice totals
+        subtotal: existingInvoice.subtotal ?? 0,
+        discountAmount: existingInvoice.discountAmount ?? 0,
+        taxAmount: existingInvoice.taxAmount ?? 0,
+        shippingAmount: existingInvoice.shippingAmount ?? 0,
+        grandTotal: existingInvoice.grandTotal ?? 0,
+
+        // Additional details
+        notes: existingInvoice.notes ?? "",
+        termsAndConditions: existingInvoice.termsAndConditions ?? "",
+
+        // Preserve all invoice item details
         invoiceItems: Array.isArray(existingInvoice.invoiceItems)
           ? existingInvoice.invoiceItems.map((item) => ({
-              ...item,
-            }))
+            ...item,
+            productId: item.productId ?? "",
+            description: item.description ?? item.productName ?? "",
+            unitId: item.unitId ?? "",
+            sizeId: item.sizeId ?? "",
+            quantity: item.quantity ?? 1,
+            unitPrice: item.unitPrice ?? 0,
+            baseUnitPrice: item.baseUnitPrice ?? 0,
+            discountAmount: item.discountAmount ?? 0,
+            taxMasterId: item.taxMasterId ?? "",
+          }))
           : [],
-
-        // Preserve invoice dates and values.
-        invoiceDate: existingInvoice.invoiceDate || getTodayDate(),
-
-        dueDate: existingInvoice.dueDate || "",
-
-        invoiceStatus:
-          existingInvoice.invoiceStatus || existingInvoice.status || "DRAFT",
       };
 
       state.exsistingInvoice = existingInvoice;
-
       state.isDirty = false;
       state.error = null;
       state.success = false;
       state.message = "";
     },
+
     /* =====================================================
        CLEAR INVOICE REQUEST STATE
     ===================================================== */
@@ -441,7 +506,7 @@ const invoiceSlice = createSlice({
       if (
         state.previewInvoice &&
         String(state.previewInvoice.id ?? state.previewInvoice.invoiceId) ===
-          String(invoiceId)
+        String(invoiceId)
       ) {
         state.previewInvoice.invoiceTemplate = templateId;
       }

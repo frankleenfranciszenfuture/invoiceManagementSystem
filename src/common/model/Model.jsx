@@ -148,6 +148,27 @@ export default function Modal() {
 
     const ModalComponent = modalMap[type];
 
+    /* =========================================================
+   MODAL CLOSE HANDLER
+========================================================= */
+
+    const handleModalClose = () => {
+        const isConvertedInvoiceModal =
+            type === "editInvoice" &&
+            data?.navigateToInvoiceDetails === true;
+
+        if (isConvertedInvoiceModal) {
+            const confirmed = window.confirm(
+                "This invoice has already been created as a draft. If you leave now, your unsaved changes will be lost. Do you want to leave?"
+            );
+
+            if (!confirmed) {
+                return;
+            }
+        }
+
+        dispatch(closeModal());
+    };
 
     /* =========================================================
        BODY SCROLL
@@ -183,10 +204,9 @@ export default function Modal() {
         }
 
         const handleEscape = (event) => {
-            if (
-                event.key === "Escape"
-            ) {
-                dispatch(closeModal());
+            if (event.key === "Escape") {
+                event.preventDefault();
+                handleModalClose();
             }
         };
 
@@ -195,7 +215,7 @@ export default function Modal() {
         return () => {
             document.removeEventListener("keydown", handleEscape);
         };
-    }, [open, type, dispatch]);
+    }, [open, type, data, dispatch]);
 
 
     /* =========================================================
@@ -203,9 +223,8 @@ export default function Modal() {
     ========================================================= */
 
     const handleBackdropClick = (event) => {
-
         if (event.target === event.currentTarget) {
-            dispatch(closeModal());
+            handleModalClose();
         }
     };
 
@@ -519,9 +538,7 @@ export default function Modal() {
 
                     <button
                         type="button"
-                        onClick={() => {
-                            dispatch(closeModal());
-                        }}
+                        onClick={handleModalClose}
                         className="
             absolute
             right-5
@@ -577,7 +594,7 @@ export default function Modal() {
                     >
                         <ModalComponent
                             data={data}
-                            onClose={() => dispatch(closeModal())}
+                            onClose={handleModalClose}
                         />
 
                     </div>

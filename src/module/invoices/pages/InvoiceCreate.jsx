@@ -128,6 +128,8 @@ import {
   calculateDueDate,
 } from "../utils/dateUtils";
 import CustomISelect from "../../../common/custom/CustomISelect";
+import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
+import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
 /* =========================================================
    EMPTY ITEM
 ========================================================= */
@@ -174,7 +176,7 @@ const getArray = (value) => {
    COMPONENT
 ========================================================= */
 
-export default function InvoiceCreate() {
+export default function InvoiceCreate({ onClose }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -185,7 +187,12 @@ export default function InvoiceCreate() {
   const [showInvoiceTypeOptions, setShowInvoiceTypeOptions] =
     useState(true);
 
-
+  const {
+    showLeaveConfirmation,
+    confirmLeave,
+    handleStay,
+    handleLeave,
+  } = useLeaveConfirmation();
   // =========================================================
   // SELECT PRODUCT INVOICE
   // =========================================================
@@ -230,6 +237,17 @@ export default function InvoiceCreate() {
       },
     });
   };
+
+  const handlePurchaseInvoice = () => {
+    setShowInvoiceTypeOptions(false);
+    dispatch(closeModal());
+
+    navigate("/invoices/purchase/new", {
+      state: {
+        invoiceType: "PURCHASE_INVOICE",
+      },
+    });
+  };
   // =========================================================
   // GO TO MENU PERMISSION
   // =========================================================
@@ -251,9 +269,6 @@ export default function InvoiceCreate() {
     dispatch(closeModal());
   };
 
-
-  const [showLeaveConfirmation, setShowLeaveConfirmation] =
-    useState(false);
 
   const [showDateTermsModal, setShowDateTermsModal] = useState(false);
 
@@ -1606,16 +1621,33 @@ export default function InvoiceCreate() {
      CLOSE
   ========================================================= */
 
+  // const handleClose = () => {
+  //   dispatch(resetInvoiceForm());
+  //   resetLocalState();
+
+  //   if (isModal) {
+  //     dispatch(closeModal());
+  //     return;
+  //   }
+
+  //   if (isEditMode) {
+  //     navigate(`/invoices/view/${editInvoiceId}`);
+  //     return;
+  //   }
+
+  //   navigate("/invoices");
+
+  //   handleRequestLeave();
+  // };
+
   const handleClose = () => {
-    dispatch(resetInvoiceForm());
-    resetLocalState();
-
-    if (isModal) {
-      dispatch(closeModal());
-      return;
-    }
-
-    handleRequestLeave();
+    confirmLeave(() => {
+      if (onClose) {
+        onClose();
+      } else {
+        navigate("/invoices");
+      }
+    })
   };
 
   /* =========================================================
@@ -2899,6 +2931,7 @@ BANKACCOUNT NAME
   ========================================================= */
 
 
+
   const buildInvoicePayload = () => {
     const validItems = invoiceItems.filter(
       (item) => item.productId || item.description,
@@ -2927,7 +2960,15 @@ BANKACCOUNT NAME
       invoiceType: invoice.invoiceType || "PRODUCT_INVOICE",
       invoiceStatus: invoice.invoiceStatus || "DRAFT",
 
+      // Sales Order reference
+      sourceType: invoice.sourceType || null,
+      salesOrderId: invoice.salesOrderId
+        ? Number(invoice.salesOrderId)
+        : null,
+      salesOrderNumber: invoice.salesOrderNumber || null,
+
       customerId: Number(invoice.customerId),
+
       salesPersonId: invoice.salesPersonId
         ? Number(invoice.salesPersonId)
         : null,
@@ -2961,19 +3002,15 @@ BANKACCOUNT NAME
 
         let discountAmount = 0;
 
-        // PRODUCT DISCOUNT
         if (discountMode === "PRODUCT") {
           discountAmount = Number(item?.discountAmount || 0);
         }
 
-        // COMMON DISCOUNT — distribute proportionally
         if (discountMode === "COMMON" && totalGrossAmount > 0) {
           discountAmount =
             commonDiscount * (grossAmount / totalGrossAmount);
         }
 
-        // Preserve original base-currency price.
-        // Fall back for existing items without baseUnitPrice.
         const baseUnitPrice =
           item.baseUnitPrice !== null &&
             item.baseUnitPrice !== undefined &&
@@ -3003,6 +3040,7 @@ BANKACCOUNT NAME
       }),
     };
   };
+
 
 
   /* =========================================================
@@ -6174,6 +6212,26 @@ BANKACCOUNT NAME
                   </div>
                 </button>
 
+                {/* PURCHASE INVOICE */}
+                <button
+                  type="button"
+                  onClick={handlePurchaseInvoice}
+                  className="flex items-center gap-3 rounded-xl border border-gray-200 p-4 text-left transition hover:border-blue-400 hover:bg-blue-50"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+                    <Package className="text-blue-600" size={21} />
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-gray-800">
+                      Purchase Invoice
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Create invoices for products and inventory.
+                    </p>
+                  </div>
+                </button>
+
               </div>
 
               <div className="mt-6 flex justify-end">
@@ -6428,6 +6486,15 @@ BANKACCOUNT NAME
         )
       }
 
+      <LeaveConfirmationModal
+        show={showLeaveConfirmation}
+        title="Leave invoice?"
+        message="You have unsaved changes. Do you want to leave this invoice page?"
+        stayText="Stay Here"
+        leaveText="Leave"
+        onStay={handleStay}
+        onLeave={handleLeave}
+      />
     </>
   );
 }

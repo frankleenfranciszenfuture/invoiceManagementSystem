@@ -693,6 +693,11 @@ function AppContent() {
         />
 
         <Route
+          path="/invoices/purchase/new"
+          element={<InvoiceCreate />}
+        />
+
+        <Route
           path="/invoices/product/edit/:id"
           element={<InvoiceCreate />}
         />
@@ -704,6 +709,11 @@ function AppContent() {
 
         <Route
           path="/invoices/sale/edit/:id"
+          element={<InvoiceCreate />}
+        />
+
+        <Route
+          path="/invoices/purchase/edit/:id"
           element={<InvoiceCreate />}
         />
 
