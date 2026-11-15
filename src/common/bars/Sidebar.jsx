@@ -161,17 +161,18 @@ const SETTINGS_NAV = [
         icon: Settings,
         to: "/settings",
     },
-    {
-        label: "Users",
-        moduleName: "Users",
-        icon: Users,
-        to: "/settings/users",
-    },
+
     {
         label: "Roles",
         moduleName: "Roles",
         icon: Users,
         to: "/settings/roles",
+    },
+    {
+        label: "Users",
+        moduleName: "Users",
+        icon: Users,
+        to: "/settings/users",
     },
     {
         label: "MenuPermission",
