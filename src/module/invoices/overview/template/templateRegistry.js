@@ -1,7 +1,9 @@
 import InvoiceTemplate1 from "./InvoiceTemplate1";
 import InvoiceTemplate2 from "./InvoiceTemplate2";
 import InvoiceTemplate3 from "./InvoiceTemplate3";
-import InvoiceTemplate4 from "./Invoicetemplate4";
+import InvoiceTemplate4 from "./InvoiceTemplate4";
+import InvoiceTemplate5 from "./InvoiceTemplate5";
+import InvoiceTemplate6 from "./InvoiceTemplate6";
 
 const invoiceTemplates = [
   {
@@ -21,8 +23,18 @@ const invoiceTemplates = [
   },
   {
     id: "InvoiceTemplate4",
-    name: "Invoice Template 4",
+    name: "Corporate Blue",
     component: InvoiceTemplate4,
+  },
+  {
+    id: "InvoiceTemplate5",
+    name: "Premium Minimal",
+    component: InvoiceTemplate5,
+  },
+  {
+    id: "InvoiceTemplate6",
+    name: "Modern GST",
+    component: InvoiceTemplate6,
   },
 ];
 

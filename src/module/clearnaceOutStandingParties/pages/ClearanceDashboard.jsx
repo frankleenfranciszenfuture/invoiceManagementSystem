@@ -391,7 +391,7 @@ export default function ClearanceDashboard() {
             return;
         }
 
-        navigate("/clearances/create");
+        navigate("/inventory/parties/clearances/create");
 
     }, [
         isAuthenticated,
@@ -581,7 +581,7 @@ export default function ClearanceDashboard() {
 
                             <div
                                 className="
-                                    relative mt-30 mb-1
+                                    relative mt-10 mb-1
                                     flex h-24 w-24 shrink-0
                                     items-center justify-center
                                     rounded-full bg-gray-100
@@ -667,26 +667,6 @@ export default function ClearanceDashboard() {
 
                                 )}
 
-                                {/* IMPORT */}
-
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        toast(
-                                            "Credit clearance import is not configured yet."
-                                        );
-                                    }}
-                                    className="
-                                        flex items-center gap-2
-                                        whitespace-nowrap rounded-md
-                                        border border-gray-300 bg-white
-                                        px-4 py-2 text-sm text-gray-700
-                                        transition-colors hover:bg-gray-50
-                                    "
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Import File
-                                </button>
 
                             </div>
 

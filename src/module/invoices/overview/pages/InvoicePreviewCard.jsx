@@ -11,6 +11,7 @@ import html2canvas from "html2canvas-pro";
 
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
+
 import { setInvoiceTemplate } from "../../slices/invoiceSlice";
 
 import {
@@ -23,32 +24,43 @@ import {
     DownloadCloudIcon,
     Mail,
 } from "lucide-react";
+
 import toast from "react-hot-toast";
 
+import {
+    openModal,
+    closeModal,
+} from "../../../ui/uiSlice";
 
+import {
+    fetchInvoiceById,
+    sendInvoiceEmail,
+} from "../../thunks/invoiceThunks";
 
-
-import { openModal } from "../../../ui/uiSlice";
-import { fetchInvoiceById, sendInvoiceEmail } from "../../thunks/invoiceThunks";
 import invoiceTemplates from "../template/templateRegistry";
 import { normalizeInvoice } from "../template/invoiceTemplateUtils";
+
 import {
     setInvoicePdfGenerator,
 } from "../../utils/invoicePdfGenerator";
+import ToolTipText from "../../../../common/toolTip/ToolTipText";
+
 
 export default function InvoicePreviewCard() {
+
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { id } = useParams();
+
     const invoiceDownloadRef = useRef(null);
+    const customizeRef = useRef(null);
+    const previewRef = useRef(null);
+    const requestedInvoiceIdRef = useRef(null);
 
     const [customizeOpen, setCustomizeOpen] = useState(false);
     const [previewScale, setPreviewScale] = useState(1);
     const [downloading, setDownloading] = useState(false);
-
-    const customizeRef = useRef(null);
-    const previewRef = useRef(null);
-    const requestedInvoiceIdRef = useRef(null);
+    const [emailSending, setEmailSending] = useState(false);
 
     const TEMPLATE_WIDTH = 794;
     const TEMPLATE_HEIGHT = 1123;
@@ -72,6 +84,7 @@ export default function InvoicePreviewCard() {
         selectedTemplateInvoiceId,
     } = useSelector((state) => state.invoice || {});
 
+
     /* ============================================================
        COMMON HELPERS
     ============================================================ */
@@ -79,10 +92,228 @@ export default function InvoicePreviewCard() {
     const getInvoiceId = (item) =>
         item?.id ?? item?.invoiceId ?? null;
 
+
     const sameId = (first, second) =>
         first != null &&
         second != null &&
         String(first) === String(second);
+
+
+    const toDisplay = (value) => {
+
+        if (
+            value === null ||
+            value === undefined ||
+            value === ""
+        ) {
+            return "—";
+        }
+
+        if (typeof value === "object") {
+            return (
+                value.addressLine1 ||
+                value.address ||
+                value.name ||
+                value.displayName ||
+                "—"
+            );
+        }
+
+        return String(value);
+    };
+
+
+    const formatAmount = (value) => {
+
+        if (
+            value === null ||
+            value === undefined ||
+            value === ""
+        ) {
+            return "—";
+        }
+
+        const amount = Number(value);
+
+        if (!Number.isFinite(amount)) {
+            return String(value);
+        }
+
+        return amount.toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+    };
+
+
+    const formatDate = (value) => {
+
+        if (!value) return "—";
+
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) {
+            return value;
+        }
+
+        return date.toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+        });
+    };
+
+
+    const formatDateTime = (value) => {
+
+        if (!value) return "—";
+
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) {
+            return value;
+        }
+
+        return date.toLocaleString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
+
+    const formatQuantity = (value) => {
+
+        if (
+            value === null ||
+            value === undefined ||
+            value === ""
+        ) {
+            return "—";
+        }
+
+        const amount = Number(value);
+
+        if (!Number.isFinite(amount)) {
+            return String(value);
+        }
+
+        return amount.toLocaleString("en-IN", {
+            maximumFractionDigits: 3,
+        });
+    };
+
+
+    const getFullName = (person) => {
+
+        if (!person) return "";
+
+        return [
+            person.salutation,
+            person.firstName,
+            person.lastName,
+        ]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+    };
+
+
+    const getCustomerName = (invoice) => {
+
+        const customer = invoice?.customer;
+
+        return (
+            invoice?.customerName ||
+            customer?.displayName ||
+            customer?.companyName ||
+            customer?.name ||
+            getFullName(customer) ||
+            invoice?.partyName ||
+            invoice?.party?.name ||
+            "No customer selected"
+        );
+    };
+
+
+    const getSalesPersonName = (invoice) => {
+
+        const salesPerson = invoice?.salesPerson;
+
+        return (
+            invoice?.salesPersonName ||
+            salesPerson?.salesPersonName ||
+            salesPerson?.name ||
+            ""
+        );
+    };
+
+
+    const getAddressText = (address) => {
+
+        if (!address) return "—";
+
+        return [
+            address.attention,
+            address.addressLine1,
+            address.addressLine2,
+            address.address,
+            address.city,
+            address.state,
+            address.country,
+            address.zipCode,
+            address.postalCode,
+        ]
+            .filter(Boolean)
+            .filter((value, index, array) =>
+                array.indexOf(value) === index
+            )
+            .join(", ") || "—";
+    };
+
+
+    const getCompanyAddress = (company) => {
+
+        if (!company) return "—";
+
+        return [
+            company.addressLine1,
+            company.addressLine2,
+            company.city,
+            company.state,
+            company.country,
+            company.pincode,
+        ]
+            .filter(Boolean)
+            .join(", ") || "—";
+    };
+
+
+    const getStatusStyles = (value) => {
+
+        if (
+            ["PAID", "ACTIVE", "COMPLETED"].includes(value)
+        ) {
+            return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+        }
+
+        if (
+            ["OVERDUE", "CANCELLED", "REJECTED"].includes(value)
+        ) {
+            return "bg-rose-50 text-rose-700 ring-rose-200";
+        }
+
+        if (
+            ["SENT", "PARTIAL", "PARTIALLY_PAID"].includes(value)
+        ) {
+            return "bg-blue-50 text-blue-700 ring-blue-200";
+        }
+
+        return "bg-amber-50 text-amber-700 ring-amber-200";
+    };
+
 
     /* ============================================================
        URL INVOICE ID
@@ -90,30 +321,39 @@ export default function InvoicePreviewCard() {
 
     const targetInvoiceId = id ?? null;
 
+
     /* ============================================================
        VALIDATE COMPLETE PREVIEW
     ============================================================ */
 
     const hasFullPreview =
         previewInvoice != null &&
-        sameId(getInvoiceId(previewInvoice), targetInvoiceId) &&
+        sameId(
+            getInvoiceId(previewInvoice),
+            targetInvoiceId
+        ) &&
         (
             previewInvoiceId == null ||
             sameId(previewInvoiceId, targetInvoiceId)
         );
+
 
     /* ============================================================
        SELECT INVOICE
     ============================================================ */
 
     const invoice = useMemo(() => {
+
         if (!targetInvoiceId) {
             return null;
         }
 
         if (
             previewInvoice &&
-            sameId(getInvoiceId(previewInvoice), targetInvoiceId) &&
+            sameId(
+                getInvoiceId(previewInvoice),
+                targetInvoiceId
+            ) &&
             (
                 previewInvoiceId == null ||
                 sameId(previewInvoiceId, targetInvoiceId)
@@ -131,9 +371,13 @@ export default function InvoicePreviewCard() {
 
         return (
             candidates.find((item) =>
-                sameId(getInvoiceId(item), targetInvoiceId)
+                sameId(
+                    getInvoiceId(item),
+                    targetInvoiceId
+                )
             ) || null
         );
+
     }, [
         targetInvoiceId,
         previewInvoice,
@@ -144,20 +388,154 @@ export default function InvoicePreviewCard() {
         invoices,
     ]);
 
+
     /* ============================================================
        SHARED NORMALIZED INVOICE DATA
     ============================================================ */
 
-    const sharedInvoice = useMemo(
-        () => (invoice ? normalizeInvoice(invoice) : null),
-        [invoice]
-    );
+    const sharedInvoice = useMemo(() => {
+
+        if (!invoice) return null;
+
+        const normalized = normalizeInvoice(invoice);
+
+        const company = invoice.company || {};
+        const bankAccount = invoice.bankAccount || {};
+        const emailSignature = invoice.emailSignature || {};
+        const customer = invoice.customer || {};
+        const salesPerson = invoice.salesPerson || {};
+
+        return {
+            ...normalized,
+
+            // Invoice details
+            id: invoice.id,
+            invoiceId: invoice.invoiceId,
+            invoiceNumber: invoice.invoiceNumber,
+            invoiceType: invoice.invoiceType,
+            invoiceStatus: invoice.invoiceStatus || invoice.status,
+            status: invoice.status,
+
+            invoiceDate: invoice.invoiceDate,
+            dueDate: invoice.dueDate,
+
+            // Currency
+            currency: invoice.currency,
+            currencyId: invoice.currencyId,
+            currencyCode:
+                invoice.currencyCode ||
+                invoice.currency?.currencyCode ||
+                "",
+
+            currencyName:
+                invoice.currencyName ||
+                invoice.currency?.currencyName ||
+                "",
+
+            currencySymbol:
+                invoice.currencySymbol ||
+                invoice.currency?.symbol ||
+                "",
+
+            // Customer
+            customerId: invoice.customerId,
+            customerName: getCustomerName(invoice),
+            customer,
+            billingAddress: customer.billingAddress || null,
+            shippingAddress: customer.shippingAddress || null,
+
+            // Salesperson
+            salesPersonId: invoice.salesPersonId,
+            salesPersonName: getSalesPersonName(invoice),
+            salesPerson,
+
+            // Company
+            companyId: invoice.companyId,
+            companyName:
+                invoice.companyName ||
+                company.companyName ||
+                "",
+
+            companyCode:
+                invoice.companyCode ||
+                company.companyCode ||
+                "",
+
+            company,
+
+            logo:
+                invoice.logo ||
+                invoice.companyLogo ||
+                company.logo ||
+                "",
+
+            companyLogo:
+                company.logo ||
+                invoice.logo ||
+                "",
+
+            companySignature:
+                company.signature || "",
+
+            companyAddress: getCompanyAddress(company),
+
+            // Bank account
+            bankAccountId: invoice.bankAccountId,
+            bankAccountName:
+                invoice.bankAccountName ||
+                bankAccount.accountName ||
+                "",
+
+            bankAccount,
+
+            bankName: bankAccount.bankName || "",
+            branchName: bankAccount.branchName || "",
+            accountNumber: bankAccount.accountNumber || "",
+            ifsc: bankAccount.ifsc || "",
+            swiftCode: bankAccount.swiftCode || "",
+
+            // Email signature
+            emailSignatureId: invoice.emailSignatureId,
+            emailSignatureName:
+                invoice.emailSignatureName ||
+                emailSignature.signatureName ||
+                "",
+
+            emailSignature,
+            signatureName: emailSignature.signatureName || "",
+            signatureContent: emailSignature.signatureContent || "",
+
+            // Invoice items
+            invoiceItems: Array.isArray(invoice.invoiceItems)
+                ? invoice.invoiceItems
+                : [],
+
+            // Amounts
+            subtotal: invoice.subtotal,
+            totalTax: invoice.totalTax,
+            taxAmount: invoice.taxAmount,
+            discountAmount: invoice.discountAmount,
+            grandTotal: invoice.grandTotal,
+            totalAmount: invoice.totalAmount,
+            amountPaid: invoice.amountPaid,
+            balanceDue: invoice.balanceDue,
+
+            // Audit
+            createdAt: invoice.createdAt,
+            updatedAt: invoice.updatedAt,
+            createdBy: invoice.createdBy,
+            updatedBy: invoice.updatedBy,
+        };
+
+    }, [invoice]);
+
 
     /* ============================================================
        FETCH COMPLETE INVOICE
     ============================================================ */
 
     useEffect(() => {
+
         if (!targetInvoiceId) {
             requestedInvoiceIdRef.current = null;
             return;
@@ -170,7 +548,9 @@ export default function InvoicePreviewCard() {
 
         const requestId = String(targetInvoiceId);
 
-        if (requestedInvoiceIdRef.current === requestId) {
+        if (
+            requestedInvoiceIdRef.current === requestId
+        ) {
             return;
         }
 
@@ -179,36 +559,45 @@ export default function InvoicePreviewCard() {
         dispatch(fetchInvoiceById(targetInvoiceId))
             .unwrap()
             .catch((fetchError) => {
+
                 console.error(
                     "Failed to load invoice preview:",
                     fetchError
                 );
+
             })
             .finally(() => {
+
                 if (
                     requestedInvoiceIdRef.current === requestId
                 ) {
                     requestedInvoiceIdRef.current = null;
                 }
+
             });
+
     }, [
         dispatch,
         targetInvoiceId,
         hasFullPreview,
     ]);
 
+
     /* ============================================================
        CLOSE CUSTOMIZE DROPDOWN ON OUTSIDE CLICK
     ============================================================ */
 
     useEffect(() => {
+
         const handleClickOutside = (event) => {
+
             if (
                 customizeRef.current &&
                 !customizeRef.current.contains(event.target)
             ) {
                 setCustomizeOpen(false);
             }
+
         };
 
         document.addEventListener(
@@ -217,31 +606,41 @@ export default function InvoicePreviewCard() {
         );
 
         return () => {
+
             document.removeEventListener(
                 "mousedown",
                 handleClickOutside
             );
+
         };
+
     }, []);
+
 
     /* ============================================================
        RESPONSIVE PREVIEW SCALE
     ============================================================ */
 
     useEffect(() => {
+
         const element = previewRef.current;
 
         if (!element) return;
 
         const updatePreviewScale = () => {
+
             const availableWidth = Math.max(
                 0,
                 element.clientWidth - 32
             );
 
             setPreviewScale(
-                Math.min(1, availableWidth / TEMPLATE_WIDTH)
+                Math.min(
+                    1,
+                    availableWidth / TEMPLATE_WIDTH
+                )
             );
+
         };
 
         updatePreviewScale();
@@ -249,11 +648,13 @@ export default function InvoicePreviewCard() {
         let resizeObserver;
 
         if (typeof ResizeObserver !== "undefined") {
+
             resizeObserver = new ResizeObserver(
                 updatePreviewScale
             );
 
             resizeObserver.observe(element);
+
         }
 
         window.addEventListener(
@@ -262,14 +663,18 @@ export default function InvoicePreviewCard() {
         );
 
         return () => {
+
             resizeObserver?.disconnect();
 
             window.removeEventListener(
                 "resize",
                 updatePreviewScale
             );
+
         };
+
     }, []);
+
 
     /* ============================================================
        CURRENT TEMPLATE
@@ -282,15 +687,18 @@ export default function InvoicePreviewCard() {
         ? reduxInvoiceTemplate
         : invoice?.invoiceTemplate || "InvoiceTemplate1";
 
+
     const Template = invoiceTemplates.find(
         (template) => template.id === invoiceTemplate
     )?.component;
+
 
     /* ============================================================
        CHANGE TEMPLATE
     ============================================================ */
 
     const handleChangeTemplate = () => {
+
         if (!invoice) return;
 
         setCustomizeOpen(false);
@@ -301,7 +709,13 @@ export default function InvoicePreviewCard() {
                 data: invoice,
             })
         );
+
     };
+
+
+    /* ============================================================
+       OPEN EMAIL MODAL
+    ============================================================ */
 
     const handleOpenEmailModal = () => {
 
@@ -317,16 +731,23 @@ export default function InvoicePreviewCard() {
                 type: "emailInvoice",
                 data: {
                     invoice,
+                    customerEmail:
+                        invoice.customer?.email ||
+                        invoice.customerEmail ||
+                        "",
                 },
             })
         );
-    }
+
+    };
+
 
     /* ============================================================
        EDIT INVOICE
     ============================================================ */
 
     const handleEditTemplate = () => {
+
         if (!invoice) return;
 
         setCustomizeOpen(false);
@@ -350,13 +771,16 @@ export default function InvoicePreviewCard() {
                 invoice,
             },
         });
+
     };
+
 
     /* ============================================================
        OPEN PREVIEW IN NEW TAB
     ============================================================ */
 
     const handleOpenPreviewInNewTab = () => {
+
         const invoiceId = getInvoiceId(invoice);
 
         if (invoiceId == null) return;
@@ -369,41 +793,46 @@ export default function InvoicePreviewCard() {
             "_blank",
             "noopener,noreferrer"
         );
+
     };
+
 
     /* ============================================================
        RETRY FETCH
     ============================================================ */
 
     const handleRetry = async () => {
+
         if (!targetInvoiceId || previewLoading) return;
 
         requestedInvoiceIdRef.current =
             String(targetInvoiceId);
 
         try {
+
             await dispatch(
                 fetchInvoiceById(targetInvoiceId)
             ).unwrap();
+
         } catch (fetchError) {
+
             console.error(
                 "Failed to reload invoice preview:",
                 fetchError
             );
+
         } finally {
+
             if (
                 requestedInvoiceIdRef.current ===
                 String(targetInvoiceId)
             ) {
                 requestedInvoiceIdRef.current = null;
             }
+
         }
+
     };
-
-    /* ============================================================
-       PDF DOWNLOAD - SUPPORTS ALL TEMPLATES
-    ============================================================ */
-
 
 
     /* ============================================================
@@ -411,10 +840,13 @@ export default function InvoicePreviewCard() {
     ============================================================ */
 
     const generateInvoicePdfBlob = async () => {
+
         const element = invoiceDownloadRef.current;
 
         if (!element) {
-            throw new Error("Selected invoice template element not found.");
+            throw new Error(
+                "Selected invoice template element not found."
+            );
         }
 
         const canvas = await html2canvas(element, {
@@ -446,11 +878,20 @@ export default function InvoicePreviewCard() {
 
         const totalPages = Math.max(
             1,
-            Math.ceil((canvas.height - 2) / pagePixelHeight)
+            Math.ceil(
+                (canvas.height - 2) / pagePixelHeight
+            )
         );
 
-        for (let page = 0; page < totalPages; page++) {
-            const startY = Math.round(page * pagePixelHeight);
+        for (
+            let page = 0;
+            page < totalPages;
+            page++
+        ) {
+
+            const startY = Math.round(
+                page * pagePixelHeight
+            );
 
             const currentHeight = Math.min(
                 Math.round(pagePixelHeight),
@@ -467,7 +908,9 @@ export default function InvoicePreviewCard() {
             const context = pageCanvas.getContext("2d");
 
             if (!context) {
-                throw new Error("Unable to create PDF canvas.");
+                throw new Error(
+                    "Unable to create PDF canvas."
+                );
             }
 
             context.fillStyle = "#ffffff";
@@ -495,7 +938,10 @@ export default function InvoicePreviewCard() {
                 pdf.addPage();
             }
 
-            const image = pageCanvas.toDataURL("image/jpeg", 0.95);
+            const image = pageCanvas.toDataURL(
+                "image/jpeg",
+                0.95
+            );
 
             const renderedHeight =
                 (currentHeight * pageWidth) / canvas.width;
@@ -510,9 +956,11 @@ export default function InvoicePreviewCard() {
                 undefined,
                 "FAST"
             );
+
         }
 
         return pdf.output("blob");
+
     };
 
 
@@ -521,7 +969,13 @@ export default function InvoicePreviewCard() {
     ============================================================ */
 
     const handleDownload = async () => {
+
         try {
+
+            if (isDraft) {
+                toast.error("Draft invoices cannot be downloaded.");
+                return;
+            }
             setDownloading(true);
 
             const blob = await generateInvoicePdfBlob();
@@ -546,16 +1000,26 @@ export default function InvoicePreviewCard() {
                 URL.revokeObjectURL(url);
             }, 1000);
 
+            toast.success("Invoice PDF downloaded successfully.");
+
         } catch (error) {
-            console.error("PDF download failed:", error);
+
+            console.error(
+                "PDF download failed:",
+                error
+            );
 
             toast.error(
-                error?.message || "Failed to generate invoice PDF."
+                error?.message ||
+                "Failed to generate invoice PDF."
             );
 
         } finally {
+
             setDownloading(false);
+
         }
+
     };
 
 
@@ -568,6 +1032,7 @@ export default function InvoicePreviewCard() {
         subject,
         message,
     }) => {
+
         const invoiceId = getInvoiceId(invoice);
 
         if (!invoiceId) {
@@ -575,24 +1040,42 @@ export default function InvoicePreviewCard() {
             return;
         }
 
+        if (!toEmail?.trim()) {
+            toast.error("Customer email address is required.");
+            return;
+        }
+
         try {
+
             setEmailSending(true);
 
-            // Generate PDF from the currently selected template
-            const pdfBlob = await generateInvoicePdfBlob();
+            const pdfBlob =
+                await generateInvoicePdfBlob();
 
             const safeInvoiceNumber = String(
-                invoice?.invoiceNumber || `Invoice-${invoiceId}`
+                invoice?.invoiceNumber ||
+                `Invoice-${invoiceId}`
             ).replace(/[^a-zA-Z0-9_-]/g, "_");
 
-            const fileName = `${safeInvoiceNumber}.pdf`;
+            const fileName =
+                `${safeInvoiceNumber}.pdf`;
 
-            // Prepare multipart request
             const formData = new FormData();
 
-            formData.append("toEmail", toEmail);
-            formData.append("subject", subject || "");
-            formData.append("message", message || "");
+            formData.append(
+                "toEmail",
+                toEmail.trim()
+            );
+
+            formData.append(
+                "subject",
+                subject || ""
+            );
+
+            formData.append(
+                "message",
+                message || ""
+            );
 
             formData.append(
                 "file",
@@ -600,7 +1083,6 @@ export default function InvoicePreviewCard() {
                 fileName
             );
 
-            // Send through Redux thunk
             const response = await dispatch(
                 sendInvoiceEmail({
                     id: invoiceId,
@@ -609,28 +1091,37 @@ export default function InvoicePreviewCard() {
             ).unwrap();
 
             toast.success(
-                response?.message || "Invoice email submitted successfully."
+                response?.message ||
+                "Invoice email sent successfully."
             );
 
-            setEmailModalOpen(false);
+            dispatch(closeModal());
 
         } catch (error) {
-            console.error("Invoice email failed:", error);
+
+            console.error(
+                "Invoice email failed:",
+                error
+            );
 
             toast.error(
                 typeof error === "string"
                     ? error
-                    : error?.message || "Failed to send invoice email."
+                    : error?.message ||
+                    "Failed to send invoice email."
             );
 
         } finally {
+
             setEmailSending(false);
+
         }
+
     };
 
 
     /* ============================================================
-       DISPLAY HELPERS
+       DISPLAY DETAILS
     ============================================================ */
 
     const invoiceNumber =
@@ -641,166 +1132,232 @@ export default function InvoicePreviewCard() {
                 : "Invoice"
         );
 
+
     const status = String(
         invoice?.invoiceStatus ||
         invoice?.status ||
         "DRAFT"
     ).toUpperCase();
 
+    const isDraft = status === "DRAFT";
+
     const invoiceType = String(
         invoice?.invoiceType || "INVOICE"
     ).replaceAll("_", " ");
 
-    const toDisplay = (value) => {
-        if (
-            value === null ||
-            value === undefined ||
-            value === ""
-        ) {
-            return "—";
-        }
-
-        if (typeof value === "object") {
-            return (
-                value.addressLine1 ||
-                value.address ||
-                value.name ||
-                "—"
-            );
-        }
-
-        return String(value);
-    };
-
-    const formatAmount = (value) => {
-        if (
-            value === null ||
-            value === undefined ||
-            value === ""
-        ) {
-            return "—";
-        }
-
-        const amount = Number(value);
-
-        if (!Number.isFinite(amount)) {
-            return String(value);
-        }
-
-        return amount.toLocaleString("en-IN", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        });
-    };
 
     const currencyCode =
         invoice?.currencyCode ||
         invoice?.currency?.currencyCode ||
         "";
 
+
     const currencyName =
         invoice?.currencyName ||
         invoice?.currency?.currencyName ||
         "";
 
+
+    const currencySymbol =
+        invoice?.currencySymbol ||
+        invoice?.currency?.symbol ||
+        "";
+
+
     const formatCurrency = (value) => {
+
         const amount = formatAmount(value);
 
         return currencyCode
             ? `${currencyCode} ${amount}`
             : amount;
+
     };
 
-    const getStatusStyles = (value) => {
-        if (
-            ["PAID", "ACTIVE", "COMPLETED"].includes(value)
-        ) {
-            return "bg-emerald-50 text-emerald-700 ring-emerald-200";
-        }
-
-        if (
-            ["OVERDUE", "CANCELLED", "REJECTED"].includes(value)
-        ) {
-            return "bg-rose-50 text-rose-700 ring-rose-200";
-        }
-
-        if (
-            ["SENT", "PARTIAL", "PARTIALLY_PAID"].includes(value)
-        ) {
-            return "bg-blue-50 text-blue-700 ring-blue-200";
-        }
-
-        return "bg-amber-50 text-amber-700 ring-amber-200";
-    };
 
     /* ============================================================
        COMPANY DETAILS
     ============================================================ */
 
+    const company = invoice?.company || {};
+
     const companyName =
         invoice?.companyName ||
-        invoice?.company?.companyName ||
+        company.companyName ||
         "—";
+
+    const companyDisplayName =
+        company.displayName || companyName;
 
     const companyCode =
         invoice?.companyCode ||
-        invoice?.company?.companyCode ||
-        "";
+        company.companyCode ||
+        "—";
+
+    const companyLegalName =
+        company.legalName || "—";
+
+    const companyAddress =
+        getCompanyAddress(company);
+
+    const companyEmail =
+        company.email || "—";
+
+    const companyPhone =
+        company.phone || "—";
+
+    const companyWebsite =
+        company.website || company.websiteUrl || "—";
+
+    const companyGST =
+        company.gstNumber || "—";
+
+    const companyPAN =
+        company.panNumber || "—";
+
+    const companyTAN =
+        company.tanNumber || "—";
 
     const logoUrl =
         invoice?.logo ||
         invoice?.companyLogo ||
-        invoice?.company?.logo ||
+        company.logo ||
         "";
+
+    const companySignature =
+        company.signature || "";
+
 
     /* ============================================================
-       CUSTOMER AND SALESPERSON
+       CUSTOMER DETAILS
     ============================================================ */
 
+    const customer = invoice?.customer || {};
+
     const customerName =
-        invoice?.customerName ||
-        invoice?.customer?.name ||
-        invoice?.partyName ||
-        invoice?.party?.name ||
-        "No customer selected";
+        getCustomerName(invoice);
+
+    const customerEmail =
+        customer.email ||
+        invoice?.customerEmail ||
+        "—";
+
+    const customerPhone =
+        customer.mobile
+            ? `${customer.mobileCode || ""} ${customer.mobile}`.trim()
+            : customer.workPhone
+                ? `${customer.workPhoneCode || ""} ${customer.workPhone}`.trim()
+                : "—";
+
+    const customerType =
+        customer.customerType ||
+        customer.type ||
+        "—";
+
+    const customerDisplayName =
+        customer.displayName ||
+        customer.companyName ||
+        customerName;
+
+    const customerPAN =
+        customer.pan || "—";
+
+    const customerWebsite =
+        customer.websiteUrl ||
+        customer.website ||
+        "—";
+
+    const customerPaymentTerms =
+        customer.paymentTerms || "—";
+
+    const billingAddress =
+        customer.billingAddress || null;
+
+    const shippingAddress =
+        customer.shippingAddress || null;
+
+    const billingAddressText =
+        getAddressText(billingAddress);
+
+    const shippingAddressText =
+        getAddressText(shippingAddress);
+
+
+    /* ============================================================
+       SALESPERSON DETAILS
+    ============================================================ */
+
+    const salesPerson =
+        invoice?.salesPerson || {};
 
     const salesPersonName =
-        invoice?.salesPersonName ||
-        invoice?.salesPerson?.name ||
-        "";
+        getSalesPersonName(invoice) || "—";
+
+    const salesPersonEmail =
+        salesPerson.email || "—";
+
+    const salesPersonMobile =
+        salesPerson.mobile || "—";
+
+    const salesPersonCode =
+        salesPerson.salesPersonCode || "—";
+
 
     /* ============================================================
        BANK DETAILS
     ============================================================ */
 
+    const bankAccount =
+        invoice?.bankAccount || {};
+
+    const bankAccountName =
+        invoice?.bankAccountName ||
+        bankAccount.accountName ||
+        "—";
+
     const bankName =
-        invoice?.bankName ||
-        invoice?.bankAccount?.bankName ||
-        "";
+        bankAccount.bankName || "—";
+
+    const branchName =
+        bankAccount.branchName || "—";
 
     const accountNumber =
-        invoice?.accountNumber ||
-        invoice?.bankAccount?.accountNumber ||
-        "";
+        bankAccount.accountNumber || "—";
+
+    const accountType =
+        bankAccount.accountType || "—";
 
     const ifsc =
-        invoice?.ifsc ||
-        invoice?.bankAccount?.ifsc ||
-        "";
+        bankAccount.ifsc || "—";
+
+    const swiftCode =
+        bankAccount.swiftCode || "—";
+
+    const bankCurrency =
+        bankAccount.currency?.currencyCode ||
+        bankAccount.currencyCode ||
+        "—";
+
 
     /* ============================================================
-       SIGNATURE DETAILS
+       EMAIL SIGNATURE
     ============================================================ */
 
+    const emailSignature =
+        invoice?.emailSignature || {};
+
     const signatureName =
-        invoice?.signatureName ||
-        invoice?.emailSignature?.signatureName ||
-        "";
+        emailSignature.signatureName || "—";
 
     const signatureContent =
-        invoice?.signatureContent ||
-        invoice?.emailSignature?.signatureContent ||
-        "";
+        emailSignature.signatureContent || "";
+
+    const defaultForNewMessages =
+        emailSignature.defaultForNewMessages ?? false;
+
+    const defaultForReplies =
+        emailSignature.defaultForReplies ?? false;
+
 
     /* ============================================================
        INVOICE ITEMS
@@ -812,13 +1369,44 @@ export default function InvoicePreviewCard() {
         ? invoice.invoiceItems
         : [];
 
+
+    /* ============================================================
+       AMOUNT DETAILS
+    ============================================================ */
+
+    const subtotal =
+        invoice?.subtotal ?? 0;
+
+    const totalTax =
+        invoice?.totalTax ??
+        invoice?.taxAmount ??
+        0;
+
+    const discountAmount =
+        invoice?.discountAmount ?? 0;
+
+    const grandTotal =
+        invoice?.grandTotal ??
+        invoice?.totalAmount ??
+        0;
+
+    const amountPaid =
+        invoice?.amountPaid ?? 0;
+
+    const balanceDue =
+        invoice?.balanceDue ??
+        (Number(grandTotal) - Number(amountPaid));
+
+
     /* ============================================================
        LOADING STATE
     ============================================================ */
 
     if (!targetInvoiceId) {
+
         return (
             <div className="mt-3 rounded-md border border-gray-200 bg-white p-6 text-center">
+
                 <FileText className="mx-auto mb-3 h-7 w-7 text-blue-500" />
 
                 <p className="text-sm text-gray-500">
@@ -832,30 +1420,42 @@ export default function InvoicePreviewCard() {
                 >
                     View Invoices
                 </button>
+
             </div>
         );
+
     }
 
+
     if (previewLoading && !hasFullPreview) {
+
         return (
             <div className="mt-3 flex min-h-[220px] flex-col items-center justify-center rounded-md border border-gray-200 bg-white p-6 text-center">
+
                 <div className="mb-3 rounded-full bg-blue-50 p-3">
                     <FileText className="h-7 w-7 text-blue-500" />
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-gray-500">
+
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+
                     Loading complete invoice preview...
+
                 </div>
+
             </div>
         );
+
     }
+
 
     /* ============================================================
        ERROR / MISSING FULL INVOICE
     ============================================================ */
 
     if (!hasFullPreview) {
+
         const message =
             previewError ||
             error ||
@@ -863,6 +1463,7 @@ export default function InvoicePreviewCard() {
 
         return (
             <div className="mt-3 flex min-h-[220px] flex-col items-center justify-center rounded-md border border-gray-200 bg-white p-6 text-center">
+
                 <div className="mb-3 rounded-full bg-blue-50 p-3">
                     <FileText className="h-7 w-7 text-blue-500" />
                 </div>
@@ -884,26 +1485,37 @@ export default function InvoicePreviewCard() {
                     disabled={previewLoading}
                     className="mt-4 inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
+
                     <RefreshCw
                         size={15}
                         className={
-                            previewLoading ? "animate-spin" : ""
+                            previewLoading
+                                ? "animate-spin"
+                                : ""
                         }
                     />
 
-                    {previewLoading ? "Loading..." : "Retry"}
+                    {previewLoading
+                        ? "Loading..."
+                        : "Retry"}
+
                 </button>
+
             </div>
         );
+
     }
+
 
     /* ============================================================
        TEMPLATE NOT FOUND
     ============================================================ */
 
     if (!Template) {
+
         return (
             <div className="mt-3 w-full rounded-md border border-gray-200 bg-white p-5">
+
                 <p className="text-sm text-red-500">
                     Invoice template "{invoiceTemplate}" not found.
                 </p>
@@ -915,9 +1527,12 @@ export default function InvoicePreviewCard() {
                 >
                     Change Template
                 </button>
+
             </div>
         );
+
     }
+
 
     /* ============================================================
        RENDER
@@ -925,16 +1540,24 @@ export default function InvoicePreviewCard() {
 
     const invoiceId = getInvoiceId(invoice);
 
+
     return (
+
         <div
             key={`${invoiceId}-${invoiceTemplate}`}
             className="group w-full min-w-0 overflow-hidden rounded-md border border-gray-100 bg-white shadow-sm"
         >
-            {/* COMMON HEADER */}
+
+            {/* =====================================================
+                COMMON HEADER
+            ===================================================== */}
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 sm:px-5">
+
                 <div className="flex min-w-0 items-center gap-3">
+
                     <div className="flex shrink-0 items-center gap-2">
+
                         <button
                             type="button"
                             onClick={() =>
@@ -956,10 +1579,14 @@ export default function InvoicePreviewCard() {
                         >
                             <FileText size={24} />
                         </button>
+
                     </div>
 
+
                     <div className="min-w-0">
+
                         <div className="flex flex-wrap items-center gap-2">
+
                             <h1 className="break-words text-lg font-semibold text-slate-800">
                                 {invoiceNumber}
                             </h1>
@@ -969,6 +1596,7 @@ export default function InvoicePreviewCard() {
                             >
                                 {status.replaceAll("_", " ")}
                             </span>
+
                         </div>
 
                         <p className="mt-1 break-words text-sm text-slate-500">
@@ -976,16 +1604,22 @@ export default function InvoicePreviewCard() {
                         </p>
 
                         <p className="mt-1 text-xs text-slate-400">
-                            {toDisplay(invoice.invoiceDate)}
+                            {formatDate(invoice.invoiceDate)}
                             {" · Due: "}
-                            {toDisplay(invoice.dueDate)}
+                            {formatDate(invoice.dueDate)}
                         </p>
+
                     </div>
+
                 </div>
 
-                {/* HEADER ACTIONS */}
+
+                {/* =================================================
+                    HEADER ACTIONS
+                ================================================= */}
 
                 <div className="flex flex-wrap items-center gap-2">
+
                     <button
                         type="button"
                         onClick={handleOpenPreviewInNewTab}
@@ -996,26 +1630,39 @@ export default function InvoicePreviewCard() {
                         <span>New Tab</span>
                     </button>
 
+
                     {/* EMAIL INVOICE */}
 
                     <button
                         type="button"
                         onClick={handleOpenEmailModal}
-                        disabled={downloading}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-blue-200 bg-blue-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                        title="Email invoice to customer"
+                        disabled={downloading || emailSending}
+                        className="group relative inline-flex items-center gap-1.5 rounded-md border border-blue-200 bg-blue-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+
                     >
-                        <Mail size={15} />
+
+                        {emailSending ? (
+                            <RefreshCw
+                                size={15}
+                                className="animate-spin"
+                            />
+                        ) : (
+                            <Mail size={15} />
+                        )}
+
                         <span>Email Invoice</span>
+
                     </button>
+
+
                     {/* PDF DOWNLOAD */}
 
                     <button
                         type="button"
                         onClick={handleDownload}
-                        disabled={downloading}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-red-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-60"
-                        title="Download invoice PDF"
+                        disabled={isDraft || downloading || emailSending}
+                        className="group relative inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-red-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+
                     >
                         {downloading ? (
                             <RefreshCw
@@ -1027,11 +1674,19 @@ export default function InvoicePreviewCard() {
                         )}
 
                         <span>
-                            {downloading
-                                ? "Generating PDF..."
-                                : "PDF Download"}
+                            {isDraft
+                                ? "Draft Invoice"
+                                : downloading
+                                    ? "Generating PDF..."
+                                    : "PDF Download"}
                         </span>
+                        <ToolTipText text={
+                            isDraft
+                                ? "Draft invoices cannot be downloaded"
+                                : "Download invoice PDF"
+                        } position="bottom" />
                     </button>
+
 
                     {/* CUSTOMIZE DROPDOWN */}
 
@@ -1039,25 +1694,36 @@ export default function InvoicePreviewCard() {
                         ref={customizeRef}
                         className="relative shrink-0"
                     >
+
                         <button
                             type="button"
                             onClick={() =>
-                                setCustomizeOpen((previous) => !previous)
+                                setCustomizeOpen(
+                                    (previous) => !previous
+                                )
                             }
                             aria-expanded={customizeOpen}
                             className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
                         >
+
                             <Settings className="h-4 w-4" />
+
                             <span>Customize</span>
 
                             <ChevronDown
-                                className={`h-3.5 w-3.5 transition-transform duration-200 ${customizeOpen ? "rotate-180" : ""
+                                className={`h-3.5 w-3.5 transition-transform duration-200 ${customizeOpen
+                                    ? "rotate-180"
+                                    : ""
                                     }`}
                             />
+
                         </button>
 
+
                         {customizeOpen && (
+
                             <div className="absolute right-0 top-full z-[100] mt-1 w-[min(310px,calc(100vw-32px))] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl">
+
                                 <div className="px-4 py-3 text-sm font-semibold text-gray-500">
                                     Invoice Template
                                 </div>
@@ -1077,19 +1743,29 @@ export default function InvoicePreviewCard() {
                                 >
                                     Edit Invoice
                                 </button>
+
                             </div>
+
                         )}
+
                     </div>
+
                 </div>
+
             </div>
 
-            {/* RESPONSIVE TEMPLATE PREVIEW */}
+
+            {/* =====================================================
+                RESPONSIVE TEMPLATE PREVIEW
+            ===================================================== */}
 
             <div
                 ref={previewRef}
                 className="w-full min-w-0 overflow-hidden bg-gray-50 px-2 py-5 sm:px-4"
             >
+
                 <div className="flex w-full justify-center">
+
                     <div
                         style={{
                             width: `${TEMPLATE_WIDTH * previewScale}px`,
@@ -1098,6 +1774,7 @@ export default function InvoicePreviewCard() {
                             position: "relative",
                         }}
                     >
+
                         <div
                             ref={invoiceDownloadRef}
                             style={{
@@ -1106,15 +1783,23 @@ export default function InvoicePreviewCard() {
                                 transformOrigin: "top left",
                             }}
                         >
+
                             <Template
                                 key={`${invoiceId}-${invoiceTemplate}`}
                                 invoice={sharedInvoice}
                                 preview
                             />
+
                         </div>
+
                     </div>
+
                 </div>
+
             </div>
+
         </div>
+
     );
+
 }

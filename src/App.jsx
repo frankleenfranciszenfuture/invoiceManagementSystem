@@ -372,6 +372,15 @@ function AppContent() {
         />
 
 
+
+        {/* =================================================
+                    PROFILE
+            ================================================= */}
+        <Route
+          path="/settings/users/view/:id"
+          element={<UserViewDetails />}
+        />
+
         {/* =================================================
                     CUSTOMERS
             ================================================= */}
@@ -707,15 +716,7 @@ function AppContent() {
           element={<InvoiceCreate />}
         />
 
-        <Route
-          path="/invoices/sale/edit/:id"
-          element={<InvoiceCreate />}
-        />
 
-        <Route
-          path="/invoices/purchase/edit/:id"
-          element={<InvoiceCreate />}
-        />
 
         <Route
           path="/invoices"
@@ -736,6 +737,18 @@ function AppContent() {
           path="/invoices/view/:id"
           element={<InvoiceViewDetails />}
         />
+
+        <Route
+          path="/invoices/sale/edit/:id"
+          element={<InvoiceCreate />}
+        />
+
+        <Route
+          path="/invoices/purchase/edit/:id"
+          element={<InvoiceCreate />}
+        />
+
+
 
 
         {/* =================================================
@@ -780,6 +793,7 @@ function AppContent() {
           path="/invoice/expenses-categories/view/:id"
           element={<ExpenseCategoryViewDetails />}
         />
+
 
 
         {/* =================================================
@@ -895,22 +909,22 @@ function AppContent() {
 
 
         <Route
-          path="/inventory/warehouses"
+          path="/settings/warehouses"
           element={<WarehouseDashboard />}
         />
 
         <Route
-          path="/inventory/warehouses/create"
+          path="/settings/warehouses/create"
           element={<WarehouseCreate />}
         />
 
         <Route
-          path="/inventory/warehouses/edit/:id"
+          path="/settings/warehouses/edit/:id"
           element={<WarehouseCreate />}
         />
 
         <Route
-          path="/inventory/warehouses/view/:id"
+          path="/settings/warehouses/view/:id"
           element={<WarehouseViewDetails />}
         />
 
@@ -967,22 +981,6 @@ function AppContent() {
           element={<ClearanceViewDetails />}
         />
 
-
-
-
-        {/* Warehouse */}
-
-        <Route
-          path="/inventory/warehouses/edit/:id"
-          element={<WarehouseCreate />}
-        />
-
-        <Route
-          path="/inventory/warehouses/view/:id"
-          element={<WarehouseViewDetails />}
-        />
-
-
         {/* SaleOrder */}
 
         <Route
@@ -1010,6 +1008,12 @@ function AppContent() {
           element={<SalesOrderCreate />}
         />
 
+        <Route
+          path="/invoices/sale/edit/:id"
+          element={<InvoiceCreate />}
+        />
+
+
 
         {/* PurchaseOrder */}
 
@@ -1036,9 +1040,20 @@ function AppContent() {
           element={<PurchaseOrderViewDetails />}
         />
 
+        <Route
+          path="/inventory/purchase/edit/:id"
+          element={<InvoiceCreate />}
+        />
+
+
         {/* =================================================
                   INVOICE  PAYMENTS
             ================================================= */}
+
+        <Route
+          path="/invoice/payments"
+          element={<PaymentDashboard />}
+        />
 
         <Route
           path="/invoice/payments"
@@ -1208,6 +1223,7 @@ function AppContent() {
         />
 
 
+
         {/* =================================================
                     Audit logs
             ================================================= */}
@@ -1218,6 +1234,28 @@ function AppContent() {
 
         <Route
           path="/audit-logs/view/:id"
+          element={<AuditLogDetails />}
+        />
+
+        {/* Audit logs in inventory */}
+        <Route
+          path="/inventory/audit-logs"
+          element={<AuditLogDashboard />}
+        />
+
+        <Route
+          path="/inventory/audit-logs/view/:id"
+          element={<AuditLogDetails />}
+        />
+
+        {/* Audit logs in Settings */}
+        <Route
+          path="/settings/audit-logs"
+          element={<AuditLogDashboard />}
+        />
+
+        <Route
+          path="/settings/audit-logs/view/:id"
           element={<AuditLogDetails />}
         />
       </Route>

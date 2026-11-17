@@ -157,6 +157,39 @@ export const getText = (value) => {
   return "";
 };
 
+export const formatInvoiceAddress = (address) => {
+  if (!address) return "";
+
+  if (typeof address === "string") {
+    return address.trim();
+  }
+
+  if (typeof address !== "object" || Array.isArray(address)) {
+    return "";
+  }
+
+  return [
+    address.attention,
+    address.addressLine1,
+    address.addressLine2,
+    address.address,
+    address.city,
+    address.state,
+    address.zipCode || address.pincode,
+    address.country,
+  ]
+    .filter(
+      (value) =>
+        value !== undefined &&
+        value !== null &&
+        typeof value !== "object" &&
+        String(value).trim() !== "",
+    )
+    .map((value) => String(value).trim())
+    .filter((value, index, array) => array.indexOf(value) === index)
+    .join(", ");
+};
+
 export const formatDate = (value) => {
   if (!value) return "-";
 
@@ -414,12 +447,23 @@ export const resolveCompany = (invoice = {}) => {
   let addressLines = [];
 
   if (Array.isArray(address)) {
-    addressLines = address.map((line) => getText(line).trim()).filter(Boolean);
+    addressLines = address
+      .map((line) => {
+        if (typeof line === "string" || typeof line === "number") {
+          return String(line).trim();
+        }
+
+        return formatInvoiceAddress(line);
+      })
+      .filter(Boolean);
   } else if (typeof address === "string") {
     addressLines = address
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean);
+  } else if (address && typeof address === "object") {
+    const formatted = formatInvoiceAddress(address);
+    if (formatted) addressLines = [formatted];
   }
 
   const companyName = firstValue(
@@ -777,15 +821,18 @@ export const getInvoiceTemplateData = (invoice = {}, taxMasters = []) => {
 
   const dueDate = invoice.dueDate ? formatDate(invoice.dueDate) : null;
 
-  const placeOfSupply = firstValue(
-    invoice.placeOfSupply,
-    invoice.partyState,
-    invoice.party?.billingAddress?.state,
-    invoice.party?.state,
-    invoice.customer?.billingAddress?.state,
-    invoice.customer?.state,
-    "-",
-  );
+  const placeOfSupply =
+    getText(
+      firstValue(
+        invoice.placeOfSupply,
+        invoice.partyState,
+        invoice.party?.billingAddress?.state,
+        invoice.party?.state,
+        invoice.customer?.billingAddress?.state,
+        invoice.customer?.state,
+        "-",
+      ),
+    ) || "-";
 
   const signatureText = signatureContentToText(company.signatureContent);
 

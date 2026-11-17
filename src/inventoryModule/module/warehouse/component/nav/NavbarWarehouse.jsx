@@ -297,7 +297,7 @@ export default function NavbarWarehouse() {
     ===================================================== */
 
     const handleCreateWarehouse = () => {
-        navigate("/inventory/warehouses/create");
+        navigate("/settings/warehouses/create");
     };
 
     /* =====================================================

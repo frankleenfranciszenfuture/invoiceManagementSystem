@@ -27,12 +27,12 @@ export default function ChangeTemplateModal() {
        CURRENT INVOICE
     ============================================================ */
 
-    const currentInvoice =
-        previewInvoice ||
-        exsistingInvoice ||
-        invoice ||
-        selectedInvoice ||
-        null;
+    const currentInvoice = [
+        previewInvoice,
+        exsistingInvoice,
+        invoice,
+        selectedInvoice,
+    ].find((item) => item?.id != null || item?.invoiceId != null) || null;
 
     const invoiceId =
         currentInvoice?.id ??
@@ -54,8 +54,8 @@ export default function ChangeTemplateModal() {
     ============================================================ */
 
     const handleSelect = (templateId) => {
-        if (invoiceId == null) {
-            console.error("Invoice ID not found. Cannot select template.");
+        if (!templateId || invoiceId == null) {
+            console.error("Cannot select template: invoice ID or template ID missing.");
             return;
         }
 

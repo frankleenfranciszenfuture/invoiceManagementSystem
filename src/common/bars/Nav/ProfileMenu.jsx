@@ -8,16 +8,16 @@ import {
     logoutUser,
 } from "../../../module/auth/thunks/authThunks";
 
+import {
+    getUserPermission,
+} from "../../../module/menuPermission/thunks/menuPermissionThunks";
+
 import toast from "react-hot-toast";
 
 import {
     X,
     LogOut,
     FileText,
-    MessageSquare,
-    Monitor,
-    PlayCircle,
-    Globe,
     Package,
     Accessibility,
     Mail,
@@ -27,67 +27,99 @@ import {
     ChevronRight,
     Wallet,
     Settings,
-    DatabaseSearch,
     ChartBarIcon,
+    Landmark,
+    Check,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+import {
+    setExsistingUser,
+} from "../../../module/users/slices/userSlice";
 
 /* =========================================================
    SHORTCUTS
-   ========================================================= */
+========================================================= */
 
 const shortcuts = [
     {
         icon: Package,
         title: "Inventory",
         sub: "Manage Stock",
-        to: "/inventory",
+        to: "/inventory/dashboard",
+        moduleName: "Inventory",
     },
     {
         icon: ChartBarIcon,
         title: "Reports",
-        sub: "Manage Stock",
+        sub: "Manage Reports",
         to: "/reports",
+        moduleName: "Reports",
     },
     {
         icon: Wallet,
         title: "Payments",
         sub: "Manage Payments",
         to: "/payments",
+        moduleName: "Payments",
     },
     {
         icon: Settings,
         title: "Settings",
         sub: "Preferences",
         to: "/settings",
+        moduleName: "Settings",
     },
     {
         icon: FileText,
         title: "Help",
         sub: "Documents",
+        to: null,
+        moduleName: null,
     },
-
     {
-        icon: FileText,
-        title: "Invoice",
-        sub: "invoicePro",
-        to: "/dashboard",
+        icon: ChartBarIcon,
+        title: "Audit Logs",
+        sub: "Manage Reports",
+        to: "/audit-logs",
+        moduleName: "Audit Logs",
     },
 ];
 
 /* =========================================================
+   NORMALIZE VALUES
+========================================================= */
+
+const normalizeModule = (value = "") =>
+    String(value)
+        .trim()
+        .toLowerCase()
+        .replace(/[_-]/g, " ")
+        .replace(/\s+/g, " ");
+
+const normalizeAction = (value = "") =>
+    String(value).trim().toUpperCase();
+
+/* =========================================================
    COMPONENT
-   ========================================================= */
+========================================================= */
 
 export default function ProfileMenu({ buttonRef }) {
 
     const dispatch = useDispatch();
+    const navigate = useNavigate();
 
     /* =====================================================
-       REDUX
-       ===================================================== */
+       REDUX - UI
+    ===================================================== */
 
-    const { profileMenuOpen } =
-        useSelector((state) => state.ui);
+    const { profileMenuOpen } = useSelector(
+        (state) => state.ui
+    );
+
+    /* =====================================================
+       REDUX - AUTH
+    ===================================================== */
 
     const {
         user,
@@ -96,14 +128,196 @@ export default function ProfileMenu({ buttonRef }) {
     } = useSelector((state) => state.auth);
 
     /* =====================================================
+       REDUX - PERMISSIONS
+    ===================================================== */
+
+    const {
+        userPermissions = [],
+        userPermissionsLoading = false,
+        userPermissionsLoaded = false,
+    } = useSelector(
+        (state) => state.menuPermission || {}
+    );
+
+    /* =====================================================
+       USER ROLE
+    ===================================================== */
+
+    const roleName = String(
+        user?.roleName ||
+        user?.role?.roleName ||
+        user?.role?.name ||
+        user?.role ||
+        user?.authority ||
+        ""
+    ).toUpperCase();
+
+    const hasFullAccess = [
+        "SUPER_ADMIN",
+        "ADMIN",
+    ].includes(roleName);
+
+    /* =====================================================
        REF
-       ===================================================== */
+    ===================================================== */
 
     const menuRef = useRef(null);
 
     /* =====================================================
+       LOAD USER PERMISSIONS
+    ===================================================== */
+
+    useEffect(() => {
+
+        if (!isAuthenticated || hasFullAccess) {
+            return;
+        }
+
+        if (
+            !userPermissionsLoading &&
+            !userPermissionsLoaded
+        ) {
+            dispatch(getUserPermission());
+        }
+
+    }, [
+        dispatch,
+        isAuthenticated,
+        hasFullAccess,
+        userPermissionsLoading,
+        userPermissionsLoaded,
+    ]);
+
+    /* =====================================================
+       PERMISSION CHECK
+       Supports grouped and flat permissions
+    ===================================================== */
+
+    const hasPermission = (moduleName, actionName) => {
+
+        if (hasFullAccess) {
+            return true;
+        }
+
+        if (!Array.isArray(userPermissions)) {
+            return false;
+        }
+
+        const targetModule = normalizeModule(moduleName);
+        const targetAction = normalizeAction(actionName);
+
+        return userPermissions.some((permission) => {
+
+            const permissionModule = normalizeModule(
+                permission.moduleName ||
+                permission.module?.moduleName ||
+                permission.module?.name ||
+                permission.name ||
+                ""
+            );
+
+            if (permissionModule !== targetModule) {
+                return false;
+            }
+
+            if (
+                permission.active === false ||
+                permission.module?.active === false ||
+                permission.status === "INACTIVE"
+            ) {
+                return false;
+            }
+
+            /* =============================================
+               GROUPED PERMISSIONS
+            ============================================= */
+
+            const actions = [
+                ...(Array.isArray(permission.actions)
+                    ? permission.actions
+                    : []),
+
+                ...(Array.isArray(permission.permissions)
+                    ? permission.permissions
+                    : []),
+            ];
+
+            const groupedAction = actions.find((action) => {
+
+                const name =
+                    typeof action === "string"
+                        ? action
+                        : (
+                            action.actionName ||
+                            action.name ||
+                            action.action?.actionName ||
+                            action.action?.name
+                        );
+
+                return (
+                    normalizeAction(name) === targetAction
+                );
+            });
+
+            if (groupedAction !== undefined) {
+
+                if (typeof groupedAction === "string") {
+                    return true;
+                }
+
+                return (
+                    groupedAction.allowed === true ||
+                    groupedAction.allowed === "true" ||
+                    groupedAction.permission === true ||
+                    groupedAction.permission === "true"
+                );
+            }
+
+            /* =============================================
+               FLAT PERMISSIONS
+            ============================================= */
+
+            const flatAction = normalizeAction(
+                permission.actionName ||
+                permission.action?.actionName ||
+                permission.action?.name ||
+                ""
+            );
+
+            if (flatAction === targetAction) {
+
+                return (
+                    permission.allowed === true ||
+                    permission.allowed === "true" ||
+                    permission.permission === true ||
+                    permission.permission === "true"
+                );
+            }
+
+            return false;
+        });
+    };
+
+    /* =====================================================
+       FILTER SHORTCUTS
+    ===================================================== */
+
+    const visibleShortcuts = shortcuts.filter((item) => {
+
+        if (!item.moduleName) {
+            return true;
+        }
+
+        if (hasFullAccess) {
+            return true;
+        }
+
+        return hasPermission(item.moduleName, "VIEW");
+    });
+
+    /* =====================================================
        CLOSE MENU WHEN CLICKING OUTSIDE
-       ===================================================== */
+    ===================================================== */
 
     useEffect(() => {
 
@@ -134,26 +348,8 @@ export default function ProfileMenu({ buttonRef }) {
     }, [dispatch, buttonRef]);
 
     /* =====================================================
-       DEBUG AUTH STATE
-       ===================================================== */
-
-    useEffect(() => {
-
-        console.log(
-            "AUTH USER:",
-            user
-        );
-
-        console.log(
-            "IS AUTHENTICATED:",
-            isAuthenticated
-        );
-
-    }, [user, isAuthenticated]);
-
-    /* =====================================================
        OPEN MODULE IN NEW TAB
-       ===================================================== */
+    ===================================================== */
 
     const handleShortcutClick = (item) => {
 
@@ -170,91 +366,74 @@ export default function ProfileMenu({ buttonRef }) {
 
     /* =====================================================
        LOGOUT
-       ===================================================== */
+    ===================================================== */
 
     const handleLogout = async () => {
 
-        console.log("🔴 LOGOUT CLICKED");
-
         try {
 
-            /*
-             * Call backend /logout first.
-             * This expires the HttpOnly JWT cookie.
-             */
-
-            const result =
-                await dispatch(
-                    logoutUser()
-                ).unwrap();
-
-            console.log(
-                "✅ BACKEND LOGOUT SUCCESS:",
-                result
-            );
+            await dispatch(
+                logoutUser()
+            ).unwrap();
 
         } catch (error) {
 
             console.error(
-                "❌ BACKEND LOGOUT FAILED:",
+                "BACKEND LOGOUT FAILED:",
                 error
             );
-
-            /*
-             * Clear Redux authentication state
-             * even if backend logout fails.
-             */
-
-            dispatch(logout());
         }
-
-        /* =================================================
-           CLEAR OLD LOCAL STORAGE TOKENS
-           ================================================= */
 
         localStorage.removeItem("token");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("posToken");
         localStorage.removeItem("posRefreshToken");
 
-        /* =================================================
-           CLOSE PROFILE MENU
-           ================================================= */
-
         dispatch(closeProfileMenu());
-
-        /* =================================================
-           TOAST
-           ================================================= */
 
         toast.success(
             "Logged out successfully"
         );
 
-        /* =================================================
-           REDIRECT
-           ================================================= */
-
         window.location.replace("/login");
     };
 
+
     /* =====================================================
        DON'T RENDER WHEN CLOSED
-       ===================================================== */
+    ===================================================== */
 
     if (!profileMenuOpen) {
         return null;
     }
 
+
+    /* =====================================================
+   VIEW MY ACCOUNT
+===================================================== */
+
+    const handleView = () => {
+
+        if (!user?.id) {
+            toast.error("Unable to load your account details.");
+            return;
+        }
+
+        dispatch(setExsistingUser(user));
+
+        dispatch(closeProfileMenu());
+
+        navigate(`/settings/users/view/${user.id}`);
+    };
+
+
     /* =====================================================
        UI
-       ===================================================== */
+    ===================================================== */
 
     return (
         <>
-            {/* =================================================
-                BACKDROP
-                ================================================= */}
+            {/* BACKDROP */}
 
             <div
                 className="fixed inset-0 z-40"
@@ -263,33 +442,38 @@ export default function ProfileMenu({ buttonRef }) {
                 }
             />
 
-            {/* =================================================
-                PROFILE MENU
-                ================================================= */}
+            {/* PROFILE MENU */}
 
             <div
                 ref={menuRef}
                 className="
-                    absolute
-                    right-0
-                    top-12
-                    z-50
-                    w-[390px]
-                    overflow-hidden
-                    rounded-xl
-                    border
-                    bg-white
-                    shadow-2xl
-                "
+    absolute
+    right-0
+    top-12
+    z-50
+    w-[min(390px,calc(100vw-20px))]
+    max-h-[calc(100dvh-75px)]
+    overflow-y-auto
+    overflow-x-hidden
+    overscroll-contain
+    rounded-xl
+    border
+    border-gray-200
+    bg-white
+    shadow-2xl
+    custom-scrollbar-hidden
+"
+                onWheel={(e) => e.stopPropagation()}
             >
 
-                {/* =================================================
-                    HEADER
-                    ================================================= */}
+                {/* HEADER */}
 
-                <div className="relative border-b p-5">
-
-                    {/* CLOSE BUTTON */}
+                <div className="
+    sticky top-0 z-20
+    relative border-b
+    border-gray-200
+    bg-white p-5
+">
 
                     <button
                         type="button"
@@ -297,11 +481,8 @@ export default function ProfileMenu({ buttonRef }) {
                             dispatch(closeProfileMenu())
                         }
                         className="
-                            absolute
-                            right-4
-                            top-4
-                            text-red-500
-                            hover:text-red-600
+                            absolute right-4 top-4
+                            text-red-500 hover:text-red-600
                         "
                     >
                         <X size={18} />
@@ -313,16 +494,10 @@ export default function ProfileMenu({ buttonRef }) {
 
                         <div
                             className="
-                                flex
-                                h-11
-                                w-11
-                                items-center
-                                justify-center
-                                rounded-lg
-                                bg-purple-600
-                                text-lg
-                                font-semibold
-                                text-white
+                                flex h-11 w-11
+                                items-center justify-center
+                                rounded-lg bg-purple-600
+                                text-lg font-semibold text-white
                             "
                         >
                             {user?.name?.charAt(0) || "F"}
@@ -350,6 +525,16 @@ export default function ProfileMenu({ buttonRef }) {
 
                             </div>
 
+                            <div className="mt-2">
+                                <span className="
+                                    rounded-full bg-purple-100
+                                    px-2.5 py-1 text-[10px]
+                                    font-semibold text-purple-700
+                                ">
+                                    {roleName || "USER"}
+                                </span>
+                            </div>
+
                         </div>
 
                     </div>
@@ -360,14 +545,10 @@ export default function ProfileMenu({ buttonRef }) {
 
                         <button
                             type="button"
+                            onClick={handleView}
                             className="
-                                rounded
-                                border
-                                border-blue-500
-                                px-3
-                                py-1
-                                text-sm
-                                text-blue-600
+                                rounded border border-blue-500
+                                px-3 py-1 text-sm text-blue-600
                                 hover:bg-blue-50
                             "
                         >
@@ -379,11 +560,8 @@ export default function ProfileMenu({ buttonRef }) {
                             onClick={handleLogout}
                             disabled={loading}
                             className="
-                                flex
-                                items-center
-                                gap-2
-                                text-red-500
-                                hover:text-red-600
+                                flex items-center gap-2
+                                text-red-500 hover:text-red-600
                                 disabled:cursor-not-allowed
                                 disabled:opacity-50
                             "
@@ -402,201 +580,98 @@ export default function ProfileMenu({ buttonRef }) {
 
                 </div>
 
-                {/* =================================================
-                    SHORTCUTS
-                    ================================================= */}
+                {/* SHORTCUTS */}
 
                 <div className="grid grid-cols-3 gap-y-8 p-6">
 
-                    {shortcuts.map((item) => {
+                    {!hasFullAccess &&
+                        (
+                            !userPermissionsLoaded ||
+                            userPermissionsLoading
+                        ) ? (
 
-                        const Icon = item.icon;
+                        <div className="
+                            col-span-3 py-5
+                            text-center text-sm text-gray-500
+                        ">
+                            Loading permissions...
+                        </div>
 
-                        return (
-                            <button
-                                key={item.title}
-                                type="button"
-                                onClick={() =>
-                                    handleShortcutClick(item)
-                                }
-                                className="
-                                    flex
-                                    flex-col
-                                    items-center
-                                    gap-2
-                                    rounded-lg
-                                    p-2
-                                    transition
-                                    hover:bg-gray-50
-                                    focus:outline-none
-                                    focus:ring-2
-                                    focus:ring-blue-400
-                                "
-                            >
+                    ) : visibleShortcuts.length > 0 ? (
 
-                                <div className="
-                                    rounded-lg
-                                    bg-gray-100
-                                    p-3
-                                    transition
-                                    hover:bg-blue-50
-                                ">
+                        visibleShortcuts.map((item) => {
 
-                                    <Icon
-                                        size={24}
-                                        className="text-gray-600"
-                                    />
+                            const Icon = item.icon;
 
-                                </div>
+                            return (
+                                <button
+                                    key={item.title}
+                                    type="button"
+                                    onClick={() =>
+                                        handleShortcutClick(item)
+                                    }
+                                    disabled={!item.to}
+                                    className="
+                                        flex flex-col items-center
+                                        gap-2 rounded-lg p-2
+                                        transition hover:bg-gray-50
+                                        focus:outline-none
+                                        focus:ring-2 focus:ring-blue-400
+                                        disabled:cursor-default
+                                    "
+                                >
 
-                                <div className="
-                                    text-center
-                                    text-sm
-                                    text-gray-700
-                                ">
+                                    <div className="
+                                        rounded-lg bg-gray-100 p-3
+                                        transition hover:bg-blue-50
+                                    ">
 
-                                    <div className="font-medium">
-                                        {item.title}
+                                        <Icon
+                                            size={24}
+                                            className="text-gray-600"
+                                        />
+
                                     </div>
 
-                                    {item.sub && (
-                                        <div className="text-xs text-gray-500">
-                                            {item.sub}
+                                    <div className="
+                                        text-center text-sm text-gray-700
+                                    ">
+
+                                        <div className="font-medium">
+                                            {item.title}
                                         </div>
-                                    )}
 
-                                </div>
+                                        {item.sub && (
+                                            <div className="text-xs text-gray-500">
+                                                {item.sub}
+                                            </div>
+                                        )}
 
-                            </button>
-                        );
-                    })}
+                                    </div>
 
-                </div>
+                                </button>
+                            );
+                        })
 
-                {/* =================================================
-                    ACCESSIBILITY
-                    ================================================= */}
+                    ) : (
 
-                <div className="px-5">
-
-                    <button
-                        type="button"
-                        className="
-                            flex
-                            w-full
-                            items-center
-                            justify-between
-                            rounded-lg
-                            border
-                            p-3
-                            hover:bg-gray-50
-                        "
-                    >
-
-                        <div className="flex items-center gap-3">
-
-                            <Accessibility
-                                size={18}
-                                className="text-gray-600"
-                            />
-
-                            <span className="text-sm">
-                                Accessibility Preferences
-                            </span>
-
+                        <div className="
+                            col-span-3 py-5
+                            text-center text-sm text-gray-500
+                        ">
+                            No shortcuts available for your account.
                         </div>
 
-                        <ChevronRight size={18} />
-
-                    </button>
+                    )}
 
                 </div>
 
-                {/* =================================================
-                    NEED ASSISTANCE
-                    ================================================= */}
 
-                <div className="mt-5 border-t p-5">
 
-                    <h3 className="mb-5 text-2xl font-semibold">
-                        Need Assistance?
-                    </h3>
 
-                    <div className="space-y-4">
-
-                        <button
-                            type="button"
-                            className="
-                                flex
-                                items-center
-                                gap-3
-                                text-gray-700
-                                hover:text-blue-600
-                            "
-                        >
-                            <Mail size={18} />
-                            Send an email
-                        </button>
-
-                        <button
-                            type="button"
-                            className="
-                                flex
-                                items-center
-                                gap-3
-                                text-gray-700
-                                hover:text-blue-600
-                            "
-                        >
-                            <Video size={18} />
-                            Record screen & share feedback
-                        </button>
-
-                        <button
-                            type="button"
-                            className="
-                                flex
-                                items-center
-                                gap-3
-                                text-gray-700
-                                hover:text-blue-600
-                            "
-                        >
-                            <GraduationCap size={18} />
-                            Register for webinars
-                        </button>
-
-                    </div>
-
-                </div>
-
-                {/* =================================================
-                    WHAT'S NEW
-                    ================================================= */}
-
-                <div className="border-t bg-gray-50 p-5">
-
-                    <div className="flex items-start gap-3">
-
-                        <Sparkles className="text-orange-500" />
-
-                        <div>
-
-                            <h4 className="font-semibold">
-                                What's New?
-                            </h4>
-
-                            <p className="mt-1 text-sm text-gray-500">
-                                View the latest features and enhancements.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
 
             </div>
+
         </>
     );
 }

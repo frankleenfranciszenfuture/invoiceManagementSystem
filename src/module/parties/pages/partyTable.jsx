@@ -562,9 +562,9 @@ export default function PartyTable({
                                                     truncate font-medium
                                                     text-gray-800
                                                 "
-                                                title={party.partyName || ""}
+                                                title={party.partyName || "BOTH"}
                                             >
-                                                {party.partyName || "—"}
+                                                {party.partyName || "BOTH"}
                                             </p>
 
                                             <p className="

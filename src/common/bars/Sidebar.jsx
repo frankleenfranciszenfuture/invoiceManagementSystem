@@ -27,6 +27,7 @@ import {
     ChartNoAxesCombined,
     ShoppingCart,
     Receipt,
+    CreditCardIcon,
 } from "lucide-react";
 
 // ============================================================
@@ -222,6 +223,13 @@ const SETTINGS_NAV = [
     },
 
     {
+        label: "Warehouse",
+        moduleName: "Warehouse",
+        icon: Building2,
+        to: "/settings/warehouses",
+    },
+
+    {
         label: "Products",
         moduleName: "Products",
         icon: BoxIcon,
@@ -249,6 +257,18 @@ const SETTINGS_NAV = [
                 to: "/settings/units",
             },
         ],
+    },
+    {
+        label: "Reports",
+        moduleName: "Reports",
+        icon: ChartNoAxesCombined,
+        to: "/reports",
+    },
+    {
+        label: "Audit Logs",
+        moduleName: "Audit Logs",
+        icon: ChartNoAxesCombined,
+        to: "/settings/audit-logs",
     },
 ];
 
@@ -289,24 +309,24 @@ const INVENTORY_NAV = [
     },
 
     {
-        label: "Warehouse",
-        moduleName: "Warehouse",
-        icon: Building2,
-        to: "/inventory/warehouses",
-    },
-    {
         label: "Parties",
         moduleName: "Parties",
         icon: Package,
         to: "/inventory/parties",
         dropdown: true,
-        children: [
-            {
-                label: "Outstanding Clearances",
-                moduleName: "Outstanding Clearances",
-                to: "/inventory/parties/clearances",
-            },
-        ],
+        // children: [
+        //     {
+        //         label: "Outstanding Clearances",
+        //         moduleName: "Outstanding Clearances",
+        //         to: "/inventory/parties/clearances",
+        //     },
+        // ],
+    },
+    {
+        label: "Outstanding Clearances",
+        moduleName: "Outstanding Clearances",
+        icon: CreditCardIcon,
+        to: "/inventory/parties/clearances",
     },
 
     {
@@ -323,20 +343,31 @@ const INVENTORY_NAV = [
         to: "/inventory/purchaseOrder",
     },
 
-    {
-        label: "Record Payments",
-        moduleName: "Record Payments",
-        icon: BadgeTurkishLira,
-        to: "/inventory/payments",
-    },
+    // {
+    //     label: "Record Payments",
+    //     moduleName: "Record Payments",
+    //     icon: BadgeTurkishLira,
+    //     to: "/inventory/payments",
+    // },
     {
         label: "General Settings",
         moduleName: "General Settings",
         icon: Settings,
         to: "/inventory/settings",
     },
+    {
+        label: "Reports",
+        moduleName: "Reports",
+        icon: ChartNoAxesCombined,
+        to: "/reports",
+    },
 
-
+    {
+        label: "Audit Logs",
+        moduleName: "Audit Logs",
+        icon: ChartNoAxesCombined,
+        to: "/inventory/audit-logs",
+    },
 
 
 
@@ -354,13 +385,27 @@ const REPORT_NAV = [
         to: "/reports",
     },
 
-    {
-        label: "Reports Selection",
-        moduleName: "Reports Selection",
-        icon: LayoutDashboard,
-        to: "/reports/create",
-    },
+    // {
+    //     label: "Reports Selection",
+    //     moduleName: "Reports Selection",
+    //     icon: LayoutDashboard,
+    //     to: "/reports/create",
+    // },
 
+];
+
+
+// ============================================================
+// REPORTS NAVIGATION
+// ============================================================
+
+const AUDIT_LOGS_NAV = [
+    {
+        label: "Audit Logs",
+        moduleName: "Audit Logs",
+        icon: LayoutDashboard,
+        to: "/audit-logs",
+    },
 ];
 
 const PAYMENT_NAV = [
@@ -459,11 +504,13 @@ const getModuleTitle = ({
     isInventoryArea,
     isPaymentArea,
     isReportsArea,
+    isAuditLogsArea,
 }) => {
     if (isInventoryArea) return "Inventory";
     if (isPaymentArea) return "Payments";
     if (isReportsArea) return "Reports";
     if (isSettingsArea) return "Settings";
+    if (isAuditLogsArea) return "Audit Logs"
 
     return "InvoicePro";
 };
@@ -741,6 +788,13 @@ const Sidebar = ({ onLogout }) => {
         pathname === "/reports" ||
         pathname.startsWith("/reports/")
 
+    const isAuditLogsArea =
+        pathname === "/audit-logs" ||
+        pathname.startsWith("/audit-logs/") ||
+        pathname === "/settings/audit-logs" ||
+        pathname.startsWith("/settings/audit-logs/") ||
+        pathname === "/inventory/audit-logs" ||
+        pathname.startsWith("/inventory/audit-logs/");
     // --------------------------------------------------------
     // ROUTE HELPERS
     // --------------------------------------------------------
@@ -801,6 +855,10 @@ const Sidebar = ({ onLogout }) => {
                 return isActiveRoute(item.to);
             }
 
+            // Reports navigation
+            if (isAuditLogsArea) {
+                return isActiveRoute(item.to);
+            }
             // Main navigation
             return isActiveRoute(item.to);
         },
@@ -809,6 +867,7 @@ const Sidebar = ({ onLogout }) => {
             isInventoryArea,
             isPaymentArea,
             isReportsArea,
+            isAuditLogsArea,
             isActiveRoute,
             pathname,
         ]
@@ -827,8 +886,9 @@ const Sidebar = ({ onLogout }) => {
                     ? PAYMENT_NAV
                     : isReportsArea
                         ? REPORT_NAV
-                        : NAV;
-
+                        : isAuditLogsArea
+                            ? AUDIT_LOGS_NAV
+                            : NAV;
 
         return sourceNav
             .filter((item) =>
@@ -839,8 +899,8 @@ const Sidebar = ({ onLogout }) => {
                 children: item.children
                     ? item.children.filter((child) =>
                         hasPermission(
-                            item.moduleName,
-                            child.action || "VIEW"
+                            child.moduleName || item.moduleName,
+                            "VIEW"
                         )
                     )
                     : undefined,
@@ -850,6 +910,7 @@ const Sidebar = ({ onLogout }) => {
         isInventoryArea,
         isPaymentArea,
         isReportsArea,
+        isAuditLogsArea,
         hasPermission,
     ]);
 
@@ -887,7 +948,7 @@ const Sidebar = ({ onLogout }) => {
             return;
         }
 
-        if (isInventoryArea || isPaymentArea || isReportsArea) {
+        if (isInventoryArea || isPaymentArea || isReportsArea || isAuditLogsArea) {
             setOpenMenu(null);
             return;
         }
@@ -906,6 +967,7 @@ const Sidebar = ({ onLogout }) => {
         isInventoryArea,
         isPaymentArea,
         isReportsArea,
+        isAuditLogsArea,
         isActiveRoute,
     ]);
 
@@ -988,6 +1050,7 @@ const Sidebar = ({ onLogout }) => {
         isInventoryArea,
         isPaymentArea,
         isReportsArea,
+        isAuditLogsArea,
     });
 
     const ModuleIcon = getModuleIcon({
@@ -995,6 +1058,7 @@ const Sidebar = ({ onLogout }) => {
         isInventoryArea,
         isPaymentArea,
         isReportsArea,
+        isAuditLogsArea,
     });
     // --------------------------------------------------------
     // RENDER
@@ -1091,28 +1155,34 @@ const Sidebar = ({ onLogout }) => {
 
                         {/* BACK TO MAIN MENU */}
 
-                        {(isSettingsArea || isInventoryArea || isReportsArea) && (
-                            <button
-                                type="button"
-                                onClick={() => goTo("/dashboard")}
-                                title="Back to Main Menu"
-                                className={`
-                    flex items-center gap-2
-                    rounded-lg text-sm font-semibold
-                    text-white transition
-                    hover:text-lime-300
-                    ${open ? "w-full px-1" : "justify-center"}
-                `}
-                            >
-                                <ChevronLeft size={18} className="shrink-0" />
+                        {(
+                            isSettingsArea ||
+                            isInventoryArea ||
+                            isReportsArea ||
+                            isPaymentArea ||
+                            isAuditLogsArea
+                        ) && (
+                                <button
+                                    type="button"
+                                    onClick={() => goTo("/dashboard")}
+                                    title="Back to Main Menu"
+                                    className={`
+            flex items-center gap-2
+            rounded-lg text-sm font-semibold
+            text-white transition
+            hover:text-lime-300
+            ${open ? "w-full px-1" : "justify-center"}
+        `}
+                                >
+                                    <ChevronLeft size={18} className="shrink-0" />
 
-                                {open && (
-                                    <span className="truncate">
-                                        Back to Main Menu
-                                    </span>
-                                )}
-                            </button>
-                        )}
+                                    {open && (
+                                        <span className="truncate">
+                                            Back to Main Menu
+                                        </span>
+                                    )}
+                                </button>
+                            )}
                     </div>
                 </div>
 

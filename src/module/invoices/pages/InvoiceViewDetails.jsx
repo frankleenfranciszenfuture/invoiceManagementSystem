@@ -151,6 +151,23 @@ const getSalesPersonName = (invoice) => {
     );
 };
 
+const getCompany = (invoice) => invoice?.company || {};
+
+const getCompanyAddress = (company) => {
+    return [
+        company?.addressLine1,
+        company?.addressLine2,
+        company?.city,
+        company?.state,
+        company?.country,
+        company?.pincode,
+    ].filter(Boolean).join(", ");
+};
+
+const getInvoiceBank = (invoice) => invoice?.bankAccount || {};
+
+const getEmailSignature = (invoice) => invoice?.emailSignature || {};
+
 const getDefaultAddress = (customer) => {
     const addresses = Array.isArray(customer?.addresses)
         ? customer.addresses
@@ -375,7 +392,7 @@ export default function InvoiceViewDetails() {
         dispatch(setExistingInvoice(invoice));
 
         navigate(
-            `/invoices/edit/${invoice.id ?? invoice.invoiceId}`
+            `/invoices/product/edit/${invoice.id ?? invoice.invoiceId}`
         );
     };
 
@@ -442,6 +459,14 @@ export default function InvoiceViewDetails() {
     // ========================================================
 
     const customer = getCustomer(invoice);
+
+    const company = getCompany(invoice);
+
+    const companyAddress = getCompanyAddress(company);
+
+    const invoiceBank = getInvoiceBank(invoice);
+
+    const emailSignature = getEmailSignature(invoice);
 
     const address = getDefaultAddress(customer);
 
@@ -759,12 +784,12 @@ export default function InvoiceViewDetails() {
 
                     <ReadField
                         label="Company Name"
-                        value={invoice.companyName}
+                        value={company.companyName}
                     />
 
                     <ReadField
                         label="Company Code"
-                        value={invoice.companyCode}
+                        value={company.companyCode}
                     />
 
                 </div>
@@ -1164,107 +1189,202 @@ export default function InvoiceViewDetails() {
             {/* =================================================
                 COMPANY AND BANK INFORMATION
             ================================================= */}
-
             <SectionCard
                 title="Company & Bank Information"
                 icon={Building2}
             >
+                {/* COMPANY LOGO */}
+                {company.logo && (
+                    <div className="mb-5 flex items-center gap-4 rounded-lg border border-gray-100 bg-gray-50 p-4">
+                        <img
+                            src={company.logo}
+                            alt={`${company.companyName || "Company"} Logo`}
+                            className="h-20 w-32 rounded-md border border-gray-200 bg-white object-contain p-2"
+                        />
+
+                        <div>
+                            <p className="text-sm font-semibold text-gray-800">
+                                {company.companyName || "—"}
+                            </p>
+
+                            <p className="mt-1 text-xs text-gray-500">
+                                {company.displayName || company.legalName || ""}
+                            </p>
+
+                            {company.isDefault && (
+                                <span className="mt-2 inline-flex rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-semibold text-green-600">
+                                    DEFAULT COMPANY
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
 
-                    <ReadField
-                        label="Company ID"
-                        value={invoice.companyId}
-                    />
+                    <ReadField label="Company ID" value={company.id} />
 
-                    <ReadField
-                        label="Company Name"
-                        value={invoice.companyName}
-                    />
+                    <ReadField label="Company Name" value={company.companyName} />
 
-                    <ReadField
-                        label="Company Code"
-                        value={invoice.companyCode}
-                    />
+                    <ReadField label="Display Name" value={company.displayName} />
 
+                    <ReadField label="Legal Name" value={company.legalName} />
 
+                    <ReadField label="Company Code" value={company.companyCode} />
 
-                    <ReadField
-                        label="Bank Name"
-                        value={invoice.bankName}
-                    />
+                    <ReadField label="GST Number" value={company.gstNumber} />
 
-                    <ReadField
-                        label="Bank Account ID"
-                        value={invoice.branchName}
-                    />
+                    <ReadField label="PAN Number" value={company.panNumber} />
 
-                    <ReadField
-                        label="Account Number"
-                        value={invoice.accountNumber}
-                    />
+                    <ReadField label="TAN Number" value={company.tanNumber} />
 
-                    <ReadField
-                        label="IFSC Code"
-                        value={invoice.ifsc}
-                    />
+                    <ReadField label="Email" value={company.email} />
 
-                    <ReadField
-                        label="IFSC Code"
-                        value={invoice.swiftCode}
-                    />
+                    <ReadField label="Phone" value={company.phone} />
+
+                    <ReadField label="Alternate Phone" value={company.alternatePhone} />
+
+                    <ReadField label="Website" value={company.website} />
+
+                    <ReadField label="Default Company" value={company.isDefault ? "Yes" : "No"} />
+
+                    <ReadField label="Company Status" value={company.status} />
+
+                    <ReadField label="Currency" value={company.currency} />
+
+                    <ReadField label="Invoice Prefix" value={company.invoicePrefix} />
+
+                    <ReadField label="Invoice Start Number" value={company.invoiceStartNumber} />
+
+                    <ReadField label="Financial Year Start" value={formatDate(company.financialYearStart)} />
+
+                    <ReadField label="Address" value={companyAddress} className="sm:col-span-2 lg:col-span-4" />
 
                 </div>
 
+                {/* COMPANY BANK ACCOUNT */}
+                <div className="mt-6 border-t border-gray-100 pt-5">
+
+                    <h4 className="mb-4 text-sm font-semibold text-gray-700">
+                        Selected Bank Account
+                    </h4>
+
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+
+                        <ReadField label="Bank Account ID" value={invoiceBank.id} />
+
+                        <ReadField label="Account Name" value={invoiceBank.accountName} />
+
+                        <ReadField label="Account Code" value={invoiceBank.accountCode} />
+
+                        <ReadField label="Account Type" value={invoiceBank.accountType} />
+
+                        <ReadField label="Bank Name" value={invoiceBank.bankName} />
+
+                        <ReadField label="Branch Name" value={invoiceBank.branchName} />
+
+                        <ReadField label="Account Number" value={invoiceBank.accountNumber} />
+
+                        <ReadField label="IFSC Code" value={invoiceBank.ifsc} />
+
+                        <ReadField label="SWIFT Code" value={invoiceBank.swiftCode} />
+
+                        <ReadField label="Currency" value={invoiceBank.currency} />
+
+                        <ReadField label="Primary Account" value={invoiceBank.primaryAccount ? "Yes" : "No"} />
+
+                        <ReadField label="Bank Status" value={invoiceBank.status} />
+
+                    </div>
+                </div>
             </SectionCard>
 
             {/* =================================================
+    COMPANY SIGNATURE
+================================================= */}
+
+            <SectionCard
+                title="Company Authorized Signature"
+                icon={FileText}
+            >
+                {company.signature ? (
+                    <div className="flex flex-col gap-3">
+                        <p className="text-xs font-medium text-gray-500">
+                            Authorized Signature
+                        </p>
+
+                        <div className="flex min-h-32 items-center justify-start rounded-lg border border-gray-100 bg-gray-50 p-5">
+                            <img
+                                src={company.signature}
+                                alt="Company Authorized Signature"
+                                className="max-h-24 max-w-xs object-contain"
+                            />
+                        </div>
+
+                        <p className="text-xs text-gray-500">
+                            {company.legalName || company.companyName}
+                        </p>
+                    </div>
+                ) : (
+                    <p className="text-sm text-gray-400">
+                        No company signature available.
+                    </p>
+                )}
+            </SectionCard>
+            {/* =================================================
                 EMAIL SIGNATURE
             ================================================= */}
+
 
             <SectionCard
                 title="Email Signature"
                 icon={FileText}
             >
-
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
 
                     <ReadField
                         label="Signature ID"
-                        value={invoice.emailSignatureId}
+                        value={emailSignature.id}
                     />
 
                     <ReadField
                         label="Signature Name"
-                        value={invoice.signatureName}
+                        value={emailSignature.signatureName}
                     />
 
                     <ReadField
                         label="User ID"
-                        value={invoice.userId}
+                        value={emailSignature.userId}
                     />
 
                     <ReadField
                         label="Default for New Messages"
-                        value={
-                            invoice.defaultForNewMessages
-                                ? "Yes"
-                                : "No"
-                        }
+                        value={emailSignature.defaultForNewMessages ? "Yes" : "No"}
                     />
 
                     <ReadField
                         label="Default for Replies"
-                        value={
-                            invoice.defaultForReplies
-                                ? "Yes"
-                                : "No"
-                        }
+                        value={emailSignature.defaultForReplies ? "Yes" : "No"}
+                    />
+
+                    <ReadField
+                        label="Created At"
+                        value={formatDateTime(emailSignature.createdAt)}
+                    />
+
+                    <ReadField
+                        label="Updated At"
+                        value={formatDateTime(emailSignature.updatedAt)}
+                    />
+
+                    <ReadField
+                        label="Signature Status"
+                        value={emailSignature.status}
                     />
 
                 </div>
 
-                {invoice.signatureContent && (
+                {emailSignature.signatureContent && (
                     <div className="mt-5 border-t border-gray-100 pt-4">
 
                         <p className="mb-2 text-xs font-medium text-gray-500">
@@ -1274,13 +1394,12 @@ export default function InvoiceViewDetails() {
                         <div
                             className="rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm text-gray-700"
                             dangerouslySetInnerHTML={{
-                                __html: invoice.signatureContent,
+                                __html: emailSignature.signatureContent,
                             }}
                         />
 
                     </div>
                 )}
-
             </SectionCard>
 
             {/* =================================================

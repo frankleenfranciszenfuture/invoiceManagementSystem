@@ -116,6 +116,13 @@ const formatLabel = (value) => {
         .join(" ");
 };
 
+const getPartyTypeInitial = (partyType) => {
+    if (!partyType) return "";
+
+    return partyType.slice(0, 3).toUpperCase();
+};
+
+
 /* =========================================================
    COMPONENT
 ========================================================= */
@@ -776,12 +783,10 @@ export default function InvoiceTable({
                                     </div>
                                 </td>
 
-                                {/* CUSTOMER */}
+                                {/* CUSTOMER / PARTY */}
 
                                 <td className="px-3 py-3">
-                                    <div className="
-                                        flex min-w-0 items-center gap-2
-                                    ">
+                                    <div className="flex min-w-0 items-center gap-2">
                                         <UserRound
                                             size={15}
                                             className="shrink-0 text-gray-400"
@@ -789,23 +794,45 @@ export default function InvoiceTable({
 
                                         <div className="min-w-0">
                                             <p className="
-                                                max-w-[180px] truncate
-                                                font-medium text-gray-700
-                                            ">
+                max-w-[180px] truncate
+                font-medium text-gray-700
+            ">
+                                                {invoice.partyType && (
+                                                    <span
+                                                        className={`
+                                                    shrink-0 rounded-full px-2 py-0.5
+                                                    text-[10px] font-semibold uppercase
+                                                    ${invoice.partyType === "CUSTOMER"
+                                                                ? "bg-orange-50 text-orange-600"
+                                                                : "bg-purple-50 text-purple-600"
+                                                            }
+        `}
+                                                    >
+                                                        {getPartyTypeInitial(invoice.partyType)}
+                                                    </span>
+                                                )}
                                                 {invoice.customerName ||
                                                     invoice.customer?.companyName ||
                                                     invoice.customer?.customerName ||
+                                                    invoice.partyName ||
+                                                    invoice.party?.partyName ||
+                                                    invoice.party?.displayName ||
+                                                    invoice.party?.name ||
                                                     "—"}
                                             </p>
 
-                                            {invoice.customer?.email && (
+                                            {(invoice.customer?.email || invoice.party?.email) && (
                                                 <p className="
-                                                    max-w-[180px] truncate
-                                                    text-xs text-gray-400
-                                                ">
-                                                    {invoice.customer.email}
+                    max-w-[180px] truncate
+                    text-xs text-gray-400
+                ">
+                                                    {invoice.customer?.email ||
+                                                        invoice.party?.email}
                                                 </p>
+
                                             )}
+
+
                                         </div>
                                     </div>
                                 </td>

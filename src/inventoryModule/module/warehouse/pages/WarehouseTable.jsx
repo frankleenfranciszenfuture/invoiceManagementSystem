@@ -270,7 +270,7 @@ export default function WarehouseTable({
 
         dispatch(setExistingWarehouse(warehouse));
 
-        navigate(`/inventory/warehouses/view/${warehouse.id}`);
+        navigate(`/settings/warehouses/view/${warehouse.id}`);
     };
 
     /* =====================================================
@@ -287,7 +287,7 @@ export default function WarehouseTable({
 
         dispatch(setExistingWarehouse(warehouse));
 
-        navigate(`/inventory/warehouses/edit/${warehouse.id}`);
+        navigate(`/settings/warehouses/edit/${warehouse.id}`);
     };
 
     /* =====================================================

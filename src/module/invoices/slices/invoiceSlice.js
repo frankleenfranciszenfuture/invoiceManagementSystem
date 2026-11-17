@@ -48,13 +48,25 @@ const emptyInvoice = {
   invoiceNumber: "",
   invoiceType: "",
 
+  // Invoice source
+  sourceType: "",
+
   // Sales Order reference
   salesOrderId: null,
   salesOrderNumber: "",
-  sourceType: "",
+
+  // Purchase Order reference
+  purchaseOrderId: null,
+  purchaseOrderNumber: "",
+
+  // Invoice recipient
+  partyType: "CUSTOMER",
 
   customerId: "",
   customerName: "",
+
+  partyId: "",
+  partyName: "",
 
   salesPersonId: "",
   salesPersonName: "",
@@ -208,6 +220,24 @@ const invoiceSlice = createSlice({
 
   reducers: {
     /* =====================================================
+   SET DEFAULT BANK ACCOUNT AND EMAIL SIGNATURE
+===================================================== */
+
+    setInvoiceDefaultAccounts: (state, action) => {
+      const { bankAccount, emailSignature } = action.payload || {};
+
+      if (bankAccount && !state.invoice.bankAccountId) {
+        state.invoice.bankAccountId = bankAccount.id ?? "";
+        state.invoice.bankName = bankAccount.bankName ?? "";
+      }
+
+      if (emailSignature && !state.invoice.emailSignatureId) {
+        state.invoice.emailSignatureId = emailSignature.id ?? "";
+        state.invoice.signatureName = emailSignature.signatureName ?? "";
+      }
+    },
+
+    /* =====================================================
        SET EXISTING INVOICE
     ===================================================== */
 
@@ -234,11 +264,25 @@ const invoiceSlice = createSlice({
    SET INVOICE FOR EDIT
 ===================================================== */
 
-
     setInvoiceForEdit: (state, action) => {
       const existingInvoice = action.payload;
 
       if (!existingInvoice) return;
+
+      // Recipient details
+      const customer = existingInvoice.customer ?? null;
+      const party = existingInvoice.party ?? null;
+
+      // Determine recipient type
+      const partyType =
+        existingInvoice.partyType ??
+        (party || existingInvoice.partyId ? "PARTY" : "CUSTOMER");
+
+      // Sales Order details
+      const salesOrder = existingInvoice.salesOrder ?? null;
+
+      // Purchase Order details
+      const purchaseOrder = existingInvoice.purchaseOrder ?? null;
 
       state.invoice = {
         ...emptyInvoice,
@@ -250,26 +294,68 @@ const invoiceSlice = createSlice({
         invoiceDate: existingInvoice.invoiceDate || getTodayDate(),
         dueDate: existingInvoice.dueDate || "",
         invoiceStatus:
-          existingInvoice.status ??
-          existingInvoice.invoiceStatus ??
-          "DRAFT",
+          existingInvoice.status ?? existingInvoice.invoiceStatus ?? "DRAFT",
+
+        // Invoice source
+        sourceType:
+          existingInvoice.sourceType ??
+          (salesOrder ? "SALES_ORDER" : purchaseOrder ? "PURCHASE_ORDER" : ""),
 
         // Sales Order reference
-        salesOrderId: existingInvoice.salesOrderId ?? null,
-        salesOrderNumber: existingInvoice.salesOrderNumber ?? "",
-        sourceType: existingInvoice.sourceType ?? "",
+        salesOrderId: salesOrder?.id ?? existingInvoice.salesOrderId ?? "",
 
-        // Customer
-        customerId: existingInvoice.customerId ?? "",
-        customerName:
-          existingInvoice.customerName ??
-          existingInvoice.customer?.displayName ??
-          existingInvoice.customer?.companyName ??
+        salesOrderNumber:
+          salesOrder?.orderNumber ?? existingInvoice.salesOrderNumber ?? "",
+
+        // Purchase Order reference
+        purchaseOrderId:
+          purchaseOrder?.id ?? existingInvoice.purchaseOrderId ?? "",
+
+        purchaseOrderNumber:
+          purchaseOrder?.orderNumber ??
+          existingInvoice.purchaseOrderNumber ??
           "",
 
+        // Invoice recipient
+        partyType,
+
+        customerId:
+          partyType === "CUSTOMER"
+            ? (customer?.id ?? existingInvoice.customerId ?? "")
+            : "",
+
+        customerName:
+          partyType === "CUSTOMER"
+            ? (customer?.displayName ??
+              customer?.name ??
+              existingInvoice.customerName ??
+              "")
+            : "",
+
+        partyId:
+          partyType === "PARTY"
+            ? (party?.id ?? existingInvoice.partyId ?? "")
+            : "",
+
+        partyName:
+          partyType === "PARTY"
+            ? (party?.partyName ??
+              party?.companyName ??
+              party?.name ??
+              existingInvoice.partyName ??
+              "")
+            : "",
+
         // Salesperson
-        salesPersonId: existingInvoice.salesPersonId ?? "",
-        salesPersonName: existingInvoice.salesPersonName ?? "",
+        salesPersonId:
+          existingInvoice.salesPersonId ??
+          existingInvoice.salesPerson?.id ??
+          "",
+
+        salesPersonName:
+          existingInvoice.salesPersonName ??
+          existingInvoice.salesPerson?.name ??
+          "",
 
         // Currency
         currencyId: existingInvoice.currencyId ?? "",
@@ -278,14 +364,22 @@ const invoiceSlice = createSlice({
         exchangeRate: existingInvoice.exchangeRate ?? 1,
 
         // Bank account
-        bankAccountId: existingInvoice.bankAccountId ?? "",
+        bankAccountId:
+          existingInvoice.bankAccountId ??
+          existingInvoice.bankAccount?.id ??
+          "",
+
         bankName:
           existingInvoice.bankAccountName ??
           existingInvoice.bankAccount?.bankName ??
           "",
 
         // Email signature
-        emailSignatureId: existingInvoice.emailSignatureId ?? "",
+        emailSignatureId:
+          existingInvoice.emailSignatureId ??
+          existingInvoice.emailSignature?.id ??
+          "",
+
         signatureName:
           existingInvoice.emailSignatureName ??
           existingInvoice.emailSignature?.signatureName ??
@@ -305,17 +399,21 @@ const invoiceSlice = createSlice({
         // Preserve all invoice item details
         invoiceItems: Array.isArray(existingInvoice.invoiceItems)
           ? existingInvoice.invoiceItems.map((item) => ({
-            ...item,
-            productId: item.productId ?? "",
-            description: item.description ?? item.productName ?? "",
-            unitId: item.unitId ?? "",
-            sizeId: item.sizeId ?? "",
-            quantity: item.quantity ?? 1,
-            unitPrice: item.unitPrice ?? 0,
-            baseUnitPrice: item.baseUnitPrice ?? 0,
-            discountAmount: item.discountAmount ?? 0,
-            taxMasterId: item.taxMasterId ?? "",
-          }))
+              ...item,
+              productId: item.productId ?? item.product?.id ?? "",
+              description:
+                item.description ??
+                item.productName ??
+                item.product?.name ??
+                "",
+              unitId: item.unitId ?? item.unit?.id ?? "",
+              sizeId: item.sizeId ?? item.size?.id ?? "",
+              quantity: item.quantity ?? 1,
+              unitPrice: item.unitPrice ?? 0,
+              baseUnitPrice: item.baseUnitPrice ?? 0,
+              discountAmount: item.discountAmount ?? 0,
+              taxMasterId: item.taxMasterId ?? item.taxMaster?.id ?? "",
+            }))
           : [],
       };
 
@@ -416,6 +514,29 @@ const invoiceSlice = createSlice({
       state.invoice[field] = value;
     },
 
+    /* =====================================================
+       SET INVOICE RECIPIENT TYPE
+    ===================================================== */
+
+    setInvoicePartyType: (state, action) => {
+      const partyType = action.payload;
+
+      if (!["CUSTOMER", "PARTY"].includes(partyType)) {
+        return;
+      }
+
+      state.invoice.partyType = partyType;
+
+      // Clear previous recipient selection.
+      state.invoice.customerId = "";
+      state.invoice.customerName = "";
+
+      state.invoice.partyId = "";
+      state.invoice.partyName = "";
+
+      state.isDirty = true;
+    },
+
     updateSelectedInvoiceField: (state, action) => {
       const { field, value } = action.payload;
 
@@ -495,39 +616,29 @@ const invoiceSlice = createSlice({
     },
 
     setInvoiceTemplate: (state, action) => {
-      const { templateId, invoiceId } = action.payload;
+      const { templateId, invoiceId } = action.payload || {};
 
-      if (!templateId) return;
+      if (!templateId || invoiceId == null) return;
 
+      // Update selected template
       state.invoiceTemplate = templateId;
-      state.selectedTemplateInvoiceId = invoiceId ?? null;
+      state.selectedTemplateInvoiceId = invoiceId;
 
-      // Update complete preview invoice
-      if (
-        state.previewInvoice &&
-        String(state.previewInvoice.id ?? state.previewInvoice.invoiceId) ===
-        String(invoiceId)
-      ) {
-        state.previewInvoice.invoiceTemplate = templateId;
-      }
+      const updateTemplate = (item) => {
+        if (item && String(item.id ?? item.invoiceId) === String(invoiceId)) {
+          item.invoiceTemplate = templateId;
+        }
+      };
 
-      // Update existing invoice
-      if (
-        state.exsistingInvoice &&
-        String(
-          state.exsistingInvoice.id ?? state.exsistingInvoice.invoiceId,
-        ) === String(invoiceId)
-      ) {
-        state.exsistingInvoice.invoiceTemplate = templateId;
-      }
+      // Update invoice objects
+      updateTemplate(state.previewInvoice);
+      updateTemplate(state.exsistingInvoice);
+      updateTemplate(state.invoice);
+      updateTemplate(state.selectedInvoice);
 
-      // Update invoice listing
-      const invoiceIndex = state.invoices.findIndex(
-        (item) => String(item.id ?? item.invoiceId) === String(invoiceId),
-      );
-
-      if (invoiceIndex !== -1) {
-        state.invoices[invoiceIndex].invoiceTemplate = templateId;
+      // Update invoice list
+      if (Array.isArray(state.invoices)) {
+        state.invoices.forEach(updateTemplate);
       }
     },
 
@@ -891,6 +1002,9 @@ export const {
   clearSelectedInvoice,
   resetInvoiceForm,
   setInvoiceField,
+  setInvoicePartyType,
+  setInvoiceDefaultAccounts,
+
   setInvoiceItems,
   setInvoiceItemField,
   addInvoiceItem,

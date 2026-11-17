@@ -73,6 +73,21 @@
   background: #f3f4f6 !important;
 }
 
+/* =====================================================
+   HIDE SCROLLBAR BUT KEEP SCROLL FUNCTIONAL
+===================================================== */
+
+.custom-scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.custom-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 /* =========================================================
    MODAL BACKDROP
 ========================================================= */

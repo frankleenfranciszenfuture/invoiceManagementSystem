@@ -52,7 +52,11 @@ import {
   LucideCreditCard,
   CreditCardIcon,
   SignatureIcon,
-  ClipboardPenIcon
+  ClipboardPenIcon,
+  Coins,
+  Phone,
+  UserIcon,
+  Check
 } from "lucide-react";
 
 import {
@@ -62,7 +66,8 @@ import {
   removeInvoiceItem,
   resetInvoiceForm,
   setInvoiceItems,
-  setInvoiceForEdit
+  setInvoiceForEdit,
+  setInvoiceDefaultAccounts,
 } from "../slices/invoiceSlice";
 
 import {
@@ -88,7 +93,7 @@ import {
   fetchAllCustomers,
 } from "../../customer/thunks/customerThunks";
 
-
+import { fetchAllParties } from "../../parties/thunks/partyThunks";
 
 import {
   fetchAllProducts,
@@ -171,7 +176,25 @@ const getArray = (value) => {
   return [];
 };
 
+const getInvoiceOrderReference = (invoice) => {
+  if (invoice.salesOrderId || invoice.salesOrderNumber) {
+    return {
+      label: "SO",
+      value: invoice.salesOrderNumber || `#${invoice.salesOrderId}`,
+      color: "bg-green-50 text-green-600",
+    };
+  }
 
+  if (invoice.purchaseOrderId || invoice.purchaseOrderNumber) {
+    return {
+      label: "PO",
+      value: invoice.purchaseOrderNumber || `#${invoice.purchaseOrderId}`,
+      color: "bg-orange-50 text-orange-600",
+    };
+  }
+
+  return null;
+};
 /* =========================================================
    COMPONENT
 ========================================================= */
@@ -292,7 +315,14 @@ export default function InvoiceCreate({ onClose }) {
   };
 
   const handleCancel = () => {
-    setShowLeaveConfirmation(true);
+    confirmLeave(() => {
+      if (onClose) {
+        onClose();
+      } else {
+        navigate("/invoices");
+      }
+    });
+
   };
 
 
@@ -583,6 +613,52 @@ export default function InvoiceCreate({ onClose }) {
   ]);
 
 
+  const partyState = useSelector((state) => state.party);
+
+  const parties = useMemo(
+    () => getArray(partyState?.parties),
+    [partyState?.parties]
+  );
+
+  const partyLoading = partyState?.loading ?? false;
+  const partyError = partyState?.error ?? null;
+
+  const [partySearch, setPartySearch] = useState("");
+  const [openParty, setOpenParty] = useState(false);
+
+  const partyDropdownRef = useRef(null);
+
+
+  const getPartyName = (party) =>
+    party?.companyName ||
+    party?.partyName ||
+    party?.vendorName ||
+    party?.contactPerson ||
+    party?.name ||
+    "";
+
+  const filteredParties = useMemo(() => {
+    const search = partySearch.trim().toLowerCase();
+
+    if (!search) return parties;
+
+    return parties.filter((party) => {
+      const searchableText = [
+        getPartyName(party),
+        party?.email,
+        party?.mobile,
+        party?.phone,
+        party?.phoneNumber,
+        party?.partyCode,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(search);
+    });
+  }, [parties, partySearch]);
+
   /* =======================================================
      FORMAT ADDRESS
   ======================================================= */
@@ -711,26 +787,6 @@ export default function InvoiceCreate({ onClose }) {
   const emailSignatureError =
     emailSignatureState?.error ?? null;
 
-  /* =======================================================
-     SELECTED EMAIL SIGNATURE
-  ======================================================= */
-
-  const selectedSignature = useMemo(() => {
-    if (!invoice?.emailSignatureId) {
-      return null;
-    }
-
-    return (
-      emailSignatures.find(
-        (emailSignature) =>
-          String(emailSignature?.id) ===
-          String(invoice.emailSignatureId)
-      ) || null
-    );
-  }, [
-    emailSignatures,
-    invoice?.emailSignatureId,
-  ]);
 
 
   /* =======================================================
@@ -754,26 +810,6 @@ export default function InvoiceCreate({ onClose }) {
   const bankAccountError =
     bankAccountState?.error ?? null;
 
-  /* =======================================================
-     SELECTED EMAIL SIGNATURE
-  ======================================================= */
-
-  const selectedBankAccount = useMemo(() => {
-    if (!invoice?.bankAccountId) {
-      return null;
-    }
-
-    return (
-      bankAccounts.find(
-        (bankAccount) =>
-          String(bankAccount?.id) ===
-          String(invoice.bankAccountId)
-      ) || null
-    );
-  }, [
-    bankAccounts,
-    invoice?.bankAccountId,
-  ]);
 
 
   /* =======================================================
@@ -878,6 +914,7 @@ export default function InvoiceCreate({ onClose }) {
 
   useEffect(() => {
     dispatch(fetchAllCustomers());
+    dispatch(fetchAllParties());
     dispatch(fetchAllProducts());
     dispatch(fetchAllUnits());
     dispatch(fetchAllSizes());
@@ -1416,6 +1453,42 @@ export default function InvoiceCreate({ onClose }) {
     );
   }, [isEdit, location.state?.invoiceType, dispatch]);
 
+
+  /* =========================================================
+   APPLY DEFAULT BANK ACCOUNT AND EMAIL SIGNATURE
+========================================================= */
+
+  useEffect(() => {
+    if (!isAdd) return;
+
+    const primaryBankAccount = bankAccounts.find(
+      (account) =>
+        account.primaryAccount === true &&
+        account.active === true &&
+        account.status === "ACTIVE"
+    );
+
+    const defaultEmailSignature = emailSignatures.find(
+      (signature) =>
+        signature.defaultForNewMessages === true &&
+        signature.status === "ACTIVE"
+    );
+
+    if (primaryBankAccount || defaultEmailSignature) {
+      dispatch(
+        setInvoiceDefaultAccounts({
+          bankAccount: primaryBankAccount,
+          emailSignature: defaultEmailSignature,
+        })
+      );
+    }
+  }, [
+    isAdd,
+    bankAccounts,
+    emailSignatures,
+    dispatch,
+  ]);
+
   /* =========================================================
      CLICK OUTSIDE
   ========================================================= */
@@ -1432,6 +1505,15 @@ export default function InvoiceCreate({ onClose }) {
         )
       ) {
         setOpenCustomer(false);
+      }
+
+      if (
+        partyDropdownRef.current &&
+        !partyDropdownRef.current.contains(
+          event.target
+        )
+      ) {
+        setOpenParty(false);
       }
 
       if (
@@ -2212,46 +2294,90 @@ BANKACCOUNT NAME
      CUSTOMER SELECT
   ========================================================= */
 
-  const handleCustomerSelect = (
-    customer
-  ) => {
-
-    if (!customer) {
-      return;
-    }
-
-
-    const name =
-      getCustomerName(
-        customer
-      );
-
-
+  const handleCustomerSelect = (customer) => {
     dispatch(
       setInvoiceField({
-        field:
-          "customerId",
-        value:
-          customer.id,
+        field: "partyType",
+        value: "CUSTOMER",
       })
     );
 
-
     dispatch(
       setInvoiceField({
-        field:
-          "customerName",
-        value:
-          name,
+        field: "customerId",
+        value: customer.id,
       })
     );
 
+    dispatch(
+      setInvoiceField({
+        field: "customerName",
+        value: getCustomerName(customer),
+      })
+    );
+
+    dispatch(
+      setInvoiceField({
+        field: "partyId",
+        value: null,
+      })
+    );
+
+    dispatch(
+      setInvoiceField({
+        field: "partyName",
+        value: "",
+      })
+    );
 
     setCustomerSearch("");
-
     setOpenCustomer(false);
+    setOpenParty(false);
+    setShowCustomerDetails(true);
   };
 
+
+  const handlePartySelect = (party) => {
+    dispatch(
+      setInvoiceField({
+        field: "partyType",
+        value: "PARTY",
+      })
+    );
+
+    dispatch(
+      setInvoiceField({
+        field: "partyId",
+        value: party.id,
+      })
+    );
+
+    dispatch(
+      setInvoiceField({
+        field: "partyName",
+        value: getPartyName(party),
+      })
+    );
+
+    dispatch(
+      setInvoiceField({
+        field: "customerId",
+        value: null,
+      })
+    );
+
+    dispatch(
+      setInvoiceField({
+        field: "customerName",
+        value: "",
+      })
+    );
+
+    setPartySearch("");
+    setOpenParty(false);
+    setOpenCustomer(false);
+    setShowCustomerDetails(false);
+  };
 
   /* =========================================================
      SALES PERSON SELECT
@@ -2428,9 +2554,7 @@ BANKACCOUNT NAME
 
 
   const handleEmailSignatureSelect = (emailSignature) => {
-    if (!emailSignature?.id) return;
-
-    const name = getEmailSignatureName(emailSignature);
+    if (!emailSignature) return;
 
     dispatch(
       setInvoiceField({
@@ -2442,7 +2566,7 @@ BANKACCOUNT NAME
     dispatch(
       setInvoiceField({
         field: "signatureName",
-        value: name,
+        value: emailSignature.signatureName ?? "",
       })
     );
 
@@ -2459,8 +2583,6 @@ BANKACCOUNT NAME
   const handleBankAccountSelect = (bankAccount) => {
     if (!bankAccount) return;
 
-    const name = getBankAccountName(bankAccount);
-
     dispatch(
       setInvoiceField({
         field: "bankAccountId",
@@ -2470,15 +2592,28 @@ BANKACCOUNT NAME
 
     dispatch(
       setInvoiceField({
-        field: "bankAccountName",
-        value: name,
+        field: "bankName",
+        value: bankAccount.bankName ?? "",
       })
     );
 
-    // Clear bank account search and close its dropdown
     setBankAccountSearch("");
     setOpenBankAccount(false);
   };
+
+  /* =======================================================
+    SELECTED EMAIL SIGNATURE
+ ======================================================= */
+
+  const selectedBankAccount = bankAccounts.find(
+    (account) =>
+      String(account.id) === String(invoice.bankAccountId)
+  );
+
+  const selectedSignature = emailSignatures.find(
+    (signature) =>
+      String(signature.id) === String(invoice.emailSignatureId)
+  );
 
 
   /* =========================================================
@@ -2740,15 +2875,16 @@ BANKACCOUNT NAME
 
   const validateInvoice = () => {
 
-    if (
-      !invoice.customerId
-    ) {
-
-      toast.error(
-        "Please select a customer"
-      );
-
-      return false;
+    if (invoice.partyType === "PARTY") {
+      if (!invoice.partyId) {
+        toast.error("Please select a party.");
+        return false;
+      }
+    } else {
+      if (!invoice.customerId) {
+        toast.error("Please select a customer.");
+        return false;
+      }
     }
 
     if (
@@ -2967,7 +3103,33 @@ BANKACCOUNT NAME
         : null,
       salesOrderNumber: invoice.salesOrderNumber || null,
 
-      customerId: Number(invoice.customerId),
+      partyType: invoice.partyType || "CUSTOMER",
+
+      customerId:
+        invoice.partyType === "PARTY"
+          ? null
+          : invoice.customerId
+            ? Number(invoice.customerId)
+            : null,
+
+      partyId:
+        invoice.partyType === "PARTY"
+          ? invoice.partyId
+            ? Number(invoice.partyId)
+            : null
+          : null,
+
+      salesOrderId: invoice.salesOrderId
+        ? Number(invoice.salesOrderId)
+        : null,
+
+      salesOrderNumber: invoice.salesOrderNumber || null,
+
+      purchaseOrderId: invoice.purchaseOrderId
+        ? Number(invoice.purchaseOrderId)
+        : null,
+
+      purchaseOrderNumber: invoice.purchaseOrderNumber || null,
 
       salesPersonId: invoice.salesPersonId
         ? Number(invoice.salesPersonId)
@@ -3275,7 +3437,6 @@ BANKACCOUNT NAME
                       SALE_INVOICE: "Sales Invoice",
                       PURCHASE_INVOICE: "Purchase Invoice",
                       TAX_INVOICE: "Tax Invoice",
-                      TAX_INVOICE: "Tax Invoice",
                       QUOTATION: "Quotation",
                       CREDIT_NOTE: "Credit Note",
                       DEBIT_NOTE: "Debit Note",
@@ -3347,27 +3508,297 @@ BANKACCOUNT NAME
               </div>
             </div>
             {/* =================================================
-              CUSTOMER
-          ================================================= */}
+    CUSTOMER / PARTY
+================================================= */}
 
             <div className="mb-6 flex items-start">
 
-
               <label className="w-44 pt-2 text-sm font-medium text-red-500 shrink-0">
-                Customer Name*
+                Customer / Party*
               </label>
-
 
               <div className="flex-1">
 
-                {/* ROW 1 */}
+                {/* RECIPIENT TYPE */}
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 mb-2">
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dispatch(
+                        setInvoiceField({
+                          field: "partyType",
+                          value: "CUSTOMER",
+                        })
+                      );
+
+                      dispatch(
+                        setInvoiceField({
+                          field: "partyId",
+                          value: null,
+                        })
+                      );
+
+                      dispatch(
+                        setInvoiceField({
+                          field: "partyName",
+                          value: "",
+                        })
+                      );
+
+                      setPartySearch("");
+                      setOpenParty(false);
+                    }}
+                    className={`px-4 py-1.5 rounded-md text-sm border transition ${(invoice.partyType || "CUSTOMER") === "CUSTOMER"
+                      ? "bg-blue-500 text-white border-blue-500"
+                      : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                      }`}
+                  >
+                    Customer
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dispatch(
+                        setInvoiceField({
+                          field: "partyType",
+                          value: "PARTY",
+                        })
+                      );
+
+                      dispatch(
+                        setInvoiceField({
+                          field: "customerId",
+                          value: null,
+                        })
+                      );
+
+                      dispatch(
+                        setInvoiceField({
+                          field: "customerName",
+                          value: "",
+                        })
+                      );
+
+                      setCustomerSearch("");
+                      setOpenCustomer(false);
+                      setShowCustomerDetails(false);
+                    }}
+                    className={`px-4 py-1.5 rounded-md text-sm border transition ${invoice.partyType === "PARTY"
+                      ? "bg-blue-500 text-white border-blue-500"
+                      : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                      }`}
+                  >
+                    Party
+                  </button>
+
+                </div>
+
+                {/* =================================================
+        CUSTOMER DROPDOWN
+    ================================================= */}
+
+                {invoice.partyType !== "PARTY" ? (
+
+                  <div className="flex items-center gap-3">
+
+                    <div
+                      ref={customerDropdownRef}
+                      className="relative w-[350px]"
+                    >
+
+                      <div className="flex">
+
+                        <div className="relative flex-1">
+
+                          <input
+                            type="text"
+                            value={
+                              customerSearch ||
+                              invoice.customerName ||
+                              ""
+                            }
+                            placeholder={
+                              customerLoading
+                                ? "Loading customers..."
+                                : "Select or add a customer"
+                            }
+                            onClick={() => setOpenCustomer(true)}
+                            onChange={(e) => {
+                              setCustomerSearch(e.target.value);
+                              setOpenCustomer(true);
+                            }}
+                            className="w-full h-10 border border-blue-500 rounded-l-md px-3 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+                          />
+
+                          <ChevronDown
+                            size={14}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                          />
+
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setOpenCustomer(true)}
+                          className="h-10 w-10 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-r-md"
+                        >
+                          <Search size={16} />
+                        </button>
+
+                      </div>
+
+
+
+                      {/* CUSTOMER DROPDOWN */}
+
+                      {openCustomer && (
+
+                        <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-[100]">
+
+                          <div className="p-2 border-b border-gray-200">
+
+                            <div className="relative">
+
+                              <Search
+                                size={16}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                              />
+
+                              <input
+                                type="text"
+                                autoFocus
+                                placeholder="Search customer"
+                                value={customerSearch}
+                                onChange={(e) =>
+                                  setCustomerSearch(e.target.value)
+                                }
+                                className="w-full border border-blue-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none"
+                              />
+
+                            </div>
+
+                          </div>
+
+                          <div className="max-h-60 overflow-y-auto">
+
+                            {customerLoading ? (
+
+                              <div className="px-4 py-5 text-center text-gray-500 text-sm">
+                                Loading customers...
+                              </div>
+
+                            ) : customerError ? (
+
+                              <div className="px-4 py-5 text-center text-red-500 text-sm">
+                                Failed to load customers
+                              </div>
+
+                            ) : filteredCustomers.length === 0 ? (
+
+                              <div className="px-4 py-5 text-center text-gray-400 text-sm">
+                                {customerSearch
+                                  ? "No customers found"
+                                  : "No customers available"}
+                              </div>
+
+                            ) : (
+
+                              filteredCustomers.map((customer, index) => {
+
+                                const name = getCustomerName(customer);
+
+                                return (
+
+                                  <button
+                                    type="button"
+                                    key={customer.id}
+                                    onClick={() =>
+                                      handleCustomerSelect(customer)
+                                    }
+                                    className={`flex w-full items-center gap-3 rounded border-b border-gray-100 px-4 py-3 text-left transition-colors
+                                                                                               ${index === 0
+                                        ? "bg-blue-500 text-white"
+                                        : "bg-white text-gray-500 hover:bg-blue-50 hover:text-gray-500"
+                                      }`}
+                                  >
+                                    <div
+                                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-medium
+                                                                                                   ${index === 0
+                                          ? "bg-gray-100 text-blue-500"
+                                          : "bg-gray-200 text-gray-700"
+                                        }`}
+                                    >
+                                      {name.charAt(0).toUpperCase()}
+                                    </div>
+
+
+                                    <div className="min-w-0">
+                                      <p className="truncate font-medium">{name}</p>
+
+                                      <p className="flex min-w-0 items-center gap-2 truncate text-xs opacity-80">
+                                        {customer.email ? (
+                                          <Mail size={13} className="shrink-0" />
+                                        ) : (
+                                          <Phone size={13} className="shrink-0" />
+                                        )}
+
+                                        <span className="truncate">
+                                          {customer.email || customer.mobile || customer.phoneNumber || ""}
+                                        </span>
+                                      </p>
+                                    </div>
+
+
+                                  </button>
+
+                                );
+                              })
+                            )}
+
+                          </div>
+
+                          <button
+                            type="button"
+                            className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
+                            onClick={() => {
+                              setOpenCustomer(false);
+
+                              dispatch(
+                                openModal({
+                                  type: "addCustomer",
+                                })
+                              );
+                            }}
+                          >
+
+                            <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center">
+                              <Plus size={14} />
+                            </div>
+
+                            <span className="font-medium">
+                              New Customer
+                            </span>
+
+                          </button>
+
+                        </div>
+                      )}
+
+                    </div>
+
+                  </div>
+
+                ) : (
+
+                  /* =================================================
+                      PARTY DROPDOWN
+                  ================================================= */
 
                   <div
-                    ref={
-                      customerDropdownRef
-                    }
+                    ref={partyDropdownRef}
                     className="relative w-[350px]"
                   >
 
@@ -3378,35 +3809,22 @@ BANKACCOUNT NAME
                         <input
                           type="text"
                           value={
-                            customerSearch ||
-                            invoice.customerName ||
+                            partySearch ||
+                            invoice.partyName ||
                             ""
                           }
                           placeholder={
-                            customerLoading
-                              ? "Loading customers..."
-                              : "Select or add a customer"
+                            partyLoading
+                              ? "Loading parties..."
+                              : "Select or add a party"
                           }
-                          onClick={() =>
-                            setOpenCustomer(
-                              true
-                            )
-                          }
-                          onChange={(
-                            e
-                          ) => {
-
-                            setCustomerSearch(
-                              e.target.value
-                            );
-
-                            setOpenCustomer(
-                              true
-                            );
+                          onClick={() => setOpenParty(true)}
+                          onChange={(e) => {
+                            setPartySearch(e.target.value);
+                            setOpenParty(true);
                           }}
                           className="w-full h-10 border border-blue-500 rounded-l-md px-3 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
                         />
-
 
                         <ChevronDown
                           size={14}
@@ -3415,29 +3833,19 @@ BANKACCOUNT NAME
 
                       </div>
 
-
                       <button
                         type="button"
-                        onClick={() =>
-                          setOpenCustomer(
-                            true
-                          )
-                        }
+                        onClick={() => setOpenParty(true)}
                         className="h-10 w-10 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-r-md"
                       >
-
-                        <Search
-                          size={16}
-                        />
-
+                        <Search size={16} />
                       </button>
 
                     </div>
 
+                    {/* PARTY DROPDOWN */}
 
-                    {/* CUSTOMER DROPDOWN */}
-
-                    {openCustomer && (
+                    {openParty && (
 
                       <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-[100]">
 
@@ -3453,16 +3861,10 @@ BANKACCOUNT NAME
                             <input
                               type="text"
                               autoFocus
-                              placeholder="Search customer"
-                              value={
-                                customerSearch
-                              }
-                              onChange={(
-                                e
-                              ) =>
-                                setCustomerSearch(
-                                  e.target.value
-                                )
+                              placeholder="Search party"
+                              value={partySearch}
+                              onChange={(e) =>
+                                setPartySearch(e.target.value)
                               }
                               className="w-full border border-blue-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none"
                             />
@@ -3471,175 +3873,128 @@ BANKACCOUNT NAME
 
                         </div>
 
-
                         <div className="max-h-60 overflow-y-auto">
 
-                          {customerLoading ? (
+                          {partyLoading ? (
 
                             <div className="px-4 py-5 text-center text-gray-500 text-sm">
-                              Loading customers...
+                              Loading parties...
                             </div>
 
-                          ) : customerError ? (
+                          ) : partyError ? (
 
                             <div className="px-4 py-5 text-center text-red-500 text-sm">
-                              Failed to load customers
+                              Failed to load parties
                             </div>
 
-                          ) : filteredCustomers.length ===
-                            0 ? (
+                          ) : filteredParties.length === 0 ? (
 
                             <div className="px-4 py-5 text-center text-gray-400 text-sm">
-
-                              {customerSearch
-                                ? "No customers found"
-                                : "No customers available"}
-
+                              {partySearch
+                                ? "No parties found"
+                                : "No parties available"}
                             </div>
 
                           ) : (
 
-                            filteredCustomers.map(
-                              (
-                                customer
-                              ) => {
+                            filteredParties.map((party, index) => {
 
-                                const name =
-                                  getCustomerName(
-                                    customer
-                                  );
+                              const name = getPartyName(party);
 
-                                return (
+                              return (
 
-                                  <button
-                                    type="button"
-                                    key={
-                                      customer.id
-                                    }
-                                    onClick={() =>
-                                      handleCustomerSelect(
-                                        customer
-                                      )
-                                    }
-                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white rounded"
+                                <button
+                                  type="button"
+                                  key={party.id}
+                                  onClick={() =>
+                                    handlePartySelect(party)
+                                  }
+                                  className={`flex w-full items-center gap-3 rounded border-b border-gray-100 px-4 py-3 text-left transition-colors
+                                                                                               ${index === 0
+                                      ? "bg-blue-500 text-white"
+                                      : "bg-white text-gray-500 hover:bg-blue-50 hover:text-gray-500"
+                                    }`}
+                                >
+                                  <div
+                                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-medium
+                                                                                                   ${index === 0
+                                        ? "bg-gray-100 text-blue-500"
+                                        : "bg-gray-200 text-gray-700"
+                                      }`}
                                   >
+                                    {name.charAt(0).toUpperCase()}
+                                  </div>
 
-                                    <div className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-medium shrink-0">
+                                  <div className="min-w-0">
+                                    <p className="truncate font-medium">{name}</p>
 
-                                      {name
-                                        .charAt(
-                                          0
-                                        )
-                                        .toUpperCase()}
+                                    <p className="flex min-w-0 items-center gap-2 truncate text-xs opacity-80">
+                                      {party.email ? (
+                                        <Mail size={13} className="shrink-0" />
+                                      ) : (
+                                        <Phone size={13} className="shrink-0" />
+                                      )}
 
-                                    </div>
+                                      <span className="truncate">
+                                        {party.email || party.mobile || party.phoneNumber || ""}
+                                      </span>
+                                    </p>
+                                  </div>
 
+                                </button>
 
-                                    <div className="min-w-0">
-
-                                      <p className="font-medium truncate">
-                                        {name}
-                                      </p>
-
-                                      <p className="text-xs opacity-70 truncate">
-
-                                        {customer.email ||
-                                          customer.mobile ||
-                                          customer.phoneNumber ||
-                                          customer.mobileNumber ||
-                                          ""}
-
-                                      </p>
-
-                                    </div>
-
-                                  </button>
-                                );
-                              }
-                            )
+                              );
+                            })
                           )}
 
                         </div>
-
 
                         <button
                           type="button"
                           className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
                           onClick={() => {
-                            setDropdownOpen(
-                              false
-                            );
+                            setOpenParty(false);
+
                             dispatch(
                               openModal({
-                                type: "addCustomer",
+                                type: "addParty",
                               })
                             );
-
                           }}
-
-                        // onClick={() => (navigate("/customers/model"))}
                         >
 
-                          <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center"
-                          >
-
-                            <Plus
-                              size={14}
-                            />
-
+                          <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center">
+                            <Plus size={14} />
                           </div>
 
                           <span className="font-medium">
-                            New Customer
+                            New Party
                           </span>
 
                         </button>
 
                       </div>
+
                     )}
 
                   </div>
 
-
-                  {/* CURRENCY */}
-
-                  <div className="h-10 px-3 flex items-center gap-2 bg-white border border-gray-200 rounded-md text-sm text-gray-800">
-
-                    <span className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
-                      <span className="w-2 h-2 rounded-full border-2 border-white" />
-                    </span>
-
-                    <div className="flex flex-col justify-center leading-tight">
-                      <span className="text-sm font-medium">
-                        {invoice?.currencyName || "Indian Rupee"}
-
-                      </span>
-
-                      <span className="text-xs text-gray-500">
-                        1 {currencyCode} = {fmt(invoice.exchangeRate)} INR
-                      </span>
-                    </div>
-                  </div>
-
-                </div>
-
-
+                )}
 
               </div>
 
+              {/* =================================================
+      SELECTED CUSTOMER DETAILS
+  ================================================= */}
 
-              {/* DETAILS */}
-
-              {invoice.customerId && (
+              {invoice.partyType !== "PARTY" && invoice.customerId && (
 
                 <div className="ml-auto w-60 shrink-0">
 
                   <button
                     type="button"
                     onClick={() =>
-                      setShowCustomerDetails(
-                        (v) => !v
-                      )
+                      setShowCustomerDetails((v) => !v)
                     }
                     className="w-full h-11 px-4 flex items-center justify-between bg-slate-600 hover:bg-slate-700 text-white rounded-md font-semibold text-sm"
                   >
@@ -3648,25 +4003,20 @@ BANKACCOUNT NAME
                       {invoice.customerName}'s Details
                     </span>
 
-
                     <ChevronRight
                       size={16}
-                      className={`transition-transform ${showCustomerDetails
-                        ? "rotate-90"
-                        : ""
+                      className={`transition-transform ${showCustomerDetails ? "rotate-90" : ""
                         }`}
                     />
 
                   </button>
-
 
                   {showCustomerDetails && (
 
                     <div className="bg-white border border-gray-200 rounded-b-md p-3 text-sm text-gray-600 space-y-1">
 
                       <p>
-                        {selectedCustomer?.email ||
-                          "No email"}
+                        {selectedCustomer?.email || "No email"}
                       </p>
 
                       <p>
@@ -3681,10 +4031,10 @@ BANKACCOUNT NAME
                   )}
 
                 </div>
+
               )}
 
             </div>
-
 
             {/* =================================================
               INVOICE NUMBER
@@ -3891,7 +4241,7 @@ BANKACCOUNT NAME
 
                             filteredcurrencies.map(
                               (
-                                currency
+                                currency, index
                               ) => {
 
                                 const name =
@@ -3903,43 +4253,40 @@ BANKACCOUNT NAME
 
                                   <button
                                     type="button"
-                                    key={
-                                      currency.id
-                                    }
-                                    onClick={async () => {
-                                      await handleCurrencySelect(currency.id);
-                                      setOpenCurrency(false);
-                                      setCurrencySearch("");
-                                    }}
-                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white rounded"
+                                    key={currency.id}
+                                    onClick={() => handleCurrencySelect(currency)}
+                                    className={`flex w-full items-center gap-3 rounded border-b border-gray-100 px-4 py-3 text-left transition-colors
+                                                                        ${index === 0
+                                        ? "bg-blue-500 text-white"
+                                        : "bg-white text-gray-500 hover:bg-blue-50 hover:text-gray-500"
+                                      }`}
                                   >
-
-                                    <div className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-medium shrink-0">
-
-                                      {name
-                                        .charAt(
-                                          0
-                                        )
-                                        .toUpperCase()}
-
+                                    <div
+                                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-medium
+                                                                            ${index === 0
+                                          ? "bg-gray-100 text-blue-500"
+                                          : "bg-gray-200 text-gray-700"
+                                        }`}
+                                    >
+                                      {name.charAt(0).toUpperCase()}
                                     </div>
-
 
                                     <div className="min-w-0">
+                                      <p className="truncate font-medium">{name}</p>
 
-                                      <p className="font-medium truncate">
-                                        {name}
+                                      <p className="flex min-w-0 items-center gap-2 truncate text-xs opacity-80">
+                                        {currency.symbol ? (
+                                          <Coins size={13} className="shrink-0" />
+                                        ) : (
+                                          <Phone size={13} className="shrink-0" />
+                                        )}
+                                        {currency.symbol}
+
+                                        <span className="truncate">
+                                          {currency.currencyName || currency.mobile || currency.phoneNumber || ""}
+                                        </span>
                                       </p>
-
-                                      <p className="text-xs opacity-70 truncate">
-
-                                        {currency.symbol ||
-                                          ""}
-
-                                      </p>
-
                                     </div>
-
                                   </button>
                                 );
                               }
@@ -3989,9 +4336,29 @@ BANKACCOUNT NAME
 
 
 
+
+                  {/* CURRENCY */}
+
+                  <div className="w-40 px-3 py-0.5 flex items-center gap-2 bg-white
+                 border border-gray-200 rounded-md text-sm text-gray-800">
+
+                    <span className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                      <span className="w-2 h-2 rounded-full border-2 border-white" />
+                    </span>
+
+                    <div className="flex flex-col justify-center leading-tight">
+                      <span className="text-sm font-medium">
+                        {invoice?.currencyName || "Indian Rupee"}
+
+                      </span>
+
+                      <span className="text-xs text-gray-500">
+                        1 {currencyCode} = {fmt(invoice.exchangeRate)} INR
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-
             </div>
 
 
@@ -4151,7 +4518,8 @@ BANKACCOUNT NAME
 
                             filteredSalesPersons.map(
                               (
-                                salesPerson
+                                salesPerson,
+                                index
                               ) => {
 
                                 const name =
@@ -4163,43 +4531,46 @@ BANKACCOUNT NAME
 
                                   <button
                                     type="button"
-                                    key={
-                                      salesPerson.id
-                                    }
-                                    onClick={() =>
-                                      handleSalesPersonSelect(
-                                        salesPerson
-                                      )
-                                    }
-                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white rounded"
+                                    key={salesPerson.id}
+                                    onClick={() => handleSalesPersonSelect(salesPerson)}
+                                    className={`flex w-full items-center gap-3 rounded border-b border-gray-100 px-4 py-3 text-left transition-colors
+                                                                                                         ${index === 0
+                                        ? "bg-blue-500 text-white"
+                                        : "bg-white text-gray-500 hover:bg-blue-50 hover:text-gray-500"
+                                      }`}
                                   >
+                                    <div
+                                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-medium
+                                                                                                             ${index === 0
+                                          ? "bg-gray-100 text-blue-500"
+                                          : "bg-gray-200 text-gray-700"
+                                        }`}
+                                    >
 
-                                    <div className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-medium shrink-0">
-
-                                      {name
-                                        .charAt(
-                                          0
-                                        )
-                                        .toUpperCase()}
+                                      {name.charAt(0).toUpperCase()}
 
                                     </div>
-
 
                                     <div className="min-w-0">
+                                      <p className="flex min-w-0 items-center gap-2 truncate font-medium">
+                                        {name ? (
+                                          <UserIcon size={13} className="shrink-0" />
+                                        ) : (
+                                          <Phone size={13} className="shrink-0" />
+                                        )}{name}</p>
 
-                                      <p className="font-medium truncate">
-                                        {name}
-                                      </p>
+                                      <p className="flex min-w-0 items-center gap-2 truncate text-xs opacity-80">
+                                        {salesPerson.email ? (
+                                          <Mail size={13} className="shrink-0" />
+                                        ) : (
+                                          <Phone size={13} className="shrink-0" />
+                                        )}
 
-
-                                      <p className="text-xs opacity-70 truncate">
-
-                                        {salesPerson.salesPersonType ||
-                                          ""}
-
+                                        <span className="truncate">
+                                          {salesPerson.email || salesPerson.mobile || salesPerson.phoneNumber || ""}
+                                        </span>
                                       </p>
                                     </div>
-
                                   </button>
                                 );
                               }
@@ -4822,7 +5193,7 @@ BANKACCOUNT NAME
 
                           filteredProducts.map(
                             (
-                              product
+                              product, index
                             ) => {
 
                               const name =
@@ -4852,16 +5223,29 @@ BANKACCOUNT NAME
                                       product
                                     )
                                   }
-                                  className="w-full text-left rounded-md px-3 py-3 hover:bg-blue-500 hover:text-white"
+                                  className={`flex w-full items-center gap-3 rounded border-b border-gray-100 px-4 py-3 text-left transition-colors
+                                                                        ${index === 0
+                                      ? "bg-blue-500 text-white"
+                                      : "bg-white text-gray-500 hover:bg-blue-50 hover:text-gray-500"
+                                    }`}
                                 >
+                                  <div
+                                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-medium
+                                                                            ${index === 0
+                                        ? "bg-gray-100 text-blue-500"
+                                        : "bg-gray-200 text-gray-700"
+                                      }`}
+                                  >
+                                    {name.charAt(0).toUpperCase()}
 
-                                  <div className="font-semibold">
-                                    {name}
                                   </div>
 
 
-                                  <div className="text-xs opacity-70">
 
+                                  <div className="text-xs opacity-70">
+                                    <div className="flex min-w-0">
+                                      <p className="truncate font-medium">{name}</p>
+                                    </div>
                                     {
                                       product.sku ||
                                       ""
@@ -5287,571 +5671,415 @@ BANKACCOUNT NAME
 
             </div>
 
-            {/* Add BankAccount */}
+            {/* BANK ACCOUNT */}
 
             <div className="flex-1 max-w-sm ml-auto">
 
-              <div className="flex justify-between items-center py-3 border-b border-gray-300 mb-4">
-
-                {/* <span className="px-1 w-full text-xl font-semibold text-[#2B7FFF]  rounded ">
-                  Add BankAccount
-
-                </span> */}
-              </div>
-
-              {/* =================================================
-              BankAccount 
-          ================================================= */}
-              {!showbankAccount ? (
+              <div className="flex items-center justify-between mb-3">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <Landmark size={17} className="text-blue-500" />
+                  Bank Account
+                </label>
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowBankAccount(
-                      true
-                    )
-                  }
-                  className="flex items-center gap-2 text-lg text-blue-500 hover:text-blue-500"
+                  onClick={() => {
+                    setBankAccountSearch("");
+                    setOpenBankAccount((prev) => !prev);
+                  }}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-800"
                 >
-
-                  <div className="w-8 h-8 px-1 text-blue-400 rounded-full border-2 border-blue-400 flex items-center justify-center">
-
-                    <Landmark
-                      size={40}
-                    />
-
-                  </div>
-
-
-                  Select BankAccount
-
+                  {openbankAccount ? "Hide" : "Change"}
                 </button>
+              </div>
 
-              ) : (
+              {/* ALWAYS VISIBLE SELECTED ACCOUNT */}
 
-                <div>
+              <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3">
 
-                  <label className="text-lg font-medium text-blue-500 block mb-1">
-                    Bank Account
-                  </label>
+                {selectedBankAccount ? (
+                  <div className="flex items-center gap-3">
 
+                    <div className="w-10 h-10 shrink-0 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <Landmark size={20} className="text-blue-600" />
+                    </div>
 
-                  <div className="flex-1">
+                    <div className="min-w-0 flex-1">
 
-                    {/* ROW 1 */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold text-gray-800 truncate">
+                          {selectedBankAccount.accountName ||
+                            getBankAccountName(selectedBankAccount)}
+                        </p>
 
-                    <div className="flex items-center gap-3">
-
-                      <div
-                        ref={
-                          bankAccountDropdownRef
-                        }
-                        className="relative w-[650px]"
-                      >
-
-                        <div className="flex">
-
-                          <div className="relative flex-1">
-
-                            <input
-                              type="text"
-                              value={
-                                bankAccountSearch ||
-                                invoice.bankAccountName ||
-                                selectedBankAccount?.bankName ||
-                                ""
-                              }
-                              placeholder={
-                                bankAccountLoading
-                                  ? "Loading bankAccounts..."
-                                  : "Select an bankAccount"
-                              }
-                              onClick={() => {
-                                setOpenBankAccount(true);
-                                setBankAccountSearch("");
-                              }}
-                              onChange={(e) => {
-                                setBankAccountSearch(e.target.value);
-                                setOpenBankAccount(true);
-                              }}
-                              className="w-full h-10 border border-blue-500 rounded-l-md px-3 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
-                            />
-
-
-                            <ChevronDown
-                              size={14}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                            />
-
-                          </div>
-
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setOpenBankAccount(
-                                true
-                              )
-                            }
-                            className="h-10 w-10 flex items-center justify-center bg-blue-500 hover:bg-emerald-600 text-white rounded-r-md"
-                          >
-
-                            <Search
-                              size={16}
-                            />
-
-                          </button>
-
-                        </div>
-
-
-                        {/* BANKACCOUNT DROPDOWN */}
-
-                        {openbankAccount && (
-
-                          <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-[100]">
-
-                            <div className="p-2 border-b border-gray-200">
-
-                              <div className="relative">
-
-                                <Search
-                                  size={16}
-                                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                                />
-
-                                <input
-                                  type="text"
-                                  autoFocus
-                                  placeholder="Search sales person"
-                                  value={
-                                    bankAccountSearch
-                                  }
-                                  onChange={(
-                                    e
-                                  ) =>
-                                    setBankAccountSearch(
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-full border border-blue-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none"
-                                />
-
-                              </div>
-
-                            </div>
-
-
-                            <div className="max-h-60 overflow-y-auto">
-
-                              {bankAccountLoading ? (
-
-                                <div className="px-4 py-5 text-center text-gray-500 text-sm">
-                                  Loading bankAccounts...
-                                </div>
-
-                              ) : bankAccountError ? (
-
-                                <div className="px-4 py-5 text-center text-red-500 text-sm">
-                                  Failed to load bankAccounts
-                                </div>
-
-                              ) : filteredBankAccounts.length ===
-                                0 ? (
-
-                                <div className="px-4 py-5 text-center text-gray-400 text-sm">
-
-                                  {bankAccountSearch
-                                    ? "No bankAccounts found"
-                                    : "No bankAccounts available"}
-
-                                </div>
-
-                              ) : (
-
-                                filteredBankAccounts.map(
-                                  (
-                                    bankAccount
-                                  ) => {
-
-                                    const name =
-                                      getBankAccountName(
-                                        bankAccount
-                                      );
-
-                                    return (
-
-                                      <button
-                                        type="button"
-                                        key={
-                                          bankAccount.id
-                                        }
-                                        onClick={() =>
-                                          handleBankAccountSelect(
-                                            bankAccount
-                                          )
-                                        }
-                                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white rounded"
-                                      >
-
-                                        <div className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-medium shrink-0">
-
-                                          {name
-                                            .charAt(
-                                              0
-                                            )
-                                            .toUpperCase()}
-
-                                        </div>
-
-
-                                        <div className="min-w-0">
-
-                                          <p className="font-medium truncate">
-                                            {name}
-                                          </p>
-
-
-                                          <p className="text-xs opacity-70 truncate">
-
-                                            {bankAccount.accountNumber ||
-                                              ""}
-
-                                          </p>
-                                          <p className="text-xs opacity-70 truncate">
-
-                                            {bankAccount.ifsc ||
-
-                                              ""}
-
-                                          </p>
-                                        </div>
-
-                                      </button>
-                                    );
-                                  }
-                                )
-                              )}
-
-                            </div>
-
-
-                            <button
-                              type="button"
-                              className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
-
-                              onClick={() => {
-                                setDropdownOpen(
-                                  false
-                                );
-                                dispatch(
-                                  openModal({
-                                    type: "addBankAccount",
-                                  })
-                                );
-
-                              }}
-                            // onClick={() =>
-                            //   (navigate("/bankAccount/newSimple"))}
-                            >
-
-                              <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center"
-                              >
-
-                                <Plus
-                                  size={14}
-                                />
-
-                              </div>
-
-                              <span className="font-medium">
-                                New BankAccount
-                              </span>
-
-                            </button>
-
-                          </div>
+                        {selectedBankAccount.primaryAccount && (
+                          <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-700">
+                            PRIMARY
+                          </span>
                         )}
-
                       </div>
 
+                      <p className="text-xs text-gray-500 mt-1">
+                        {selectedBankAccount.bankName}
+                      </p>
 
+                      <p className="text-xs text-gray-500">
+                        A/C: {selectedBankAccount.accountNumber || "N/A"}
+                      </p>
+
+                    </div>
+
+                    <span className="shrink-0 rounded-full bg-green-100 px-2 py-1 text-[10px] font-semibold text-green-700">
+                      Selected
+                    </span>
+
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Landmark size={20} className="text-blue-500" />
+                    <p className="text-sm text-gray-500">
+                      No bank account selected
+                    </p>
+                  </div>
+                )}
+
+              </div>
+
+              {/* CHANGE BANK ACCOUNT DROPDOWN */}
+
+              {openbankAccount && (
+                <div
+                  ref={bankAccountDropdownRef}
+                  className="relative mt-3"
+                >
+
+                  <div className="flex">
+                    <input
+                      type="text"
+                      value={bankAccountSearch}
+                      placeholder="Search bank account..."
+                      onChange={(e) => setBankAccountSearch(e.target.value)}
+                      className="w-full h-10 border border-gray-300 rounded-l-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+                      autoFocus
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => setBankAccountSearch("")}
+                      className="h-10 px-3 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700"
+                    >
+                      <Search size={16} />
+                    </button>
+                  </div>
+
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-64 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl">
+
+                    {bankAccountLoading ? (
+                      <p className="p-4 text-sm text-gray-500 text-center">
+                        Loading bank accounts...
+                      </p>
+                    ) : bankAccountError ? (
+                      <p className="p-4 text-sm text-red-500 text-center">
+                        {bankAccountError}
+                      </p>
+                    ) : filteredBankAccounts.length > 0 ? (
+
+                      filteredBankAccounts.map((account) => {
+                        const isSelected =
+                          String(account.id) === String(invoice.bankAccountId);
+
+                        return (
+                          <button
+                            key={account.id}
+                            type="button"
+                            onClick={() => handleBankAccountSelect(account)}
+                            className={`w-full flex items-center gap-3 p-3 text-left border-b border-gray-100 last:border-0 transition
+                  ${isSelected
+                                ? "bg-blue-50"
+                                : "hover:bg-gray-50"
+                              }`}
+                          >
+
+                            <div className="w-9 h-9 shrink-0 rounded-lg bg-blue-100 flex items-center justify-center">
+                              <Landmark size={17} className="text-blue-600" />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-semibold text-gray-800">
+                                  {account.accountName || getBankAccountName(account)}
+                                </p>
+
+                                {account.primaryAccount && (
+                                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-700">
+                                    PRIMARY
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="text-xs text-gray-500">
+                                {account.bankName}
+                              </p>
+
+                              <p className="text-xs text-gray-400">
+                                A/C: {account.accountNumber || "N/A"}
+                              </p>
+
+                            </div>
+
+                            {isSelected && (
+                              <span className="text-blue-600">
+                                <Check size={18} />
+                              </span>
+                            )}
+
+                          </button>
+                        );
+                      })
+
+                    ) : (
+                      <p className="p-4 text-sm text-gray-500 text-center">
+                        No bank accounts found
+                      </p>
+                    )}
+                    {/* ADD NEW BANK ACCOUNT */}
+
+                    <div className="sticky bottom-0 border-t border-gray-200 bg-white p-2">
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenBankAccount(false);
+                          setBankAccountSearch("");
+
+                          dispatch(
+                            openModal({
+                              type: "addBankAccount",
+                            })
+                          );
+                        }}
+                        className="
+      w-full flex items-center justify-center gap-2
+      rounded-lg border border-dashed border-blue-300
+      bg-blue-50 px-3 py-2.5
+      text-sm font-semibold text-blue-700
+      hover:bg-blue-100 transition
+    "
+                      >
+                        <Plus size={16} />
+                        Add New Bank Account
+                      </button>
+
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+
+
+            {/* EMAIL SIGNATURE */}
+
+            <div className="flex-1 max-w-sm ml-auto mt-3">
+
+              <div className="flex items-center justify-between mb-3">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <ClipboardPenIcon size={17} className="text-purple-500" />
+                  Email Signature
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmailSignatureSearch("");
+                    setOpenEmailSignature((prev) => !prev);
+                  }}
+                  className="text-xs font-semibold text-purple-600 hover:text-purple-800"
+                >
+                  {openEmailSignature ? "Hide" : "Change"}
+                </button>
+              </div>
+
+              {/* ALWAYS VISIBLE SELECTED SIGNATURE */}
+
+              <div className="rounded-xl border border-purple-200 bg-purple-50/60 p-3">
+
+                {selectedSignature ? (
+                  <div className="flex items-center gap-3">
+
+                    <div className="w-10 h-10 shrink-0 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <ClipboardPenIcon size={20} className="text-purple-600" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold text-gray-800 truncate">
+                          {getEmailSignatureName(selectedSignature)}
+                        </p>
+
+                        {selectedSignature.defaultForNewMessages && (
+                          <span className="rounded-full bg-purple-100 px-2 py-1 text-[10px] font-bold text-purple-700">
+                            DEFAULT
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-gray-500 mt-1">
+                        Email signature selected
+                      </p>
+
+                    </div>
+
+                    <span className="shrink-0 rounded-full bg-green-100 px-2 py-1 text-[10px] font-semibold text-green-700">
+                      Selected
+                    </span>
+
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <ClipboardPenIcon size={20} className="text-purple-500" />
+                    <p className="text-sm text-gray-500">
+                      No email signature selected
+                    </p>
+                  </div>
+                )}
+
+              </div>
+
+              {/* CHANGE SIGNATURE DROPDOWN */}
+
+              {openEmailSignature && (
+                <div
+                  ref={emailSignatureDropdownRef}
+                  className="relative mt-3"
+                >
+
+                  <div className="flex">
+                    <input
+                      type="text"
+                      value={emailSignatureSearch}
+                      placeholder="Search email signature..."
+                      onChange={(e) => setEmailSignatureSearch(e.target.value)}
+                      className="w-full h-10 border border-gray-300 rounded-l-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500"
+                      autoFocus
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => setEmailSignatureSearch("")}
+                      className="h-10 px-3 bg-purple-600 text-white rounded-r-lg hover:bg-purple-700"
+                    >
+                      <Search size={16} />
+                    </button>
+                  </div>
+
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-64 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl">
+
+                    {emailSignaturesLoading ? (
+                      <p className="p-4 text-sm text-gray-500 text-center">
+                        Loading email signatures...
+                      </p>
+                    ) : emailSignatureError ? (
+                      <p className="p-4 text-sm text-red-500 text-center">
+                        {emailSignatureError}
+                      </p>
+                    ) : filteredEmailSignatures.length > 0 ? (
+
+                      filteredEmailSignatures.map((signature) => {
+                        const isSelected =
+                          String(signature.id) === String(invoice.emailSignatureId);
+
+                        return (
+                          <button
+                            key={signature.id}
+                            type="button"
+                            onClick={() => handleEmailSignatureSelect(signature)}
+                            className={`w-full flex items-center gap-3 p-3 text-left border-b border-gray-100 last:border-0 transition
+                  ${isSelected
+                                ? "bg-purple-50"
+                                : "hover:bg-gray-50"
+                              }`}
+                          >
+
+                            <div className="w-9 h-9 shrink-0 rounded-lg bg-purple-100 flex items-center justify-center">
+                              <ClipboardPenIcon size={17} className="text-purple-600" />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-semibold text-gray-800">
+                                  {getEmailSignatureName(signature)}
+                                </p>
+
+                                {signature.defaultForNewMessages && (
+                                  <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[9px] font-bold text-purple-700">
+                                    DEFAULT
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="text-xs text-gray-500">
+                                {signature.defaultForReplies
+                                  ? "Default for replies"
+                                  : "Email signature"}
+                              </p>
+
+                            </div>
+
+                            {isSelected && (
+                              <span className="text-purple-600">
+                                <Check size={18} />
+                              </span>
+                            )}
+
+                          </button>
+                        );
+                      })
+
+                    ) : (
+                      <p className="p-4 text-sm text-gray-500 text-center">
+                        No email signatures found
+                      </p>
+                    )}
+                    {/* ADD NEW EMAIL SIGNATURE */}
+
+                    <div className="sticky bottom-0 border-t border-gray-200 bg-white p-2">
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenEmailSignature(false);
+                          setEmailSignatureSearch("");
+
+                          dispatch(
+                            openModal({
+                              type: "addEmailSignature",
+                            })
+                          );
+                        }}
+                        className="
+      w-full flex items-center justify-center gap-2
+      rounded-lg border border-dashed border-purple-300
+      bg-purple-50 px-3 py-2.5
+      text-sm font-semibold text-purple-700
+      hover:bg-purple-100 transition
+    "
+                      >
+                        <Plus size={16} />
+                        Add New Email Signature
+                      </button>
 
                     </div>
                   </div>
 
                 </div>
-
               )}
+
             </div>
-
-
-
-
-            {/* Add Signature */}
-
-            <div className="flex-1 max-w-sm ml-auto">
-
-              <div className="flex justify-between items-center py-3 border-b border-gray-300 mb-4">
-
-                <div >
-
-                  {/* <span className="px-1 w-full text-xl font-semibold text-[#2B7FFF] rounded ">
-                    Add Signature
-                  </span> */}
-
-                </div>
-              </div>
-
-
-              {/* =================================================
-              Signatures
-          ================================================= */}
-              {!showSignature ? (
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowSignature(
-                      true
-                    )
-                  }
-                  className="flex items-center gap-2 text-lg text-blue-500 hover:text-blue-500"
-                >
-
-                  <div className="w-8 h-8 px-1 text-blue-400 rounded-full border-2 border-blue-400 flex items-center justify-center">
-                    <ClipboardPenIcon
-                      size={40}
-                    />
-
-
-                  </div>
-
-
-                  Select Signature
-
-                </button>
-
-              ) : (
-
-                <div>
-
-                  <label className="text-lg font-medium text-blue-500 block mb-1">
-                    Signature
-                  </label>
-
-
-                  <div className="flex-1">
-
-                    {/* ROW 1 */}
-
-                    <div className="flex items-center gap-3">
-
-                      <div
-                        ref={
-                          emailSignatureDropdownRef
-                        }
-                        className="relative w-[650px]"
-                      >
-
-                        <div className="flex">
-
-                          <div className="relative flex-1">
-
-
-                            <input
-                              type="text"
-                              value={
-                                emailSignatureSearch ||
-                                invoice.signatureName ||
-                                getEmailSignatureName(selectedSignature) ||
-                                ""
-                              }
-                              placeholder="Select an email signature"
-                              onClick={() => {
-                                setEmailSignatureSearch("");
-                                setOpenEmailSignature(true);
-                              }}
-                              onChange={(e) => {
-                                setEmailSignatureSearch(e.target.value);
-                                setOpenEmailSignature(true);
-                              }}
-                              className="w-full h-10 border border-blue-500 rounded-l-md px-3 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
-                            />
-
-
-                            <ChevronDown
-                              size={14}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                            />
-
-                          </div>
-
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setOpenEmailSignature(
-                                true
-                              )
-                            }
-                            className="h-10 w-10 flex items-center justify-center bg-blue-500 hover:bg-emerald-600 text-white rounded-r-md"
-                          >
-
-                            <Search
-                              size={16}
-                            />
-
-                          </button>
-
-                        </div>
-
-
-                        {/* SALES PERSON DROPDOWN */}
-
-                        {openEmailSignature && (
-
-                          <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-[100]">
-
-                            <div className="p-2 border-b border-gray-200">
-
-                              <div className="relative">
-
-                                <Search
-                                  size={16}
-                                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                                />
-
-                                <input
-                                  type="text"
-                                  autoFocus
-                                  placeholder="Search sales person"
-                                  value={
-                                    emailSignatureSearch
-                                  }
-                                  onChange={(
-                                    e
-                                  ) =>
-                                    setEmailSignatureSearch(
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-full border border-blue-300 rounded pl-10 pr-3 py-2 text-sm focus:outline-none"
-                                />
-
-                              </div>
-
-                            </div>
-
-
-                            <div className="max-h-60 overflow-y-auto">
-
-                              {emailSignaturesLoading ? (
-
-                                <div className="px-4 py-5 text-center text-gray-500 text-sm">
-                                  Loading emailSignatures...
-                                </div>
-
-                              ) : emailSignatureError ? (
-
-                                <div className="px-4 py-5 text-center text-red-500 text-sm">
-                                  Failed to load emailSignatures
-                                </div>
-
-                              ) : filteredEmailSignatures.length ===
-                                0 ? (
-
-                                <div className="px-4 py-5 text-center text-gray-400 text-sm">
-
-                                  {emailSignatureSearch
-                                    ? "No emailSignatures found"
-                                    : "No emailSignatures available"}
-
-                                </div>
-
-                              ) : (
-
-                                filteredEmailSignatures.map(
-                                  (
-                                    emailSignature
-                                  ) => {
-
-                                    const name =
-                                      getEmailSignatureName(
-                                        emailSignature
-                                      );
-
-                                    return (
-
-                                      <button
-                                        type="button"
-                                        key={emailSignature.id}
-                                        onMouseDown={(e) => e.preventDefault()}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleEmailSignatureSelect(emailSignature);
-                                        }}
-                                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-blue-500 hover:text-white rounded"
-                                      >
-                                        <div className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-medium shrink-0">
-                                          {name.charAt(0).toUpperCase()}
-                                        </div>
-
-                                        <div className="min-w-0">
-                                          <p className="font-medium truncate">{name}</p>
-                                          <p className="text-xs opacity-70 truncate">
-                                            {emailSignature.userId ?? ""}
-                                          </p>
-                                        </div>
-                                      </button>
-                                    );
-                                  }
-                                )
-                              )}
-
-                            </div>
-
-
-                            <button
-                              type="button"
-                              className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
-                              onClick={() => {
-                                setDropdownOpen(
-                                  false
-                                );
-                                dispatch(
-                                  openModal({
-                                    type: "addEmailSignature",
-                                  })
-                                );
-
-                              }}
-                            >
-                              <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center">
-                                <Plus size={14} />
-                              </div>
-
-                              <span className="font-medium">
-                                New Email Signature
-                              </span>
-                            </button>
-
-                          </div>
-                        )}
-
-                      </div>
-
-
-
-                    </div>
-                  </div>
-
-                </div>
-
-              )}
-            </div>
-
-
 
 
             {/* Add Other Details */}
@@ -5925,42 +6153,7 @@ BANKACCOUNT NAME
 
 
 
-              {/* PAYMENT GATEWAY */}
 
-              <button
-                type="button"
-                onClick={() =>
-                  setShowGateway(
-                    !showGateway
-                  )
-                }
-                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
-              >
-
-                <div className="w-5 h-5 rounded-full border-2 border-blue-500 flex items-center justify-center">
-
-                  <Plus
-                    size={12}
-                  />
-
-                </div>
-
-
-                Add Payment Gateway
-
-              </button>
-
-
-              {showGateway && (
-
-                <div className="text-sm text-gray-500 pl-7">
-
-                  Payment gateway configuration
-                  can be added here.
-
-                </div>
-
-              )}
 
             </div>
 

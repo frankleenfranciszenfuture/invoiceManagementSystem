@@ -4,6 +4,8 @@ import React from "react";
 import {
     firstValue,
     getInvoiceTemplateData,
+    formatInvoiceAddress,
+    getText,
 } from "../../utils/invoiceTemplateHelpers";
 
 export default function InvoiceTemplate3({
@@ -53,6 +55,15 @@ export default function InvoiceTemplate3({
 
     const isTata = variant === "tata";
 
+    const shippingAddress = formatInvoiceAddress(
+        firstValue(
+            invoice.shippingAddress,
+            invoice.customer?.shippingAddress,
+            invoice.party?.shippingAddress,
+        )
+    ) || partyAddress;
+
+
     const pageClass = preview
         ? "relative mx-auto"
         : "fixed left-[-10000px] top-0";
@@ -75,7 +86,7 @@ export default function InvoiceTemplate3({
     const getItemData = (item, index) => {
         const breakdown = breakdowns[index] || {};
 
-        const name = firstValue(
+        const name = getText(firstValue(
             item.productName,
             item.itemName,
             item.product?.productName,
@@ -83,20 +94,20 @@ export default function InvoiceTemplate3({
             item.serviceName,
             item.description,
             "-"
-        );
+        ));
 
-        const description = firstValue(
+        const description = getText(firstValue(
             item.description,
             ""
-        );
+        ));
 
-        const hsn = firstValue(
+        const hsn = getText(firstValue(
             item.hsnCode,
             item.sacCode,
             item.product?.hsnCode,
             item.product?.sacCode,
             "-"
-        );
+        ));
 
         const quantity = Number(item.quantity) || 0;
         const rate = Number(item.unitPrice) || 0;
@@ -121,19 +132,18 @@ export default function InvoiceTemplate3({
             (taxable + taxAmount)
         );
 
-        const unit = firstValue(
+        const unit = getText(firstValue(
             item.unitName,
             item.unit?.unitName,
             item.unit?.name,
             ""
-        );
-
-        const size = firstValue(
+        ));
+        const size = getText(firstValue(
             item.sizeName,
             item.size?.sizeName,
             item.size?.name,
             ""
-        );
+        ));
 
         return {
             name,
@@ -174,10 +184,10 @@ export default function InvoiceTemplate3({
     );
 
     const dateRows = [
-        ["Invoice #:", invoiceNumber],
-        ["Invoice Date:", invoiceDate],
-        ...(dueDate ? [["Due Date:", dueDate]] : []),
-        ["Place of Supply:", placeOfSupply],
+        ["Invoice #:", getText(invoiceNumber)],
+        ["Invoice Date:", getText(invoiceDate)],
+        ...(dueDate ? [["Due Date:", getText(dueDate)]] : []),
+        ["Place of Supply:", getText(placeOfSupply)],
     ];
 
     const border = "border border-black";
@@ -285,12 +295,7 @@ export default function InvoiceTemplate3({
                             </div>
 
                             <div className="whitespace-pre-line leading-[1.7]">
-                                {firstValue(
-                                    invoice.shippingAddress,
-                                    invoice.shippingAddress?.address,
-                                    partyAddress,
-                                    "-"
-                                )}
+                                {shippingAddress || "-"}
                             </div>
                         </div>
                     </div>

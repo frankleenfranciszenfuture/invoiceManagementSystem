@@ -32,7 +32,7 @@ export default function InvoiceTemplate1({
         hasIgst,
         isPaid,
         partyName,
-        partyAddress,
+        partyAddress: rawPartyAddress,
         partyEmail,
         partyPhone,
         partyGstin,
@@ -47,6 +47,31 @@ export default function InvoiceTemplate1({
         signatureText,
         amountInWords: totalInWords,
     } = getInvoiceTemplateData(invoice, taxMasters);
+
+    const formatAddress = (address) => {
+        if (!address) return "";
+
+        if (typeof address === "string") {
+            return address;
+        }
+
+        if (typeof address === "object") {
+            return [
+                address.attention,
+                address.address,
+                address.city,
+                address.state,
+                address.zipCode,
+                address.country,
+            ]
+                .filter(Boolean)
+                .join(", ");
+        }
+
+        return "";
+    };
+
+    const partyAddress = formatAddress(rawPartyAddress);
 
     const companyAddress = [
         [company.addressLine1,

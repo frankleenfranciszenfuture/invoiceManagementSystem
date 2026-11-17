@@ -93,8 +93,6 @@ export default function Modal() {
         // INVOICE NUMBER SETTING
         invoiceNumberSetting: InvoiceNumberSetting,
 
-        // CHANGE INVOICE TEMPLATE
-        changeTemplate: ChangeTemplateModal,
 
         // Role
         addRole: RoleCreate,
@@ -143,6 +141,11 @@ export default function Modal() {
 
         //email
         emailInvoice: EmailInvoiceModal,
+
+
+
+        // CHANGE INVOICE TEMPLATE
+        changeTemplate: ChangeTemplateModal,
     };
 
 
@@ -332,7 +335,7 @@ export default function Modal() {
 
         // Other
         invoiceNumberSetting: "w-[650px] max-w-[92vw] max-h-[75vh]",
-        changeTemplate: "w-[800px] max-w-[92vw] max-h-[82vh]",
+        changeTemplate: "w-[950px] max-w-[92vw] max-h-[102vh]",
         addContactPerson: "w-[650px] max-w-[92vw] max-h-[75vh]",
     };
 

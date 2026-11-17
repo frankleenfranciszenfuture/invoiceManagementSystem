@@ -210,18 +210,22 @@ export default function NotificationMenu() {
             <div
                 ref={menuRef}
                 className="
-                    absolute
-                    right-0
-                    top-12
-                    z-50
-                    w-[390px]
-                    h-[520px]
-                    rounded-xl
-                    border
-                    bg-white
-                    shadow-2xl
-                    overflow-hidden
-                "
+    absolute
+    right-0
+    top-12
+    z-50
+    w-[min(390px,calc(100vw-20px))]
+    max-h-[calc(100dvh-75px)]
+    overflow-y-auto
+    overflow-x-hidden
+    overscroll-contain
+    rounded-xl
+    border
+    border-gray-200
+    bg-white
+    shadow-2xl
+    custom-scrollbar-hidden
+"
             >
                 {/* Header */}
 
@@ -483,7 +487,7 @@ export default function NotificationMenu() {
 
                 </div>
 
-            </div>
+            </div >
         </>
     );
 }
