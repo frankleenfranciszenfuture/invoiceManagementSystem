@@ -1,23 +1,17 @@
 import axios from "axios";
+import { getImageUrl } from "./utils/imageUtils";
 
 /* =========================================================
    AXIOS INSTANCE
    ========================================================= */
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api/v1.0";
+
 const api = axios.create({
-  baseURL: "http://localhost:8081/api/v1.0",
-
-  // headers: {
-  //   "Content-Type": "application/json",
-  // },
-
-  /*
-   * IMPORTANT:
-   * Browser automatically sends the HttpOnly `jwt` cookie.
-   */
+  baseURL: API_BASE_URL,
   withCredentials: true,
 });
-
 /* =========================================================
    AUTO LOGOUT
    ========================================================= */
@@ -177,9 +171,6 @@ api.interceptors.response.use(
 );
 
 export const getProductImageUrl = (image) => {
-  if (!image) return null;
-
-  return `http://localhost:8081/api/v1.0/uploads/products/${image}`;
+  return getImageUrl(image, "products");
 };
-
 export default api;

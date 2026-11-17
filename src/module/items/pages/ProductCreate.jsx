@@ -8,6 +8,8 @@ import React, {
 import { useNavigate } from "react-router-dom";
 import { openModal } from "../../ui/uiSlice";
 
+import { getImageUrl } from "../../../api/utils/imageUtils";
+
 import {
     useDispatch,
     useSelector,
@@ -1069,30 +1071,9 @@ export default function ProductCreate() {
        PRODUCT IMAGE URL
        ======================================================= */
 
-    const getProductImageUrl =
-        (imageUrl) => {
-
-            if (!imageUrl) {
-                return "";
-            }
-
-            if (
-                imageUrl.startsWith(
-                    "http://"
-                ) ||
-                imageUrl.startsWith(
-                    "https://"
-                )
-            ) {
-                return imageUrl.replace(
-                    "http://localhost:8080",
-                    "http://localhost:8081"
-                );
-            }
-
-            return `http://localhost:8081/api/v1.0/uploads/products/${imageUrl}`;
-        };
-
+    const getProductImageUrl = (imageUrl) => {
+        return getImageUrl(imageUrl, "products");
+    };
 
     /* =======================================================
        NORMALIZE EDIT SIZES

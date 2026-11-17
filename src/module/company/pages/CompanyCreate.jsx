@@ -34,29 +34,18 @@ import {
     getUserPermission,
 } from "../../menuPermission/thunks/menuPermissionThunks";
 
-
+import { getImageUrl } from "../../../api/utils/imageUtils";
 /* =========================================================
    COMPANY IMAGE URL
 ========================================================= */
 
+/* =========================================================
+   COMPANY IMAGE URL
+   ========================================================= */
+
 const getCompanyImageUrl = (imageUrl) => {
-    if (!imageUrl) {
-        return "";
-    }
-
-    if (
-        imageUrl.startsWith("http://") ||
-        imageUrl.startsWith("https://")
-    ) {
-        return imageUrl.replace(
-            "http://localhost:8080",
-            "http://localhost:8081"
-        );
-    }
-
-    return `http://localhost:8081/api/v1.0/uploads/companies/${imageUrl}`;
+    return getImageUrl(imageUrl, "companies");
 };
-
 
 /* =========================================================
    INITIAL FORM
