@@ -1,6 +1,7 @@
 package com.ims.dtos.invoice;
 
 import com.ims.entity.SalesPersonEntity;
+import com.ims.enums.InvoicePartyType;
 import com.ims.enums.InvoiceStatus;
 import com.ims.enums.InvoiceType;
 import jakarta.validation.Valid;
@@ -28,12 +29,16 @@ public class InvoiceUpdateRequest {
     private InvoiceType invoiceType;
 
 
-    // =====================================================
-    // CUSTOMER
-    // =====================================================
+    @NotNull(message = "Invoice party type is required")
+    private InvoicePartyType partyType;
 
-    @NotNull(message = "Customer is required")
     private Long customerId;
+
+    private Long partyId;
+
+    private Long purchaseOrderId;
+
+    private Long salesOrderId;
 
 
     // =====================================================

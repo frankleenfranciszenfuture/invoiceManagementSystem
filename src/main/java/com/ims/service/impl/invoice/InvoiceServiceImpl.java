@@ -10,6 +10,7 @@ import com.ims.dtos.invoice.InvoiceResponse;
 import com.ims.dtos.invoice.InvoiceSearchRequest;
 import com.ims.dtos.invoice.InvoiceUpdateRequest;
 import com.ims.entity.*;
+import com.ims.enums.InvoicePartyType;
 import com.ims.enums.InvoiceStatus;
 import com.ims.enums.audit.AuditAction;
 import com.ims.exception.BadRequestException;
@@ -85,6 +86,8 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final EmailSignatureRepository emailSignatureRepository;
 
     private final FileStorageService fileStorageService;
+
+    private final PartyRepository partyRepository;
     // =====================================================
     // CREATE INVOICE
     // =====================================================
@@ -127,16 +130,15 @@ public class InvoiceServiceImpl implements InvoiceService {
         // 2. FIND CUSTOMER
         // =====================================================
 
-        CustomerEntity customer =
-                customerRepository.findById(
-                        request.getCustomerId()
-                ).orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Customer not found with id: "
-                                        + request.getCustomerId()
-                        )
-                );
+        // =====================================================
+// RESOLVE INVOICE RECIPIENT
+// =====================================================
 
+        InvoiceRecipient recipient = resolveInvoiceRecipient(
+                request.getPartyType(),
+                request.getCustomerId(),
+                request.getPartyId()
+        );
 
         // =====================================================
 // FIND CURRENCY
@@ -284,7 +286,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                         .invoiceType(
                                 request.getInvoiceType()
                         )
-                        .customer(customer)
+                        .customer(recipient.customer())
+                        .party(recipient.party())
                         .currency(currency)
                         .exchangeRate(exchangeRate)
                         .salesPerson(salesPerson)
@@ -596,15 +599,15 @@ public class InvoiceServiceImpl implements InvoiceService {
         // 4. FIND CUSTOMER
         // =====================================================
 
-        CustomerEntity customer =
-                customerRepository.findById(
-                        request.getCustomerId()
-                ).orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Customer not found with id: "
-                                        + request.getCustomerId()
-                        )
-                );
+        // =====================================================
+// RESOLVE INVOICE RECIPIENT
+// =====================================================
+
+        InvoiceRecipient recipient = resolveInvoiceRecipient(
+                request.getPartyType(),
+                request.getCustomerId(),
+                request.getPartyId()
+        );
 
 // =====================================================
 // FIND CURRENCY
@@ -724,7 +727,12 @@ public class InvoiceServiceImpl implements InvoiceService {
                 request.getInvoiceType()
         );
 
-        invoice.setCustomer(customer);
+        // =====================================================
+// UPDATE INVOICE RECIPIENT
+// =====================================================
+
+        invoice.setCustomer(recipient.customer());
+        invoice.setParty(recipient.party());
 
         invoice.setSalesPerson(salesPerson);
         invoice.setBankAccount(bankAccount);
@@ -1600,44 +1608,140 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     private CompanyDetails resolveCompanyDetails(Long companyId) {
 
-        // Use the company selected on the invoice form.
+        // If company ID is supplied, use that selected company
         if (companyId != null) {
             return companyRepository.findById(companyId)
-                    .filter(company ->
-                            Boolean.TRUE.equals(company.getActive()))
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException(
-                                    "Company not found or inactive: "
-                                            + companyId
-                            )
-                    );
+                    .filter(company -> Boolean.TRUE.equals(company.getActive()))
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Company not found or inactive: " + companyId
+                    ));
         }
 
-        // Otherwise, use the configured default company.
-        return companyRepository.findByIsDefaultTrue()
-                .filter(company ->
-                        Boolean.TRUE.equals(company.getActive()))
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "No active default company is configured."
-                        )
-                );
+        // If company ID is not supplied, automatically select default company
+        return companyRepository
+                .findFirstByActiveTrueAndIsDefaultTrueOrderByIdAsc()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No active default company is configured."
+                ));
     }
 
-    private InvoiceResponse toResponseWithFileUrls(
-            InvoiceEntity invoice
+
+    private InvoiceRecipient resolveInvoiceRecipient(
+            InvoicePartyType partyType,
+            Long customerId,
+            Long partyId
     ) {
-        InvoiceResponse response =
-                invoiceMapper.toResponse(invoice);
+
+        if (partyType == null) {
+            throw new BadRequestException(
+                    "Invoice party type is required."
+            );
+        }
+
+        if (partyType == InvoicePartyType.CUSTOMER) {
+
+            if (customerId == null) {
+                throw new BadRequestException(
+                        "Please select a customer."
+                );
+            }
+
+            if (partyId != null) {
+                throw new BadRequestException(
+                        "Party ID must not be supplied for a customer invoice."
+                );
+            }
+
+            CustomerEntity customer = customerRepository.findById(customerId)
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException(
+                                    "Customer not found with id: " + customerId
+                            )
+                    );
+
+            return new InvoiceRecipient(customer, null);
+        }
+
+        if (partyType == InvoicePartyType.PARTY) {
+
+            if (partyId == null) {
+                throw new BadRequestException(
+                        "Please select a party."
+                );
+            }
+
+            if (customerId != null) {
+                throw new BadRequestException(
+                        "Customer ID must not be supplied for a party invoice."
+                );
+            }
+
+            PartyEntity party = partyRepository.findById(partyId)
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException(
+                                    "Party not found with id: " + partyId
+                            )
+                    );
+
+            return new InvoiceRecipient(null, party);
+        }
+
+        throw new BadRequestException(
+                "Unsupported invoice party type."
+        );
+    }
+
+    private record InvoiceRecipient(
+            CustomerEntity customer,
+            PartyEntity party
+    ) {}
+
+    private InvoiceResponse toResponseWithFileUrls(InvoiceEntity invoice) {
+
+        InvoiceResponse response = invoiceMapper.toResponse(invoice);
+
+        // =====================================================
+        // INVOICE LOGO URL
+        // =====================================================
 
         if (response.getLogo() != null
-                && !response.getLogo().isBlank()) {
+                && !response.getLogo().isBlank()
+                && !response.getLogo().startsWith("http")) {
 
             response.setLogo(
-                    fileStorageService.getFileUrl(
-                            response.getLogo()
-                    )
+                    fileStorageService.getFileUrl(response.getLogo())
             );
+        }
+
+        // =====================================================
+        // COMPANY LOGO AND SIGNATURE URL
+        // =====================================================
+
+        if (response.getCompany() != null) {
+
+            // Company logo
+            String companyLogo = response.getCompany().getLogo();
+
+            if (companyLogo != null
+                    && !companyLogo.isBlank()
+                    && !companyLogo.startsWith("http")) {
+
+                response.getCompany().setLogo(
+                        fileStorageService.getFileUrl(companyLogo)
+                );
+            }
+
+            // Company signature
+            String companySignature = response.getCompany().getSignature();
+
+            if (companySignature != null
+                    && !companySignature.isBlank()
+                    && !companySignature.startsWith("http")) {
+
+                response.getCompany().setSignature(
+                        fileStorageService.getFileUrl(companySignature)
+                );
+            }
         }
 
         return response;

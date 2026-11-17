@@ -1,8 +1,7 @@
+
 package com.ims.dtos.invoice;
 
-import com.ims.entity.Currency;
-import com.ims.entity.ExchangeRate;
-import com.ims.entity.SalesPersonEntity;
+import com.ims.enums.InvoicePartyType;
 import com.ims.enums.InvoiceStatus;
 import com.ims.enums.InvoiceType;
 import jakarta.validation.Valid;
@@ -22,110 +21,53 @@ import java.util.List;
 @Builder
 public class InvoiceCreateRequest {
 
-    // =====================================================
-    // INVOICE NUMBER
-    // =====================================================
-
-    /*
-     * Optional.
-     *
-     * If null/blank:
-     * backend generates invoice number.
-     *
-     * Example:
-     * NT000003
-     */
     private String invoiceNumber;
-
-
-    // =====================================================
-    // INVOICE TYPE
-    // =====================================================
 
     @NotNull(message = "Invoice type is required")
     private InvoiceType invoiceType;
 
+    // CUSTOMER or PARTY
+    @NotNull(message = "Invoice party type is required")
+    private InvoicePartyType partyType;
 
-    // =====================================================
-    // CUSTOMER
-    // =====================================================
-
-    @NotNull(message = "Customer is required")
+    // Only one of these two IDs should be supplied.
     private Long customerId;
 
+    private Long partyId;
 
-    // =====================================================
-    // DATES
-    // =====================================================
+    private Long purchaseOrderId;
+
+    private Long salesOrderId;
 
     @NotNull(message = "Invoice date is required")
     private LocalDate invoiceDate;
 
     private LocalDate dueDate;
 
-
-    // =====================================================
-    // SHIPPING
-    // =====================================================
-
     @Builder.Default
     private BigDecimal shippingAmount = BigDecimal.ZERO;
 
-    // =====================================================
-    // SALES PERSON
-    // =====================================================
     private Long salesPersonId;
-
-
-    // =====================================================
-    // CURRENCY
-    // =====================================================
 
     @NotNull(message = "Currency is required")
     private Long currencyId;
 
-    // =====================================================
-    // EXCHANGE RATE
-    // =====================================================
-
     private BigDecimal exchangeRate;
 
-    // =====================================================
-    // COMPANY DETAILS
-    // =====================================================
     private Long companyId;
 
-    // =====================================================
-    // BANK DETAILS
-    // =====================================================
     private Long bankAccountId;
 
-    // =====================================================
-    // EMAIL SIGNATURE
-    // =====================================================
     private Long emailSignatureId;
 
-    // =====================================================
-    // NOTES
-    // =====================================================
-
     private String notes;
-
-
-    // =====================================================
-    // TERMS & CONDITIONS
-    // =====================================================
 
     private String termsAndConditions;
 
     private InvoiceStatus invoiceStatus;
-    // =====================================================
-    // ITEMS
-    // =====================================================
 
     @NotEmpty(message = "Invoice must contain at least one item")
     @Valid
     @Builder.Default
-    private List<InvoiceItemRequest> invoiceItems =
-            new ArrayList<>();
+    private List<InvoiceItemRequest> invoiceItems = new ArrayList<>();
 }

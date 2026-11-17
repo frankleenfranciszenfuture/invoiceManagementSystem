@@ -4,8 +4,10 @@ import com.ims.dtos.invoice.InvoiceCreateRequest;
 import com.ims.dtos.invoice.InvoiceItemRequest;
 import com.ims.dtos.invoice.InvoiceUpdateRequest;
 import com.ims.entity.InvoiceEntity;
+import com.ims.enums.InvoicePartyType;
 import com.ims.exception.BadRequestException;
 import com.ims.exception.ResourceNotFoundException;
+import com.ims.exception.ValidationException;
 import com.ims.repository.InvoiceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -50,13 +52,11 @@ public class InvoiceValidation {
         // CUSTOMER
         // -------------------------------------------------
 
-        if (request.getCustomerId() == null) {
-
-            throw new BadRequestException(
-                    "Customer ID is required."
-            );
-        }
-
+        validateInvoiceRecipient(
+                request.getPartyType(),
+                request.getCustomerId(),
+                request.getPartyId()
+        );
         // -------------------------------------------------
         // INVOICE DATE
         // -------------------------------------------------
@@ -111,12 +111,11 @@ public class InvoiceValidation {
         // CUSTOMER
         // -------------------------------------------------
 
-        if (request.getCustomerId() == null) {
-
-            throw new BadRequestException(
-                    "Customer ID is required."
-            );
-        }
+        validateInvoiceRecipient(
+                request.getPartyType(),
+                request.getCustomerId(),
+                request.getPartyId()
+        );
 
         // -------------------------------------------------
         // INVOICE DATE
@@ -293,5 +292,35 @@ public class InvoiceValidation {
                                 "Invoice not found."
                         )
                 );
+    }
+
+    private void validateInvoiceRecipient(
+            InvoicePartyType partyType,
+            Long customerId,
+            Long partyId
+    ) {
+
+        if (partyType == null) {
+            throw new ValidationException(
+                    "Invoice party type is required."
+            );
+        }
+
+        if (partyType == InvoicePartyType.CUSTOMER) {
+
+            if (customerId == null || partyId != null) {
+                throw new ValidationException(
+                        "Please select a valid customer."
+                );
+            }
+
+        } else if (partyType == InvoicePartyType.PARTY) {
+
+            if (partyId == null || customerId != null) {
+                throw new ValidationException(
+                        "Please select a valid party."
+                );
+            }
+        }
     }
 }
