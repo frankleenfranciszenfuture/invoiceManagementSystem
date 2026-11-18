@@ -285,7 +285,17 @@ public class InventoryServiceImpl implements InventoryService {
                         .and(InventoryStockSpecification.hasSizeId(sizeId))
                         .and(InventoryStockSpecification.availableOnly(availableOnly));
 
-        return stockRepository.findAll(specification, pageable)
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(
+                        Sort.Order.desc("transactionDate"),
+                        Sort.Order.desc("id")
+                )
+        );
+
+
+        return stockRepository.findAll(specification, sortedPageable)
                 .map(stockMapper::toResponse);
     }
 
@@ -374,7 +384,16 @@ public class InventoryServiceImpl implements InventoryService {
                         .and(InventoryTransactionSpecification.fromDate(fromDate))
                         .and(InventoryTransactionSpecification.toDate(toDate));
 
-        return transactionRepository.findAll(specification, pageable)
+        Pageable sortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(
+                        Sort.Order.desc("transactionDate"),
+                        Sort.Order.desc("id")
+                )
+        );
+
+        return transactionRepository.findAll(specification, sortedPageable)
                 .map(transactionMapper::toResponse);
     }
 

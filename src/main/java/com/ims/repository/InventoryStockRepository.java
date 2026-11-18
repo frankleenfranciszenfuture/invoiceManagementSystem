@@ -1,6 +1,7 @@
 package com.ims.repository;
 
 
+import com.ims.entity.ExpenseEntity;
 import com.ims.entity.InventoryStockEntity;
 
 import jakarta.persistence.LockModeType;
@@ -121,4 +122,8 @@ public interface InventoryStockRepository
             Long warehouseId,
             Long unitId
     );
+
+//    boolean existsByOrderNoIgnoreCase(String transactionNo);
+//
+//    Optional<InventoryStockEntity> findTopByOrderByIdDesc();
 }
