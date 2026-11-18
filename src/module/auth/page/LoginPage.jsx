@@ -324,14 +324,14 @@ const LoginPage = () => {
                         <div className="text-center mb-8">
 
                             <h1 className="
-                                text-2xl
+                                text-3xl
                                 font-bold
                                 text-gray-900
                                 tracking-tight
                             ">
-                                Login
+                                Welcome to Login
                             </h1>
-
+                            <span className="text-gray-500">Invoice Management System</span>
                         </div>
 
                         {/* ERROR */}
@@ -602,27 +602,7 @@ const LoginPage = () => {
 
                         {/* SIGN UP */}
 
-                        <p className="
-                            mt-9
-                            text-center
-                            text-[10px]
-                            text-gray-500
-                        ">
-                            Don't have an account?{" "}
 
-                            <Link
-                                to="/register"
-                                className="
-                                    font-semibold
-                                    text-[#354DEB]
-                                    hover:text-blue-800
-                                    no-underline
-                                "
-                            >
-                                Sign up
-                            </Link>
-
-                        </p>
 
                     </div>
 
