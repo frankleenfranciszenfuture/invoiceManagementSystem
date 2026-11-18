@@ -63,7 +63,7 @@ export const settings = [
     title: "Products",
     group: "organization",
     items: [
-      { label: "Products", path: "/items", component: ComingSoon },
+      { label: "Products", path: "/invoice/items", component: ComingSoon },
       {
         label: "Categories",
         path: "/settings/categories",
@@ -78,99 +78,88 @@ export const settings = [
       { label: "Units", path: "/settings/units", component: ComingSoon },
     ],
   },
-  {
-    title: "Setup & Configurations",
-    group: "organization",
-    items: [
-      {
-        label: "General",
-        path: "/settings/setup/general",
-        component: ComingSoon,
-      },
-      {
-        label: "Currencies",
-        path: "/settings/setup/currencies",
-        component: ComingSoon,
-      },
-      {
-        label: "Payment Terms",
-        path: "/settings/setup/payment-terms",
-        component: ComingSoon,
-      },
-      {
-        label: "Opening Balances",
-        path: "/settings/setup/opening-balances",
-        component: ComingSoon,
-      },
-      {
-        label: "Reminders",
-        path: "/settings/setup/reminders",
-        component: ComingSoon,
-      },
-      {
-        label: "Customer Portal",
-        path: "/settings/setup/customer-portal",
-        component: ComingSoon,
-      },
-      {
-        label: "Vendor Portal",
-        path: "/settings/setup/vendor-portal",
-        component: ComingSoon,
-      },
-    ],
-  },
+
   {
     title: "Invoice Customization",
     group: "organization",
     items: [
       {
         label: "Sales Persons",
-        path: "/salesPersons",
+        path: "/settings/salesPersons",
         component: ComingSoon,
       },
       {
         label: "Currencies",
-        path: "/currencies",
+        path: "/settings/currencies",
         component: ComingSoon,
       },
 
       {
         label: "EmailSignatures",
-        path: "/emailSignatures",
-        component: ComingSoon,
-      },
-
-      {
-        label: "Party",
-        path: "/parties",
+        path: "/settings/emailSignatures",
         component: ComingSoon,
       },
     ],
   },
-
+  {
+    title: "Inventory Customization",
+    group: "organization",
+    items: [
+      {
+        label: "Open Stock",
+        path: "/settings/openStock",
+        component: ComingSoon,
+      },
+      {
+        label: "Adjustment Stock",
+        path: "/settings/adjustmentStock",
+        component: ComingSoon,
+      },
+      {
+        label: "Parties",
+        path: "/settings/parties",
+        component: ComingSoon,
+      },
+      {
+        label: "Outstanding Clearances",
+        path: "/settings/parties/clearances",
+        component: ComingSoon,
+      },
+      {
+        label: "Warehouse",
+        path: "/settings/warehouse",
+        component: ComingSoon,
+      },
+      {
+        label: "Reminders",
+        path: "/settings",
+        component: ComingSoon,
+      },
+    ],
+  },
   /* ---------------- MODULE SETTINGS ---------------- */
-  {
-    title: "General",
-    group: "module",
-    items: [
-      {
-        label: "Preferences",
-        path: "/settings/modules/general/preferences",
-        component: ComingSoon,
-      },
-    ],
-  },
-  {
-    title: "Online Payments",
-    group: "module",
-    items: [
-      {
-        label: "Payment Gateways",
-        path: "/settings/modules/payments/gateways",
-        component: ComingSoon,
-      },
-    ],
-  },
+  // {
+  //   title: "General",
+  //   group: "module",
+  //   items: [
+  //     {
+  //       label: "Preferences",
+  //       path: "/settings/modules/general/preferences",
+  //       component: ComingSoon,
+  //     },
+  //   ],
+  // },
+  // {
+  //   title: "Online Payments",
+  //   group: "module",
+  //   items: [
+  //     {
+  //       label: "Payment Gateways",
+  //       path: "/settings/modules/payments/gateways",
+  //       component: ComingSoon,
+  //     },
+  //   ],
+  // },
 ];
 
 /* Flat list of every item, used to generate routes */

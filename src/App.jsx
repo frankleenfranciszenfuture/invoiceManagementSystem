@@ -1258,7 +1258,62 @@ function AppContent() {
           path="/settings/audit-logs/view/:id"
           element={<AuditLogDetails />}
         />
+
+
+
+        {/* =================================================
+                   Inventory Customization Settings
+            ================================================= */}
+
+        {/* OpenStock */}
+
+        <Route
+          path="/settings/openStock"
+          element={<InventoryStockDashboard />}
+        />
+
+        {/* Adjustment Stock */}
+
+        <Route
+          path="/settings/adjustmentStock"
+          element={<InventoryStockAdjustmentDashboard />}
+        />
+
+
+        {/*Parties */}
+
+        <Route
+          path="/settings/parties"
+          element={<PartyDashboard />}
+        />
+
+        {/*Outstanding Clearances */}
+
+        <Route
+          path="/settings/parties/clearances"
+          element={<ClearanceDashboard />}
+        />
+
+
+        {/*Warehouses */}
+
+        <Route
+          path="/settings/warehouse"
+          element={<WarehouseDashboard />}
+        />
+
+        {/*SalesPerson */}
+
+        <Route
+          path="/settings/salesPersons"
+          element={<SalesPersonDashboard />}
+        />
+
+
+
       </Route>
+
+
 
     </Routes>
   );

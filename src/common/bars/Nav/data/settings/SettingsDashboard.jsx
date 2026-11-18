@@ -24,8 +24,8 @@ import { settings } from "../settings/settingsData";
 const COLUMNS = [
     ["Organization"],
     ["Users & Roles", "Taxes & Compliance"],
-    ["Setup & Configurations"],
     ["Products"],
+    ["Inventory Customization"],
     ["Invoice Customization"],
 ];
 

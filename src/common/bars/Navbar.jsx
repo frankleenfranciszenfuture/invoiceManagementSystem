@@ -124,7 +124,7 @@ export default function Navbar({ title }) {
                         [&_button:hover_svg]:text-white
                     "
                 >
-                    <QuickCreateButton />
+                    {/* <QuickCreateButton /> */}
                     <NotificationButton />
                     <SettingsButton />
                 </div>
