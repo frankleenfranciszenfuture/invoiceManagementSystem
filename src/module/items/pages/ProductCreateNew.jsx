@@ -84,7 +84,7 @@ import SearchableCreateSelect from "../../../common/custom/SearchableCreateSelec
 import { openModal } from "../../../module/ui/uiSlice";
 import useLeaveConfirmation from "../../../common/confirmation/useLeaveConfirmation";
 import LeaveConfirmationModal from "../../../common/confirmation/LeaveConfirmationModal";
-
+import { closeModal } from "../../../module/ui/uiSlice";
 /* =========================================================
    INITIAL FORM DATA
 ========================================================= */
@@ -318,6 +318,7 @@ const ProductCreateNew = ({ onClose }) => {
     const { id } = useParams();
 
     const isEditMode = Boolean(id);
+    const modal = useSelector((state) => state.ui.modal);
 
     const [isProductLoading, setIsProductLoading] = useState(false);
     const [existingImageUrl, setExistingImageUrl] = useState("");
@@ -1407,6 +1408,7 @@ const ProductCreateNew = ({ onClose }) => {
                 dispatch(clearCreatedTaxMasterSelection());
 
                 setSaveMode("close");
+
                 return;
             }
 
@@ -1416,7 +1418,13 @@ const ProductCreateNew = ({ onClose }) => {
             dispatch(clearCreatedSubCategorySelection());
             dispatch(clearCreatedTaxMasterSelection());
 
-            navigate("/invoice/items");
+            // Close Add Product modal and return to Invoice Create
+            if (modal?.data?.source === "invoice") {
+                dispatch(closeModal());
+            } else {
+                dispatch(closeModal());
+                navigate("/invoice/items");
+            }
 
         } catch (error) {
             console.error(

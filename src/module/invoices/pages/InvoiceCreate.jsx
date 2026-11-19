@@ -5276,7 +5276,19 @@ BANKACCOUNT NAME
                       <button
                         type="button"
                         className="w-full border-t border-gray-200 px-4 py-3 flex items-center gap-2 text-blue-600 hover:bg-blue-50"
-                        onClick={() => (navigate("/items/newSimple"))}
+                        onClick={() => {
+                          setOpenRowItemDropdown(false);
+                          setItemSearch("");
+
+                          dispatch(
+                            openModal({
+                              type: "addProduct",
+                              data: {
+                                source: "invoice",
+                              },
+                            })
+                          );
+                        }}
                       >
 
                         <Plus

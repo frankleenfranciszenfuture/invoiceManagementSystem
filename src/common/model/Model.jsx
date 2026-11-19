@@ -12,7 +12,7 @@ import SizeCreate from "../../module/sizes/pages/SizeCreate";
 import UnitCreate from "../../module/units/pages/UnitCreate";
 import SubCategoryCreate from "../../module/subCategory/pages/SubCategoryCreate";
 import CategoryCreate from "../../module/category/pages/CategoryCreate";
-import ProductCreate from "../../module/items/pages/ProductCreate"
+
 import InvoiceCreate from "../../module/invoices/pages/InvoiceCreate"
 import InvoiceNumberSetting from "../../module/invoices/pages/InvoiceNumberSetting";
 import ChangeTemplateModal from "../../module/invoices/overview/template/ChangeTemplateModal";
@@ -35,6 +35,7 @@ import TaxCreateSimple from "../../module/taxMaster/pages/TaxCreateSimple";
 import CustomerCreateNew from "../../module/customer/pages/CustomerCreateNew";
 import BankAccountCreateSimple from "../../module/bankAccount/pages/BankAccountCreateSimple";
 import EmailSignatureCreateSimple from "../../module/emailSignature/pages/EmailSignatureCreateSimple";
+import ProductCreateNew from "../../module/items/pages/ProductCreateNew";
 
 export default function Modal() {
 
@@ -83,8 +84,8 @@ export default function Modal() {
         editSubCategory: SubCategoryCreate,
 
         // TAX MASTER
-        addProduct: ProductCreate,
-        editProduct: ProductCreate,
+        addProduct: ProductCreateNew,
+        editProduct: ProductCreateNew,
 
         // Invoice
         addInvoice: InvoiceCreate,
