@@ -23,9 +23,7 @@ public interface CurrencyRepository
             String currencyCode,
             Long id
     );
-    Optional<Currency> findByCurrencyCodeIgnoreCaseAndActiveTrue(
-            String currencyCode
-    );
+
 
     Optional<Currency> findByCurrencyCodeIgnoreCaseAndActiveFalse(
             String currencyCode
@@ -40,5 +38,8 @@ public interface CurrencyRepository
             CurrencyStatus status
     );
 
+    Optional<Currency> findByCurrencyCodeIgnoreCaseAndActiveTrue(
+            String currencyCode
+    );
 }
 

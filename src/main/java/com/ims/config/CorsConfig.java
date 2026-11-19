@@ -1,3 +1,4 @@
+
 package com.ims.config;
 
 import org.springframework.context.annotation.Bean;
@@ -19,7 +20,8 @@ public class CorsConfig {
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",
                 "http://textile-pos.zenfuture.in",
-                "https://textile-pos.zenfuture.in"
+                "https://textile-pos.zenfuture.in",
+                "https://ims.zenfuture.in"
         ));
 
         config.setAllowedMethods(List.of(

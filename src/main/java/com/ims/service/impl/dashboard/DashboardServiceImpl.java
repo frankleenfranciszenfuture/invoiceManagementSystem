@@ -11,10 +11,7 @@ import com.ims.dtos.inventory.InventoryDashboardResponse;
 import com.ims.entity.*;
 import com.ims.entity.Currency;
 
-import com.ims.enums.ExpenseStatus;
-import com.ims.enums.InvoiceStatus;
-import com.ims.enums.PaymentStatus;
-import com.ims.enums.PaymentType;
+import com.ims.enums.*;
 
 import com.ims.repository.*;
 import com.ims.repository.dashbaord.*;
@@ -67,6 +64,7 @@ public class DashboardServiceImpl implements DashboardService {
     // Currency repositories and service
     private final CurrencyRepository currencyRepository;
     private final ExchangeRateService exchangeRateService;
+
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
@@ -851,13 +849,17 @@ public class DashboardServiceImpl implements DashboardService {
 
         LocalDate conversionDate = LocalDate.now();
 
-        Currency inrCurrency = currencyRepository
-                .findByCurrencyCodeIgnoreCase("INR")
-                .orElseThrow(() ->
-                        new IllegalStateException(
-                                "INR currency is not configured."
-                        )
-                );
+//        Currency inrCurrency = currencyRepository
+//                .findByCurrencyCodeIgnoreCase("INR")
+//                .orElseThrow(() ->
+//                        new IllegalStateException(
+//                                "INR currency is not configured."
+//                        )
+//                );
+//
+//        Long inrCurrencyId = inrCurrency.getId();
+
+        Currency inrCurrency = getDefaultCurrency();
 
         Long inrCurrencyId = inrCurrency.getId();
 
@@ -1739,5 +1741,20 @@ public class DashboardServiceImpl implements DashboardService {
             LocalDate fromDate,
             LocalDate toDate
     ) {
+    }
+
+
+    private Currency getDefaultCurrency() {
+
+        return currencyRepository
+                .findByCurrencyCodeIgnoreCaseAndActiveTrue("INR")
+                .filter(currency ->
+                        currency.getStatus() == CurrencyStatus.ACTIVE
+                )
+                .orElseThrow(() ->
+                        new IllegalStateException(
+                                "Default currency INR is missing or inactive in currency master."
+                        )
+                );
     }
 }
