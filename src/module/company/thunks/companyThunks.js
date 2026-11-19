@@ -12,7 +12,7 @@ export const fetchAllCompanies = createAsyncThunk(
     try {
       const res = await api.get("/companies");
 
-      console.log("Companies:", res.data);
+   
 
       return res.data;
     } catch (error) {
@@ -130,15 +130,15 @@ export const createCompany = createAsyncThunk(
          DEBUG
          ===================================================== */
 
-      console.log("CREATE COMPANY:");
+    
 
       for (const [key, value] of formData.entries()) {
         if (key === "data" && value instanceof Blob) {
           const json = await value.text();
 
-          console.log("company JSON:", JSON.parse(json));
+        
         } else {
-          console.log(key, value);
+      
         }
       }
 
@@ -176,15 +176,15 @@ export const updateCompany = createAsyncThunk(
          DEBUG
          ===================================================== */
 
-      console.log("UPDATE COMPANY:");
+     
 
       for (const [key, value] of formData.entries()) {
         if (key === "data" && value instanceof Blob) {
           const json = await value.text();
 
-          console.log("company JSON:", JSON.parse(json));
+         
         } else {
-          console.log(key, value);
+          
         }
       }
 
@@ -240,7 +240,7 @@ export const fetchCompaniesByStatus = createAsyncThunk(
     try {
       const res = await api.get(`/companies/status/${status}`);
 
-      console.log("Companies by status:", res.data);
+     
 
       return res.data;
     } catch (error) {

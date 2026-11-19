@@ -2838,10 +2838,7 @@ export default function ProductCreateSimple() {
                 }
 
 
-                console.log(
-                    "PRODUCT SAVE RESPONSE:",
-                    result
-                );
+              
 
 
                 toast.success(

@@ -10,7 +10,7 @@ export const fetchAllBankAccounts = createAsyncThunk(
     try {
       const res = await api.get("/bank-accounts");
 
-      console.log("Bank Accounts:", res.data);
+     
 
       return res.data;
     } catch (error) {

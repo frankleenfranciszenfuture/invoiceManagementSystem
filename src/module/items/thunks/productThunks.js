@@ -40,17 +40,17 @@ export const fetchAllProducts = createAsyncThunk(
         }
       });
 
-      console.log("PRODUCT REQUEST PARAMS:", params);
+    
 
       const res = await api.get("/products", {
         params,
       });
 
-      console.log("PRODUCT API RESPONSE:", res.data);
+     
 
       return res.data;
     } catch (error) {
-      console.error("Fetch products error:", error);
+    
 
       return rejectWithValue(
         error?.response?.data?.message ||
@@ -195,15 +195,15 @@ export const createProduct = createAsyncThunk(
          DEBUG
          ===================================================== */
 
-      console.log("CREATE PRODUCT:");
+
 
       for (const [key, value] of formData.entries()) {
         if (key === "product" && value instanceof Blob) {
           const json = await value.text();
 
-          console.log("product JSON:", JSON.parse(json));
+         
         } else {
-          console.log(key, value);
+     
         }
       }
 
@@ -215,7 +215,7 @@ export const createProduct = createAsyncThunk(
 
       return res.data;
     } catch (error) {
-      console.error("Create product error:", error);
+  
 
       return rejectWithValue(
         error?.response?.data?.message ||
@@ -241,15 +241,15 @@ export const updateProduct = createAsyncThunk(
          DEBUG
          ===================================================== */
 
-      console.log("UPDATE PRODUCT:");
+
 
       for (const [key, value] of formData.entries()) {
         if (key === "product" && value instanceof Blob) {
           const json = await value.text();
 
-          console.log("product JSON:", JSON.parse(json));
+      
         } else {
-          console.log(key, value);
+        
         }
       }
 
@@ -305,7 +305,7 @@ export const fetchProductsByStatus = createAsyncThunk(
     try {
       const res = await api.get(`/products/status/${status}`);
 
-      console.log("Products by status:", res.data);
+    
 
       return res.data;
     } catch (error) {

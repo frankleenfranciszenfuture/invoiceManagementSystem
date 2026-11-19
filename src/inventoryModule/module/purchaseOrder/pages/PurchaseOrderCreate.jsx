@@ -683,8 +683,7 @@ export default function PurchaseOrderCreate({ onClose }) {
     };
 
     const handlePartySelect = (party) => {
-        console.log("Selected customer/party:", party);
-
+ 
         const selectedId =
             party?.id ??
             party?.customerId ??
@@ -1236,7 +1235,7 @@ export default function PurchaseOrderCreate({ onClose }) {
                 navigate("/inventory/purchaseOrder");
             }
         } catch (error) {
-            console.log("Backend error:", error);
+            
 
             const message =
                 typeof error === "string"
@@ -1272,7 +1271,7 @@ export default function PurchaseOrderCreate({ onClose }) {
             ? formData.customerName
             : formData.partyName;
 
-    console.log("Selected customer/party:", selectedPartyName);
+  
 
     const selectedWarehouse = warehouses.find(
         (item) => String(item.id) === String(formData.warehouseId)

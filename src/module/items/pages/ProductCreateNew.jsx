@@ -605,20 +605,7 @@ const ProductCreateNew = ({ onClose }) => {
 
                 const product = getProductData(response);
 
-                console.log("EDIT PRODUCT FULL RESPONSE:", response);
-                console.log("EDIT PRODUCT DATA:", product);
 
-                console.log("PRODUCT SIZES:", {
-                    sizes: product?.sizes,
-                    productSizes: product?.productSizes,
-                    sizeIds: product?.sizeIds,
-                });
-
-                console.log("PRODUCT UNITS:", {
-                    units: product?.units,
-                    productUnits: product?.productUnits,
-                    unitIds: product?.unitIds,
-                });
                 if (!product || typeof product !== "object") {
                     throw new Error("Product details not found");
                 }

@@ -12,7 +12,7 @@ export const fetchAllPayments = createAsyncThunk(
         params: filters,
       });
 
-      console.log("Payment API Response:", res.data);
+    
 
       return res.data;
     } catch (error) {

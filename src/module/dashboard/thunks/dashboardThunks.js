@@ -13,29 +13,30 @@ export const fetchDashboardOverview = createAsyncThunk(
         },
       });
 
-      console.log("DASHBOARD API RESPONSE:", response.data);
-
       // Support both:
       // { data: { kpis: ... } }
       // { kpis: ... }
       const result = response.data?.data ?? response.data;
 
       if (!result || !result.kpis) {
-        console.error("Invalid dashboard response:", result);
-
         return rejectWithValue(
           "Dashboard API returned an unexpected response structure.",
         );
       }
 
-      console.log("DASHBOARD DATA:", result);
-
       return result;
     } catch (error) {
-      console.error("DASHBOARD API ERROR:", error.response?.data || error);
+      console.error("Dashboard API Error:", {
+        status: error.response?.status,
+        response: error.response?.data,
+        message: error.message,
+        url: error.config?.url,
+        params: error.config?.params,
+      });
 
       return rejectWithValue(
         error.response?.data?.message ||
+          error.response?.data?.error ||
           error.message ||
           "Failed to load dashboard",
       );

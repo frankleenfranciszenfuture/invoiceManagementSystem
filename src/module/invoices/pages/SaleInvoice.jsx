@@ -993,10 +993,7 @@ export default function ServiceInvoice() {
                         ).unwrap();
 
 
-                    console.log(
-                        "GENERATED INVOICE NUMBER RESPONSE:",
-                        result
-                    );
+                 
 
 
                     const invoiceNumber =
@@ -1085,10 +1082,7 @@ export default function ServiceInvoice() {
 
         const loadInvoice = async () => {
             try {
-                console.log(
-                    "Loading invoice ID:",
-                    editInvoiceId
-                );
+               
 
                 dispatch(resetInvoiceForm());
 
@@ -2497,12 +2491,7 @@ export default function ServiceInvoice() {
                 payload.invoiceStatus = status;
             }
 
-            console.log(
-                isEdit
-                    ? "UPDATE INVOICE PAYLOAD:"
-                    : "CREATE INVOICE PAYLOAD:",
-                JSON.stringify(payload, null, 2)
-            );
+         
 
             if (isEdit) {
                 if (!editInvoiceId) {

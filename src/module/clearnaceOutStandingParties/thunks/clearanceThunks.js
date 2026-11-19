@@ -10,7 +10,7 @@ export const fetchAllClearance = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const res = await api.get("/credit-clearance");
-      console.log("Credit Clearance:", res.data);
+    
       return res.data;
     } catch (error) {
       return rejectWithValue(error?.response?.data?.message || error.message);

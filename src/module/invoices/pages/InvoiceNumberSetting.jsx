@@ -200,11 +200,7 @@ export default function InvoiceNumberSetting() {
                     nextNumber
                 ).padStart(6, "0")}`;
 
-            console.log(
-                "AUTO MODE - GENERATED INVOICE NUMBER:",
-                generatedInvoiceNumber
-            );
-
+           
             dispatch(
                 setInvoiceField({
                     field: "invoiceNumber",
@@ -224,10 +220,7 @@ export default function InvoiceNumberSetting() {
             const manualInvoiceNumber =
                 form.manualInvoiceNumber.trim();
 
-            console.log(
-                "MANUAL MODE - INVOICE NUMBER:",
-                manualInvoiceNumber
-            );
+           
 
             dispatch(
                 setInvoiceField({

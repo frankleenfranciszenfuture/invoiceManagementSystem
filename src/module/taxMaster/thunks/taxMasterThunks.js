@@ -11,7 +11,6 @@ export const fetchAllTaxMasters = createAsyncThunk(
     try {
       const res = await api.get("/tax-masters");
 
-      console.log("Tax Masters:", res.data);
 
       return res.data;
     } catch (error) {

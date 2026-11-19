@@ -12,7 +12,7 @@ export const fetchAllWarehouse = createAsyncThunk(
         params: filters,
       });
 
-      console.log("Warehouse API Response:", res.data);
+  
 
       return res.data;
     } catch (error) {

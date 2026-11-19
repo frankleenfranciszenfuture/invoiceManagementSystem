@@ -17,8 +17,6 @@ const api = axios.create({
    ========================================================= */
 
 const logoutUser = () => {
-  console.log("🔴 AUTO LOGOUT");
-
   /*
    * Remove old tokens if they exist from an older version.
    */
@@ -52,20 +50,10 @@ api.interceptors.request.use(
      * `jwt` cookie because withCredentials = true.
      */
 
-    console.log("➡️ REQUEST:", {
-      method: config.method?.toUpperCase(),
-      url: config.url,
-      baseURL: config.baseURL,
-      params: config.params,
-      fullURL: api.getUri(config),
-    });
-
     return config;
   },
 
   (error) => {
-    console.error("❌ REQUEST ERROR:", error);
-
     return Promise.reject(error);
   },
 );
@@ -80,8 +68,6 @@ api.interceptors.response.use(
      ======================================================= */
 
   (response) => {
-    console.log("✅ RESPONSE:", response.config.url, response.status);
-
     return response;
   },
 
@@ -91,16 +77,12 @@ api.interceptors.response.use(
 
   async (error) => {
     if (!error.response) {
-      console.error("🌐 Network error");
-
       return Promise.reject(error);
     }
 
     const originalRequest = error.config;
 
     const status = error.response.status;
-
-    console.log("❌ ERROR:", status, originalRequest?.url);
 
     /* =====================================================
        LOGIN REQUEST
@@ -133,8 +115,6 @@ api.interceptors.response.use(
        * 401 means there is no valid authenticated session.
        */
       if (status === 401) {
-        console.warn("⚠️ Authentication check failed");
-
         localStorage.removeItem("token");
         localStorage.removeItem("refreshToken");
 
@@ -149,8 +129,6 @@ api.interceptors.response.use(
        ===================================================== */
 
     if (status === 401) {
-      console.warn("🔐 401 Unauthorized → logout");
-
       logoutUser();
 
       return Promise.reject(error);
@@ -161,8 +139,6 @@ api.interceptors.response.use(
        ===================================================== */
 
     if (status === 403) {
-      console.warn("🚫 403 Forbidden → Access denied");
-
       return Promise.reject(error);
     }
 

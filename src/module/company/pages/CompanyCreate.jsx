@@ -1317,12 +1317,6 @@ export default function CompanyCreate() {
             };
 
 
-            console.log(
-                "COMPANY SAVE PAYLOAD:",
-                payload
-            );
-
-
             try {
 
                 /* =================================================

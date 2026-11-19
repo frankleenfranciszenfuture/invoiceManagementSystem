@@ -22,8 +22,6 @@ const getStoredUser = () => {
 
     return JSON.parse(storedUser);
   } catch (error) {
-    console.error("Failed to parse stored user:", error);
-
     localStorage.removeItem("user");
 
     return null;

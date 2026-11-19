@@ -278,7 +278,7 @@ export default function EditCustomer({ mode = "page",
     const [showLeaveConfirmation, setShowLeaveConfirmation] = React.useState(false);
 
     useEffect(() => {
-        console.log("isDirty:", isDirty);
+        
     }, [isDirty]);
 
     const changeTab = (tab) => {
@@ -444,7 +444,7 @@ export default function EditCustomer({ mode = "page",
                 }),
             ).unwrap();
 
-            console.log("Customers loaded successfully");
+            
         } catch (error) {
             console.error("Failed to load customers:", error);
         }
@@ -468,7 +468,7 @@ export default function EditCustomer({ mode = "page",
     const handleCancel = () => {
         const dirty = store.getState().customers?.isDirty ?? false;
 
-        console.log("Cancel clicked. isDirty:", dirty);
+    
 
         if (dirty) {
             setShowLeaveConfirmation(true);

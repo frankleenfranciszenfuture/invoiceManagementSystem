@@ -1895,7 +1895,7 @@ const PaymentCreate = ({ onClose }) => {
 
             navigate("/invoice/payments");
         } catch (error) {
-            console.error("Payment creation error:", error);
+           
 
             toast.error(
                 typeof error === "string"

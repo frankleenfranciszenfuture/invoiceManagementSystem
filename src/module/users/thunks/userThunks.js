@@ -41,7 +41,7 @@ export const fetchAllUsers = createAsyncThunk(
         },
       });
 
-      console.log("Users:", res.data);
+     
 
       return res.data;
     } catch (error) {

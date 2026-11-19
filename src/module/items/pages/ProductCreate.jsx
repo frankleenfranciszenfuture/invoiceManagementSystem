@@ -1275,24 +1275,7 @@ export default function ProductCreate() {
         const selectedSizes = normalizeSelectedSizes(data);
         const selectedUnits = normalizeSelectedUnits(data);
 
-        console.log(
-            "========== EDIT PRODUCT =========="
-        );
-
-        console.log(
-            "EDIT DATA:",
-            data
-        );
-
-        console.log(
-            "EDIT SIZE IDS:",
-            selectedSizes
-        );
-
-        console.log(
-            "EDIT UNIT IDS:",
-            selectedUnits
-        );
+      
 
         // ============================================
         // SET FORM
@@ -2141,10 +2124,7 @@ export default function ProductCreate() {
                 : {}),
         };
 
-        console.log(
-            "PRODUCT SAVE PAYLOAD:",
-            payload
-        );
+       
 
         // ============================================
         // API
@@ -2161,10 +2141,7 @@ export default function ProductCreate() {
 
                 const productId = form.id;
 
-                console.log(
-                    "UPDATING PRODUCT ID:",
-                    productId
-                );
+              
 
                 if (!productId) {
                     toast.error(
@@ -2191,10 +2168,7 @@ export default function ProductCreate() {
                 ).unwrap();
             }
 
-            console.log(
-                "PRODUCT SAVE RESPONSE:",
-                result
-            );
+           
 
             toast.success(
                 isEdit

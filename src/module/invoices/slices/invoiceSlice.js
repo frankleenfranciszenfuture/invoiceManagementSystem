@@ -643,7 +643,7 @@ const invoiceSlice = createSlice({
     },
 
     addRecentActivity: (state, action) => {
-      console.log("addRecentActivity reducer", action.payload);
+      
 
       state.recentActivities.unshift({
         id: Date.now(),

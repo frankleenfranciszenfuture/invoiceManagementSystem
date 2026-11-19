@@ -216,7 +216,7 @@ const LoginPage = () => {
                 })
             ).unwrap();
 
-            console.log("LOGIN SUCCESS:", result);
+
 
             try {
                 if (remember) {
@@ -236,7 +236,7 @@ const LoginPage = () => {
             navigate("/home", { replace: true });
 
         } catch (err) {
-            console.error("LOGIN ERROR:", err);
+
 
             const message =
                 typeof err === "string"

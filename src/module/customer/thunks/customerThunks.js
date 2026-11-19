@@ -14,7 +14,7 @@ export const fetchAllCustomers = createAsyncThunk(
     try {
       const response = await fetchCustomers(params);
 
-      console.log("CUSTOMER API RESULT:", response);
+     
 
       return response;
     } catch (error) {

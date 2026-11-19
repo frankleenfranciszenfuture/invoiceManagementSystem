@@ -10,7 +10,7 @@ export const fetchAllCurrencies = createAsyncThunk(
     try {
       const res = await api.get("/currencies");
 
-      console.log("Currencies:", res.data);
+  
 
       return res.data;
     } catch (error) {

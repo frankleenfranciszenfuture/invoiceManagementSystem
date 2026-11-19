@@ -19,8 +19,7 @@ export const fetchAllUnits = createAsyncThunk(
         params: queryParams,
       });
 
-      console.log("Unit API params:", queryParams);
-      console.log("Units:", res.data);
+     
 
       return res.data;
     } catch (error) {

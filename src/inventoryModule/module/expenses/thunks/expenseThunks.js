@@ -12,8 +12,6 @@ export const fetchAllExpenses = createAsyncThunk(
         params: filters,
       });
 
-      console.log("Expense API Response:", res.data);
-
       return res.data;
     } catch (error) {
       return rejectWithValue(error?.response?.data?.message || error.message);

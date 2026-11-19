@@ -10,7 +10,7 @@ export const fetchAllRoles = createAsyncThunk(
     try {
       const res = await api.get("/roles/get-all");
 
-      console.log("Roles:", res.data);
+
 
       return res.data;
     } catch (error) {

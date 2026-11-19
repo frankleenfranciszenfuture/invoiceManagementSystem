@@ -325,7 +325,7 @@ const customerSlice = createSlice({
     },
 
     addRecentActivity: (state, action) => {
-      console.log("addRecentActivity reducer", action.payload);
+  
 
       state.recentActivities.unshift({
         id: Date.now(),
@@ -377,7 +377,7 @@ const customerSlice = createSlice({
 
         const response = action.payload;
 
-        console.log("CUSTOMER PAYLOAD:", response);
+       
 
         const customers = Array.isArray(response)
           ? response

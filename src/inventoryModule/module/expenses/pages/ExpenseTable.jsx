@@ -370,7 +370,7 @@ export default function ExpenseTable({
                 size: pagination?.size ?? 10,
             }));
         } catch (error) {
-            console.log("Backend error:", error);
+
 
             const message =
                 typeof error === "string"

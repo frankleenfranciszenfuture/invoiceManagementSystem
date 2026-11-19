@@ -21,12 +21,11 @@ export const fetchInvoices = createAsyncThunk(
         },
       });
 
-      console.log("INVOICE API RESPONSE:", res.data);
-      console.log("INVOICE CONTENT:", res.data?.data?.content);
+     
 
       return res.data;
     } catch (error) {
-      console.error("Fetch invoices error:", error);
+      
 
       return rejectWithValue(
         error?.response?.data?.message ||
@@ -140,14 +139,10 @@ export const createInvoice = createAsyncThunk(
 
   async (data, { rejectWithValue }) => {
     try {
-      console.log(
-        "CREATE INVOICE REQUEST BODY:",
-        JSON.stringify(data, null, 2),
-      );
+    
 
       const res = await api.post("/invoices", data);
 
-      console.log("CREATE INVOICE RESPONSE:", res.data);
 
       return res.data.data;
     } catch (error) {

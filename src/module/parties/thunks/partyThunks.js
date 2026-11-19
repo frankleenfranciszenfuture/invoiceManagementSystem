@@ -10,7 +10,6 @@ export const fetchAllParties = createAsyncThunk(
     try {
       const res = await api.get("/parties");
 
-      console.log("Parties:", res.data);
 
       return res.data;
     } catch (error) {

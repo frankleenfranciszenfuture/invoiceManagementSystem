@@ -579,7 +579,7 @@ export default function ExpenseCategoryCreate() {
             setActiveTab("category");
 
         } catch (error) {
-            console.error("Expense category save error:", error);
+           
 
             toast.error(
                 typeof error === "string"

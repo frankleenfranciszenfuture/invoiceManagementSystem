@@ -10,7 +10,7 @@ export const fetchAllSalesPersons = createAsyncThunk(
     try {
       const res = await api.get("/salesPersons");
 
-      console.log("Sales Persons:", res.data);
+  
 
       return res.data;
     } catch (error) {

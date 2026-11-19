@@ -64,12 +64,6 @@ const loadCurrentUserPermissions = async (user, dispatch) => {
 
   const roleName = getRoleName(user);
 
-  console.log("AUTH PERMISSION LOAD - USER:", user);
-
-  console.log("AUTH PERMISSION LOAD - ROLE ID:", roleId);
-
-  console.log("AUTH PERMISSION LOAD - ROLE NAME:", roleName);
-
   /*
    * -------------------------------------------------------
    * SUPER ADMIN / ADMIN
@@ -83,8 +77,6 @@ const loadCurrentUserPermissions = async (user, dispatch) => {
   const hasFullAccess = roleName === "SUPER_ADMIN" || roleName === "ADMIN";
 
   if (hasFullAccess) {
-    console.log("FULL ACCESS ROLE - SKIPPING PERMISSION API");
-
     return;
   }
 
@@ -95,15 +87,11 @@ const loadCurrentUserPermissions = async (user, dispatch) => {
    */
 
   if (roleId) {
-    console.log("LOADING ROLE PERMISSIONS FOR ROLE:", roleId);
-
     await dispatch(
       getRolePermission({
         roleId,
       }),
     ).unwrap();
-
-    console.log("ROLE PERMISSIONS LOADED");
   } else {
     console.warn(
       "No roleId found for current user. Role permissions were not loaded.",
@@ -116,11 +104,7 @@ const loadCurrentUserPermissions = async (user, dispatch) => {
    * -------------------------------------------------------
    */
 
-  console.log("LOADING DIRECT USER PERMISSIONS");
-
   await dispatch(getUserPermission()).unwrap();
-
-  console.log("DIRECT USER PERMISSIONS LOADED");
 };
 
 /* =========================================================
@@ -140,8 +124,6 @@ export const loginUser = createAsyncThunk(
 
       const loginResponse = await authApi.login(credentials);
 
-      console.log("LOGIN RESPONSE:", loginResponse);
-
       /*
        * ---------------------------------------------------
        * 2. GET COMPLETE CURRENT USER
@@ -150,19 +132,11 @@ export const loginUser = createAsyncThunk(
 
       const meResponse = await authApi.getCurrentUser();
 
-      console.log("CURRENT USER RESPONSE:", meResponse);
-
       const user = meResponse?.data || meResponse;
 
       if (!user) {
         throw new Error("Unable to load current user after login.");
       }
-
-      console.log("FINAL LOGGED-IN USER:", user);
-
-      console.log("FINAL ROLE:", getRoleName(user));
-
-      console.log("FINAL ROLE ID:", getRoleId(user));
 
       /*
        * ---------------------------------------------------
@@ -204,8 +178,6 @@ export const loginUser = createAsyncThunk(
         user,
       };
     } catch (error) {
-      console.error("LOGIN ERROR:", error);
-
       /*
        * Make sure stale permission data cannot remain.
        */
@@ -250,12 +222,6 @@ export const checkAuthentication = createAsyncThunk(
         throw new Error("Unable to load current user.");
       }
 
-      console.log("RESTORED CURRENT USER:", user);
-
-      console.log("RESTORED ROLE:", getRoleName(user));
-
-      console.log("RESTORED ROLE ID:", getRoleId(user));
-
       /*
        * -------------------------------------------------
        * 3. CLEAR OLD PERMISSIONS
@@ -291,8 +257,6 @@ export const checkAuthentication = createAsyncThunk(
         user,
       };
     } catch (error) {
-      console.error("AUTHENTICATION CHECK ERROR:", error);
-
       localStorage.removeItem("user");
 
       dispatch(clearMenuPermissions());
