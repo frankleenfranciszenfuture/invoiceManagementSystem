@@ -89,13 +89,7 @@ const NAV = [
         dropdown: true,
     },
 
-    {
-        label: "Inventory",
-        moduleName: "Inventory",
-        icon: BoxIcon,
-        to: "/inventory/dashboard",
-        dropdown: true,
-    },
+
 
     {
         label: "Invoices",
@@ -113,11 +107,34 @@ const NAV = [
         to: "/invoice-approvals",
     },
     {
+        label: "Parties",
+        moduleName: "Parties",
+        icon: Package,
+        to: "/parties",
+        dropdown: true,
+        // children: [
+        //     {
+        //         label: "Outstanding Clearances",
+        //         moduleName: "Outstanding Clearances",
+        //         to: "/inventory/parties/clearances",
+        //     },
+        // ],
+    },
+
+    {
+        label: "Outstanding Clearances",
+        moduleName: "Outstanding Clearances",
+        icon: CreditCardIcon,
+        to: "/parties/clearances",
+    },
+
+    {
         label: "Expenses",
         moduleName: "Expenses",
         icon: Box,
         to: "/invoice/expenses",
     },
+
 
     {
         label: "Payments",
@@ -126,6 +143,13 @@ const NAV = [
         to: "/invoice/payments",
     },
 
+    {
+        label: "Inventory",
+        moduleName: "Inventory",
+        icon: BoxIcon,
+        to: "/inventory/dashboard",
+        dropdown: true,
+    },
     {
         label: "Settings",
         moduleName: "Settings",
@@ -229,6 +253,7 @@ const SETTINGS_NAV = [
         to: "/settings/warehouses",
     },
 
+
     {
         label: "Products",
         moduleName: "Products",
@@ -258,18 +283,7 @@ const SETTINGS_NAV = [
             },
         ],
     },
-    {
-        label: "Reports",
-        moduleName: "Reports",
-        icon: ChartNoAxesCombined,
-        to: "/reports",
-    },
-    {
-        label: "Audit Logs",
-        moduleName: "Audit Logs",
-        icon: ChartNoAxesCombined,
-        to: "/settings/audit-logs",
-    },
+
 ];
 
 
@@ -308,26 +322,7 @@ const INVENTORY_NAV = [
 
     },
 
-    {
-        label: "Parties",
-        moduleName: "Parties",
-        icon: Package,
-        to: "/inventory/parties",
-        dropdown: true,
-        // children: [
-        //     {
-        //         label: "Outstanding Clearances",
-        //         moduleName: "Outstanding Clearances",
-        //         to: "/inventory/parties/clearances",
-        //     },
-        // ],
-    },
-    {
-        label: "Outstanding Clearances",
-        moduleName: "Outstanding Clearances",
-        icon: CreditCardIcon,
-        to: "/inventory/parties/clearances",
-    },
+
 
     {
         label: "Sale Order",

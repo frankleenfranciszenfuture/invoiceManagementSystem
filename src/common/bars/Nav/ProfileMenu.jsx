@@ -60,7 +60,7 @@ const shortcuts = [
         icon: Wallet,
         title: "Payments",
         sub: "Manage Payments",
-        to: "/payments",
+        to: "/invoice/payments",
         moduleName: "Payments",
     },
     {

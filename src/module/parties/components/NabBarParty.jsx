@@ -289,7 +289,7 @@ export default function NavbarParty() {
         );
 
         navigate(
-            `/inventory/parties?partyStatus=${view.value}`
+            `/settings/parties?partyStatus=${view.value}`
         );
 
     };
@@ -300,7 +300,7 @@ export default function NavbarParty() {
 
     const handleCreateParty = () => {
 
-        navigate("/inventory/parties/create");
+        navigate("/parties/create");
 
     };
 

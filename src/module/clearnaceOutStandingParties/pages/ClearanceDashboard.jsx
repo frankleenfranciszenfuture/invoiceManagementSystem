@@ -391,7 +391,7 @@ export default function ClearanceDashboard() {
             return;
         }
 
-        navigate("/inventory/parties/clearances/create");
+        navigate("/parties/clearances/create");
 
     }, [
         isAuthenticated,

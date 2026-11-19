@@ -321,7 +321,7 @@ export default function PartyTable({
 
         dispatch(setExistingParty(party));
 
-        navigate(`/inventory/parties/view/${party.id}`);
+        navigate(`/parties/view/${party.id}`);
     };
 
     /* =====================================================
@@ -338,7 +338,7 @@ export default function PartyTable({
 
         dispatch(setExistingParty(party));
 
-        navigate(`/inventory/parties/edit/${party.id}`);
+        navigate(`/parties/edit/${party.id}`);
     };
 
     /* =====================================================

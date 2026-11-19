@@ -291,7 +291,7 @@ export default function NavbarClearance() {
         );
 
         navigate(
-            `/inventory/parties/clearances?clearanceStatus=${view.value}`
+            `/parties/clearances?clearanceStatus=${view.value}`
         );
 
     };
@@ -302,7 +302,7 @@ export default function NavbarClearance() {
 
     const handleCreateClearance = () => {
 
-        navigate("/inventory/parties/clearances/create");
+        navigate("/parties/clearances/create");
 
     };
 

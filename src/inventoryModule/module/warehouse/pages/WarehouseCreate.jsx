@@ -436,7 +436,7 @@ const WarehouseCreate = ({ onClose }) => {
             if (onClose) {
                 onClose();
             } else {
-                navigate("/inventory/warehouses");
+                navigate("/settings/warehouses");
             }
 
 

@@ -934,23 +934,23 @@ function AppContent() {
             ================================================= */}
 
         <Route
-          path="/inventory/parties"
+          path="/parties"
           element={<PartyDashboard />}
         />
 
         <Route
-          path="/inventory/parties/create"
+          path="/parties/create"
           element={<PartyCreateNew />}
 
         />
 
         <Route
-          path="/inventory/parties/edit/:id"
+          path="/parties/edit/:id"
           element={<PartyCreateNew />}
         />
 
         <Route
-          path="/inventory/parties/view/:id"
+          path="/parties/view/:id"
           element={<PartyViewDetails />}
         />
 
@@ -960,24 +960,24 @@ function AppContent() {
 
 
         <Route
-          path="/inventory/parties/clearances"
+          path="/parties/clearances"
           element={<ClearanceDashboard />}
 
         />
 
         <Route
-          path="/inventory/parties/clearances/create"
+          path="/parties/clearances/create"
           element={<ClearanceCreateSimple />}
 
         />
 
         <Route
-          path="/inventory/parties/clearances/edit/:id"
+          path="/parties/clearances/edit/:id"
           element={<ClearanceCreateSimple />}
         />
 
         <Route
-          path="/inventory/parties/clearances/view/:id"
+          path="/parties/clearances/view/:id"
           element={<ClearanceViewDetails />}
         />
 
