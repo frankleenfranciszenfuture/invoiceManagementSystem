@@ -49,6 +49,7 @@ import { fetchAllTaxMasters } from "../../../../module/taxMaster/thunks/taxMaste
 import { fetchAllCurrencies, fetchExchangeRate } from "../../../../module/currency/thunks/currencyThunks";
 import LeaveConfirmationModal from "../../../../common/confirmation/LeaveConfirmationModal";
 import useLeaveConfirmation from "../.../../../../../common/confirmation/useLeaveConfirmation";
+import { openModal } from "../../../../module/ui/uiSlice";
 
 const getArray = (value) => {
     if (!value) return [];
@@ -683,7 +684,7 @@ export default function PurchaseOrderCreate({ onClose }) {
     };
 
     const handlePartySelect = (party) => {
- 
+
         const selectedId =
             party?.id ??
             party?.customerId ??
@@ -980,6 +981,22 @@ export default function PurchaseOrderCreate({ onClose }) {
             ) {
                 setOpenRowItemDropdown(null);
             }
+
+            if (
+                warehouseDropdownRef.current &&
+                !warehouseDropdownRef.current.contains(event.target)
+            ) {
+                setOpenWarehouse(false);
+                setWarehouseSearch("");
+            }
+
+            if (
+                currencyDropdownRef.current &&
+                !currencyDropdownRef.current.contains(event.target)
+            ) {
+                setOpenCurrency(false);
+                setCurrencySearch("");
+            }
         };
 
         document.addEventListener("mousedown", handleClickOutside);
@@ -1235,7 +1252,7 @@ export default function PurchaseOrderCreate({ onClose }) {
                 navigate("/inventory/purchaseOrder");
             }
         } catch (error) {
-            
+
 
             const message =
                 typeof error === "string"
@@ -1271,7 +1288,7 @@ export default function PurchaseOrderCreate({ onClose }) {
             ? formData.customerName
             : formData.partyName;
 
-  
+
 
     const selectedWarehouse = warehouses.find(
         (item) => String(item.id) === String(formData.warehouseId)
@@ -1509,6 +1526,37 @@ export default function PurchaseOrderCreate({ onClose }) {
                                                     })
                                                 )}
                                             </div>
+                                            <button
+                                                type="button"
+                                                className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
+                                                onClick={() => {
+                                                    setOpenParty(false);
+                                                    setPartySearch("");
+
+                                                    dispatch(
+                                                        openModal({
+                                                            type:
+                                                                formData.partyType === "CUSTOMER"
+                                                                    ? "addCustomer"
+                                                                    : "addParty",
+                                                            data: {
+                                                                source: "purchaseOrder",
+                                                                partyType: formData.partyType,
+                                                            },
+                                                        })
+                                                    );
+                                                }}
+                                            >
+                                                <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center">
+                                                    <Plus size={14} />
+                                                </div>
+
+                                                <span className="font-medium">
+                                                    {formData.partyType === "CUSTOMER"
+                                                        ? "New Customer"
+                                                        : "New Party"}
+                                                </span>
+                                            </button>
                                         </div>
                                     )}
                                 </div>
@@ -1653,6 +1701,29 @@ export default function PurchaseOrderCreate({ onClose }) {
                                                 })
                                             )}
                                         </div>
+                                        <button
+                                            type="button"
+                                            className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
+                                            onClick={() => {
+                                                setOpenWarehouse(false);
+                                                setWarehouseSearch("");
+                                                dispatch(
+                                                    openModal({
+                                                        type: "addWarehouse",
+                                                    })
+                                                );
+                                            }}
+                                        >
+
+                                            <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center">
+                                                <Plus size={14} />
+                                            </div>
+
+                                            <span className="font-medium">
+                                                New Warehouse
+                                            </span>
+
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -1769,6 +1840,29 @@ export default function PurchaseOrderCreate({ onClose }) {
                                                 })
                                             )}
                                         </div>
+                                        <button
+                                            type="button"
+                                            className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-200 text-blue-600 hover:bg-blue-50"
+                                            onClick={() => {
+                                                setOpenCurrency(false);
+
+                                                dispatch(
+                                                    openModal({
+                                                        type: "addCurrency",
+                                                    })
+                                                );
+                                            }}
+                                        >
+
+                                            <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center">
+                                                <Plus size={14} />
+                                            </div>
+
+                                            <span className="font-medium">
+                                                New Currency
+                                            </span>
+
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -2196,7 +2290,7 @@ export default function PurchaseOrderCreate({ onClose }) {
                                                         No products found
                                                     </div>
                                                 ) : (
-                                                    filteredProducts.map((product) => {
+                                                    filteredProducts.map((product, index) => {
                                                         const name =
                                                             product.productName ||
                                                             product.itemName ||
@@ -2221,17 +2315,35 @@ export default function PurchaseOrderCreate({ onClose }) {
                                                                         activeItemIndex
                                                                     )
                                                                 }
-                                                                className="w-full rounded-md px-3 py-3 text-left hover:bg-blue-500 hover:text-white"
+                                                                className={`flex w-full items-center gap-3 rounded border-b border-gray-100 px-4 py-3 text-left transition-colors
+                                                                        ${index === 0
+                                                                        ? "bg-blue-500 text-white"
+                                                                        : "bg-white text-gray-500 hover:bg-blue-50 hover:text-gray-500"
+                                                                    }`}
                                                             >
-                                                                <div className="font-semibold">
-                                                                    {name}
+                                                                <div
+                                                                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-medium
+                                                                            ${index === 0
+                                                                            ? "bg-gray-100 text-blue-500"
+                                                                            : "bg-gray-200 text-gray-700"
+                                                                        }`}
+                                                                >
+                                                                    {name.charAt(0).toUpperCase()}
+
                                                                 </div>
 
                                                                 <div className="text-xs opacity-70">
+                                                                    <div className="flex min-w-0">
+                                                                        <p className="truncate font-medium">{name}</p>
+                                                                    </div>
                                                                     {product.sku || ""}
                                                                     {product.sku && " • "}
-                                                                    Rate: {currencySymbol}
-                                                                    {fmt(price)}
+                                                                    <span className="flex">
+                                                                        Rate: {currencySymbol}
+                                                                        {fmt(price)}
+
+                                                                    </span>
+
                                                                 </div>
                                                             </button>
                                                         );
@@ -2241,9 +2353,20 @@ export default function PurchaseOrderCreate({ onClose }) {
 
                                             <button
                                                 type="button"
-                                                onClick={() =>
-                                                    navigate("/items/newSimple")
-                                                }
+                                                onClick={() => {
+                                                    setOpenRowItemDropdown(false);
+                                                    setItemSearch("");
+
+                                                    dispatch(
+                                                        openModal({
+                                                            type: "addProduct",
+                                                            data: {
+                                                                source: "purchaseOrder",
+                                                            },
+                                                        })
+                                                    );
+                                                }}
+
                                                 className="flex w-full items-center gap-2 border-t border-gray-200 px-4 py-3 text-blue-600 hover:bg-blue-50"
                                             >
                                                 <Plus size={15} />

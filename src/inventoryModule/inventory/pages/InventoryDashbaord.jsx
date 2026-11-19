@@ -687,7 +687,7 @@ const InventoryDashboard = () => {
                         Refresh
                     </button>
 
-                    <button
+                    {/* <button
                         type="button"
                         onClick={() => { navigate("/inventory/openStock") }}
                         disabled={loading}
@@ -715,7 +715,7 @@ const InventoryDashboard = () => {
                         />
                         adjust
                         <Tooltip text="Adjust Stock" position="top" />
-                    </button>
+                    </button> */}
                 </div>
             </div>
 
